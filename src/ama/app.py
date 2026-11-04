@@ -39,7 +39,8 @@ from ama.scratch import DiskUsageFn, ScratchGate
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages,
+from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, movie_review_pages, pages,
+                     repeat_pages,
                      review_pages, scratch_pages)
 
 
@@ -153,6 +154,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(discs_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
+    app.include_router(extras_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     return app

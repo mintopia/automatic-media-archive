@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Tidy up Extras{% endblock %}
+{% block main %}
+{%- set all_other = rows | selectattr("extra.category", "equalto", "Other") | list | length == rows | length %}
+<main class="extras">
+  <form id="leave" method="post" action="/discs/{{ record.id }}/extras/leave"></form>
+  <div class="page-head">
+    <div>
+      <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><a href="/review">Review</a></div>
+      <h1>Want to sort the Extras for {{ record.title }}?</h1>
+      <p class="sub">{{ rows | length }} Extra{{ "s" if rows | length != 1 }} from the {{ record.disc_type.long_name }}, filed to the film's {% if all_other %}Other {% endif %}folder.</p>
+    </div>
+    <div class="actions"><button class="btn quiet" type="submit" form="leave">Leave as they are</button><button class="btn pri" type="submit" form="extras">Save changes</button></div>
+  </div>
+  <div class="notice ok" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>Already filed. Changes are optional.</b>Plex can already see these. Picking a category moves the Extra into the matching Plex folder; nothing here blocks anything.</div></div>
+  {%- if errors %}
+  <div class="errors" role="alert" style="margin-bottom:20px">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+  {%- endif %}
+  <form id="extras" method="post" action="/discs/{{ record.id }}/extras">
+    <section class="bin fil" aria-labelledby="extras-h">
+      <h2 class="tab" id="extras-h">Extras <span class="c">{{ rows | length }}</span></h2>
+      <div class="box">
+        <div class="colhead" aria-hidden="true"><span>Pictures</span><span>Title</span><span></span></div>
+        {%- for r in rows %}
+        {%- set n = r.extra.title_number %}
+        <div class="titem">
+          <div class="frames">{% for pct, src in r.stills %}{% if src %}<div class="frame"><img src="{{ src }}" alt="{{ r.extra.name }} at {{ pct }}%" loading="lazy"><span>{{ pct }}%</span></div>{% else %}<div class="frame">{{ pct }}%<span class="ts">No picture</span></div>{% endif %}{% endfor %}</div>
+          <div><div class="tt">{{ r.extra.name }}</div><div class="ts">{{ r.note }}</div></div>
+          <div class="ctl">
+            <div class="field"><label for="n{{ n }}">Name in Plex</label><input class="input" id="n{{ n }}" name="name_{{ n }}" value="{{ r.extra.name }}" maxlength="76" required></div>
+            <div class="field"><label for="c{{ n }}">Category</label><select class="select" id="c{{ n }}" name="category_{{ n }}">{% for c in categories %}<option{% if c == r.extra.category %} selected{% endif %}>{{ c.value }}</option>{% endfor %}</select></div>
+          </div>
+        </div>
+        {%- endfor %}
+      </div>
+    </section>
+  </form>
+</main>
+{% endblock %}

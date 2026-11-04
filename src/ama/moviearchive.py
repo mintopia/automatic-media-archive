@@ -41,6 +41,7 @@ import httpx
 from ama import encode, hdr, picture, review
 from ama import extras as extras_mod
 from ama.archive import Archive, FilingError, extended_path
+from ama.archive import move as archive_move
 from ama.config import CqConfig
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord, TitleStatus
@@ -595,6 +596,45 @@ class MovieArchiver:
                 self._archive.place(rel / sub.parent, {sub.name: rec.scratch_dir / e.encoded})
                 self.extras.set_status(rec.id, e.title_number, ExtraStatus.FILED)
         return sum(e.status == ExtraStatus.FILED for e in self.extras.of(rec.id))
+
+    def sort_extras(self, rec: DiscRecord, changes: dict[int, tuple[str, Category]]) -> int:
+        """The user sorted a filed Disc's Extras ({Title: (name, category)}): move each
+        changed one to its Plex folder and ask Plex to rescan; how many moved.
+
+        Marks the Extras sorted (publish `review` after). Blocking: call in a thread.
+        Raises RetryLater if the NAS can't be reached.
+        """
+        if not isinstance(self._nas.status, NasConnected) or rec.archive_dir is None:
+            raise RetryLater("The NAS isn't connected")
+        film = rec.archive_dir
+        filed = {e.title_number: e for e in self.extras.of(rec.id)
+                 if e.status == ExtraStatus.FILED}
+        taken = {e.file.casefold() for e in filed.values()}
+        moved = 0
+        for number, (name, category) in changes.items():
+            e = filed.get(number)
+            name = " ".join(name.split()) or (e.name if e else "")
+            if e is None or (name, category) == (e.name, e.category):
+                continue
+            taken.discard(e.file.casefold())
+            file = extras_mod.file_name(
+                category, name, lambda f: f.casefold() in taken or extended_path(film / f).exists())
+            try:
+                archive_move(film / e.file, film / file)
+            except OSError as err:
+                raise RetryLater(f"Couldn't move “{e.name}” on the NAS ({err})") from err
+            self.extras.place(rec.id, number, name, category, file)
+            taken.add(file.casefold())
+            self._discs.log(rec.id, f"Extra “{e.name}” moved to {file}")
+            moved += 1
+        self.extras.mark_reviewed(rec.id)
+        if moved:
+            try:
+                self._discs.log(rec.id, self._plex.scan(film))
+            except httpx.HTTPError as err:
+                self._discs.log(rec.id, f"Couldn't ask Plex to scan the folder ({err}); "
+                                        "Plex will find it on its next scan", error=True)
+        return moved
 
     # -- for the UI ---------------------------------------------------------
 

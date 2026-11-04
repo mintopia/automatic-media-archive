@@ -9,5 +9,15 @@
     </div>
   </div>
   <div sse-swap="review">{% include "partials/review_bin.html" %}</div>
+  {%- if extras_to_sort %}
+  <section class="bin fil" aria-labelledby="sort-h" style="margin-top:28px">
+    <h2 class="tab" id="sort-h">Extras to sort, if you like <span class="c">{{ extras_to_sort | length }}</span></h2>
+    <div class="box">
+    {%- for s in extras_to_sort %}
+      <div class="row"><div class="dtype">{{ s.record.disc_type }}</div><div><div class="tt">{{ s.record.title }}</div><div class="ts">{{ s.extras }} Extra{{ "s" if s.extras != 1 }} filed under Other · already in Plex</div></div><a class="btn" href="{{ s.href }}">Sort Extras</a></div>
+    {%- endfor %}
+    </div>
+  </section>
+  {%- endif %}
 </main>
 {% endblock %}

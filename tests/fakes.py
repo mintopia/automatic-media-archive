@@ -431,6 +431,7 @@ class FakeFfmpeg:
         self.encode_frame: dict | None = None
         self._frames: dict[str, dict] = {}  # Encode output path -> its first frame
         self.exit_code = 0
+        self.fail_sources: set[str] = set()  # Rip file names whose Encode fails (exit 1)
         self.hold = False
         self.encoding = threading.Event()  # set while an Encode is running
         self.sample_output: list[str] = []  # what each picture-analysis run prints (#10)
@@ -489,9 +490,9 @@ class FakeFfmpeg:
             on_line("[hevc_nvenc @ 0000020] a harmless warning")
             while self.hold and not self._go.wait(0.01):
                 self._block(on_line, 0.4)  # lets the caller abort us
-            if self.exit_code:
+            if self.exit_code or src.name in self.fail_sources:
                 on_line("[hevc_nvenc @ 0000020] OpenEncodeSessionEx failed: unsupported device")
-                return self.exit_code
+                return self.exit_code or 1
             dest.write_bytes(b"HEVC " + src.name.encode())
             self._frames[str(dest)] = self.encode_frame or self.frame
             on_line("progress=end")

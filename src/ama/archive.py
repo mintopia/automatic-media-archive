@@ -44,6 +44,21 @@ def extended_path(path: Path) -> Path:
     return Path("\\\\?\\UNC\\" + p[2:] if p.startswith("\\\\") else "\\\\?\\" + p)
 
 
+def move(src: Path, dest: Path) -> None:
+    """Move a filed file to `dest` inside the Archive (a rename on the share), removing
+    `src`'s folder if that leaves it empty. Done already (src gone, dest there) = no-op.
+    `dest` must not be another file: it would be replaced."""
+    s, d = extended_path(src), extended_path(dest)
+    if not s.exists() and d.exists():
+        return
+    d.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(s, d)
+    try:
+        s.parent.rmdir()
+    except OSError:
+        pass  # not empty
+
+
 def _digest(path: Path) -> tuple[int, str]:
     h = hashlib.sha256()
     with path.open("rb") as f:
