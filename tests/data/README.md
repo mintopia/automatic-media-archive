@@ -9,6 +9,11 @@
   apdefs.h and other projects' captures). The PRGT codes, 3309 and the 6202/6203
   stream-type codes are unverified. Replace them with real captures once MakeMKV
   is registered and a Disc can be scanned.
+- `makemkv-info-bd-decoys.txt`: **synthetic** robot output in the same format, modelled on
+  forum reports of decoy-playlist BDs (notes/research/makemkvcon.md §7): 14 Titles
+  `00800-00813.mpls` within 4 s of 2:50:12, same 12 clips; only `00805.mpls` (Title 6) plays
+  them in order (`1-12`), the rest are shuffled; plus 2 extras. No real decoy Disc has been
+  scanned yet: replace with a real capture when one turns up.
 - `musicbrainz/discid-ffvii-rebirth-disc1.json`: **real** MusicBrainz response,
   `GET /ws/2/discid/kIBdaUqY_5kMBgOXehaFmL5TSbA-?inc=recordings+artist-credits&fmt=json`,
   2026-11-04, for disc 1 of the FINAL FANTASY VII REBIRTH OST (the CD in the archive PC's

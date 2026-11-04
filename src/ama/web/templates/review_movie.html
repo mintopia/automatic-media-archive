@@ -33,10 +33,15 @@
       <section class="bin ink" aria-labelledby="titles-h">
         <h2 class="tab" id="titles-h">Which Title is the film? <span class="c">{{ titles | length }}</span></h2>
         <div class="box">
-          {%- for t in titles[:4] %}{% include "partials/title_row.html" %}{% endfor %}
-          {%- if titles | length > 4 %}
-          <details class="more-titles"><summary class="more">Show {{ titles | length - 4 }} more Title{{ "s" if titles | length - 4 != 1 }}</summary>
-            {%- for t in titles[4:] %}{% include "partials/title_row.html" %}{% endfor %}
+          {%- if decoys %}
+          <div class="pad" style="border-bottom:1px solid var(--rule)">
+            <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>This Disc has {{ decoys.versions | length }} near-identical versions of the film</b>It's a copy-protection trick. Only one plays in the right order. {% if decoys.confident %}We've picked the most likely one. Check the pictures look right.{% else %}We couldn't tell which, so check the pictures and pick the one that looks right.{% endif %}</div></div>
+          </div>
+          {%- endif %}
+          {%- for t in titles[:shown] %}{% include "partials/title_row.html" %}{% endfor %}
+          {%- if titles | length > shown %}
+          <details class="more-titles"><summary class="more">{{ more_label }}</summary>
+            {%- for t in titles[shown:] %}{% include "partials/title_row.html" %}{% endfor %}
           </details>
           {%- endif %}
         </div>

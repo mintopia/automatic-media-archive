@@ -109,6 +109,7 @@ class FakeMakemkv:
         self.ripped_ids: list[int] = []
         self.ripping = False
         self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
+        self.scan_file = "makemkv-info-bd.txt"  # what `info` prints (tests/data/)
         # A UHD scan says "Using LibreDrive mode"; this many `info` runs refuse it instead.
         self.libredrive_refusals = 0
         self._go = threading.Event()
@@ -125,7 +126,7 @@ class FakeMakemkv:
                 on_line(ln)
             return 127
         if "info" in args:
-            out = _lines("makemkv-info-bd.txt")
+            out = _lines(self.scan_file)
             if self.disc_name is not None:
                 volume = self.disc_name.upper().replace(" ", "_")
                 out = [f'CINFO:2,0,"{self.disc_name}"' if ln.startswith("CINFO:2,") else
