@@ -32,6 +32,15 @@ class DriveConfig(_Section):
     poll_seconds: float = Field(default=3.0, gt=0)
 
 
+class ToolsConfig(_Section):
+    cyanrip: str = ""
+
+
+class CdConfig(_Section):
+    offset: int = 667
+    retries: int = Field(default=10, ge=1)
+
+
 class NasConfig(_Section):
     unc: str
     username: str = ""
@@ -76,6 +85,8 @@ class EncodeConfig(_Section):
 class Config(_Section):
     web: WebConfig = WebConfig()
     drive: DriveConfig = DriveConfig()
+    cd: CdConfig = CdConfig()
+    tools: ToolsConfig = ToolsConfig()
     nas: NasConfig
     paths: PathsConfig
     tmdb: TmdbConfig = TmdbConfig()

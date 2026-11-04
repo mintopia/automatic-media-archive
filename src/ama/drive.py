@@ -92,6 +92,12 @@ def classify_root(root: Path) -> DiscType | None:
 class DriveProbe(Protocol):
     def probe(self) -> DriveState: ...
 
+    def eject(self) -> None: ...
+
+    def device(self) -> str | None:
+        """The drive as ripping tools address it (e.g. "D:"), or None if there is none."""
+        ...
+
 
 class WindowsDriveProbe:
     """Reads the optical drive through Win32 (GetVolumeInformationW) and its root.
@@ -118,10 +124,38 @@ class WindowsDriveProbe:
                 return f"{c}:"
         return None
 
+    def device(self) -> str | None:
+        return self._letter or self._find_letter()
+
+    def eject(self) -> None:
+        """Open the tray (IOCTL_STORAGE_EJECT_MEDIA). Raises OSError if it can't."""
+        import ctypes
+        from ctypes import wintypes
+
+        letter = self.device()
+        if letter is None:
+            raise OSError("No optical drive found")
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.restype = wintypes.HANDLE
+        GENERIC_READ, SHARE_RW, OPEN_EXISTING = 0x80000000, 0x3, 3
+        h = k32.CreateFileW(f"\\\\.\\{letter}", GENERIC_READ, SHARE_RW, None,
+                            OPEN_EXISTING, 0, None)
+        if h in (None, wintypes.HANDLE(-1).value):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            IOCTL_STORAGE_EJECT_MEDIA = 0x2D4808
+            returned = wintypes.DWORD()
+            if not k32.DeviceIoControl(wintypes.HANDLE(h), IOCTL_STORAGE_EJECT_MEDIA, None, 0,
+                                       None, 0, ctypes.byref(returned), None):
+                raise ctypes.WinError(ctypes.get_last_error())
+        finally:
+            k32.CloseHandle(wintypes.HANDLE(h))
+        self._cache = None
+
     def probe(self) -> DriveState:
         import ctypes
 
-        letter = self._letter or self._find_letter()
+        letter = self.device()
         if letter is None:
             return DriveMissing("No optical drive found")
         root = f"{letter}\\"
@@ -180,6 +214,14 @@ class DriveMonitor:
             log.info("drive: %s", state)
             self.state = state
             self._bus.publish(self.TOPIC)
+
+    def device(self) -> str | None:
+        return self._probe.device()
+
+    async def eject(self) -> None:
+        """Eject the Disc, then re-read the drive so `state` reflects it at once."""
+        await asyncio.to_thread(self._probe.eject)
+        await self.poll_once()
 
     async def run(self) -> None:
         while True:

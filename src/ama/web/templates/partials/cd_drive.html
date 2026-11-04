@@ -1,0 +1,20 @@
+{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Disc page. -#}
+{%- set tag = heading or "div" -%}
+<div class="drive">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+  <div class="body">
+    {%- if cd %}
+    <{{ tag }} class="title">{% if link %}<a href="/discs/{{ cd.disc_id }}">{{ cd.label or "Unknown CD" }}</a>{% else %}{{ cd.label or "Unknown CD" }}{% endif %}</{{ tag }}>
+    <div class="meta">{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
+    <div class="status"><span class="stk rip">Ripping</span><span class="ts">{{ cd.position() }}</span></div>
+    <div class="prog">
+      <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ cd.percent | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ '%.1f' | format(cd.percent) }}%"></i></div><div class="eta">{% if cd.eta_seconds is not none %}<span class="nw">{{ cd.eta_seconds | left }}</span> · {% endif %}the Disc ejects when it's done</div></div>
+      <div class="pct">{{ cd.percent | int }}%</div>
+    </div>
+    {%- else %}
+    <{{ tag }} class="title">Audio CD</{{ tag }}>
+    <div class="meta">Reading the track list</div>
+    <div class="status"><span class="stk rip">Ripping</span><span class="ts">Starting</span></div>
+    {%- endif %}
+  </div>
+</div>

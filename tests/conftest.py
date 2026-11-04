@@ -20,7 +20,7 @@ from ama.config import (
     WebConfig,
 )
 from ama.proc import ProcResult
-from tests.fakes import FakeDrive, FakeRunner
+from tests.fakes import FakeCyanrip, FakeDrive, FakeRunner
 
 UNC = r"\\nas\media"
 
@@ -44,6 +44,7 @@ class Harness:
     drive: FakeDrive
     share: dict  # {"reachable": bool}
     runner: FakeRunner
+    cyanrip: FakeCyanrip
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Harness:
@@ -52,9 +53,10 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Ha
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
                                                 "The network path was not found."))
+    cyanrip = FakeCyanrip(drive)
     services = build_services(cfg, probe=drive, runner=runner,
-                              nas_exists=lambda p: share["reachable"])
-    return Harness(services, drive, share, runner)
+                              nas_exists=lambda p: share["reachable"], streamer=cyanrip)
+    return Harness(services, drive, share, runner, cyanrip)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

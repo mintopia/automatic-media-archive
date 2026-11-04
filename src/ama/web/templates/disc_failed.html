@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Rip failed{% endblock %}
+{% block main %}
+<main id="disc">
+  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Didn't work</span></div>
+  <div class="solo">
+    <div class="stack">
+      <div class="page-head failed"><div><h1>Couldn't {{ "read" if record.failure.kind == "unreadable_track" else "rip" }} this {{ "CD" if record.disc_type == "CD" else "Disc" }}</h1><p class="sub">{{ record.label or ("Unknown CD" if record.disc_type == "CD" else record.disc_type.long_name) }}{% if track_count %} · {{ track_count }} tracks{% endif %}{% if record.finished_at %} · ejected at {{ record.finished_at.strftime("%H:%M") }}{% endif %}</p></div><span class="stk fail">Failed</span></div>
+      <div class="notice" role="alert">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+        <div><b>{{ record.failure.headline }}</b>{{ record.failure.advice }}</div>
+      </div>
+      <p class="ts">Nothing was filed. The partial Rip has been deleted from scratch, so it isn't using any space.</p>
+      {%- if not record.dismissed %}
+      <form class="actions" method="post" action="/discs/{{ record.id }}/dismiss">
+        <button class="btn pri" type="submit" name="next" value="retry"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg>Try again</button>
+        <button class="btn quiet" type="submit" name="next" value="dismiss">Dismiss</button>
+      </form>
+      <p class="ts after-actions">Try again waits for you to insert the Disc. Nothing is retried on its own.</p>
+      {%- endif %}
+      <section class="bin ink" aria-labelledby="log-h">
+        <h2 class="tab" id="log-h">Log</h2>
+        <div class="box">
+          <details open>
+            <summary><svg class="i" aria-hidden="true"><use href="/static/icons.svg#log"/></svg>Show the full log</summary>
+<div class="log">{% for ln in log %}{% if ln.error %}<span class="e">{{ ln.at.strftime("%H:%M:%S") }}  {{ ln.text }}</span>{% else %}{{ ln.at.strftime("%H:%M:%S") }}  {{ ln.text }}{% endif %}
+{% endfor %}</div>
+          </details>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

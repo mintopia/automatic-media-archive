@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
 
-from ama.web import FRAGMENTS, TEMPLATES, auth, render_fragment, view_context
+from ama.web import FRAGMENTS, TEMPLATES, auth, fragments_for, render_fragment, view_context
 
 router = APIRouter()
 
@@ -58,16 +58,16 @@ async def events(request: Request) -> StreamingResponse:
     async def stream() -> AsyncIterator[str]:
         with services.bus.subscribe() as q:
             # Resync everything on (re)connect: the browser may have missed events.
-            for topic in FRAGMENTS:
-                yield _sse(topic, render_fragment(topic, services))
+            for name in FRAGMENTS:
+                yield _sse(name, render_fragment(name, services))
             while not await request.is_disconnected():
                 try:
                     topic = await asyncio.wait_for(q.get(), KEEPALIVE_SECONDS)
                 except TimeoutError:
                     yield ": keepalive\n\n"
                     continue
-                if topic in FRAGMENTS:
-                    yield _sse(topic, render_fragment(topic, services))
+                for name in fragments_for(topic):
+                    yield _sse(name, render_fragment(name, services))
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache"})

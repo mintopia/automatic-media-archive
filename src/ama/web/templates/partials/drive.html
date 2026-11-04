@@ -1,5 +1,7 @@
 {%- set kind = drive | kind -%}
-{%- if kind == "DiscPresent" -%}
+{%- if cd or cd_reading -%}
+{%- with heading=None, link=True %}{% include "partials/cd_drive.html" %}{% endwith -%}
+{%- elif kind == "DiscPresent" -%}
 <div class="drive">
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ drive.disc_type.long_name }}</span></div>
   <div class="body">

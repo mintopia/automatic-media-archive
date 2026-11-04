@@ -1,0 +1,74 @@
+{#- A CD's Rip: drive card, tracks with AccurateRip results, and what was found on it.
+    `view` is a CdRip (live) or a CdDisc (finished); `live` says which. -#}
+{%- if view is none -%}
+{#- The Rip being watched just finished: load its result in place. -#}
+<div hx-get="/discs/{{ cd_last_id }}" hx-trigger="load" hx-select="#disc" hx-target="#disc" hx-swap="outerHTML"></div>
+{%- else -%}
+<div class="split">
+  <div class="stack">
+    {%- if live %}
+    {%- with cd=view, heading="h1", link=False %}{% include "partials/cd_drive.html" %}{% endwith %}
+    {%- else %}
+    {%- set verified = view.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length %}
+    <div class="drive">
+      <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+      <div class="body">
+        <h1 class="title">{{ view.record.label or "Unknown CD" }}</h1>
+        <div class="meta">{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
+        <div class="status"><span class="stk fil">Ripped</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified by AccurateRip</span></div>
+      </div>
+    </div>
+    {%- endif %}
+    <section class="bin rip" aria-labelledby="tracks-h">
+      <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
+      <div class="box">
+        <table class="tbl cdt">
+          <thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th><th class="st">Status</th></tr></thead>
+          <tbody>
+          {%- for t in view.tracks %}
+            {%- set now = live and t.number == view.current and not t.ripped %}
+            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else "Track " ~ t.number }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
+              <td class="st">
+              {%- if t.ripped -%}
+                {%- set s = t.ar.status if t.ar else "unavailable" -%}
+                {%- if s == "accurate" -%}<span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Verified (confidence {{ t.ar.confidence }})</span>
+                {%- elif s == "mismatch" -%}<span class="warn">Didn't match AccurateRip</span>
+                {%- elif s == "not_in_db" -%}<span class="wait">Ripped · CD not in AccurateRip</span>
+                {%- else -%}<span class="wait">Ripped · AccurateRip unavailable</span>
+                {%- endif -%}
+              {%- elif now -%}
+                Ripping {{ t.percent | int }}%<div class="bar thin" aria-label="{{ t.percent | int }}%"><i style="width:{{ '%.1f' | format(t.percent) }}%"></i></div>
+              {%- else -%}
+                <span class="wait">Waiting</span>
+              {%- endif -%}
+              </td></tr>
+          {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="aside stack">
+    {%- if view.hidden_track or view.preemphasis %}
+    <section class="bin ink" aria-labelledby="found-h">
+      <h2 class="tab" id="found-h">Found on this CD</h2>
+      <div class="box"><div class="pad notes">
+        {%- if view.hidden_track %}
+        <p><b>Hidden track before track 1</b><br><span class="ts">{{ view.hidden_track.seconds | mmss }} of audio before track 1. It's {{ "being " if live else "" }}kept as track 0.</span></p>
+        {%- endif %}
+        {%- if view.preemphasis %}
+        <p><b>Pre-emphasis</b><br><span class="ts">This CD was mastered with pre-emphasis. The files are marked so players can correct it; the audio itself isn't changed.</span></p>
+        {%- endif %}
+      </div></div>
+    </section>
+    {%- endif %}
+    <section class="bin fil" aria-labelledby="next-h">
+      <h2 class="tab" id="next-h">After the Rip</h2>
+      <div class="box"><div class="pad notes">
+        <p>Each track is checked against AccurateRip, a database of other people's rips of the same CD. Higher confidence means more matching rips.</p>
+        <p class="ts">Then it's matched on MusicBrainz and filed to Music. If more than one edition matches, or a track isn't verified, it waits in Review.</p>
+      </div></div>
+    </section>
+  </div>
+</div>
+{%- endif -%}

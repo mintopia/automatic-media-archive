@@ -14,10 +14,7 @@
       </section>
     </div>
     <div class="aside stack">
-      <section class="bin rip">
-        <div class="tab">Ripping <span class="c">0</span></div>
-        <div class="box"><p class="pad ts">Nothing ripping.</p></div>
-      </section>
+      <div sse-swap="rip" class="contents">{% include "partials/rip.html" %}</div>
       <section class="bin enc">
         <div class="tab">Encoding <span class="c">0</span></div>
         <div class="box"><p class="pad ts">Nothing waiting to encode.</p></div>
@@ -26,6 +23,7 @@
         <div class="tab">Filed today <span class="c">0</span></div>
         <div class="box"><p class="pad ts">Nothing filed yet today.</p></div>
       </section>
+      <div sse-swap="rip-failed" class="contents">{% include "partials/rip_failed.html" %}</div>
     </div>
   </div>
 </main>

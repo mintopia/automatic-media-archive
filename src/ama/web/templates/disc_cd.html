@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ "Ripping" if live else "Ripped" }} {{ title }}{% endblock %}
+{% block main %}
+<main id="disc">
+  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ "Disc in drive" if live else "Ripped" }}</span></div>
+  {%- if live %}
+  <div sse-swap="cd-rip">{% include "partials/cd_rip_live.html" %}</div>
+  {%- else %}
+  {% include "partials/cd_rip.html" %}
+  {%- endif %}
+</main>
+{% endblock %}

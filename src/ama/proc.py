@@ -3,9 +3,12 @@ so tests can pass a fake instead of spawning real processes."""
 
 from __future__ import annotations
 
+import codecs
+import re
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 
@@ -32,3 +35,42 @@ def run(args: Sequence[str]) -> ProcResult:
         timeout=120,
     )
     return ProcResult(p.returncode, p.stdout)
+
+
+class Streamer(Protocol):
+    def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
+                 cwd: Path | None = None) -> int: ...
+
+
+def stream(args: Sequence[str], on_line: Callable[[str], None], cwd: Path | None = None) -> int:
+    """Run a long job with no console window, calling `on_line` for each output line.
+
+    Lines end at `\\n` or `\\r` (progress meters redraw with `\\r`). stdout and
+    stderr are combined. Blocks until exit and returns the exit code; call it
+    from a worker thread. Never logs `args`.
+    """
+    p = subprocess.Popen(
+        list(args),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        cwd=cwd,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    assert p.stdout is not None
+    for line in split_lines(iter(lambda: p.stdout.read1(65536), b"")):
+        on_line(line)
+    return p.wait()
+
+
+def split_lines(chunks: Iterable[bytes]) -> Iterator[str]:
+    """Decode a byte stream into lines split on `\\r` or `\\n`, dropping empty ones."""
+    buf = ""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    for chunk in chunks:
+        buf += decoder.decode(chunk)
+        *lines, buf = re.split(r"[\r\n]", buf)
+        yield from (ln for ln in lines if ln.strip())
+    buf += decoder.decode(b"", final=True)
+    if buf.strip():
+        yield buf

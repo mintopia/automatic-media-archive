@@ -20,6 +20,20 @@ letter = ""
 # How often to check the drive for a Disc being inserted or removed (seconds).
 poll_seconds = 3
 
+[tools]
+# Full path to the cyanrip executable used for CD Rips (ADR-0004). Leave it
+# empty to use the copy AMA manages (ADR-0006). Until that exists, empty means
+# `cyanrip` on PATH. Prefer a nightly build: 0.9.3.1 misses AccurateRip for
+# about half of Discs on Windows (cyanrip issue #145).
+cyanrip = ''
+
+[cd]
+# Drive read offset in samples (EAC convention). +667 is the AccurateRip value
+# for the PIONEER BDR-S11JX; confirm once with `cyanrip -f`.
+offset = 667
+# How many times cyanrip re-reads a frame before counting it as an error.
+retries = 10
+
 [nas]
 # UNC path of the NAS share that holds the Plex library (Music/, Movies/, TV/).
 # Connected with `net use` at startup; retried while it fails.
