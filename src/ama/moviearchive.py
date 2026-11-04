@@ -35,11 +35,11 @@ from pathlib import Path
 
 import httpx
 
-from ama import encode, hdr, picture, review
+from ama import decoys, encode, hdr, picture, review
 from ama.archive import Archive, FilingError
 from ama.config import CqConfig
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord,     TitleStatus
+from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus
@@ -269,7 +269,10 @@ class MovieArchiver:
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
-        if looks_like_tv(rec.titles):  # never accepted as a film, however well one fits
+        # TV is never accepted as a film, however well one fits. Decoy playlists (#9) look
+        # like several same-length Titles too, but are a film's: they win.
+        if looks_like_tv(rec.titles) and decoys.detect(
+                t for t in rec.titles if t.status == TitleStatus.RIPPED) is None:
             self._discs.mark_review(rec.id, ReviewReason.EPISODES)
             self._discs.log(rec.id, "Several Titles are episode-length, so this looks like TV. "
                                     "Needs Review: match the Titles to Episodes")
@@ -287,6 +290,17 @@ class MovieArchiver:
             encoding="utf-8")
         film, reason = decide(candidates, main.duration_s)
         searched = ", ".join(f"“{t}”" for t in terms) or "nothing (the Disc has no usable name)"
+        found = decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)
+        if found is not None:
+            likely = found.likely
+            name = f"Title {likely.number}" + (f" ({likely.source})" if likely.source else "")
+            self._discs.log(rec.id, f"Suspected decoy playlists: {len(found.versions)} Titles "
+                                    f"run within {decoys.DURATION_TOLERANCE_S} s of each other; "
+                                    + (f"{name} plays in order, likely the film"
+                                       if found.confident else
+                                       "none plays more in order than the others"))
+            if film is not None:  # confident, but which Title is the film is for Review
+                reason, film = ReviewReason.DECOY_PLAYLISTS, None
         if film is None:
             assert reason is not None
             self._discs.mark_review(rec.id, reason)

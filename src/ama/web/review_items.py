@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ama import cdreview, review
+from ama import cdreview, decoys, review
 from ama.cyanrip import ArStatus
-from ama.discs import DiscRecord, ReviewReason
+from ama.discs import DiscRecord, ReviewReason, TitleStatus
 from ama.drive import DiscType
 
 if TYPE_CHECKING:
@@ -50,6 +50,8 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
     ReviewReason.MULTIPLE_MATCHES: ("Several films match · pick yours", "Choose film"),
     ReviewReason.EPISODES: ("Looks like TV episodes · match each Title to an Episode",
                             "Match episodes"),
+    ReviewReason.DECOY_PLAYLISTS: ("Suspected decoy playlists · check which Title is the film",
+                                   "Choose Title"),
 }
 
 
@@ -59,9 +61,17 @@ def review_items(services: Services) -> list[ReviewItem]:
         if rec.disc_type == DiscType.CD:
             items.append(_cd_item(services, rec))
         else:
-            reason = rec.review_reason or ReviewReason.NO_RELEASE
-            items.append(ReviewItem(rec, rec.name, *_GENERIC[reason]))
+            items.append(_video_item(rec))
     return items
+
+
+def _video_item(rec: DiscRecord) -> ReviewItem:
+    summary, action = _GENERIC[rec.review_reason or ReviewReason.NO_RELEASE]
+    if rec.review_reason == ReviewReason.DECOY_PLAYLISTS and (
+            found := decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)):
+        summary = (f"Suspected decoy playlists · {len(found.versions)} near-identical versions "
+                   "of the film · check which is right")
+    return ReviewItem(rec, rec.name, summary, action)
 
 
 def _cd_item(services: Services, rec: DiscRecord) -> ReviewItem:
