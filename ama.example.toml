@@ -40,6 +40,11 @@ state_db = "ama.sqlite3"
 # Log file (rotated). The app also logs to the console when it has one.
 log_file = 'logs\ama.log'
 
+[tools]
+# MakeMKV's command-line program, used for DVD and Blu-ray Rips. MakeMKV is
+# yours to install and register (ADR-0006); this is where it installs by default.
+makemkvcon = 'C:\Program Files (x86)\MakeMKV\makemkvcon64.exe'
+
 [tmdb]
 # TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
 api_key = ""

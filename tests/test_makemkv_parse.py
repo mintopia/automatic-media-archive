@@ -13,6 +13,7 @@ from ama.makemkv import (
     licence_problem,
     parse_line,
     parse_scan,
+    pick_source,
     rip_summary,
     select_titles,
 )
@@ -30,6 +31,20 @@ def test_real_licence_failure_is_detected():
     assert msgs[2].params == ("http://www.makemkv.com/",)
     assert "too old" in msgs[2].text
     assert [licence_problem(m, DiscType.BD) for m in msgs] == [False, False, True]
+
+
+def test_real_drive_listing_finds_the_drive():
+    scan = parse_scan(lines("makemkv-drives-no-disc.txt"))
+    assert len(scan.drives) == 16
+    assert [(d.index, d.device, d.has_disc) for d in scan.drives if d.exists] == [(0, "D:", False)]
+    assert pick_source(scan.drives) == "disc:0"
+    assert not any(licence_problem(m, DiscType.BD) for m in scan.messages)
+
+
+def test_the_drive_holding_a_disc_is_preferred():
+    scan = parse_scan(lines("makemkv-info-bd.txt"))
+    assert pick_source(scan.drives) == "disc:0"
+    assert pick_source([]) is None
 
 
 def test_new_version_banner_is_not_a_licence_problem():

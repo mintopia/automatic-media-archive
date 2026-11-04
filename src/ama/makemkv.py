@@ -181,9 +181,13 @@ class Scan:
 
 def parse_scan(lines: Iterable[str]) -> Scan:
     """The result of `makemkvcon -r info ...`."""
+    return parse_scan_records(map(parse_line, lines))
+
+
+def parse_scan_records(records: Iterable[RobotLine]) -> Scan:
     scan = Scan()
     attrs: dict[int, dict[str, object]] = {}
-    for rec in map(parse_line, lines):
+    for rec in records:
         match rec:
             case Drv():
                 scan.drives.append(rec)

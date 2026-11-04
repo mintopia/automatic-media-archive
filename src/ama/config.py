@@ -45,6 +45,10 @@ class PathsConfig(_Section):
     log_file: Path = Path("logs/ama.log")
 
 
+class ToolsConfig(_Section):
+    makemkvcon: Path = Path(r"C:\Program Files (x86)\MakeMKV\makemkvcon64.exe")
+
+
 class TmdbConfig(_Section):
     api_key: str = _secret()
 
@@ -78,6 +82,7 @@ class Config(_Section):
     drive: DriveConfig = DriveConfig()
     nas: NasConfig
     paths: PathsConfig
+    tools: ToolsConfig = ToolsConfig()
     tmdb: TmdbConfig = TmdbConfig()
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()

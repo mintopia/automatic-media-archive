@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from ama.drive import DiscPresent, DiscType, DriveEmpty, DriveState
 from ama.proc import ProcResult
@@ -14,12 +16,14 @@ class FakeDrive:
     def __init__(self) -> None:
         self.state: DriveState = DriveEmpty()
         self._error: Exception | None = None
+        self.ejected = 0  # times the app ejected the Disc
 
     def insert(self, disc_type: DiscType, label: str = "") -> None:
         self.state = DiscPresent(disc_type, label)
 
     def eject(self) -> None:
         self.state = DriveEmpty()
+        self.ejected += 1
 
     def fail_with(self, error: Exception) -> None:
         self._error = error
@@ -28,6 +32,77 @@ class FakeDrive:
         if self._error:
             raise self._error
         return self.state
+
+
+DATA = Path(__file__).parent / "data"
+
+
+def _lines(name: str) -> list[str]:
+    return (DATA / name).read_text(encoding="utf-8").splitlines()
+
+
+class FakeMakemkv:
+    """A streaming `LineRunner` that plays makemkvcon against the Disc in a FakeDrive.
+
+    `info` answers with the captured scan; `mkv <id> <dir>` writes the Title's
+    file into <dir> and streams progress. A rip holds at 50% until `release()`
+    (so tests can look at a Rip in progress) or until the Disc leaves the drive.
+    """
+
+    def __init__(self, drive: FakeDrive) -> None:
+        self.drive = drive
+        self.calls: list[list[str]] = []
+        self.licence_ok = True
+        self.fail_title: int | None = None
+        self.ripped_ids: list[int] = []
+        self.ripping = False
+        self._go = threading.Event()
+
+    def release(self) -> None:
+        self._go.set()
+
+    def __call__(self, args: Sequence[str], on_line: Callable[[str], None]) -> int:
+        args = list(args)
+        self.calls.append(args)
+        if not self.licence_ok:
+            for ln in _lines("makemkv-licence-too-old.txt"):
+                on_line(ln)
+            return 127
+        if "info" in args:
+            out = _lines("makemkv-info-bd.txt")
+            if args[-1] == "disc:9999":
+                out = [ln for ln in out if ln.startswith(("MSG:1005", "DRV:"))]
+            for ln in out:
+                on_line(ln)
+            return 0
+        i = args.index("mkv")
+        title_id, dest = int(args[i + 2]), Path(args[i + 3])
+        out = _lines("makemkv-mkv-title.txt")
+        start = out.index("PRGV:32768,32768,65536")
+        for ln in out[: start + 1]:
+            on_line(ln)
+        f = dest / f"Example_Movie_t{title_id:02d}.mkv"
+        f.write_bytes(b"partial")
+        self.ripping = True
+        while not self._go.wait(0.01):
+            on_line("PRGV:32768,32768,65536")  # lets the caller abort us
+            if not isinstance(self.drive.state, DiscPresent):
+                on_line('MSG:5010,0,0,"Failed to open disc","Failed to open disc"')
+                return 1
+        self.ripping = False
+        if title_id == self.fail_title:
+            on_line('MSG:2003,0,3,"Error \'Scsi error - MEDIUM ERROR\' occurred while reading '
+                    '\'/BDMV/STREAM/00020.m2ts\' at offset \'1048576\'","Error \'%1\' occurred '
+                    'while reading \'%2\' at offset \'%3\'","Scsi error - MEDIUM ERROR",'
+                    '"/BDMV/STREAM/00020.m2ts","1048576"')
+            on_line('MSG:5037,516,2,"Copy complete. 0 titles saved, 1 failed.",'
+                    '"Copy complete. %1 titles saved, %2 failed.","0","1"')
+            return 0
+        for ln in out[start + 1:]:
+            on_line(ln)
+        f.write_bytes(b"mkv")
+        self.ripped_ids.append(title_id)
+        return 0
 
 
 class FakeRunner:

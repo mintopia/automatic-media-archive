@@ -30,6 +30,7 @@ NAV: list[tuple[str, str]] = [("Now", "/")]
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
     "nas": "partials/nas.html",
+    "rip": "partials/rip.html",
 }
 
 GB = 1000**3
@@ -49,6 +50,10 @@ def view_context(services: Services) -> dict[str, Any]:
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
+        # Video Rip: the Disc being ripped (else the last one), and its live progress.
+        "rip_disc": services.video_rip.disc,
+        "rip_progress": services.video_rip.progress,
+        "rip_failure": services.discs.unseen_failure(),
     }
 
 
