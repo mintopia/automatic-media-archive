@@ -37,9 +37,10 @@ from ama.repeat import RepeatGuard
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
+from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages,
-                     review_pages, scratch_pages)
+                     review_pages, scratch_pages, tv_review_pages)
 
 
 @dataclass
@@ -61,12 +62,13 @@ class Services:
     thumbnails: Thumbnailer
     repeat: RepeatGuard
     scratch: ScratchGate
+    tv_archive: TvArchiver
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
-                self.thumbnails.run]
+                self.thumbnails.run, self.tv_archive.run]
 
 
 def build_services(
@@ -99,6 +101,10 @@ def build_services(
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
+    tv_titles = TvTitles(db)
+    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
+                                  tool, streamer, interval=cfg.drive.poll_seconds,
+                                  retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -121,14 +127,14 @@ def build_services(
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds),
-        movie_archive=MovieArchiver(discs, Movies(db), tmdb, nas,
-                                    archive, plex, bus, cfg.encode.cq, tool, streamer,
-                                    interval=cfg.drive.poll_seconds,
-                                    retry_seconds=cfg.nas.retry_seconds),
+        movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
+        tv_archive=TvArchiver(discs, tv_titles, movie_archive, nas, archive, plex, bus,
+                              interval=cfg.drive.poll_seconds,
+                              retry_seconds=cfg.nas.retry_seconds),
     )
 
 
@@ -151,6 +157,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(discs_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
+    app.include_router(tv_review_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     return app

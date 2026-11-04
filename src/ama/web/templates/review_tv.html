@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Match episodes{% endblock %}
+{%- macro option(value, label, picked) %}<option value="{{ value }}"{% if value == picked %} selected{% endif %}>{{ label }}</option>{% endmacro %}
+{% block main %}
+<main class="tv">
+  <div class="page-head">
+    <div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
+      <h1>Which episode is each Title?</h1>
+      <p class="sub">{% if series %}{{ series.title }} · {% endif %}{{ record.disc_type.long_name }}{% if record.label %} labelled “{{ record.label }}”{% endif %} · {{ titles | length }} Title{{ "s" if titles | length != 1 }} ripped</p>
+    </div>
+    <div class="actions">
+      <a class="btn quiet" href="/review">Not now</a>
+      {%- if series %}<button class="btn pri" type="submit" form="map"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>File episodes</button>{% endif %}
+    </div>
+  </div>
+  {%- if errors %}
+  <div class="errors" role="alert" style="margin-bottom:20px">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+  {%- endif %}
+  {%- if searching %}
+  <section class="bin rev" aria-labelledby="series-h" style="margin-bottom:28px">
+    <h2 class="tab" id="series-h">Which series? <span class="c">{{ results | length }}</span></h2>
+    <div class="box">
+      <form class="pad search" method="get" action="/review/{{ record.id }}" style="border-bottom:1px solid var(--rule)"><label class="sr" for="q">Search TV series</label><svg class="i" aria-hidden="true" style="left:36px;top:35px"><use href="/static/icons.svg#search"/></svg><input class="input" id="q" name="q" type="search" value="{{ q }}" placeholder="Series name" enterkeyhint="search"></form>
+      {%- for s in results %}
+      <a class="radio pick" href="/review/{{ record.id }}?series={{ s.id }}"><span></span><div><div class="tt">{{ s.title }}</div><div class="ts">TMDB {{ s.id }}</div></div><span class="btn quiet">Choose</span></a>
+      {%- endfor %}
+      {%- if tmdb_error %}
+      <p class="pad ts" role="alert">{{ tmdb_error }}</p>
+      {%- elif not results %}
+      <p class="pad ts">{% if q %}TMDB has no series called “{{ q }}”.{% else %}This Disc has no usable name.{% endif %} Search for the series' name above.</p>
+      {%- endif %}
+    </div>
+  </section>
+  {%- else %}
+  <div class="box" style="margin-bottom:28px"><div class="pad tv-series">
+    <dl class="facts"><dt>Series</dt><dd><b>{{ series.title }}</b> · TMDB · <a href="/review/{{ record.id }}?change=1">Change</a></dd><dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ folder }}</dd></dl>
+    <form class="field" method="get" action="/review/{{ record.id }}" style="min-width:200px">
+      <input type="hidden" name="series" value="{{ series.id }}">
+      <label for="season">Season</label>
+      <select class="select" id="season" name="season" onchange="this.form.requestSubmit()">
+        {%- for n in seasons %}<option value="{{ n }}"{% if n == season %} selected{% endif %}>{% if n == 0 %}Specials (Season 00){% else %}Season {{ n }}{% endif %}</option>{% endfor %}
+      </select>
+      <noscript><button class="btn quiet" type="submit">Show</button></noscript>
+    </form>
+  </div>
+  {%- if tmdb_error %}<p class="pad ts" role="alert">{{ tmdb_error }}</p>{% endif %}
+  </div>
+  {%- endif %}
+  <form id="map" method="post" action="/review/{{ record.id }}/episodes">
+    {%- if series %}<input type="hidden" name="series" value="{{ series.id }}"><input type="hidden" name="season" value="{{ season }}">{% endif %}
+    <section class="bin rev" aria-labelledby="titles-h"><h2 class="tab" id="titles-h">Titles <span class="c">{{ titles | length }}</span></h2><div class="box">
+      <div class="colhead"><span>Pictures</span><span>Title</span><span></span></div>
+      {%- for row in titles %}{% set t = row.choice %}{% set picked = row.picked %}
+      <div class="titem{% if row.play_all %} flag{% endif %}">
+        {% include "partials/title_frames.html" %}
+        <div><div class="tt">Title {{ t.title.number }}</div><div class="ts">{{ short_duration(t.title.duration_s) }}</div>
+          {%- if row.play_all %}<div class="ts note">Looks like all the episodes joined together (“Play all”), usually safe to discard</div>{% endif %}</div>
+        <div class="field"><label for="t{{ t.title.number }}">Episode</label>
+          <select class="select" id="t{{ t.title.number }}" name="t{{ t.title.number }}">
+            {%- for e in episodes %}{{ option(e.code, e.code ~ " · " ~ e.name if e.name else e.code, picked) }}{% endfor %}
+            {%- if specials %}<optgroup label="Specials (Season 00)">{% for e in specials %}{{ option(e.code, e.code ~ " · " ~ e.name if e.name else e.code, picked) }}{% endfor %}</optgroup>{% endif %}
+            {{ option(extra, "Extra", picked) }}
+            {{ option(discard, "Discard (not an episode)", picked) }}
+          </select>
+        </div>
+      </div>
+      {%- endfor %}
+    </div></section>
+  </form>
+  <div class="tv-foot">
+    <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a></p>
+    <form method="post" action="/review/{{ record.id }}/kind"><input type="hidden" name="kind" value="film"><button class="btn quiet" type="submit">It's a film, not TV</button></form>
+  </div>
+</main>
+{% endblock %}

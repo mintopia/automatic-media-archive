@@ -65,3 +65,43 @@ def test_a_tv_disc_always_goes_to_review_even_when_a_film_matches(harness, clien
     assert harness.ffmpeg.encodes() == []
     queue = _page(client, "/review")
     assert "Looks like TV episodes" in queue and "Match episodes" in queue
+
+
+def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harness, client):
+    _the_office(harness)
+    rec = _in_review(harness, _tv_disc(harness))
+    eventually(lambda: len(harness.ffmpeg.thumbnails) == 15)  # 5 Titles x 10/50/90%
+    page = _page(client, f"/review/{rec.id}")
+    assert "Which episode is each Title?" in page
+    assert "DVD labelled “THE_OFFICE_S1_D2” · 5 Titles ripped" in page
+    assert "The Office (2001)" in page and f"{SHOW}/Season 01" in page
+    assert '<option value="1" selected>Season 1</option>' in page
+    assert '<option value="0">Specials (Season 00)</option>' in page
+    # Episode-length Titles get the season's Episodes in order; the Play all is discarded,
+    # the short one kept as an Extra.
+    assert '<option value="S01E01" selected>S01E01 · Downsize</option>' in page
+    assert '<option value="S01E03" selected>S01E03 · The Quiz</option>' in page
+    assert '<option value="S00E02">S00E02 · Christmas Special (2)</option>' in page
+    assert "“Play all”" in page
+    assert page.count('value="discard" selected') == 1
+    assert page.count('value="extra" selected') == 1
+    assert "1 h 28 m" in page and "29 m" in page
+    for pct in (10, 50, 90):
+        assert f"/review/{rec.id}/titles/4/frames/{pct}" in page
+
+    season2 = _page(client, f"/review/{rec.id}?series={OFFICE}&season=2")
+    assert f"{SHOW}/Season 02" in season2
+    assert '<option value="S02E01" selected>S02E01 · Merger</option>' in season2
+
+
+def test_the_user_can_search_for_another_series(harness, client):
+    _the_office(harness)
+    harness.web.add_series("The Office US", 2316, "The Office", 2005, {1: [(1, "Pilot", 23)]})
+    rec = _in_review(harness, _tv_disc(harness))
+    page = _page(client, f"/review/{rec.id}?q=The Office US")
+    assert f'href="/review/{rec.id}?series=2316"' in page and "The Office (2005)" in page
+    assert "TMDB has no series called “Nope”" in _page(client, f"/review/{rec.id}?q=Nope")
+    picked = _page(client, f"/review/{rec.id}?series=2316")
+    assert "TV/The Office (2005) {tmdb-2316}/Season 01" in picked
+    harness.web.tmdb_offline = True
+    assert "Couldn't reach TMDB" in _page(client, f"/review/{rec.id}?series=2316")
