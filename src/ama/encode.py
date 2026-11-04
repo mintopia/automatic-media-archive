@@ -19,6 +19,7 @@ from pathlib import Path
 
 from ama.config import CqConfig
 from ama.drive import DiscType
+from ama.hdr import Colour, colour_args
 
 ENGLISH = frozenset({"eng", "en"})
 
@@ -187,7 +188,8 @@ def cq_for(cq: CqConfig, disc_type: DiscType) -> int:
 # hevc_nvenc settings (notes/research/ffmpeg.md §1); CQ is per Disc Type, from config.
 VIDEO_OPTS = ["-c:v", "hevc_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr",
               "-b:v", "0", "-profile:v", "main10", "-pix_fmt", "p010le",
-              "-rc-lookahead", "32", "-spatial-aq", "1", "-bf", "4"]
+              "-rc-lookahead", "32", "-spatial-aq", "1", "-bf", "4",
+              "-temporal-aq", "1", "-b_ref_mode", "middle"]  # verified on this GPU (#11)
 
 
 def _flags(*named: tuple[str, bool]) -> str:
@@ -195,8 +197,10 @@ def _flags(*named: tuple[str, bool]) -> str:
 
 
 def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
-                title: str, video_filter: str | None = None) -> list[str]:
-    """`video_filter`: the `-vf` chain from `picture.Picture.filters` (#10), if any."""
+                title: str, colour: Colour | None = None,
+                video_filter: str | None = None) -> list[str]:
+    """`colour`: tag the video with it (HDR10 sources; `hdr.py` checks the result).
+    `video_filter`: the `-vf` chain from `picture.Picture.filters` (#10), if any."""
     args = [str(exe), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "warning",
             "-progress", "pipe:1", "-y", "-hwaccel", "cuda", "-i", str(src)]
     for s in sel.streams:
@@ -205,6 +209,7 @@ def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
         args += ["-vf", video_filter]
     args += ["-map_chapters", "0", "-map_metadata", "0", "-metadata", f"title={title}",
              *VIDEO_OPTS[:8], "-cq", str(cq), *VIDEO_OPTS[8:],
+             *(colour_args(colour) if colour else []),
              "-c:a", "copy", "-c:s", "copy"]
     for i, a in enumerate(sel.audio):
         args += [f"-disposition:a:{i}", _flags(("default", a is sel.default_audio),

@@ -31,6 +31,7 @@ from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
+from ama.repeat import RepeatGuard, video_fingerprint
 from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
@@ -46,6 +47,12 @@ LICENCE_FAILURE = Failure(
     FailureKind.LICENCE, "MakeMKV says its licence key isn't valid.",
     "DVDs and Blu-rays can't be ripped until the key is fixed. CDs still work. Open MakeMKV "
     "on the archive PC, go to Help → Register, and enter the key again.")
+LIBREDRIVE_FAILURE = Failure(
+    FailureKind.LIBREDRIVE, "The drive can't decrypt this UHD Blu-ray.",
+    "UHD Blu-rays need MakeMKV's LibreDrive mode, and the drive isn't in it. This isn't a "
+    "problem with the Disc. Open MakeMKV on the archive PC once (it switches the drive into "
+    "LibreDrive mode), close it, then insert the Disc again. If MakeMKV's drive information "
+    "says LibreDrive isn't possible, the drive needs MakeMKV's firmware update.")
 INTERRUPTED_FAILURE = Failure(
     FailureKind.INTERRUPTED, "The app stopped during the Rip.",
     "The partial Rip was thrown away. Insert the Disc again to rip it from the start.")
@@ -89,13 +96,14 @@ class VideoRipper:
     TOPIC = "rip"
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
-                 makemkvcon: Callable[[], Path], streamer: Streamer,
+                 makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None) -> None:
         self._drive = drive
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
         self._store = store
         self._bus = bus
+        self._repeat = repeat
         self._exe = makemkvcon
         self._run_lines = streamer
         self._clock = clock
@@ -152,14 +160,19 @@ class VideoRipper:
             return
         self._handled = state
         assert isinstance(state, DiscPresent)
-        await self.rip(state)
+        # Repeat-Disc warning (#16): a Disc already in the Archive waits for the user.
+        fingerprint = await asyncio.to_thread(video_fingerprint, self._disc_root(),
+                                              state.disc_type)
+        if await self._repeat.admit(state.disc_type, fingerprint):
+            await self.rip(state, fingerprint)
 
     # -- the Rip -----------------------------------------------------------
 
-    async def rip(self, inserted: DiscPresent) -> None:
+    async def rip(self, inserted: DiscPresent, fingerprint: str | None = None) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
         disc = self._store.create(inserted.disc_type, inserted.label, "video")
+        self._repeat.remember(disc.id, fingerprint)
         shutil.rmtree(disc.scratch_dir, ignore_errors=True)
         disc.scratch_dir.mkdir(parents=True, exist_ok=True)
         self.disc, self.progress = disc, RipProgress()
@@ -205,9 +218,14 @@ class VideoRipper:
                 return Failure(FailureKind.MAKEMKV, "MakeMKV can't see the drive.",
                                "Check the drive is connected, close the MakeMKV window if it's "
                                "open, then insert the Disc again.")
-            code, out = await self._makemkv(disc, makemkv.info_args(exe, source,
-                                                                    MIN_TITLE_SECONDS))
-            scan = makemkv.parse_scan_records(out)
+            scan = await self._scan(disc, exe, source)
+            if makemkv.libredrive_refused(scan.messages):
+                # LibreDrive mode can drop when the drive resets; a fresh scan may bring it back
+                self._store.log(disc.id, "Reading the Disc once more, in case the drive "
+                                         "switches to LibreDrive mode")
+                scan = await self._scan(disc, exe, source)
+                if makemkv.libredrive_refused(scan.messages):
+                    return LIBREDRIVE_FAILURE
             await self._save_hints(disc, scan)
             if not scan.titles:
                 return Failure(FailureKind.DISC, "MakeMKV couldn't read this Disc.", _DISC_ADVICE)
@@ -266,6 +284,10 @@ class VideoRipper:
             return None
         except _Fail as f:
             return f.failure
+
+    async def _scan(self, disc: DiscRecord, exe: Path, source: str) -> makemkv.Scan:
+        _, out = await self._makemkv(disc, makemkv.info_args(exe, source, MIN_TITLE_SECONDS))
+        return makemkv.parse_scan_records(out)
 
     async def _save_hints(self, disc: DiscRecord, scan: makemkv.Scan) -> None:
         """Keep what the Disc says it is, for Identification after it's ejected (#6)."""

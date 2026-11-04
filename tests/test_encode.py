@@ -169,3 +169,22 @@ def test_the_picture_filters_go_in_as_one_video_filter_chain():
                        video_filter="bwdif,crop=720:360:0:60")
     assert args[args.index("-vf") + 1] == "bwdif,crop=720:360:0:60"
     assert args.index("-vf") > args.index("-i")
+
+
+def test_the_encode_uses_temporal_aq_and_middle_b_frame_references():
+    sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
+    line = " ".join(ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=22,
+                                title="X"))
+    assert "-temporal-aq 1" in line and "-b_ref_mode middle" in line
+    assert "-color_trc" not in line  # SDR: ffmpeg keeps the source's tags by itself
+
+
+def test_an_hdr10_encode_is_tagged_with_the_sources_colour_description():
+    from ama.hdr import Colour
+    sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
+    args = ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=24, title="X",
+                       colour=Colour("bt2020", "smpte2084", "bt2020nc", "tv"))
+    line = " ".join(args)
+    assert ("-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
+            "-color_range tv") in line
+    assert args.index("-color_trc") < args.index("-c:a")

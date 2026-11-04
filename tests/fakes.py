@@ -84,6 +84,14 @@ def _lines(name: str) -> list[str]:
     return (DATA / name).read_text(encoding="utf-8").splitlines()
 
 
+# LibreDrive lines (notes/research/makemkvcon.md §6; MSG codes unverified, AMA keys on text).
+_LIBREDRIVE_ON = ('MSG:1011,0,1,"Using LibreDrive mode (v06.3 id=0123456789AB)","%1",'
+                  '"Using LibreDrive mode (v06.3 id=0123456789AB)"')
+_LIBREDRIVE_REQUIRED = ('MSG:5097,0,0,"LibreDrive compatible drive is required to open this '
+                        'disc - video can\'t be decrypted","LibreDrive compatible drive is '
+                        'required to open this disc - video can\'t be decrypted"')
+
+
 class FakeMakemkv:
     """A `Streamer` that plays makemkvcon against the Disc in a FakeDrive.
 
@@ -100,6 +108,8 @@ class FakeMakemkv:
         self.ripped_ids: list[int] = []
         self.ripping = False
         self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
+        # A UHD scan says "Using LibreDrive mode"; this many `info` runs refuse it instead.
+        self.libredrive_refusals = 0
         self._go = threading.Event()
 
     def release(self) -> None:
@@ -122,6 +132,16 @@ class FakeMakemkv:
                        for ln in out]
             if args[-1] == "disc:9999":
                 out = [ln for ln in out if ln.startswith(("MSG:1005", "DRV:"))]
+            elif (isinstance(self.drive.state, DiscPresent)
+                  and self.drive.state.disc_type == DiscType.UHD):
+                if self.libredrive_refusals > 0:
+                    self.libredrive_refusals -= 1
+                    out = [ln for ln in out if ln.startswith(("MSG:1005", "DRV:"))] + [
+                        _LIBREDRIVE_REQUIRED, 'MSG:5010,0,0,"Failed to open disc",'
+                                              '"Failed to open disc"', "TCOUNT:0"]
+                else:
+                    i = next(i for i, ln in enumerate(out) if ln.startswith("PRGT:"))
+                    out = [*out[:i], _LIBREDRIVE_ON, *out[i:]]
             for ln in out:
                 on_line(ln)
             return 0
@@ -371,6 +391,11 @@ def probe_stream(index: int, kind: str, codec: str, lang: str = "", title: str =
                             "attached_pic": 0, **disp}, **extra}
 
 
+# The real first frame of an HDR10 clip (tests/data/ffprobe/hdr10-source.json).
+HDR10_FRAME: dict = json.loads((Path(__file__).parent / "data" / "ffprobe" / "hdr10-source.json")
+                               .read_text(encoding="utf-8"))["frames"][0]
+
+
 class FakeFfmpeg:
     """A `Streamer` playing ffprobe (answers `streams`) and an ffmpeg Encode.
 
@@ -389,6 +414,12 @@ class FakeFfmpeg:
             probe_stream(5, "subtitle", "hdmv_pgs_subtitle", "fra"),
         ]
         self.duration = 7293.0
+        # The first video frame `hdr.probe_args` sees (ffprobe JSON `frames[0]`): SDR by
+        # default, `HDR10_FRAME` for a UHD. The Encode keeps it unless `encode_frame` is set.
+        self.frame: dict = {"pix_fmt": "yuv420p", "color_range": "tv", "color_space": "bt709",
+                            "color_primaries": "bt709", "color_transfer": "bt709"}
+        self.encode_frame: dict | None = None
+        self._frames: dict[str, dict] = {}  # Encode output path -> its first frame
         self.exit_code = 0
         self.hold = False
         self.encoding = threading.Event()  # set while an Encode is running
@@ -419,6 +450,12 @@ class FakeFfmpeg:
                  cwd: Path | None = None) -> int:
         args = list(args)
         self.calls.append(args)
+        if "ffprobe" in Path(args[0]).name.lower() and "-show_frames" in args:
+            frame = self._frames.get(args[-1], self.frame)
+            out = json.dumps({"frames": [frame], "streams": [self.streams[0]]}, indent=1)
+            for ln in out.splitlines():
+                on_line(ln)
+            return 0
         if "ffprobe" in Path(args[0]).name.lower():
             out = json.dumps({"streams": self.streams, "chapters": [{"id": 0}, {"id": 1}],
                               "format": {"duration": str(self.duration)}}, indent=1)
@@ -441,6 +478,7 @@ class FakeFfmpeg:
                 on_line("[hevc_nvenc @ 0000020] OpenEncodeSessionEx failed: unsupported device")
                 return self.exit_code
             dest.write_bytes(b"HEVC " + src.name.encode())
+            self._frames[str(dest)] = self.encode_frame or self.frame
             on_line("progress=end")
             return 0
         finally:

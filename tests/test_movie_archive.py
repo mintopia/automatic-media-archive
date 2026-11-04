@@ -19,7 +19,7 @@ from ama.discs import DiscStatus, ReviewReason
 from ama.drive import DiscType
 from ama.moviearchive import EncodeStatus
 from tests.conftest import eventually, make_harness
-from tests.fakes import probe_stream
+from tests.fakes import HDR10_FRAME, probe_stream
 
 FOLDER = "Example Movie (2016) {tmdb-1234}"
 
@@ -35,8 +35,14 @@ def _wait_for(harness, status: DiscStatus):
     return harness.services.discs.list(status)[0]
 
 
-def _filed(harness):
-    return extended_path(harness.nas_root / "Movies" / FOLDER / f"{FOLDER}.mkv")
+def _filed(harness, version="1080p"):
+    return extended_path(harness.nas_root / "Movies" / FOLDER / f"{FOLDER} - {version}.mkv")
+
+
+def _uhd_source(harness) -> None:
+    """The Main Feature of a UHD: 4K HEVC with HDR10 metadata."""
+    harness.ffmpeg.streams[0] = probe_stream(0, "video", "hevc", height=2160)
+    harness.ffmpeg.frame = HDR10_FRAME
 
 
 def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client, harness):
@@ -256,3 +262,70 @@ def test_a_film_with_no_bars_and_nothing_to_fix_gets_no_video_filter(client, har
     _rip(harness)
     _wait_for(harness, DiscStatus.FILED)
     assert "-vf" not in harness.ffmpeg.encodes()[0]
+
+
+def test_a_uhd_is_encoded_keeping_its_hdr10_metadata_checked_and_filed_as_the_4k_version(
+        client, harness):
+    _uhd_source(harness)
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness, disc_type=DiscType.UHD)
+
+    rec = _wait_for(harness, DiscStatus.FILED)
+    assert _filed(harness, "4K").exists()
+    args = harness.ffmpeg.encodes()[0]
+    line = " ".join(args)
+    assert args[args.index("-cq") + 1] == "24"  # UHD's CQ
+    assert "-profile:v main10" in line
+    assert ("-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
+            "-color_range tv") in line
+    probed = [c[-1] for c in harness.ffmpeg.calls if "-show_frames" in c]
+    assert probed[-1].endswith("encode.tmp.mkv")  # the finished Encode itself was checked
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "HDR10 metadata kept: 0.005-1000 nits" in log and "MaxCLL 1000, MaxFALL 400" in log
+
+
+def test_an_encode_that_loses_the_hdr10_metadata_fails_and_keeps_the_rip(harness, client):
+    _uhd_source(harness)
+    harness.ffmpeg.encode_frame = {**HDR10_FRAME, "side_data_list": []}
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness, disc_type=DiscType.UHD)
+
+    movies = harness.services.movie_archive.movies
+    eventually(lambda: (m := movies.get(1)) is not None and m.status == EncodeStatus.FAILED)
+    rec = harness.services.discs.get(1)
+    assert rec.status == DiscStatus.RIPPED
+    assert (rec.scratch_dir / "Example_Movie_t00.mkv").exists()
+    assert not (rec.scratch_dir / "encode.tmp.mkv").exists()
+    assert not (rec.scratch_dir / "encode.mkv").exists()
+    log = "\n".join(map(str, harness.services.discs.log_lines(1)))
+    assert "the mastering display metadata is missing" in log
+    assert "MaxCLL is missing, not 1000" in log
+
+
+def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(client, harness):
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 1, timeout=5)
+
+    _uhd_source(harness)
+    harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
+    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=5)
+
+    folder = extended_path(harness.nas_root / "Movies" / FOLDER)
+    assert sorted(p.name for p in folder.iterdir()) == [
+        f"{FOLDER} - 1080p.mkv", f"{FOLDER} - 4K.mkv"]
+    filed = harness.services.discs.list(DiscStatus.FILED)
+    assert filed[0].archive_dir == filed[1].archive_dir
+
+
+def test_a_4k_main_feature_is_encoded_as_uhd_even_if_the_disc_looked_like_a_blu_ray(
+        client, harness):
+    _uhd_source(harness)
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness, disc_type=DiscType.BD)
+    rec = _wait_for(harness, DiscStatus.FILED)
+    assert _filed(harness, "4K").exists()
+    args = harness.ffmpeg.encodes()[0]
+    assert args[args.index("-cq") + 1] == "24"
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "its Main Feature is 4K, so it is encoded as a UHD" in log

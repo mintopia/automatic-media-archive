@@ -158,6 +158,15 @@ def licence_problem(msg: Msg, disc_type: DiscType) -> bool:
     return "registration key" in t or "evaluation period" in t or "too old" in t
 
 
+def libredrive_refused(messages: Iterable[Msg]) -> bool:
+    """True when MakeMKV can't open a UHD because the drive isn't in LibreDrive mode.
+
+    Keyed on text: the MSG code isn't known yet (notes/research/makemkvcon.md §6).
+    "Using LibreDrive mode (...)" is the good case.
+    """
+    return any("libredrive" in (t := m.text.lower()) and "required" in t for m in messages)
+
+
 def parse_duration(s: str) -> int:
     seconds = 0
     for part in s.split(":"):

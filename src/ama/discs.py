@@ -59,6 +59,7 @@ class FailureKind(StrEnum):
     MAKEMKV = "makemkv"  # MakeMKV missing, or crashed
     DISC = "disc"  # couldn't read the Disc, or nothing on it to rip
     TITLE = "title"  # a Title couldn't be ripped
+    LIBREDRIVE = "libredrive"  # a UHD the drive can't open without LibreDrive mode
     # CD
     NOT_INSTALLED = "not_installed"  # cyanrip missing
     NO_AUDIO = "no_audio"
