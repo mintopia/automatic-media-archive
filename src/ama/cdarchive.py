@@ -33,10 +33,12 @@ from mutagen.flac import FLAC
 from ama import cdreview, cyanrip, musicbrainz, review
 from ama.archive import Archive, FilingError, safe_name
 from ama.cdrip import CdTracks, Track
+from ama.covers import Covers
 from ama.cyanrip import ArStatus
 from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason
 from ama.drive import DiscType
 from ama.events import EventBus
+from ama.media import Album, MediaStore
 from ama.musicbrainz import Match, MusicBrainz
 from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
@@ -161,7 +163,9 @@ def rename_cue_files(cue: str, names: dict[str, str]) -> str:
 class CdArchiver:
     def __init__(self, discs: DiscStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
                  archive: Archive, plex: Plex, bus: EventBus, interval: float,
-                 retry_seconds: float = 60.0) -> None:
+                 covers: Covers, media: MediaStore, retry_seconds: float = 60.0) -> None:
+        self._covers = covers
+        self._media = media
         self._discs = discs
         self._tracks = tracks
         self._nas = nas
@@ -264,25 +268,26 @@ class CdArchiver:
                                  encoding="utf-8")
             files[f"{stem}.cue"] = filed_cue
         files[f"{stem}.log"] = scratch / "rip.log"
+        art = None
         if not match.release.id:
-            art = None
             self._discs.log(rec.id, "Details entered by hand: no cover art")
         else:
             try:
-                art = self._mb.cover_art(match.release)
+                art = self._covers.release(match.release)  # cached for its History page
             except httpx.HTTPError as e:
                 raise RetryLater(f"Couldn't fetch the cover art ({e})") from e
             if art is None:
                 self._discs.log(rec.id, "No cover art on the Cover Art Archive")
         if art is not None:
-            cover = scratch / f"cover.{art[1]}"
-            cover.write_bytes(art[0])
-            files[cover.name] = cover
+            cached = self._covers.path(art)
+            assert cached is not None
+            files[f"cover{cached.suffix}"] = cached
         try:
             folder = self._archive.place(album_folder(match), files)
         except (OSError, FilingError) as e:
             raise RetryLater(f"Couldn't file to the NAS ({e})") from e
         title = f"{match.release.title} — {match.release.artist}"
+        self._media.save(rec.id, Album.of(match, disc_id, art))
         self._discs.mark_filed(rec.id, title, folder)
         self._discs.log(rec.id, f"Filed {len(files)} files to {folder}; scratch deleted")
         try:

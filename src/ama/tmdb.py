@@ -23,6 +23,7 @@ from ama.archive import safe_name
 from ama.discs import ReviewReason
 
 BASE = "https://api.themoviedb.org/3"
+IMAGES = "https://image.tmdb.org/t/p"
 MOVIES = Path("Movies")
 RUNTIME_TOLERANCE_S = 5 * 60
 MAX_DETAILS = 8  # /movie/{id} calls per Disc
@@ -270,3 +271,31 @@ class Tmdb:
                                e.get("name") or "", int(e.get("runtime") or 0))
                        for e in d.get("episodes") or [] if e.get("episode_number") is not None),
                       key=lambda e: e.number)
+
+    # -- History (what a filed Disc is) ---------------------------------------
+
+    def overview(self, tv: bool, tmdb_id: int) -> tuple[str, str | None]:
+        """A film's or series' overview and poster path ("/abc.jpg"). Raises TmdbError."""
+        d = self._get(f"/{'tv' if tv else 'movie'}/{tmdb_id}", {})
+        return d.get("overview") or "", d.get("poster_path") or None
+
+    def poster(self, path: str) -> bytes | None:
+        """A poster image (342 px wide), or None if TMDB has none at `path`.
+        Raises httpx.HTTPError when it can't be fetched."""
+        r = self._http.get(f"{IMAGES}/w342{path}", follow_redirects=True)
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        return r.content
+
+    def guess(self, volume_label: str) -> Candidate | None:
+        """A likely film for a Disc being ripped, from its volume label alone (only for show:
+        Identification decides). None when TMDB has none or can't be asked."""
+        terms = search_terms(DiscHints(volume_label=volume_label))
+        if not self.configured or not terms:
+            return None
+        try:
+            found = self.search(terms[0], limit=1)
+        except TmdbError:
+            return None
+        return found[0] if found else None

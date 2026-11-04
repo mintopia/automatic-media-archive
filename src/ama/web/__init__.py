@@ -32,7 +32,7 @@ TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
-NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review")]
+NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
@@ -89,11 +89,9 @@ def view_context(services: Services) -> dict[str, Any]:
         "cd_last_id": cd.last_disc_id,
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
-        "filed": sorted((d for d in [*cd.discs(DiscStatus.FILED, limit=100),
-                                     *services.movie_archive.filed(),
-                                     *services.tv_archive.filed()]
-                         if d.record.filed_at and d.record.filed_at.date() == date.today()),
-                        key=lambda d: d.record.filed_at, reverse=True),
+        "filed": [d for d in filed_discs(services)
+                  if d.record.filed_at and d.record.filed_at.date() == date.today()],
+        "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
         **services.movie_archive.queue_view(),
         **services.tv_archive.queue_view(),  # TV Episodes not yet filed (#13)
         "drive": services.drive.state,
@@ -106,10 +104,19 @@ def view_context(services: Services) -> dict[str, Any]:
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_disc": services.video_rip.disc,
         "rip_progress": services.video_rip.progress,
+        "rip_likely": services.video_rip.likely,  # a film guessed from the label, only for show
         "rip_failure": next(iter(services.discs.list(DiscStatus.FAILED, types=VIDEO_DISC_TYPES)),
                             None),
         **_tools_context(services),
     }
+
+
+def filed_discs(services: Services, limit: int = 100) -> list:
+    """Filed Discs, newest first, as CdDiscs, FiledMovies and FiledTv (History)."""
+    return sorted([*services.cd.discs(DiscStatus.FILED, limit=limit),
+                   *services.movie_archive.filed(limit), *services.tv_archive.filed(limit)],
+                  key=lambda d: (d.record.filed_at or d.record.started_at, d.record.id),
+                  reverse=True)[:limit]
 
 
 def _tools_context(services: Services) -> dict[str, Any]:

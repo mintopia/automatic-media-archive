@@ -40,6 +40,8 @@ import httpx
 
 from ama import decoys, encode, hdr, picture, review
 from ama import extras as extras_mod
+from ama.covers import Covers
+from ama.media import MediaStore, screen
 from ama.archive import Archive, FilingError, extended_path
 from ama.archive import move as archive_move
 from ama.config import CqConfig
@@ -200,7 +202,9 @@ class MovieArchiver:
                  streamer: Streamer, interval: float, retry_seconds: float = 60.0,
                  clock: Callable[[], float] = time.monotonic,
                  claimed: Callable[[int], bool] = lambda disc_id: False, *,
-                 extras: Extras) -> None:
+                 extras: Extras, media: MediaStore, covers: Covers) -> None:
+        self._media = media
+        self._covers = covers
         self._discs = discs
         self.movies = movies
         self.extras = extras
@@ -580,6 +584,9 @@ class MovieArchiver:
             extras = self._file_extras(rec, rel)
         except (OSError, FilingError) as e:
             raise RetryLater(f"Couldn't file to the NAS ({e})") from e
+        film = movie.film
+        self._media.save(rec.id, screen(self._tmdb, self._covers, False, film.id, film.title,
+                                        film.year, lambda text: self._discs.log(rec.id, text)))
         self._discs.mark_filed(rec.id, movie.film.name, folder)
         self._discs.log(rec.id, f"Filed {name} to {folder}; scratch deleted")
         if extras:

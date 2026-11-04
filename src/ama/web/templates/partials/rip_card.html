@@ -10,6 +10,9 @@
     <div class="title"><a href="/disc">{{ disc.name }}</a></div>
     {%- endif %}
     {%- if progress %}
+    {%- if rip_likely %}
+    <div class="guess">Likely <b>{{ rip_likely.name }}</b> on TMDB, from the Disc label · checked again after the Rip</div>
+    {%- endif %}
     {%- if progress.title_number %}
     <div class="meta">{% if on_page %}Disc name from the drive{% else %}In the drive{% endif %} · {{ n }} Titles to rip · <span class="nw">{{ disc.total_size }}</span></div>
     <div class="status"><span class="stk rip">Ripping</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>

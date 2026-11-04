@@ -91,7 +91,7 @@ def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(ha
 
     assert rec.title == f"{ALBUM} — Various Artists"
     page = client.get("/").text
-    assert "Filed today <span class=\"c\">1</span>" in page
+    assert "History <span class=\"c\">1</span>" in page
     assert f"{ALBUM} — Various Artists" in page
     assert "waiting to be identified" not in page
 

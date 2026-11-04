@@ -51,3 +51,7 @@ _Avoid_: Approval, triage
 **Archive**:
 The final, named, Plex-ready files on the NAS. For CDs this is lossless; for video Discs it is the Encode, and no lossless copy is kept.
 _Avoid_: Library, backup, master
+
+**History**:
+The UI section listing every Disc filed to the Archive, newest first, with what it was filed as (cover or poster, tracks or overview, sources). A Disc's page is in History once it is Ripped. Only the UI wording: the Disc statuses (`ripped`, `filed`) keep their names.
+_Avoid_: Filed, Ripped, Archive (as the section's name)

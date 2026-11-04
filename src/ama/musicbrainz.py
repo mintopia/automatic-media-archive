@@ -34,6 +34,8 @@ class Release:
     status: str | None = None
     release_group_id: str | None = None
     labels: tuple[tuple[str, str], ...] = ()  # (label name, catalogue number)
+    disambiguation: str | None = None  # e.g. "English track titles"
+    has_front: bool | None = None      # the Cover Art Archive has a front cover (None = unknown)
 
     @property
     def is_compilation(self) -> bool:
@@ -75,6 +77,8 @@ def _release(r: dict[str, Any]) -> Release:
         country=r.get("country") or None, barcode=r.get("barcode") or None,
         status=r.get("status") or None,
         release_group_id=(r.get("release-group") or {}).get("id"), labels=labels,
+        disambiguation=r.get("disambiguation") or None,
+        has_front=(r.get("cover-art-archive") or {}).get("front"),
     )
 
 

@@ -11,8 +11,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ama import cdreview, review, tvreview
 from ama.cyanrip import ArStatus
@@ -86,23 +87,38 @@ def review_page(request: Request, disc_id: int) -> Response:
 # ---- CD ------------------------------------------------------------------------
 
 @dataclass(frozen=True)
+class EditionTrack:
+    number: int
+    title: str
+    artist: str     # "" when it's the album artist
+    seconds: float  # as ripped
+    differs: bool   # another edition titles this track differently
+
+
+@dataclass(frozen=True)
 class Edition:
     """One release offered on the CD Review page, with what tells it apart."""
 
     match: Match
     heading: str               # e.g. "Parlophone · UK · 1997"
     facts: tuple[tuple[str, str], ...]
+    tracks: tuple[EditionTrack, ...] = ()
+
+    @property
+    def differences(self) -> int:
+        return sum(t.differs for t in self.tracks)
 
     @property
     def value(self) -> str:
         return f"{self.match.release.id}:{self.match.disc_number}"
 
 
-def _edition(m: Match, show_title: bool) -> Edition:
+def _edition(m: Match, show_title: bool, others: list[Match] = (),
+             seconds: dict[int, float] | None = None) -> Edition:
     r = m.release
     labels = list(dict.fromkeys(name for name, _ in r.labels if name))
     parts = [*labels[:1], COUNTRIES.get(r.country, r.country) if r.country else None, r.date,
-             r.status if r.status and r.status != "Official" else None]
+             r.status if r.status and r.status != "Official" else None, r.disambiguation]
     heading = " · ".join(p for p in parts if p) or "No release details"
     cats = list(dict.fromkeys(cat for _, cat in r.labels if cat))
     facts = [("Title", r.title)] if show_title else []
@@ -111,7 +127,18 @@ def _edition(m: Match, show_title: bool) -> Edition:
     if r.disc_total > 1:
         facts.append(("Discs", f"{r.disc_total} CDs · this is disc {m.disc_number}"))
     facts.append(("Tracks", str(len(m.tracks))))
-    return Edition(m, heading, tuple(facts))
+    titles = [{t.number: t.title for t in o.tracks} for o in others]
+
+    def differs(number: int, title: str) -> bool:
+        """Titled differently elsewhere, and this title isn't the one most editions share."""
+        theirs = [o[number] for o in titles if number in o]
+        same = 1 + theirs.count(title)
+        return same < 1 + len(theirs) and same * 2 <= 1 + len(theirs)
+
+    tracks = tuple(EditionTrack(t.number, t.title, t.artist if t.artist != r.artist else "",
+                                (seconds or {}).get(t.number, 0.0), differs(t.number, t.title))
+                   for t in m.tracks)
+    return Edition(m, heading, tuple(facts), tracks)
 
 
 def _join(numbers: list[int]) -> str:
@@ -155,7 +182,9 @@ def _cd_page(request: Request, services, rec: DiscRecord, form: dict[str, str] |
     tracks = services.cd.disc(rec.id).tracks
     matches = cdreview.candidates(rec.scratch_dir, tracks)
     titles_differ = len({m.release.title for m in matches}) > 1
-    editions = [_edition(m, titles_differ) for m in matches]
+    seconds = {t.number: t.seconds for t in tracks}
+    editions = [_edition(m, titles_differ, [o for o in matches if o is not m], seconds)
+                for m in matches]
     first = matches[0] if matches else None
     if form is None:
         form = {"album": first.release.title if first else "",
@@ -190,6 +219,31 @@ def _cd_in_review(services, disc_id: int) -> DiscRecord | None:
     if rec is not None and rec.disc_type != DiscType.CD:
         raise HTTPException(404, "Not a CD")
     return rec
+
+
+@router.get("/review/{disc_id}/cover/{release_id}")
+def edition_cover(request: Request, disc_id: int, release_id: str) -> Response:
+    """An offered edition's front cover, from the Cover Art Archive (cached, covers.py).
+
+    Only for editions this Disc's saved MusicBrainz answer offers; no MusicBrainz call.
+    """
+    services = request.app.state.services
+    rec = services.discs.get(disc_id)
+    if rec is None or rec.disc_type != DiscType.CD:
+        raise HTTPException(404, "No such Disc")
+    tracks = services.cd.disc(rec.id).tracks
+    match = next((m for m in cdreview.candidates(rec.scratch_dir, tracks)
+                  if m.release.id == release_id), None)
+    if match is None or match.release.has_front is False:
+        raise HTTPException(404, "No cover")
+    try:
+        name = services.covers.release(match.release)
+    except (httpx.HTTPError, OSError):
+        name = None
+    path = services.covers.path(name) if name else None
+    if path is None:
+        raise HTTPException(404, "No cover")
+    return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
 
 
 @router.post("/review/{disc_id}/release")

@@ -18,6 +18,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ama import cyanrip
 from ama.config import CdConfig
@@ -30,6 +31,10 @@ from ama.proc import Streamer
 from ama.repeat import RepeatGuard, cd_fingerprint
 from ama.scratch import ScratchGate
 from ama.tools import ToolLookup, ToolUnavailable
+
+if TYPE_CHECKING:
+    from ama.cdguess import Guess, Guesser
+    from ama.media import Album
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +61,11 @@ class CdRip:
     tracks: list[Track]
     current: int | None = None       # track number being ripped
     eta_seconds: int | None = None   # whole Disc
+    mb_disc_id: str = ""             # MusicBrainz Disc ID, from the TOC
+    guess: Guess | None = None       # likely release while it rips (cdguess.py); only for show
+
+    def track_title(self, number: int) -> str | None:
+        return self.guess.track_title(number) if self.guess else None
 
     @property
     def total_seconds(self) -> float:
@@ -92,6 +102,10 @@ class CdDisc:
 
     record: DiscRecord
     tracks: list[Track] = field(default_factory=list)
+    album: Album | None = None  # what it was filed as (media.py), once filed
+
+    def track_title(self, number: int) -> str | None:
+        return self.album.track_title(number) if self.album else None
 
     @property
     def hidden_track(self) -> Track | None:
@@ -198,8 +212,11 @@ class CdRipper:
 
     def __init__(self, cfg: CdConfig, drive: DriveMonitor, discs: DiscStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
-                 repeat: RepeatGuard, scratch: ScratchGate) -> None:
+                 repeat: RepeatGuard, scratch: ScratchGate,
+                 guesser: Guesser | None = None) -> None:
         self._cfg = cfg
+        self._guesser = guesser
+        self.guess_retry_seconds = 60.0  # MusicBrainz trouble during the early guess
         self._repeat = repeat
         self._scratch = scratch
         self._tool = tool
@@ -314,8 +331,17 @@ class CdRipper:
             await self._fail(rec, failure)
             return
         self._tracks.save(rec.id, tracks)
-        self.current = CdRip(rec.id, label, tracks)
+        self.current = CdRip(rec.id, label, tracks, mb_disc_id=info.disc_id or "")
         self._publish()
+        guessing = asyncio.create_task(self._guesser.follow(
+            self.current, info.mcn, self._publish, lambda: self.guess_retry_seconds))             if self._guesser and info.disc_id else None
+        try:
+            await self._rip(rec, exe, device, tracks)
+        finally:
+            if guessing:
+                guessing.cancel()
+
+    async def _rip(self, rec: DiscRecord, exe: Path, device: str, tracks: list[Track]) -> None:
 
         # 2. Rip.
         rec.scratch_dir.mkdir(parents=True, exist_ok=True)

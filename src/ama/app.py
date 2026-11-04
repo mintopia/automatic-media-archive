@@ -21,12 +21,15 @@ from fastapi.staticfiles import StaticFiles
 
 from ama.archive import Archive
 from ama.cdarchive import CdArchiver
+from ama.cdguess import Guesser
 from ama.cdrip import CdRipper, CdTracks
+from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
 from ama.db import Database
 from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
+from ama.media import MediaStore
 from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
@@ -42,7 +45,8 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, movie_review_pages, pages,
+from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
+                     movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      tv_review_pages)
 
@@ -69,6 +73,8 @@ class Services:
     tv_archive: TvArchiver
     notifier: Notifier
     sets: DiscSets
+    covers: Covers
+    media: MediaStore
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
@@ -104,6 +110,8 @@ def build_services(
     cd_tracks = CdTracks(db)
     archive = Archive(Path(cfg.nas.unc))
     mb = MusicBrainz(http)
+    covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
+    media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
@@ -111,7 +119,8 @@ def build_services(
     movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
                                   tool, streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
-                                  extras=Extras(db, cfg.paths.state_db.parent / STILLS))
+                                  extras=Extras(db, cfg.paths.state_db.parent / STILLS),
+                                  media=media, covers=covers)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -126,14 +135,14 @@ def build_services(
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch),
+                    scratch=scratch, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
-                              disc_root=disc_root),
+                              disc_root=disc_root, guess=tmdb.guess),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
-                              interval=cfg.drive.poll_seconds),
+                              interval=cfg.drive.poll_seconds, covers=covers, media=media),
         movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
@@ -141,9 +150,12 @@ def build_services(
         scratch=scratch,
         tv_archive=TvArchiver(discs, tv_titles, movie_archive, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
-                              retry_seconds=cfg.nas.retry_seconds),
+                              retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
+                              covers=covers),
         notifier=Notifier(discs, bus, channels(cfg, http)),
         sets=DiscSets(db),
+        covers=covers,
+        media=media,
     )
 
 
@@ -171,4 +183,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(set_review_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
+    app.include_router(history_pages.router)
     return app

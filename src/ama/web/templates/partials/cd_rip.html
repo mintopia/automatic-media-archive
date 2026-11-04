@@ -27,15 +27,10 @@
           <tbody>
           {%- for t in view.tracks %}
             {%- set now = live and t.number == view.current and not t.ripped %}
-            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else "Track " ~ t.number }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
+            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else (view.track_title(t.number) or "Track " ~ t.number) }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
               <td class="st">
               {%- if t.ripped -%}
-                {%- set s = t.ar.status if t.ar else "unavailable" -%}
-                {%- if s == "accurate" -%}<span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Verified (confidence {{ t.ar.confidence }})</span>
-                {%- elif s == "mismatch" -%}<span class="warn">Didn't match AccurateRip</span>
-                {%- elif s == "not_in_db" -%}<span class="wait">Ripped · CD not in AccurateRip</span>
-                {%- else -%}<span class="wait">Ripped · AccurateRip unavailable</span>
-                {%- endif -%}
+                {% include "partials/cd_track_ar.html" %}
               {%- elif now -%}
                 Ripping {{ t.percent | int }}%<div class="bar thin" aria-label="{{ t.percent | int }}%"><i style="width:{{ '%.1f' | format(t.percent) }}%"></i></div>
               {%- else -%}

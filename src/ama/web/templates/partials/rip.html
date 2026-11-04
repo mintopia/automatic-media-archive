@@ -4,7 +4,7 @@
 {%- set progress = rip_progress -%}
 {%- set on_page = true -%}
 <div class="stack">
-{% include "partials/rip_card.html" %}
+{% if screen %}{% include "partials/screen_card.html" %}{% else %}{% include "partials/rip_card.html" %}{% endif %}
 {%- if disc.titles %}
 <section class="bin rip" aria-labelledby="titles-h">
   <h2 class="tab" id="titles-h">Titles <span class="c">{{ disc.titles | length }}</span></h2>

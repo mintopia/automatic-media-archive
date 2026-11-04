@@ -1,18 +1,15 @@
-{#- Now page: Filed today. Topic "filed". `filed`: CdDiscs, FiledMovies and FiledTv filed today, newest first. -#}
+{#- Now page: History, today's part. Topic "filed". `filed`: CdDiscs, FiledMovies and FiledTv filed today, newest first. -#}
 <section class="bin fil">
-  <div class="tab">Filed today <span class="c">{{ filed | length }}</span></div>
+  <a class="tab" href="/history">History <span class="c">{{ filed | length }}</span></a>
   <div class="box">
   {%- for d in filed[:3] %}
-    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div><div class="ts">
-      {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}{% if d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ d.extras }} Extra{{ "s" if d.extras != 1 }}</a>{% endif %}
-      {%- elif d.episodes is defined %}{% set n = d.episodes | selectattr("episode") | list | length %}{% if n %}TV · {{ n }} Episode{{ "s" if n != 1 }}{% else %}Movies · {{ d.episodes | length }} Extra{{ "s" if d.episodes | length != 1 }}{% endif %}
-      {%- else %}Music · {{ d.tracks | length }} tracks · verified{% endif %}</div></div><span class="stk fil">Filed</span></div>
+    {%- with dated=False %}{% include "partials/history_row.html" %}{% endwith %}
   {%- endfor %}
   {%- if filed | length > 3 %}
-    <p class="more">{{ filed | length - 3 }} more filed today</p>
+    <p class="more"><a href="/history">{{ filed | length - 3 }} more filed today</a></p>
   {%- endif %}
   {%- if not filed %}
-    <p class="pad ts">Nothing filed yet today.</p>
+    <p class="pad ts">Nothing filed yet today. <a href="/history">Everything filed before</a></p>
   {%- endif %}
   </div>
 </section>

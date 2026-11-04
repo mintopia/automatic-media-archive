@@ -58,6 +58,7 @@ class TrackReport:
 class Report:
     disc_tracks: int | None = None
     disc_id: str | None = None
+    mcn: str | None = None           # "Disc MCN:" (the barcode, when the CD carries one)
     device_model: str | None = None
     accuraterip: str | None = None   # header: found | not found | error | mismatch | disabled
     htoa_frames: int | None = None   # hidden track before track 1, split off as track 0
@@ -93,6 +94,7 @@ _TRACK_START = re.compile(
 _HEADER = {
     "Disc tracks:": "disc_tracks",
     "DiscID:": "disc_id",
+    "Disc MCN:": "mcn",
     "Device model:": "device_model",
     "AccurateRip:": "accuraterip",
 }

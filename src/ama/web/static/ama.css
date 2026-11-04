@@ -245,3 +245,35 @@ a.radio.pick{color:inherit;text-decoration:none;align-items:center}
 .radio .input{width:100%;height:auto;margin:0}
 .radio>div>label{display:block;cursor:pointer}
 .set-where{display:none}
+/* Cover art and posters (History, the live CD card): docs/mockups/history.html, disc-filed-cd.html */
+.drive .cell.art{padding:0;justify-content:flex-start;gap:0}
+.drive .cell.art img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--thumb)}
+.drive .cell.art.poster img{aspect-ratio:2/3}
+.drive .cell.art span{padding:12px 14px}
+.guess{color:var(--ink2);font-size:13px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.dtype.art{padding:0;overflow:hidden}
+.dtype.art img{width:100%;height:100%;object-fit:cover;display:block}
+.links{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}
+.overview{max-width:68ch;text-wrap:pretty}
+@media (max-width:720px){
+  .drive .cell.art{flex-direction:row;align-items:center;gap:12px;padding:10px 14px}
+  .drive .cell.art img{width:64px;height:64px}
+  .drive .cell.art.poster img{width:48px;height:72px}
+  .drive .cell.art span{padding:0}
+}
+a.tab{text-decoration:none}a.tab:hover{text-decoration:underline;text-underline-offset:3px}
+/* CD Review: edition cover + track list preview (docs/mockups/review-cd.html) */
+.edition{display:flex;gap:14px;align-items:flex-start}
+.edition .cover{width:72px;height:72px;object-fit:cover;flex:none;border:1px solid var(--rule);background:var(--thumb)}
+.preview{margin-top:12px}.preview>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;gap:6px}
+.preview .tbl{margin-top:8px;background:var(--well)}
+.diffnote{color:var(--rev-ink);font-weight:600}
+td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
+@media (max-width:720px){.edition .cover{width:56px;height:56px}}
+/* Long album titles (FFVII) must not widen the page on a phone */
+.drive .title{overflow-wrap:break-word}.crumb span{min-width:0;overflow-wrap:anywhere}
+@media (max-width:720px){.drive{grid-template-columns:minmax(0,1fr)}.drive .body{min-width:0}}
+.preview .tbl{width:100%}
+.preview>summary{flex-wrap:wrap}
+@media (max-width:720px){.edition{flex-direction:column;gap:10px}}

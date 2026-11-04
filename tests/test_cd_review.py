@@ -60,6 +60,41 @@ def test_the_review_page_shows_what_tells_the_editions_apart(harness, client):
     assert "couldn't be verified" not in page   # all tracks verified: no AccurateRip notice
 
 
+def _edition_block(page: str, release_id: str) -> str:
+    start = page.index(f'value="{release_id}:1"')
+    end = page.find('<label class="radio"', start)
+    return page[start:end if end != -1 else len(page)]
+
+
+def test_each_edition_previews_its_track_list_and_the_title_differences_show(harness, client):
+    harness.web.covers[SPECIAL] = COVER
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    requests_before = len(harness.web.requests)
+
+    page = _page(client, f"/review/{rec.id}")
+    english = _edition_block(page, PSEUDO)
+    japanese = _edition_block(page, STANDARD)
+    assert "English track titles" in english                      # MusicBrainz disambiguation
+    assert "Another Buster Sword" in english and "もうひとつのバスターソード" not in english
+    assert "もうひとつのバスターソード" in japanese and "Another Buster Sword" not in japanese
+    for block in (english, japanese):
+        assert "The Unknown Journey Continues" in block and "2:00" in block   # title, length
+        assert block.count('<tr') >= 24
+    assert "Shotaro Shima" in english and "島翔太朗" in japanese   # track artists (Various Artists)
+    # Track 1 is the same in every edition; track 2's title differs, and is marked.
+    assert '<td class="diff">Another Buster Sword<' in english
+    assert '<td class="diff">The Unknown Journey Continues' not in english
+    # The two Japanese editions agree, so it's the English one whose titles stand out.
+    assert 'class="diff"' not in japanese and "differ from the other editions" not in japanese
+    assert "23 titles differ from the other editions" in english
+    # Covers come from the Cover Art Archive (cached), not another MusicBrainz call.
+    assert f"/review/{rec.id}/cover/{SPECIAL}" in _edition_block(page, SPECIAL)
+    assert client.get(f"/review/{rec.id}/cover/{SPECIAL}").content == COVER
+    assert client.get(f"/review/{rec.id}/cover/not-a-candidate").status_code == 404
+    assert not any(r.url.host == "musicbrainz.org" for r in harness.web.requests[requests_before:])
+
+
 def test_picking_an_edition_files_the_cd(harness, client):
     harness.web.covers[STANDARD] = COVER
     _insert(harness, DISC_1, 24, _response())

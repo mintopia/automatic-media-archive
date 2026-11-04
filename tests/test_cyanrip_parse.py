@@ -146,3 +146,9 @@ def test_success_needs_exit_zero_clean_footer_and_every_track():
     errors = parse_report(capture("log-accurate-issue93.txt").replace("Ripping errors: 0",
                                                                          "Ripping errors: 2"))
     assert not rip_succeeded(errors, 0, 18)
+
+
+def test_info_output_gives_the_discs_mcn_from_the_real_ffvii_toc():
+    r = parse_report(capture("info-ffvii-rebirth-disc1.txt"))
+    assert r.mcn == "4988601470865"
+    assert parse_report(INFO).mcn is None

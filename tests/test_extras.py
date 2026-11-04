@@ -148,6 +148,6 @@ def test_a_filed_film_links_to_its_extras_from_now_and_its_disc_page(client, har
     _film(harness)
     rec = _rip_and_file(harness)
     now = html.unescape(client.get("/").text)
-    assert f'Movies · 1080p · <a href="/discs/{rec.id}/extras">1 Extra</a>' in now  # Filed today
+    assert f'Movies · 1080p · <a href="/discs/{rec.id}/extras">1 Extra</a>' in now  # History, on Now
     disc = client.get(f"/discs/{rec.id}").text
     assert f'href="/discs/{rec.id}/extras"' in disc

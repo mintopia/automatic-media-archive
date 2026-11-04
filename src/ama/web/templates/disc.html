@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ rip_disc.name if rip_disc else "Disc in drive" }}{% endblock %}
+{% block title %}{% if live %}{{ rip_disc.name if rip_disc else "Disc in drive" }}{% else %}{{ screen.name if screen else rip_disc.name }} · History{% endif %}{% endblock %}
 {% block main %}
 <main>
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{% if live %}Disc in drive{% else %}{{ rip_disc.name }}{% endif %}</span></div>
+  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg>{% if live %}<span>Disc in drive</span>{% else %}<a href="/history">History</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ screen.name if screen else rip_disc.name }}</span>{% endif %}</div>
   <div class="split">
     {% if live %}<div sse-swap="rip">{% include "partials/rip.html" %}</div>{% else %}<div>{% include "partials/rip.html" %}</div>{% endif %}
     <div class="aside stack">
+      {%- if not screen %}
       <section class="bin ink" aria-labelledby="next-h">
         <h2 class="tab" id="next-h">After the Rip</h2>
         <div class="box"><div class="pad" style="display:flex;flex-direction:column;gap:10px;font-size:14px">
@@ -13,6 +14,7 @@
           <p class="ts">Then we work out which film this is. If we're sure, it's encoded and filed to Movies. If not, it waits in Review with pictures from each Title so you can choose.</p>
         </div></div>
       </section>
+      {%- endif %}
       {%- if extras_href %}
       <p class="ts">Its Extras are filed under Other. <a href="{{ extras_href }}">Sort the Extras</a> if you like.</p>
       {%- endif %}
