@@ -1,0 +1,103 @@
+/* App-only rules (from src/ama/web/static/ama.css, line 178 on) used by the mockups made from the running app: history.html, disc-filed-*.html, disc-ripping-cd-guess.html, review-cd-editions.html, and the History bin thumbnails on now.html. */
+/* Disc pages (docs/mockups/disc-ripping-video.html, disc-ripping-cd.html, disc-failed.html, disc-licence.html) */
+.contents{display:contents}
+.tbl .num{text-align:right;color:var(--ink2);white-space:nowrap}
+.tbl .st{width:200px}
+.cdt .n{width:48px;color:var(--ink2)}
+.cdt .len{width:80px;color:var(--ink2)}
+.cdt .st{width:260px}
+.ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
+.ok .i{width:16px;height:16px}
+.wait{color:var(--ink3)}
+.warn{color:var(--rev-ink);font-weight:600}
+.bad{color:var(--fail);font-weight:600}
+.tbl tr.now td{background:var(--well)}
+.skipped{padding:12px 14px;border-top:1px solid var(--rule);color:var(--ink2);font-size:13px}
+.notes{display:flex;flex-direction:column;gap:10px;font-size:14px}
+@media (max-width:720px){.tbl .hide-m{display:none}.tbl .st{width:auto}.tbl td,.tbl th{padding:10px 8px}}
+@media (max-width:720px){.cdt .len{display:none}.cdt .st{width:auto}.cdt td,.cdt th{padding:10px 8px}}
+details summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;font-weight:600;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details[open] summary{border-bottom:1px solid var(--rule)}
+.page-head{margin-bottom:0}.page-head .stk{align-self:flex-start}
+form.actions{margin:0}
+.after-actions{margin-top:-12px}
+.actions button.btn{appearance:none}
+.drive .title a,.row .tt a{color:inherit;text-decoration:none}
+.drive .title a:hover,.row .tt a:hover{text-decoration:underline;text-decoration-thickness:2px}
+
+/* Review (docs/mockups/review-cd.html) */
+.radio:has(>input:checked){background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.radio .stk.sel{visibility:hidden}.radio:has(>input:checked) .stk.sel{visibility:visible}
+@media (max-width:720px){.radio .stk{display:none}}
+.manual{border-top:1px solid var(--rule)}.manual summary{display:list-item;list-style:inside disclosure-closed;padding:16px 18px;font-weight:600;cursor:pointer;min-height:44px}.manual[open] summary{list-style-type:disclosure-open}.manual summary:hover{background:var(--well)}
+.manual>.pad{padding:18px}
+.page-head.gap{margin-bottom:24px}
+textarea.input{padding:10px 12px;font:inherit;resize:vertical}
+.errors{color:var(--rev-ink);font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px}
+/* Movie Review (#7): Title rows with stills (review-movie mockup) */
+.title-row{display:grid;grid-template-columns:22px minmax(0,1fr) 300px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--rule);cursor:pointer}
+.box>.title-row:first-child{border-top:0}
+.title-row>input{width:18px;height:18px;accent-color:var(--ink)}
+.title-row:has(>input:checked){background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.frame{position:relative;overflow:hidden}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame img+span{position:relative;padding:3px 5px;border-radius:2px;background:rgba(23,24,26,.72);color:#ECEDEF}
+.more-titles>summary{cursor:pointer;list-style:none}.more-titles>summary::-webkit-details-marker{display:none}.more-titles[open]>summary{display:none}
+@media (max-width:720px){.title-row{grid-template-columns:22px minmax(0,1fr)}.title-row .frames{grid-column:1/-1}}
+/* Extras (#8, docs/mockups/review-extras.html); .titem/.colhead shared with TV Review */
+main.extras{max-width:1064px}
+.titem:first-child{border-top:0}
+.ctl{display:flex;flex-direction:column;gap:8px}
+.notice.ok{display:grid;color:inherit;font-weight:inherit}
+/* TV Review (#13): docs/mockups/review-tv.html */
+main.tv{max-width:920px}
+.titem{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;align-items:center;padding:16px 18px;border-top:1px solid var(--rule)}
+.titem.flag{background:var(--notice)}
+.titem .note{color:var(--rev-ink);font-weight:600;margin-top:4px}
+.colhead{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;padding:10px 18px;border-bottom:1px solid var(--rule);color:var(--ink2);font-size:13px;font-weight:600}
+.colhead+.titem{border-top:0}
+.tv-series{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-end}
+.tv-series form{margin:0}
+.tv-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap}.tv-foot form{margin:0}
+a.radio.pick{color:inherit;text-decoration:none;align-items:center}
+@media (max-width:720px){.titem{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.colhead{display:none}}
+
+/* Sets (docs/mockups/review-set.html, review-set-bonus.html) */
+.bin .box.set-list{margin-top:14px;border-top-width:1px;border-top-color:var(--rule)}
+.set-disc{margin-top:14px;max-width:200px}
+.radio .input{width:100%;height:auto;margin:0}
+.radio>div>label{display:block;cursor:pointer}
+.set-where{display:none}
+/* Cover art and posters (History, the live CD card): docs/mockups/history.html, disc-filed-cd.html */
+.drive .cell.art{padding:0;justify-content:flex-start;gap:0}
+.drive .cell.art img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--thumb)}
+.drive .cell.art.poster img{aspect-ratio:2/3}
+.drive .cell.art span{padding:12px 14px}
+.guess{color:var(--ink2);font-size:13px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.dtype.art{padding:0;overflow:hidden}
+.dtype.art img{width:100%;height:100%;object-fit:cover;display:block}
+.links{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}
+.overview{max-width:68ch;text-wrap:pretty}
+@media (max-width:720px){
+  .drive .cell.art{flex-direction:row;align-items:center;gap:12px;padding:10px 14px}
+  .drive .cell.art img{width:64px;height:64px}
+  .drive .cell.art.poster img{width:48px;height:72px}
+  .drive .cell.art span{padding:0}
+}
+a.tab{text-decoration:none}a.tab:hover{text-decoration:underline;text-underline-offset:3px}
+/* CD Review: edition cover + track list preview (docs/mockups/review-cd.html) */
+.edition{display:flex;gap:14px;align-items:flex-start}
+.edition .cover{width:72px;height:72px;object-fit:cover;flex:none;border:1px solid var(--rule);background:var(--thumb)}
+.preview{margin-top:12px}.preview>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;gap:6px}
+.preview .tbl{margin-top:8px;background:var(--well)}
+.diffnote{color:var(--rev-ink);font-weight:600}
+td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
+@media (max-width:720px){.edition .cover{width:56px;height:56px}}
+/* Long album titles (FFVII) must not widen the page on a phone */
+.drive .title{overflow-wrap:break-word}.crumb span{min-width:0;overflow-wrap:anywhere}
+@media (max-width:720px){.drive{grid-template-columns:minmax(0,1fr)}.drive .body{min-width:0}}
+.preview .tbl{width:100%}
+.preview>summary{flex-wrap:wrap}
+@media (max-width:720px){.edition{flex-direction:column;gap:10px}}
