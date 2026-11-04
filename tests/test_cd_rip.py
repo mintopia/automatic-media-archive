@@ -226,6 +226,7 @@ def test_a_cd_swapped_in_between_two_looks_is_still_ripped(harness):
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()
         await harness.services.cd.check_once()  # rips, ejects: the drive reads empty
+        harness.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD (same: a repeat)
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()  # the ripper never saw it empty
         await harness.services.cd.check_once()

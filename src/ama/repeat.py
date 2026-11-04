@@ -1,13 +1,8 @@
-"""Repeat-Disc warning (#16): a Disc that's already in the Archive isn't ripped again
-until the user chooses.
+"""Repeat-Disc warning: a Disc already in the Archive, or ripped and still on its way
+there, isn't ripped again until the user chooses.
 
-Every Rip remembers its Disc's fingerprint (`remember`). On insert, before ripping,
-each ripper asks `RepeatGuard.admit(disc_type, fingerprint)`: a Disc that matches a
-filed one pauses there (`pending`, shown on the Now page) until the user picks
-"Eject, don't archive" (`Choice.SKIP`: eject, no Rip) or "Archive again"
-(`Choice.AGAIN`: rip as normal), or takes the Disc out. Fingerprints are per Disc:
-CD = MusicBrainz Disc ID; video = hash of the Disc's file structure, so a BD and a
-UHD (or two editions) of the same film are different Discs.
+Fingerprints are per Disc: CD = MusicBrainz Disc ID; video = hash of the Disc's file
+structure, so a BD and a UHD (or two editions) of the same film are different Discs.
 """
 
 from __future__ import annotations
@@ -20,7 +15,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStore
+from ama.discs import DiscRecord, DiscStatus, DiscStore
 from ama.drive import DiscType, DriveMonitor
 from ama.events import EventBus
 
@@ -65,20 +60,32 @@ class Choice(StrEnum):
     AGAIN = "again"  # archive it again
 
 
+KNOWN = (DiscStatus.FILED, DiscStatus.REVIEW, DiscStatus.RIPPED)  # filed, or on the way
 _OTHER_FORMAT = {DiscType.BD: "UHD Blu-ray", DiscType.UHD: "Blu-ray", DiscType.DVD: "Blu-ray"}
 
 
 @dataclass(frozen=True)
 class RepeatDisc:
-    """A Disc in the drive that matches one already filed, waiting for the user's choice."""
+    """A Disc in the drive that matches a known one, waiting for the user's choice."""
 
     disc_type: DiscType
-    previous: DiscRecord  # the filed Disc it matches
-    folder: str           # where that was filed, relative to the Archive root
+    previous: DiscRecord  # the known Disc it matches
+    folder: str           # where that was filed, relative to the Archive root ("" if not yet)
 
     @property
     def name(self) -> str:
         return self.previous.title or self.previous.name
+
+    @property
+    def filed(self) -> bool:
+        return self.previous.status == DiscStatus.FILED
+
+    @property
+    def waiting(self) -> str:
+        """Where the known Disc is on its way to the Archive ("" once filed)."""
+        if self.previous.status == DiscStatus.REVIEW:
+            return "Already ripped, waiting for Review"
+        return "" if self.filed else "Already ripped, waiting to be filed"
 
     @property
     def note(self) -> str:
@@ -105,15 +112,16 @@ class RepeatGuard:
                              "VALUES (?, ?)", (disc_id, fingerprint))
 
     def known(self, fingerprint: str) -> DiscRecord | None:
-        """The most recently filed Disc with this fingerprint."""
+        """The latest Disc with this fingerprint that is filed or on its way there."""
         row = self._db.execute(
             "SELECT d.id FROM disc_fingerprints f JOIN discs d ON d.id = f.disc_id "
-            "WHERE f.fingerprint = ? AND d.status = 'filed' "
-            "ORDER BY d.filed_at DESC, d.id DESC LIMIT 1", (fingerprint,)).fetchone()
+            "WHERE f.fingerprint = ? AND d.status IN (?, ?, ?) "
+            "ORDER BY d.id DESC LIMIT 1",
+            (fingerprint, *KNOWN)).fetchone()
         return self._discs.get(row[0]) if row else None
 
     async def admit(self, disc_type: DiscType, fingerprint: str | None) -> bool:
-        """True = rip this Disc. A filed Disc waits here for the user's choice."""
+        """True = rip this Disc. A known Disc waits here for the user's choice."""
         previous = self.known(fingerprint) if fingerprint else None
         if previous is None:
             return True

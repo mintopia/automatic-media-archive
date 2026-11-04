@@ -174,13 +174,14 @@ class VideoRipper:
             return
         self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)
-        if await self._scratch.refuses(state.disc_type, state.label):  # #12: ejected unripped
-            return
-        # Repeat-Disc warning (#16): a Disc already in the Archive waits for the user.
+        # A known Disc waits for the user first; one they want again still needs room.
         fingerprint = await asyncio.to_thread(video_fingerprint, self._disc_root(),
                                               state.disc_type)
-        if await self._repeat.admit(state.disc_type, fingerprint):
-            await self.rip(state, fingerprint)
+        if not await self._repeat.admit(state.disc_type, fingerprint):
+            return
+        if await self._scratch.refuses(state.disc_type, state.label):  # ejected unripped
+            return
+        await self.rip(state, fingerprint)
 
     # -- the Rip -----------------------------------------------------------
 

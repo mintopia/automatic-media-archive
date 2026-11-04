@@ -322,12 +322,12 @@ class CdRipper:
         if not tracks and not known_cd:
             self._publish()
             return  # a data Disc, not an enhanced CD: not ours
-        if tracks and await self._scratch.refuses(DiscType.CD, label):  # #12: ejected unripped
-            self._publish()
-            return
-        # Repeat-Disc warning (#16): a CD already in the Archive waits for the user.
+        # A known CD waits for the user first; one they want again still needs room.
         fingerprint = cd_fingerprint(info.disc_id) if tracks else None
         if not await self._repeat.admit(DiscType.CD, fingerprint):
+            return
+        if tracks and await self._scratch.refuses(DiscType.CD, label):  # ejected unripped
+            self._publish()
             return
         rec = self._discs.create(DiscType.CD, label, SCRATCH_SUBDIR)
         self._repeat.remember(rec.id, fingerprint)
