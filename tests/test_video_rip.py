@@ -192,3 +192,14 @@ def test_a_film_guess_tmdb_cant_give_is_left_out_quietly(client, harness):
     assert "Likely" not in page_text(client, "/disc") and "TMDB" not in page_text(client, "/disc")
     harness.makemkv.release()
     eventually(lambda: harness.drive.ejected == 1)
+
+
+def test_a_video_rip_starting_and_finishing_is_logged(client, harness, caplog):
+    caplog.set_level("INFO")
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.drive.ejected == 1)
+    infos = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert "Rip started: Blu-ray “EXAMPLE_MOVIE” (Disc 1)" in infos
+    eventually(lambda: "Rip finished: Blu-ray “EXAMPLE_MOVIE” (Disc 1): ripped" in [
+        r.getMessage() for r in caplog.records if r.levelname == "INFO"])

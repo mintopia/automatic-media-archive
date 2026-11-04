@@ -11,6 +11,7 @@ Archive, which deletes its scratch.
 
 from __future__ import annotations
 
+import logging
 import shutil
 from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass
@@ -20,6 +21,8 @@ from pathlib import Path
 
 from ama.db import Database
 from ama.drive import DiscType
+
+log = logging.getLogger(__name__)
 
 
 class DiscStatus(StrEnum):
@@ -164,6 +167,10 @@ _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_
          "review_reason, title, archive_dir, filed_at")
 
 
+def _rip_name(rec: DiscRecord) -> str:
+    return f"{rec.disc_type.long_name} “{rec.label}” (Disc {rec.id})"
+
+
 class DiscStore:
     def __init__(self, db: Database, scratch: Path,
                  now: Callable[[], datetime] = datetime.now) -> None:
@@ -205,6 +212,7 @@ class DiscStore:
         self._db.execute("UPDATE discs SET scratch_dir = ? WHERE id = ?", (str(scratch), disc_id))
         disc = self.get(disc_id)
         assert disc is not None
+        log.info("Rip started: %s", _rip_name(disc))
         return disc
 
     def get(self, disc_id: int) -> DiscRecord | None:
@@ -245,12 +253,16 @@ class DiscStore:
     def mark_ripped(self, disc_id: int) -> None:
         self._db.execute("UPDATE discs SET status = 'ripped', finished_at = ? WHERE id = ?",
                          (self._ts(), disc_id))
+        if rec := self.get(disc_id):
+            log.info("Rip finished: %s: ripped", _rip_name(rec))
 
     def mark_failed(self, disc_id: int, failure: Failure) -> None:
         """Fail the record and delete its partial scratch files (idempotent)."""
         rec = self.get(disc_id)
         if rec is None:
             return
+        if rec.status == DiscStatus.RIPPING:
+            log.info("Rip finished: %s: failed (%s)", _rip_name(rec), failure.headline)
         shutil.rmtree(rec.scratch_dir, ignore_errors=True)
         self._db.execute(
             "UPDATE discs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
