@@ -190,3 +190,5 @@ details summary::-webkit-details-marker{display:none}
 details[open] summary{border-bottom:1px solid var(--rule)}
 .page-head{margin-bottom:0}.page-head .stk{align-self:flex-start}
 form.actions{margin:0}
+.drive .title a{color:inherit;text-decoration:none}
+.drive .title a:hover{text-decoration:underline;text-decoration-thickness:2px}
