@@ -1,4 +1,4 @@
-"""In-process pub/sub of *topics* ("drive", "nas", ...).
+"""In-process pub/sub of *topics* (`Topic`).
 
 Publishers only say "topic X changed"; each SSE connection re-renders the
 fragment for that topic from current state. Events therefore carry no payload,
@@ -11,13 +11,27 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator
 from contextlib import contextmanager
+from enum import StrEnum
+
+
+class Topic(StrEnum):
+    """What changed; each names the UI fragments that re-render (web.FRAGMENTS)."""
+
+    DRIVE = "drive"      # the drive card
+    NAS = "nas"
+    TOOLS = "tools"
+    RIP = "rip"          # a Rip, and the Ripping bin
+    ENCODE = "encode"    # the Encode queue
+    FILED = "filed"      # History
+    REVIEW = "review"    # the Review queue
+    SCRATCH = "scratch"
 
 
 class EventBus:
     def __init__(self) -> None:
         self._subscribers: set[asyncio.Queue[str]] = set()
 
-    def publish(self, topic: str) -> None:
+    def publish(self, topic: Topic) -> None:
         for q in self._subscribers:
             q.put_nowait(topic)
 

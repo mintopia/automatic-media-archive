@@ -28,12 +28,13 @@ from ama.discs import (
     TitleStatus,
 )
 from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
-from ama.tmdb import Candidate, DiscHints, bd_meta_title, save_hints
+from ama.media import Screen
+from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -103,16 +104,15 @@ class _Fail(Exception):
 
 
 class VideoRipper:
-    TOPIC = "rip"
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
                  scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
-                 guess: Callable[[str], Candidate | None] | None = None) -> None:
+                 guess: Callable[[str], Screen | None] | None = None) -> None:
         self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
-        self.likely: Candidate | None = None  # while ripping; only for show
+        self.likely: Screen | None = None  # a guessed film while ripping; only for show
         self._drive = drive
         self._scratch = scratch
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
@@ -174,13 +174,14 @@ class VideoRipper:
             return
         self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)
-        if await self._scratch.refuses(state.disc_type, state.label):  # #12: ejected unripped
-            return
-        # Repeat-Disc warning (#16): a Disc already in the Archive waits for the user.
+        # A known Disc waits for the user first; one they want again still needs room.
         fingerprint = await asyncio.to_thread(video_fingerprint, self._disc_root(),
                                               state.disc_type)
-        if await self._repeat.admit(state.disc_type, fingerprint):
-            await self.rip(state, fingerprint)
+        if not await self._repeat.admit(state.disc_type, fingerprint):
+            return
+        if await self._scratch.refuses(state.disc_type, state.label):  # ejected unripped
+            return
+        await self.rip(state, fingerprint)
 
     # -- the Rip -----------------------------------------------------------
 
@@ -315,7 +316,7 @@ class VideoRipper:
         return makemkv.parse_scan_records(out)
 
     async def _save_hints(self, disc: DiscRecord, scan: makemkv.Scan) -> None:
-        """Keep what the Disc says it is, for Identification after it's ejected (#6)."""
+        """Keep what the Disc says it is, for Identification after it's ejected."""
         root = self._disc_root()
         bd_title = await asyncio.to_thread(bd_meta_title, root) if root else ""
         save_hints(disc.scratch_dir, DiscHints(volume_label=disc.label, disc_name=scan.disc_name,
@@ -332,10 +333,8 @@ class VideoRipper:
     async def _makemkv(self, disc: DiscRecord, args: list[str],
                        on_record: Callable[[RobotLine], None] | None = None,
                        quiet: bool = False) -> tuple[int, list[RobotLine]]:
-        """Run makemkvcon, logging its messages (only licence ones if `quiet`).
-
-        Raises _Fail on a licence error or if the program can't be started.
-        """
+        """Run makemkvcon, logging its messages (only licence ones if `quiet`); raises _Fail on a
+        licence error or if it won't start."""
         records: list[RobotLine] = []
         licence = False
 
@@ -375,8 +374,8 @@ class VideoRipper:
 
     def _publish(self) -> None:
         self._last_publish = self._clock()
-        self._bus.publish(self.TOPIC)
-        self._bus.publish(DriveMonitor.TOPIC)
+        self._bus.publish(Topic.RIP)
+        self._bus.publish(Topic.DRIVE)
 
     def _publish_soon(self) -> None:
         """From the makemkvcon thread: publish on the loop, at most every PUBLISH_EVERY_SECONDS."""

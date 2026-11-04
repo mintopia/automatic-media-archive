@@ -1,5 +1,5 @@
 {#- Now page: the Encoding bin. Topic "encode". `encoding`: Movies not yet filed, FIFO;
-    `tv_encoding`: kept TV Titles not yet filed (#13); `encode_job`: the Encode running
+    `tv_encoding`: kept TV Titles not yet filed; `encode_job`: the Encode running
     now (live progress), or None; `encode_next`: the Disc id that encodes next. -#}
 {%- macro running(job, href, name) %}
     <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="{{ href }}">{{ name }}</a></div><div class="bar thin enc" aria-label="{{ job.progress.pct }}%"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>

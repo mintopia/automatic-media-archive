@@ -28,6 +28,10 @@ _Avoid_: Bonus, special feature
 A Title that is one installment of a TV series. Mapping Titles to Episodes always requires Review.
 _Avoid_: Chapter
 
+**Extras Disc**:
+A video Disc of a film's Extras with no Main Feature (often the second Disc of a set), filed as Extras of a film already in the Archive.
+_Avoid_: Bonus Disc, special features Disc
+
 ## Pipeline
 
 **Rip**:

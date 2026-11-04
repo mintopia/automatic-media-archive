@@ -29,6 +29,9 @@ def _setup_logging(log_file: Path) -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         handlers=handlers,
     )
+    # httpx logs each request's full URL at INFO, and a TMDB v3 key travels in the URL.
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def main(argv: list[str] | None = None) -> None:

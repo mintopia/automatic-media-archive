@@ -85,6 +85,13 @@ class Album:
             out.append(("Cover Art Archive", f"{CAA}/release/{self.release_id}"))
         return out
 
+    @property
+    def source(self) -> tuple[str, str, str] | None:
+        """(name, short name, URL) of where it was identified; None if entered by hand."""
+        if not self.release_id:
+            return None
+        return "MusicBrainz release", "MB", f"{MB}/release/{self.release_id}"
+
 
 @dataclass(frozen=True)
 class Screen:
@@ -105,6 +112,10 @@ class Screen:
     @property
     def links(self) -> list[tuple[str, str]]:
         return [("TMDB", f"{TMDB}/{'tv' if self.tv else 'movie'}/{self.tmdb_id}")]
+
+    @property
+    def source(self) -> tuple[str, str, str]:
+        return "TMDB", "TMDB", self.links[0][1]
 
 
 Media = Album | Screen
@@ -142,10 +153,8 @@ class MediaStore:
 
 def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year: int | None,
            log: Callable[[str], None]) -> Screen:
-    """What to keep for a filed film or series: TMDB's overview and poster, best effort.
-
-    TMDB trouble is logged and leaves them out; it never holds up filing.
-    """
+    """A filed film's or series' TMDB overview and poster, best effort: trouble is logged, never
+    holds up filing."""
     overview, poster = "", None
     try:
         overview, path = tmdb.overview(tv, tmdb_id)
@@ -159,3 +168,11 @@ def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year:
     except (httpx.HTTPError, OSError) as e:
         log(f"No poster kept: couldn't fetch it from TMDB ({type(e).__name__})")
     return Screen(tmdb_id, title, year, tv=tv, overview=overview, poster=poster)
+
+
+def film_guess(tmdb: Tmdb, covers: Covers, volume_label: str) -> Screen | None:
+    """A likely film for a Disc being ripped, with its poster cached; only for show."""
+    film = tmdb.guess(volume_label)
+    if film is None:
+        return None
+    return screen(tmdb, covers, False, film.id, film.title, film.year, lambda _: None)

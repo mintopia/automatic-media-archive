@@ -16,7 +16,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 
 log = logging.getLogger(__name__)
 
@@ -106,12 +106,8 @@ class DriveProbe(Protocol):
 
 
 class WindowsDriveProbe:
-    """Reads the optical drive through Win32 (GetVolumeInformationW) and its root.
-
-    `letter` is e.g. "D:"; None picks the first drive Windows reports as CD-ROM.
-    Classification is cached per volume (serial number + label) so a loaded
-    Disc is only listed once, not every poll.
-    """
+    """The optical drive through Win32; classification is cached per volume so a Disc's files are
+    listed once, not every poll."""
 
     def __init__(self, letter: str | None = None) -> None:
         import ctypes
@@ -202,7 +198,6 @@ def default_probe(letter: str | None) -> DriveProbe:
 class DriveMonitor:
     """Polls the probe and publishes `drive` on the bus when the state changes."""
 
-    TOPIC = "drive"
 
     def __init__(self, probe: DriveProbe, bus: EventBus, interval: float) -> None:
         self._probe = probe
@@ -225,16 +220,13 @@ class DriveMonitor:
             if has_disc(state) and not has_disc(self.state):
                 self.insertion += 1
             self.state = state
-            self._bus.publish(self.TOPIC)
+            self._bus.publish(Topic.DRIVE)
 
     def device(self) -> str | None:
         return self._probe.device()
 
     async def eject(self) -> None:
-        """Eject the Disc, then re-read the drive so `state` reflects it at once.
-
-        Raises OSError if the drive refuses (the drive is re-read either way).
-        """
+        """Eject the Disc and re-read the drive; raises OSError if the drive refuses."""
         try:
             await asyncio.to_thread(self._probe.eject)
         finally:

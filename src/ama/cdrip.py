@@ -26,7 +26,7 @@ from ama.cyanrip import ArResult, ArStatus, Report
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, Failure, FailureKind
 from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, cd_fingerprint
 from ama.scratch import ScratchGate
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-TOPIC = "rip"
 SCRATCH_SUBDIR = "cd"
 
 
@@ -119,6 +118,18 @@ class CdDisc:
     def total_seconds(self) -> float:
         return sum(t.seconds for t in self.tracks)
 
+    @property
+    def accuraterip(self) -> str:
+        """The Rip's AccurateRip outcome in a few words, for History."""
+        statuses = [t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in self.tracks]
+        if statuses and all(s == ArStatus.ACCURATE for s in statuses):
+            return "verified"
+        if bad := statuses.count(ArStatus.MISMATCH):
+            return f"accepted with {bad} track{'s' if bad != 1 else ''} not matching"
+        if ArStatus.NOT_IN_DB in statuses:
+            return "not in AccurateRip"
+        return "AccurateRip unavailable"
+
 
 class CdTracks:
     """The `cd_tracks` table."""
@@ -181,11 +192,8 @@ def is_error_line(text: str) -> bool:
 
 
 def strip_data_tracks(cue: str) -> str:
-    """Drop enhanced-CD data tracks (`FILE "…" BINARY` + its TRACK) from a cue sheet.
-
-    cyanrip never rips data tracks but still lists them, pointing at a .bin
-    that doesn't exist.
-    """
+    """Drop enhanced-CD data tracks (`FILE "…" BINARY` + its TRACK) from a cue sheet:
+    with `-X` cyanrip skips them but still lists them, pointing at a .bin it never wrote."""
     out: list[str] = []
     skipping = False
     for line in cue.splitlines(keepends=True):
@@ -277,8 +285,8 @@ class CdRipper:
             self._publish()
 
     def _publish(self) -> None:
-        self._bus.publish(TOPIC)
-        self._bus.publish("drive")
+        self._bus.publish(Topic.RIP)
+        self._bus.publish(Topic.DRIVE)
 
     async def _eject(self, disc_id: int | None) -> None:
         try:
@@ -313,12 +321,12 @@ class CdRipper:
         if not tracks and not known_cd:
             self._publish()
             return  # a data Disc, not an enhanced CD: not ours
-        if tracks and await self._scratch.refuses(DiscType.CD, label):  # #12: ejected unripped
-            self._publish()
-            return
-        # Repeat-Disc warning (#16): a CD already in the Archive waits for the user.
+        # A known CD waits for the user first; one they want again still needs room.
         fingerprint = cd_fingerprint(info.disc_id) if tracks else None
         if not await self._repeat.admit(DiscType.CD, fingerprint):
+            return
+        if tracks and await self._scratch.refuses(DiscType.CD, label):  # ejected unripped
+            self._publish()
             return
         rec = self._discs.create(DiscType.CD, label, SCRATCH_SUBDIR)
         self._repeat.remember(rec.id, fingerprint)

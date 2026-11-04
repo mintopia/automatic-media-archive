@@ -1,15 +1,10 @@
-"""Decoy playlist detection (#9), pure.
+"""Decoy playlist detection, pure.
 
-Some Blu-rays (and a few DVDs) hide the film among many decoy playlists: Titles
-that run the same length as the film but play its scenes out of order. MakeMKV
-can't tell them apart, so such a Disc always goes to Review, whatever TMDB says
-(notes/research/makemkvcon.md §7).
-
-Suspected decoys: at least MIN_VERSIONS Titles, each at least MIN_FEATURE_S
-long, within DURATION_TOLERANCE_S of one another's length. Sizes and clips
-aren't compared: a false alarm only costs a Review, a missed decoy files a
-scrambled film. The likely film is the version whose segments (TINFO 26) run in
-ascending order the most; with no order to go on, the lowest-numbered.
+Some Blu-rays hide the film among many decoy playlists: versions of one feature that
+run its length and play the same clips out of order (notes/research/makemkvcon.md
+§7). Sizes aren't compared: a false alarm only costs a Review, a missed decoy files a
+scrambled film. Episodes differ from decoys by being shorter than a feature and made
+of their own clips.
 """
 
 from __future__ import annotations
@@ -21,7 +16,8 @@ from ama.discs import TitleRecord
 
 MIN_VERSIONS = 8
 DURATION_TOLERANCE_S = 3
-MIN_FEATURE_S = 10 * 60
+MIN_FEATURE_S = 70 * 60  # shorter is an Episode or an Extra, not a version of the film
+SHARED_CLIPS = 0.5  # a version plays at least this share of the other versions' clips
 
 
 @dataclass(frozen=True)
@@ -49,12 +45,21 @@ def in_order(t: TitleRecord) -> int:
     return sum(b > a for a, b in zip(s, s[1:]))
 
 
+def _same_clips(a: TitleRecord, b: TitleRecord) -> bool:
+    """Whether two Titles play mostly the same clips (true when either map is unknown)."""
+    sa, sb = set(segments(a.segments)), set(segments(b.segments))
+    if not sa or not sb:
+        return True
+    return len(sa & sb) >= SHARED_CLIPS * min(len(sa), len(sb))
+
+
 def detect(titles: Iterable[TitleRecord]) -> Decoys | None:
     long = sorted((t for t in titles if t.duration_s >= MIN_FEATURE_S), key=lambda t: t.number)
     best: list[TitleRecord] = []
     for anchor in long:
         group = [t for t in long
-                 if abs(t.duration_s - anchor.duration_s) <= DURATION_TOLERANCE_S]
+                 if abs(t.duration_s - anchor.duration_s) <= DURATION_TOLERANCE_S
+                 and _same_clips(t, anchor)]
         if len(group) > len(best):
             best = group
     if len(best) < MIN_VERSIONS:

@@ -1,6 +1,6 @@
 """The Encode of a Main Feature: stream selection, the ffmpeg command, its progress.
 
-Pure functions only; `moviearchive.py` runs them. Policy (ticket #6, ADR-0002):
+Pure functions only; `moviearchive.py` runs them. Policy (ADR-0002):
 - video: the first real video stream, hevc_nvenc Main10 (p010) at the Disc Type's CQ;
 - audio, passed through untouched: every English track (commentaries too), plus the
   film's original-language track when the film isn't English. A Disc with neither
@@ -107,10 +107,7 @@ def _rate(text: object) -> float:
 
 
 def parse_probe(text: str) -> Probe:
-    """ffprobe `-show_streams -show_chapters -show_format -of json` output.
-
-    Raises ValueError if there is no JSON object in `text`.
-    """
+    """ffprobe's JSON (streams, chapters, format); ValueError if there is none."""
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end < start:
         raise ValueError("ffprobe printed no JSON")
@@ -189,7 +186,7 @@ def cq_for(cq: CqConfig, disc_type: DiscType) -> int:
 VIDEO_OPTS = ["-c:v", "hevc_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr",
               "-b:v", "0", "-profile:v", "main10", "-pix_fmt", "p010le",
               "-rc-lookahead", "32", "-spatial-aq", "1", "-bf", "4",
-              "-temporal-aq", "1", "-b_ref_mode", "middle"]  # verified on this GPU (#11)
+              "-temporal-aq", "1", "-b_ref_mode", "middle"]  # verified on this GPU
 
 
 def _flags(*named: tuple[str, bool]) -> str:
@@ -200,7 +197,7 @@ def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
                 title: str, colour: Colour | None = None,
                 video_filter: str | None = None) -> list[str]:
     """`colour`: tag the video with it (HDR10 sources; `hdr.py` checks the result).
-    `video_filter`: the `-vf` chain from `picture.Picture.filters` (#10), if any."""
+    `video_filter`: the `-vf` chain from `picture.Picture.filters`, if any."""
     args = [str(exe), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "warning",
             "-progress", "pipe:1", "-y", "-hwaccel", "cuda", "-i", str(src)]
     for s in sel.streams:
@@ -243,10 +240,7 @@ class EncodeProgress:
 
 
 class ProgressReader:
-    """Feed it ffmpeg's output lines; `-progress` blocks come back as EncodeProgress.
-
-    Lines that aren't progress keys (warnings on stderr) return None.
-    """
+    """Turns ffmpeg's `-progress` lines into EncodeProgress (None for other lines)."""
 
     KEYS = frozenset({"frame", "fps", "bitrate", "total_size", "out_time_us", "out_time_ms",
                       "out_time", "dup_frames", "drop_frames", "speed", "progress"})

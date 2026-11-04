@@ -147,7 +147,9 @@ def _track_line(r: Report, t: TrackReport, line: str) -> None:
     elif line.startswith("Accurip:"):
         v = line.split(":", 1)[1].strip()
         if v.startswith("disc found in database"):
-            t.ar = ArResult(ArStatus.MISMATCH)  # upgraded by a matching v1/v2 line below
+            # Before the Rip (`-I`) there are no checksums yet, so no verdict.
+            # After it, a matching v1/v2 line below upgrades this to ACCURATE.
+            t.ar = ArResult(ArStatus.MISMATCH) if t.ripped else None
         elif v.startswith("not found"):
             status = ArStatus.UNAVAILABLE if r.accuraterip in ("error", "disabled") \
                 else ArStatus.NOT_IN_DB
@@ -188,13 +190,10 @@ def info_command(exe: str | Path, device: str, offset: int) -> list[str]:
 
 
 def rip_command(exe: str | Path, device: str, offset: int, out_dir: str, retries: int) -> list[str]:
-    """Secure Rip to per-track FLAC + cue + log in `out_dir` (relative to the cwd).
-
-    cyanrip 0.9.3.1 mangles absolute Windows paths in -D (issue #109), so run it
-    with cwd = the scratch folder and a relative `out_dir`.
-    """
+    """Secure Rip of the audio tracks to per-track FLAC + cue + log in `out_dir`."""
     return [
         str(exe), *_common(device, offset),
+        "-X",  # skip data tracks: the pinned build would rip them to .bin
         "-P", "3", "-r", str(retries), "-o", "flac",
         "-D", out_dir, "-F", "{track}", "-L", "rip", "-M", "rip",
     ]

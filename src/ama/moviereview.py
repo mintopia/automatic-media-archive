@@ -1,11 +1,11 @@
-"""Movie Review (#7): what the Review page needs beyond the Encode pipeline.
+"""Movie Review: what the Review page needs beyond the Encode pipeline.
 
 - `Thumbnailer` (background task): for every video Disc waiting in Review, takes a
   still from each ripped Title at 10/50/90% of its runtime, from the Rip in
   scratch (`thumbs/t<title>_<pct>.jpg`; written to a temp name, then renamed, so a
   cut-off grab is retaken). A grab that fails is not retried until the app
   restarts; the page shows the Title without that picture.
-- `saved_search`: the TMDB search #6 made (`tmdb.json`), the films offered first.
+- `saved_search`: the TMDB search Identification made (`tmdb.json`), the films offered first.
 
 A decision (film + Main Feature) joins the Encode queue (`Movies.enqueue`) and the
 Disc goes back to `ripped` (`DiscStore.requeue`); `MovieArchiver` Encodes and files it.

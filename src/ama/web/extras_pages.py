@@ -1,4 +1,4 @@
-"""Sorting a filed film's Extras (#8): optional, never blocks filing.
+"""Sorting a filed film's Extras: optional, never blocks filing.
 
 `GET /discs/{id}/extras` lists the Extras filed to the film's folder with their
 stills (taken before scratch was deleted), a name and a Plex category each.
@@ -14,13 +14,13 @@ from dataclasses import dataclass
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import review
 from ama.discs import DiscRecord, DiscStatus, TitleRecord
 from ama.extras import Category, Extra, ExtraStatus
-from ama.moviearchive import RetryLater
+from ama.retry import RetryLater
 from ama.moviereview import POSITIONS, short_duration
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -127,7 +127,7 @@ async def save(request: Request, disc_id: int) -> Response:
     except RetryLater as e:
         return _page(request, services, rec, [f"{e}. Nothing was lost; try again."],
                      status_code=503)
-    services.bus.publish(review.TOPIC)
+    services.bus.publish(Topic.REVIEW)
     return RedirectResponse("/review", status_code=303)
 
 
@@ -136,5 +136,5 @@ async def leave(request: Request, disc_id: int) -> Response:
     services = _services(request)
     _filed_movie(services, disc_id)
     services.movie_archive.extras.mark_reviewed(disc_id)
-    services.bus.publish(review.TOPIC)
+    services.bus.publish(Topic.REVIEW)
     return RedirectResponse("/review", status_code=303)

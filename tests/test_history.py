@@ -77,6 +77,12 @@ def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(
     row = page[page.index(f'href="/discs/{rec.id}"') - 400:]
     assert cover in row[:800] and ALBUM in row[:800]
 
+    assert "24 tracks · verified" in row
+    names = row[row.index("<details"):row.index("</details>")]
+    assert "<summary" in names and "The Unknown Journey Continues" in names  # track 1
+    assert f'href="https://musicbrainz.org/release/{SPECIAL}"' in row[:row.index("</details>")]
+    assert 'aria-label="MusicBrainz release"' in row
+
     now = unescape(client.get("/").text)
     assert '<a href="/history">History</a>' in now
     assert "Filed today" not in now
@@ -149,5 +155,43 @@ def test_a_filed_tv_discs_page_shows_the_series_poster_overview_and_tmdb_link(ha
     page = unescape(client.get(f"/discs/{rec.id}").text)
     assert "The Office" in page and "A mockumentary about an office." in page
     assert "3 Episodes" in page
+    history = unescape(client.get("/history").text)
+    names = history[history.index("<details"):history.index("</details>")]
+    assert "S01E02 · Work Experience" in names
+    assert 'href="https://www.themoviedb.org/tv/2996" aria-label="TMDB"' in history
     assert 'href="https://www.themoviedb.org/tv/2996"' in page
     assert client.get("/covers/tmdb-tv-2996.jpg").content == POSTER
+
+
+def _forget_media(harness, rec) -> None:
+    """As if `rec` was filed before History kept what each Disc is (migration 0012)."""
+    harness.services.db.execute("DELETE FROM media_info WHERE disc_id = ?", (rec.id,))
+    for f in harness.services.covers.folder.glob("*"):
+        f.unlink()
+
+
+def test_discs_filed_before_history_kept_their_details_get_them_at_startup(harness, client):
+    import asyncio
+    cd = _file_ffvii(harness)
+    eventually(lambda: not cd.scratch_dir.exists())
+    harness.drive.eject()
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122,
+                         poster_path="/ex1234.jpg")
+    harness.web.tmdb_images["/ex1234.jpg"] = POSTER
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2)
+    film = next(r for r in harness.services.discs.list(DiscStatus.FILED) if r.id != cd.id)
+    for rec in (cd, film):
+        _forget_media(harness, rec)
+    assert "The Unknown Journey Continues" not in unescape(client.get("/history").text)
+
+    asyncio.run(harness.services.backfill.run())
+    page = unescape(client.get(f"/discs/{cd.id}").text)
+    assert "The Unknown Journey Continues" in page and f"/covers/release-{SPECIAL}.jpg" in page
+    assert client.get(f"/covers/release-{SPECIAL}.jpg").content == COVER
+    assert "/covers/tmdb-movie-1234.jpg" in unescape(client.get(f"/discs/{film.id}").text)
+
+    lookups = len(harness.web.requests)
+    asyncio.run(harness.services.backfill.run())  # nothing left to fill in: no requests
+    assert len(harness.web.requests) == lookups

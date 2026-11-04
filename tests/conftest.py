@@ -115,7 +115,7 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                               disc_root=lambda: drive.root, disk_usage=disk)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
-    services.cd_archive.retry_seconds = 0.05
+    services.cd_archive.backoff.retry_seconds = 0.05
     services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
     return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check, web,
                    Path(cfg.nas.unc), ffmpeg, disk)

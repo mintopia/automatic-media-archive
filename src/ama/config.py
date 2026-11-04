@@ -18,7 +18,7 @@ class _Section(BaseModel):
 
 
 def _secret() -> str:
-    return Field(default="", repr=False)  # type: ignore[return-value]
+    return Field(default="", repr=False)
 
 
 class WebConfig(_Section):

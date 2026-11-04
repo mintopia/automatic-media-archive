@@ -1,12 +1,22 @@
-{#- One filed Disc in History (the Now bin and /history). `d`: a CdDisc, FiledMovie or FiledTv; `dated`: show the day it was filed. -#}
+{#- One filed Disc in History (the Now bin and /history). `d`: a CdDisc, FiledMovie or FiledTv; `dated`: show the day it was filed.
+    The meta line opens to list what the Disc holds (tracks, Episodes, Extras) when there is anything to name. -#}
 {%- set m = media_of(d.record.id) -%}
 {%- set art = (m.cover if m.kind == "album" else m.poster) if m else none -%}
+{%- set names = contents_of(d) -%}
+{%- set src = m.source if m else none -%}
+{%- macro meta() -%}
+  {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}{% if d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ d.extras }} Extra{{ "s" if d.extras != 1 }}</a>{% endif %}
+  {%- elif d.episodes is defined %}{% set n = d.episodes | selectattr("episode") | list | length %}{% if n %}TV · {{ n }} Episode{{ "s" if n != 1 }}{% else %}Movies · {{ d.episodes | length }} Extra{{ "s" if d.episodes | length != 1 }}{% endif %}
+  {%- else %}Music · {{ d.tracks | length }} tracks · {{ d.accuraterip }}{% endif %}
+  {%- if dated and d.record.filed_at %} · <span class="nw">{{ d.record.filed_at.strftime("%d %b %Y") }}</span>{% endif %}
+{%- endmacro -%}
+{%- macro tail(more) -%}
+  {%- if src or more %} <span class="nw">{% if src %}<a class="src" href="{{ src[2] }}" aria-label="{{ src[0] }}" title="{{ src[0] }}">{{ src[1] }}</a>{% endif %}{% if more %}<svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg>{% endif %}</span>{% endif %}
+{%- endmacro -%}
 <div class="row compact">
   {%- if art %}<div class="dtype art"><img src="/covers/{{ art }}" alt="" loading="lazy"></div>{% else %}<div class="dtype">{{ d.record.disc_type }}</div>{% endif %}
-  <div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div><div class="ts">
-    {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}{% if d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ d.extras }} Extra{{ "s" if d.extras != 1 }}</a>{% endif %}
-    {%- elif d.episodes is defined %}{% set n = d.episodes | selectattr("episode") | list | length %}{% if n %}TV · {{ n }} Episode{{ "s" if n != 1 }}{% else %}Movies · {{ d.episodes | length }} Extra{{ "s" if d.episodes | length != 1 }}{% endif %}
-    {%- else %}Music · {{ d.tracks | length }} tracks · verified{% endif %}
-    {%- if dated and d.record.filed_at %} · <span class="nw">{{ d.record.filed_at.strftime("%d %b %Y") }}</span>{% endif %}</div></div>
+  <div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div>
+    {%- if names %}<details class="names"><summary class="ts">{{ meta() }}{{ tail(true) }}</summary><ol class="ts">{% for n in names %}<li>{{ n }}</li>{% endfor %}</ol></details>
+    {%- else %}<div class="ts">{{ meta() }}{{ tail(false) }}</div>{% endif %}</div>
   <span class="stk fil">Filed</span>
 </div>

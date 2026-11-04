@@ -1,12 +1,12 @@
-"""Video multi-disc sets (#14).
+"""Video multi-disc sets.
 
 A *set* is the Discs that file into one Plex folder: a TV series' season
 (`TV/Show (Year) {tmdb-ID}/Season NN`), or a film (`Movies/Title (Year) {tmdb-ID}`)
-with its bonus Discs. A set exists once one of its Discs is filed; Review asks a
+with its Extras Discs. A set exists once one of its Discs is filed; Review asks a
 later Disc whether it belongs to one ("Is this Disc part of a set?") and which Disc
 of the set it is. Attached, it reuses the set's Identification: a TV Disc's Episode
 mapping starts at the set's series and season and carries on after the Episodes
-earlier Discs filed; a bonus Disc's Titles are all filed as Extras in the film's
+earlier Discs filed; an Extras Disc's Titles are all filed as Extras in the film's
 `Other/` folder.
 
 Membership comes from what was filed (`tv_titles` Episodes, `movies`) plus the Disc
@@ -33,34 +33,34 @@ from ama.tv import season_folder, series_folder
 ANSWER_FILE = "set.json"
 
 
-class Library(StrEnum):
+class SetKind(StrEnum):
     TV = "tv"
     MOVIE = "movie"
 
 
 @dataclass(frozen=True)
 class SetKey:
-    library: Library
+    kind: SetKind
     tmdb_id: int
     season: int | None = None  # TV only
 
     def __str__(self) -> str:
         """"tv:2996:1", "movie:438631" (the form value)."""
-        return ":".join(str(p) for p in (self.library.value, self.tmdb_id, self.season)
+        return ":".join(str(p) for p in (self.kind.value, self.tmdb_id, self.season)
                         if p is not None)
 
     @classmethod
     def parse(cls, text: str) -> SetKey | None:
         parts = text.split(":")
         try:
-            library = Library(parts[0])
+            kind = SetKind(parts[0])
             numbers = [int(p) for p in parts[1:]]
         except ValueError:
             return None
-        if library == Library.TV and len(numbers) == 2:
-            return cls(library, numbers[0], numbers[1])
-        if library == Library.MOVIE and len(numbers) == 1:
-            return cls(library, numbers[0])
+        if kind == SetKind.TV and len(numbers) == 2:
+            return cls(kind, numbers[0], numbers[1])
+        if kind == SetKind.MOVIE and len(numbers) == 1:
+            return cls(kind, numbers[0])
         return None
 
 
@@ -106,10 +106,10 @@ class DiscSet:
         return next((n for d, n in self.members if d == disc_id), None)
 
 
-def bonus_paths(film_set: DiscSet, rec: DiscRecord, titles: Iterable[TitleRecord]
+def extras_disc_paths(film_set: DiscSet, rec: DiscRecord, titles: Iterable[TitleRecord]
                 ) -> dict[int, PurePosixPath]:
-    """Where a bonus Disc's Titles are filed: `<film folder>/Other/<name>.mkv`, named the
-    way a film's Extras are (#8)."""
+    """Where an Extras Disc's Titles are filed: `<film folder>/Other/<name>.mkv`, named the
+    way a film's Extras are."""
     hints = load_hints(rec.scratch_dir, rec.label)
     names = extras.default_names(titles, (hints.disc_name, hints.volume_name, rec.label,
                                           film_set.show.name, film_set.show.title), rec.label)
@@ -172,36 +172,36 @@ class DiscSets:
             "VALUES (?, ?, ?, ?, ?) ON CONFLICT (disc_id) DO UPDATE SET "
             "library = excluded.library, tmdb_id = excluded.tmdb_id, "
             "season = excluded.season, disc_number = excluded.disc_number",
-            (disc_id, key.library.value, key.tmdb_id, key.season, number))
+            (disc_id, key.kind.value, key.tmdb_id, key.season, number))
 
     def detach(self, disc_id: int) -> None:
         self._db.execute("DELETE FROM disc_sets WHERE disc_id = ?", (disc_id,))
 
-    def filed(self, library: Library) -> list[DiscSet]:
+    def filed(self, kind: SetKind) -> list[DiscSet]:
         """Every set with a filed Disc, most recently filed first."""
         recorded = {(lib, tmdb_id, season, disc_id): number
                     for lib, tmdb_id, season, disc_id, number in self._db.execute(
                         "SELECT library, tmdb_id, season, disc_id, disc_number FROM disc_sets"
                     ).fetchall()}
-        if library == Library.TV:
+        if kind == SetKind.TV:
             rows = self._db.execute(
                 "SELECT DISTINCT t.tmdb_id, t.series, t.year, t.original_language, t.season, "
                 "t.disc_id, d.filed_at FROM tv_titles t JOIN discs d ON d.id = t.disc_id "
                 "WHERE d.status = 'filed' AND t.season > 0 AND t.path LIKE 'TV/%'").fetchall()
-            found = [(SetKey(Library.TV, r[0], r[4]), Series(r[0], r[1], r[2], r[3]), r[5], r[6])
+            found = [(SetKey(SetKind.TV, r[0], r[4]), Series(r[0], r[1], r[2], r[3]), r[5], r[6])
                      for r in rows]
         else:
             rows = self._db.execute(
                 "SELECT m.tmdb_id, m.title, m.year, m.original_language, m.disc_id, d.filed_at "
                 "FROM movies m JOIN discs d ON d.id = m.disc_id WHERE d.status = 'filed'"
             ).fetchall()
-            found = [(SetKey(Library.MOVIE, r[0]), Series(r[0], r[1], r[2], r[3]), r[4], r[5])
+            found = [(SetKey(SetKind.MOVIE, r[0]), Series(r[0], r[1], r[2], r[3]), r[4], r[5])
                      for r in rows]
-            # bonus Discs: attached to a film, filed as its Extras
+            # Extras Discs: attached to a film, filed as its Extras
             shows = {k: s for k, s, _, _ in found}
             for lib, tmdb_id, _, disc_id in recorded:
-                key = SetKey(Library.MOVIE, tmdb_id)
-                if lib == Library.MOVIE.value and key in shows:
+                key = SetKey(SetKind.MOVIE, tmdb_id)
+                if lib == SetKind.MOVIE.value and key in shows:
                     row = self._db.execute("SELECT filed_at FROM discs WHERE id = ? AND "
                                            "status = 'filed'", (disc_id,)).fetchone()
                     if row:
@@ -213,7 +213,7 @@ class DiscSets:
         for key, (show, discs) in by_key.items():
             order = sorted(discs, key=lambda d: (discs[d], d))
             numbers = {d: n for d in order
-                       if (n := recorded.get((key.library.value, key.tmdb_id, key.season, d)))}
+                       if (n := recorded.get((key.kind.value, key.tmdb_id, key.season, d)))}
             free = (n for n in range(1, 10_000) if n not in numbers.values())
             for d in order:
                 if d not in numbers:
@@ -223,4 +223,4 @@ class DiscSets:
         return [s for _, s in sorted(sets, key=lambda x: x[0], reverse=True)]
 
     def find(self, key: SetKey) -> DiscSet | None:
-        return next((s for s in self.filed(key.library) if s.key == key), None)
+        return next((s for s in self.filed(key.kind) if s.key == key), None)

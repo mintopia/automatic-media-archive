@@ -1,18 +1,10 @@
-"""TV (#13): what a TV Disc looks like, and where its Episodes are filed.
+"""What a TV Disc looks like, and where its Episodes are filed.
 
-A video Disc *looks like TV* when, Play-alls aside, two or more ripped Titles of
-episode length (15 min or more) are about as long as the longest one. Such a
-Disc always goes to Review, whatever TMDB says: mapping Titles to Episodes needs
-a human (GLOSSARY). A Disc that doesn't look like TV can still be marked as TV in
-Review.
-
-A *Play all* is a Title made of other Titles: its segments contain two or more
-other Titles' segments, or (no segment map) it is as long as the other
-episode-length Titles put together. Review suggests discarding it.
-
-Plex TV naming: `TV/Show (Year) {tmdb-ID}/Season NN/Show - sNNeNN - Title.mkv`;
-specials are season 0 (`Season 00`). A Title kept as an Extra goes to the show's
-`Other/` folder.
+A Disc *looks like TV* when, Play-alls aside, three or more Titles of episode length
+are about as long as the longest, and that is well under a feature's length: two cuts
+of a film, or a film and a long documentary, are not TV. Two such Titles *might be
+TV*; Identification asks TMDB for a matching series. A TV Disc always goes to Review:
+mapping Titles to Episodes needs a human (GLOSSARY).
 """
 
 from __future__ import annotations
@@ -21,13 +13,15 @@ import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
-from ama import extras
+from ama import decoys, extras
 from ama.archive import safe_name
 from ama.discs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints, Episode, Series, clean_term
 
 TV = PurePosixPath("TV")
 EPISODE_MIN_S = 15 * 60
+EPISODE_MAX_S = decoys.MIN_FEATURE_S  # an Episode is shorter than a feature
+MIN_EPISODES = 3  # fewer could be a film's cuts
 SIMILAR = 0.8          # an episode is at least this fraction of the longest one
 PLAY_ALL_SLACK_S = 90  # or 3%: a Play-all's length vs. the Titles it joins
 
@@ -118,5 +112,15 @@ def episode_like(titles: Iterable[TitleRecord]) -> list[TitleRecord]:
     return [t for t in long if t.duration_s >= SIMILAR * longest]
 
 
+def _episode_shaped(titles: Iterable[TitleRecord]) -> list[TitleRecord]:
+    like = episode_like(titles)
+    return like if like and max(t.duration_s for t in like) < EPISODE_MAX_S else []
+
+
 def looks_like_tv(titles: Iterable[TitleRecord]) -> bool:
-    return len(episode_like(titles)) >= 2
+    return len(_episode_shaped(titles)) >= MIN_EPISODES
+
+
+def might_be_tv(titles: Iterable[TitleRecord]) -> bool:
+    """Two Episode-shaped Titles: TV only if TMDB knows the series."""
+    return len(_episode_shaped(titles)) >= 2

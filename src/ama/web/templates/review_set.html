@@ -21,7 +21,7 @@
       {%- endif %}
       <section class="bin rev" aria-labelledby="disc-h"><h2 class="tab" id="disc-h">This Disc</h2><div class="box">
         <div class="radio"><input type="radio" id="part-yes" name="part" value="yes"{% if part == "yes" %} checked{% endif %}{% if not sets %} disabled{% endif %}><div>
-          <label for="part-yes"><div class="tt">{% if tv %}Part of an existing set{% else %}Bonus Disc for a film already filed{% endif %}</div><div class="ts">{% if tv %}Episodes and Extras go into the same Plex folder as the other Discs.{% else %}Its Titles are filed as Extras in the film's folder.{% endif %}</div></label>
+          <label for="part-yes"><div class="tt">{% if tv %}Part of an existing set{% else %}Extras Disc for a film already filed{% endif %}</div><div class="ts">{% if tv %}Episodes and Extras go into the same Plex folder as the other Discs.{% else %}Its Titles are filed as Extras in the film's folder.{% endif %}</div></label>
           {%- if sets %}
           <div class="box set-list">
             {%- for s in sets %}

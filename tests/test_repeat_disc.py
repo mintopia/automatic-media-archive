@@ -134,13 +134,41 @@ def test_a_different_cd_is_ripped_without_asking(harness, client):
     assert WARNING not in _page(client)
 
 
-def test_a_cd_not_yet_filed_is_not_a_repeat(harness, client):
+def test_a_cd_ripped_but_not_yet_filed_is_a_repeat_waiting_to_be_filed(harness, client):
     harness.cyanrip.disc_id = DISC_1  # MusicBrainz offline: Ripped, never filed
     harness.drive.insert(DiscType.CD)
     eventually(lambda: harness.drive.ejected == 1)
     rips = _rips(harness)
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: _rips(harness) == rips + 1)
+    eventually(lambda: "You've ripped this Disc already" in _page(client))
+    assert "Already ripped, waiting to be filed" in _page(client)
+    assert _rips(harness) == rips
+
+
+def test_a_cd_waiting_in_review_is_a_repeat_waiting_for_review(harness, client):
+    harness.web.musicbrainz[DISC_1] = 404  # not on MusicBrainz: Review
+    harness.cyanrip.disc_id = DISC_1
+    harness.drive.insert(DiscType.CD)
+    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW))
+    harness.drive.eject()
+    harness.drive.insert(DiscType.CD)
+    eventually(lambda: "Already ripped, waiting for Review" in _page(client))
+
+
+def test_a_known_cd_is_recognised_before_scratch_is_checked_and_again_after_archive_again(
+        harness, client):
+    _file_cd(harness)
+    harness.drive.eject()
+    ejected, rips = harness.drive.ejected, _rips(harness)
+    harness.disk.used = harness.disk.total - 1000**3 // 2  # scratch full
+    harness.drive.insert(DiscType.CD)
+    eventually(lambda: WARNING in _page(client))
+    assert harness.drive.ejected == ejected and harness.services.scratch.refused is None
+
+    client.post("/repeat/again")
+    eventually(lambda: harness.drive.ejected == ejected + 1)
+    assert harness.services.scratch.refused is not None  # not ripped: no room
+    assert _rips(harness) == rips
 
 
 # -- video -----------------------------------------------------------------------

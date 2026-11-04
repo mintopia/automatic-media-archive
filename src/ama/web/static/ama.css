@@ -211,7 +211,7 @@ form.actions{margin:0}
 .page-head.gap{margin-bottom:24px}
 textarea.input{padding:10px 12px;font:inherit;resize:vertical}
 .errors{color:var(--rev-ink);font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px}
-/* Movie Review (#7): Title rows with stills (review-movie mockup) */
+/* Movie Review: Title rows with stills (review-movie mockup) */
 .title-row{display:grid;grid-template-columns:22px minmax(0,1fr) 300px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--rule);cursor:pointer}
 .box>.title-row:first-child{border-top:0}
 .title-row>input{width:18px;height:18px;accent-color:var(--ink)}
@@ -221,12 +221,12 @@ textarea.input{padding:10px 12px;font:inherit;resize:vertical}
 .frame img+span{position:relative;padding:3px 5px;border-radius:2px;background:rgba(23,24,26,.72);color:#ECEDEF}
 .more-titles>summary{cursor:pointer;list-style:none}.more-titles>summary::-webkit-details-marker{display:none}.more-titles[open]>summary{display:none}
 @media (max-width:720px){.title-row{grid-template-columns:22px minmax(0,1fr)}.title-row .frames{grid-column:1/-1}}
-/* Extras (#8, docs/mockups/review-extras.html); .titem/.colhead shared with TV Review */
+/* Extras (docs/mockups/review-extras.html); .titem/.colhead shared with TV Review */
 main.extras{max-width:1064px}
 .titem:first-child{border-top:0}
 .ctl{display:flex;flex-direction:column;gap:8px}
 .notice.ok{display:grid;color:inherit;font-weight:inherit}
-/* TV Review (#13): docs/mockups/review-tv.html */
+/* TV Review: docs/mockups/review-tv.html */
 main.tv{max-width:920px}
 .titem{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;align-items:center;padding:16px 18px;border-top:1px solid var(--rule)}
 .titem.flag{background:var(--notice)}
@@ -277,3 +277,12 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 .preview .tbl{width:100%}
 .preview>summary{flex-wrap:wrap}
 @media (max-width:720px){.edition{flex-direction:column;gap:10px}}
+/* History rows: the meta line opens to list what the Disc holds; a small link to where it was identified */
+.names summary{display:block;padding:0;font-weight:400;border:0}
+.names[open] summary{border:0}
+.names summary .i{width:14px;height:14px;margin-left:4px;vertical-align:-2px;transition:transform .15s}
+.names[open] summary .i{transform:rotate(90deg)}
+.names ol{margin:6px 0 2px;padding-left:0;list-style:none;columns:2 16em;column-gap:24px}
+.names li{break-inside:avoid;overflow-wrap:anywhere;padding:1px 0}
+.src{display:inline-block;margin-left:4px;padding:0 5px;border:1px solid var(--rule);font:600 10px/16px Archivo,sans-serif;letter-spacing:.04em;color:var(--ink2);text-decoration:none;vertical-align:1px}
+.src:hover{color:var(--ink);border-color:var(--ink3)}

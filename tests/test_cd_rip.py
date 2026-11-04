@@ -226,6 +226,7 @@ def test_a_cd_swapped_in_between_two_looks_is_still_ripped(harness):
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()
         await harness.services.cd.check_once()  # rips, ejects: the drive reads empty
+        harness.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD (same: a repeat)
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()  # the ripper never saw it empty
         await harness.services.cd.check_once()
@@ -233,3 +234,16 @@ def test_a_cd_swapped_in_between_two_looks_is_still_ripped(harness):
     asyncio.run(go())
     assert len(_rip_calls(harness)) == 2
     assert len(harness.services.discs.list(DiscStatus.RIPPED)) == 2
+
+
+def _info(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+
+
+def test_a_rip_starting_and_finishing_is_logged(harness, client, caplog):
+    caplog.set_level("INFO")
+    harness.drive.insert(DiscType.CD, "OK_COMPUTER")
+    rec = _only_disc(harness, DiscStatus.RIPPED)
+    assert f"Rip started: Audio CD “OK_COMPUTER” (Disc {rec.id})" in _info(caplog)
+    eventually(lambda: f"Rip finished: Audio CD “OK_COMPUTER” (Disc {rec.id}): ripped"
+               in _info(caplog))

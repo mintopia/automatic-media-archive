@@ -77,7 +77,7 @@ class Candidate:
 
 @dataclass(frozen=True)
 class Series:
-    """A TV series on TMDB (#13)."""
+    """A TV series on TMDB."""
 
     id: int
     name: str
@@ -247,7 +247,7 @@ class Tmdb:
         return [self.movie(int(r["id"]), r) for r in results.get("results", [])[:limit]
                 if r.get("id")]
 
-    # -- TV (#13) -------------------------------------------------------------
+    # -- TV -------------------------------------------------------------
 
     def search_tv(self, query: str, limit: int = MAX_DETAILS) -> list[Series]:
         """TMDB's best `limit` series for a free-text search. Raises TmdbError."""

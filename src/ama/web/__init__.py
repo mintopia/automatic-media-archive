@@ -15,7 +15,12 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
 
+from ama.cdrip import CdDisc
 from ama.discs import DiscStatus
+from ama.extras import ExtraStatus
+from ama.media import Album
+from ama.moviearchive import FiledMovie
+from ama.tvarchive import FiledTv
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -45,7 +50,7 @@ FRAGMENTS: dict[str, str] = {
     "filed": "partials/filed_bin.html",
     "encode": "partials/encoding_bin.html",
     "review": "partials/review_bin.html",
-    # The scratch page body (#12): one partial, live on each topic that changes what it shows.
+    # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
     "scratch-encode": "partials/scratch.html",
@@ -92,10 +97,11 @@ def view_context(services: Services) -> dict[str, Any]:
         "filed": [d for d in filed_discs(services)
                   if d.record.filed_at and d.record.filed_at.date() == date.today()],
         "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
+        "contents_of": lambda d: contents_of(services, d),
         **services.movie_archive.queue_view(),
-        **services.tv_archive.queue_view(),  # TV Episodes not yet filed (#13)
+        **services.tv_archive.queue_view(),  # TV Episodes not yet filed
         "drive": services.drive.state,
-        "repeat": services.repeat.pending,  # an archived Disc waiting for the user (#16)
+        "repeat": services.repeat.pending,  # an archived Disc waiting for the user
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
@@ -117,6 +123,21 @@ def filed_discs(services: Services, limit: int = 100) -> list:
                    *services.movie_archive.filed(limit), *services.tv_archive.filed(limit)],
                   key=lambda d: (d.record.filed_at or d.record.started_at, d.record.id),
                   reverse=True)[:limit]
+
+
+def contents_of(services: Services, d: Any) -> list[str]:
+    """What a filed Disc holds, by name, for its History row: tracks, Episodes or Extras."""
+    if isinstance(d, CdDisc):
+        album = services.media.get(d.record.id)
+        return [f"{t.number}. {album.track_title(t.number) or f'Track {t.number}'}"
+                for t in d.tracks if t.number] if isinstance(album, Album) else []
+    if isinstance(d, FiledMovie):
+        return [e.name for e in services.movie_archive.extras.of(d.record.id)
+                if e.status == ExtraStatus.FILED]
+    if isinstance(d, FiledTv):
+        return [f"{t.episode.code} · {t.episode.name}" if t.episode else f"Extra · {t.path.stem}"
+                for t in d.episodes]
+    return []
 
 
 def _tools_context(services: Services) -> dict[str, Any]:

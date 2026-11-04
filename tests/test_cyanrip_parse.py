@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from ama.cyanrip import ArResult, ArStatus, Progress, parse_progress, parse_report, rip_succeeded
+from ama.cyanrip import ArResult, ArStatus, Progress, parse_progress, parse_report, \
+    rip_command, rip_succeeded
 
 DATA = Path(__file__).parent / "data" / "cyanrip"
 
@@ -152,3 +153,14 @@ def test_info_output_gives_the_discs_mcn_from_the_real_ffvii_toc():
     r = parse_report(capture("info-ffvii-rebirth-disc1.txt"))
     assert r.mcn == "4988601470865"
     assert parse_report(INFO).mcn is None
+
+
+def test_info_output_has_no_accuraterip_verdict_even_when_the_disc_is_in_the_database():
+    # Before a Rip there are no checksums: "disc found in database" isn't a mismatch yet.
+    r = parse_report(capture("info-ffvii-rebirth-disc1.txt"))
+    assert r.accuraterip == "found" and len(r.audio_tracks) == 24
+    assert all(t.ar is None for t in r.audio_tracks)
+
+
+def test_the_rip_skips_data_tracks():
+    assert "-X" in rip_command("cyanrip.exe", "D:", 6, "rip", 5)

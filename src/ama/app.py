@@ -20,6 +20,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from ama.archive import Archive
+from ama.backfill import Backfill
 from ama.cdarchive import CdArchiver
 from ama.cdguess import Guesser
 from ama.cdrip import CdRipper, CdTracks
@@ -27,9 +28,10 @@ from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
 from ama.db import Database
 from ama.discs import DiscStore
+from ama.encoder import Encoder
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
-from ama.media import MediaStore
+from ama.media import MediaStore, film_guess
 from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
@@ -75,12 +77,14 @@ class Services:
     sets: DiscSets
     covers: Covers
     media: MediaStore
+    backfill: Backfill
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
-                self.thumbnails.run, self.tv_archive.run, self.notifier.run]
+                self.thumbnails.run, self.tv_archive.run, self.notifier.run,
+                self.backfill.run]
 
 
 def build_services(
@@ -93,7 +97,7 @@ def build_services(
     make_tools: Callable[[EventBus], Tools] | None = None,
     http: httpx.Client | None = None,
     disc_root: Callable[[], Path | None] | None = None,
-    disk_usage: DiskUsageFn = shutil.disk_usage,  # type: ignore[assignment]
+    disk_usage: DiskUsageFn = shutil.disk_usage,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
@@ -116,8 +120,9 @@ def build_services(
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
-    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
-                                  tool, streamer, interval=cfg.drive.poll_seconds,
+    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
+    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
+                                  streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
                                   media=media, covers=covers)
@@ -138,7 +143,8 @@ def build_services(
                     scratch=scratch, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
-                              disc_root=disc_root, guess=tmdb.guess),
+                              disc_root=disc_root,
+                              guess=lambda label: film_guess(tmdb, covers, label)),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
@@ -148,7 +154,7 @@ def build_services(
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
-        tv_archive=TvArchiver(discs, tv_titles, movie_archive, nas, archive, plex, bus,
+        tv_archive=TvArchiver(discs, tv_titles, encoder, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
                               covers=covers),
@@ -156,6 +162,8 @@ def build_services(
         sets=DiscSets(db),
         covers=covers,
         media=media,
+        backfill=Backfill(db, discs, media, mb, covers, tmdb, movie_archive.movies,
+                          tv_titles),
     )
 
 

@@ -134,6 +134,7 @@ def test_a_notification_failure_never_blocks_the_pipeline(notified, caplog, stat
     eventually(lambda: notified.drive.ejected == 1)
 
     notified.web.notify_status = 200  # the next Disc still rips, and still notifies
+    notified.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
     notified.drive.insert(DiscType.CD, "SECOND")
     _sent(notified, 2)
     assert "SECOND" in _ntfy(notified)[1]["message"]
@@ -148,6 +149,7 @@ def test_a_channel_that_hangs_never_holds_up_the_next_rip(notified, monkeypatch)
                         lambda note: gate.wait(10))
     notified.drive.insert(DiscType.CD, "FIRST")
     eventually(lambda: notified.drive.ejected == 1)
+    notified.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
     notified.drive.insert(DiscType.CD, "SECOND")
     eventually(lambda: len(notified.services.discs.list(DiscStatus.RIPPED)) == 2)
     gate.set()

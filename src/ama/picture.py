@@ -1,4 +1,4 @@
-"""The Encode's picture: progressive output and auto-crop (#10).
+"""The Encode's picture: progressive output and auto-crop.
 
 Pure functions only; `moviearchive.py` runs the analysis and hands the result to
 `encode.ffmpeg_args` as one `-vf` chain (notes/research/ffmpeg.md §5-6):
@@ -154,12 +154,8 @@ def parse_sample(lines: Iterable[str]) -> Sample:
 
 
 def _edges(lo: list[int], hi: list[int], size: int) -> tuple[int, int]:
-    """One axis of the union box, or the whole axis unless real bars bound it.
-
-    Bars sit at the same place in every bright sample, so each edge of the union
-    must be reached by at least `EDGE_AGREE` samples; edges no two samples share
-    are scene content (a film dark throughout), and bars under MIN_BAR aren't worth it.
-    """
+    """One axis of the union box: bars sit still, so an edge counts only if EDGE_AGREE samples
+    reach it and the bar is at least MIN_BAR."""
     start, end = min(lo), max(hi)
     agreed = (sum(abs(v - start) <= EDGE_SLACK for v in lo) >= EDGE_AGREE
               and sum(abs(v - end) <= EDGE_SLACK for v in hi) >= EDGE_AGREE)

@@ -1,16 +1,12 @@
-"""TV Encode and filing (#13).
+"""TV Encode and filing.
 
 Review keeps some of a TV Disc's Titles (`tvreview`): each is an Episode or an
-Extra, with where it goes in the Archive (`tv.episode_path` / `tv.extra_path`).
-They are queued in `tv_titles`. `TvArchiver` encodes them one by one through the
-movie pipeline's Encode (`MovieArchiver.encode_title`, which also keeps it to one
-Encode at a time across films and TV) to scratch `tv/t<n>.mkv`, files each as soon
-as it is encoded, and once every kept Title is filed marks the Disc filed (its
-scratch, the lossless Rip, is deleted: ADR-0002) and asks Plex to scan the show.
-
-Trouble outside AMA (NAS, tools) retries every `retry_seconds`. A failed Encode
-keeps the Rip; it and any Encode cut short by a restart are queued again at the
-next start.
+Extra, with where it goes in the Archive (`tv.episode_path` / `tv.extra_path`),
+queued in `tv_titles`. `TvArchiver` Encodes them one by one through the shared
+`Encoder` to scratch `tv/t<n>.mkv`, files each as soon as it is Encoded, and once
+every kept Title is filed marks the Disc filed (its scratch, the lossless Rip, is
+deleted: ADR-0002) and asks Plex to scan the show. A failed Encode keeps the Rip;
+it and any Encode cut short by a restart are queued again at the next start.
 """
 
 from __future__ import annotations
@@ -21,22 +17,21 @@ import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path, PurePosixPath
+from typing import Any
 
-import httpx
-
-from ama import review
+from ama import filing
+from ama.archive import Archive
 from ama.covers import Covers
-from ama.media import MediaStore, screen
-from ama.archive import Archive, FilingError
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore
+from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus
 from ama.events import EventBus
-from ama.moviearchive import TOPIC, MovieArchiver, RetryLater
-from ama.nas import NasConnected, NasMonitor
-from ama.plex import Plex
 from ama.extras import default_names
+from ama.media import MediaStore, screen
+from ama.nas import NasMonitor
+from ama.plex import Plex
+from ama.retry import Backoff, RetryLater
 from ama.tmdb import Episode, Series, Tmdb, load_hints
 from ama.tv import episode_path, extra_path
 from ama.tvreview import Kept
@@ -45,14 +40,6 @@ from ama.video_rip import VIDEO_DISC_TYPES
 log = logging.getLogger(__name__)
 
 ENCODES = "tv"  # scratch subfolder for the Encodes
-
-
-class TvStatus(StrEnum):
-    QUEUED = "queued"
-    ENCODING = "encoding"
-    ENCODED = "encoded"  # waiting to be filed
-    FILED = "filed"
-    FAILED = "failed"
 
 
 @dataclass(frozen=True)
@@ -64,7 +51,7 @@ class TvTitle:
     series: Series
     episode: Episode | None  # None: an Extra
     path: PurePosixPath      # in the Archive
-    status: TvStatus
+    status: EncodeStatus
     queued_at: datetime
     video_height: int = 0
 
@@ -92,6 +79,7 @@ class TvTitles:
     def __init__(self, db: Database, now: Callable[[], datetime] = datetime.now) -> None:
         self._db = db
         self._now = now
+        self._queue = EncodeQueue(db, "tv_titles", "encode_status")
 
     _COLS = ("disc_id, title_number, tmdb_id, series, year, original_language, season, "
              "episode, episode_name, path, encode_status, queued_at, video_height")
@@ -101,7 +89,7 @@ class TvTitles:
          queued, height) = row
         return TvTitle(disc_id, number, Series(tmdb_id, name, year, lang),
                        Episode(season, episode, ep_name) if season is not None else None,
-                       PurePosixPath(path), TvStatus(status), datetime.fromisoformat(queued),
+                       PurePosixPath(path), EncodeStatus(status), datetime.fromisoformat(queued),
                        height)
 
     def enqueue(self, disc_id: int, series: Series,
@@ -112,10 +100,10 @@ class TvTitles:
         for number, ep, path in kept:
             self._db.execute(
                 f"INSERT INTO tv_titles ({self._COLS}) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, 0)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                 (disc_id, number, series.id, series.name, series.year, series.original_language,
                  ep.season if ep else None, ep.number if ep else None, ep.name if ep else "",
-                 path.as_posix(), queued))
+                 path.as_posix(), EncodeStatus.QUEUED, queued))
 
     def has(self, disc_id: int) -> bool:
         return self._db.execute("SELECT 1 FROM tv_titles WHERE disc_id = ? LIMIT 1",
@@ -127,7 +115,7 @@ class TvTitles:
         return [self._row(r) for r in rows]
 
     def in_season(self, series_id: int, season: int) -> list[TvTitle]:
-        """Every Disc's Episodes of the series' season (a set's earlier Discs, #14)."""
+        """Every Disc's Episodes of the series' season (a set's earlier Discs)."""
         rows = self._db.execute(f"SELECT {self._COLS} FROM tv_titles WHERE tmdb_id = ? AND "
                                 "season = ? AND path LIKE 'TV/%' ORDER BY episode",
                                 (series_id, season)).fetchall()
@@ -135,14 +123,11 @@ class TvTitles:
 
     def queue(self) -> list[TvTitle]:
         """Kept Titles of Discs not yet filed, first in first out."""
-        cols = ", ".join("t." + c.strip() for c in self._COLS.split(","))
-        rows = self._db.execute(
-            f"SELECT {cols} FROM tv_titles t JOIN discs d ON d.id = t.disc_id "
-            "WHERE d.status = 'ripped' ORDER BY t.queued_at, t.disc_id, t.title_number"
-        ).fetchall()
-        return [self._row(r) for r in rows]
+        cols = ", ".join("q." + c.strip() for c in self._COLS.split(","))
+        return [self._row(r) for r in
+                self._queue.waiting(cols, "q.queued_at, q.disc_id, q.title_number")]
 
-    def set_status(self, disc_id: int, number: int, status: TvStatus,
+    def set_status(self, disc_id: int, number: int, status: EncodeStatus,
                    video_height: int | None = None) -> None:
         self._db.execute("UPDATE tv_titles SET encode_status = ?, "
                          "video_height = COALESCE(?, video_height) "
@@ -151,11 +136,7 @@ class TvTitles:
 
     def requeue_unfinished(self) -> list[int]:
         """At startup: Encodes cut short, or failed, go back in the queue (Discs affected)."""
-        rows = self._db.execute("SELECT DISTINCT disc_id FROM tv_titles "
-                                "WHERE encode_status IN ('encoding', 'failed')").fetchall()
-        self._db.execute("UPDATE tv_titles SET encode_status = 'queued' "
-                         "WHERE encode_status IN ('encoding', 'failed')")
-        return [r[0] for r in rows]
+        return self._queue.requeue(EncodeStatus.ENCODING, EncodeStatus.FAILED)
 
 
 @dataclass(frozen=True)
@@ -171,7 +152,7 @@ def encoded_path(rec: DiscRecord, number: int) -> Path:
 
 
 class TvArchiver:
-    def __init__(self, discs: DiscStore, titles: TvTitles, encoder: MovieArchiver,
+    def __init__(self, discs: DiscStore, titles: TvTitles, encoder: Encoder,
                  nas: NasMonitor, archive: Archive, plex: Plex, bus: EventBus, interval: float,
                  retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic, *,
                  tmdb: Tmdb, media: MediaStore, covers: Covers) -> None:
@@ -186,10 +167,7 @@ class TvArchiver:
         self._plex = plex
         self._bus = bus
         self._interval = interval
-        self.retry_seconds = retry_seconds
-        self._clock = clock
-        self._not_before: dict[int, float] = {}
-        self._warned: set[int] = set()
+        self.backoff = Backoff(retry_seconds, clock)
 
     async def run(self) -> None:
         self.recover()
@@ -204,25 +182,22 @@ class TvArchiver:
     async def once(self) -> None:
         discs = dict.fromkeys(t.disc_id for t in self.titles.queue())
         for disc_id in discs:
-            if self._clock() < self._not_before.get(disc_id, 0.0):
+            if not self.backoff.due(disc_id):
                 continue
             rec = self._discs.get(disc_id)
             assert rec is not None
             try:
                 await self._advance(rec)
             except RetryLater as e:
-                if disc_id not in self._warned:
+                if self.backoff.later(disc_id):
                     self._discs.log(disc_id, f"{e}; trying again in a while", error=True)
-                    self._warned.add(disc_id)
-                self._not_before[disc_id] = self._clock() + self.retry_seconds
             except Exception:
                 log.exception("TV Encode/filing of Disc %s crashed", disc_id)
                 self._discs.log(disc_id, "The Encode or filing went wrong (see the app's log "
                                          "file); trying again in a while", error=True)
-                self._not_before[disc_id] = self._clock() + self.retry_seconds
+                self.backoff.later(disc_id)
             else:
-                self._not_before.pop(disc_id, None)
-                self._warned.discard(disc_id)
+                self.backoff.done(disc_id)
             finally:
                 self._publish()
 
@@ -230,58 +205,51 @@ class TvArchiver:
         """Encode and file what's left of the Disc's kept Titles; file the Disc when done."""
         titles = {t.number: t for t in rec.titles}
         for row in self.titles.for_disc(rec.id):
-            if row.status in (TvStatus.QUEUED, TvStatus.ENCODING):
-                ffmpeg, ffprobe = self._encoder.encode_tools()
+            if row.status in (EncodeStatus.QUEUED, EncodeStatus.ENCODING):
+                ffmpeg, ffprobe = self._encoder.tools()
                 out = encoded_path(rec, row.title_number)
                 out.parent.mkdir(exist_ok=True)
-                self.titles.set_status(rec.id, row.title_number, TvStatus.ENCODING)
+                self.titles.set_status(rec.id, row.title_number, EncodeStatus.ENCODING)
                 self._publish()
                 height = await self._encoder.encode_title(
                     rec, titles[row.title_number], row.name, row.series.original_language,
                     out, ffmpeg, ffprobe)
                 if height is None:
-                    self.titles.set_status(rec.id, row.title_number, TvStatus.FAILED)
+                    self.titles.set_status(rec.id, row.title_number, EncodeStatus.FAILED)
                     continue
-                self.titles.set_status(rec.id, row.title_number, TvStatus.ENCODED, height)
+                self.titles.set_status(rec.id, row.title_number, EncodeStatus.ENCODED, height)
                 row = next(r for r in self.titles.for_disc(rec.id)
                            if r.title_number == row.title_number)
-            if row.status == TvStatus.ENCODED:
+            if row.status == EncodeStatus.ENCODED:
                 await asyncio.to_thread(self._file_one, rec, row)
         rows = self.titles.for_disc(rec.id)
-        if rows and all(r.status == TvStatus.FILED for r in rows):
+        if rows and all(r.status == EncodeStatus.FILED for r in rows):
             await asyncio.to_thread(self._finish, rec, rows)
 
     def _file_one(self, rec: DiscRecord, row: TvTitle) -> None:
-        if not isinstance(self._nas.status, NasConnected):
-            raise RetryLater("The NAS isn't connected")
+        filing.require_nas(self._nas)
         src = encoded_path(rec, row.title_number)
-        try:
+        with filing.to_nas():
             folder = self._archive.place(Path(row.path.parent), {row.path.name: src})
-        except (OSError, FilingError) as e:
-            raise RetryLater(f"Couldn't file to the NAS ({e})") from e
-        self.titles.set_status(rec.id, row.title_number, TvStatus.FILED)
+        self.titles.set_status(rec.id, row.title_number, EncodeStatus.FILED)
         src.unlink(missing_ok=True)
         self._discs.log(rec.id, f"Filed {row.path.name} to {folder}")
 
     def _finish(self, rec: DiscRecord, rows: list[TvTitle]) -> None:
         series = rows[0].series
         n = sum(1 for r in rows if r.episode)
-        # The show's folder, or the film's for a bonus Disc (#14): `TV/<show>`, `Movies/<film>`
+        # The show's folder, or the film's for an Extras Disc: `TV/<show>`, `Movies/<film>`
         show = self._archive.root / Path(*rows[0].path.parts[:2])
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
-        # A bonus Disc (#14) is filed as its film's Extras: keep the film, not the "series".
+        # An Extras Disc is filed as its film's Extras: keep the film, not the "series".
         film = n == 0 and show.parent.name == "Movies"
         self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
                                         series.name, series.year,
                                         lambda text: self._discs.log(rec.id, text)))
         self._discs.mark_filed(rec.id, f"{series.title} · {what}", show)
         self._discs.log(rec.id, f"All kept Titles filed to {show}; scratch deleted")
-        try:
-            self._discs.log(rec.id, self._plex.scan(show))
-        except httpx.HTTPError as e:
-            self._discs.log(rec.id, f"Couldn't ask Plex to scan the folder ({e}); "
-                                    "Plex will find it on its next scan", error=True)
+        filing.scan(self._plex, self._discs, rec.id, show)
 
     # -- for the UI ---------------------------------------------------------
 
@@ -289,12 +257,12 @@ class TvArchiver:
         recs = self._discs.list(DiscStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
         return [FiledTv(r, rows) for r in recs if (rows := self.titles.for_disc(r.id))]
 
-    def queue_view(self) -> dict:
+    def queue_view(self) -> dict[str, Any]:
         """For the Encoding bin: kept Titles not yet filed, and their Discs' Types."""
-        rows = [r for r in self.titles.queue() if r.status != TvStatus.FILED]
+        rows = [r for r in self.titles.queue() if r.status != EncodeStatus.FILED]
         types = {r.disc_id: rec.disc_type for r in rows if (rec := self._discs.get(r.disc_id))}
         return {"tv_encoding": rows, "tv_disc_types": types}
 
     def _publish(self) -> None:
-        for topic in (TOPIC, "rip", "filed", review.TOPIC):
+        for topic in PIPELINE_TOPICS:
             self._bus.publish(topic)

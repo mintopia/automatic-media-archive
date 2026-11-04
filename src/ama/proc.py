@@ -38,22 +38,16 @@ def run(args: Sequence[str]) -> ProcResult:
 
 
 class Streamer(Protocol):
-    """Run a long job, calling `on_line` for each output line as it arrives.
-
-    Returns the exit code. If `on_line` raises, the process is killed and the
-    exception propagates (that is how a caller aborts a running job).
-    """
+    """Run a long job, calling `on_line` per output line; the exit code. Raising from `on_line`
+    kills the process (how a caller aborts)."""
 
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
                  cwd: Path | None = None) -> int: ...
 
 
 def stream(args: Sequence[str], on_line: Callable[[str], None], cwd: Path | None = None) -> int:
-    """The real `Streamer`: no console window, no timeout, never logs `args`.
-
-    Lines end at `\\n` or `\\r` (progress meters redraw with `\\r`). stdout and
-    stderr are combined. Blocks until exit; call it from a worker thread.
-    """
+    """The real `Streamer`: no window, no timeout, stdout+stderr split at line ends and `\\r`
+    (progress meters), never logs `args`. Blocking."""
     p = subprocess.Popen(
         list(args),
         stdout=subprocess.PIPE,

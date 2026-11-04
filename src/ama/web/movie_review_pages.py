@@ -1,7 +1,7 @@
-"""Movie Review (#7): pick the film on TMDB and the Title that is the Main Feature.
+"""Movie Review: pick the film on TMDB and the Title that is the Main Feature.
 
 `GET /review/{id}` for a video Disc renders `page()` (dispatched from
-review_pages). The films offered are the ones #6's search found (`tmdb.json`);
+review_pages). The films offered are the ones Identification's search found (`tmdb.json`);
 `?q=` searches TMDB again. Each ripped Title shows stills at 10/50/90% that the
 Thumbnailer takes in the background; until they exist the frames poll
 `/review/{id}/titles/{n}/frames`. Confirming queues the Encode
@@ -16,10 +16,9 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import decoys, moviereview, review
+from ama import decoys, moviereview
 from ama.discs import DiscRecord, DiscStatus, TitleRecord
 from ama.extras import extra_titles
-from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviearchive import main_feature
 from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_duration, \
     thumb_path
@@ -27,6 +26,7 @@ from ama.tmdb import Candidate, TmdbError, movie_folder, search_terms, load_hint
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
 from ama.web.review_items import plural
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -223,6 +223,6 @@ def confirm(request: Request, disc_id: int, film: Annotated[int, Form()] = 0,
                                    f"{candidate.id}); Main Feature is Title {t.number} "
                                    f"({t.duration})")
         services.discs.log(rec.id, "Queued for Encode")
-        for topic in (review.TOPIC, "rip", ENCODE_TOPIC):
+        for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return RedirectResponse("/review", status_code=303)
