@@ -1,0 +1,201 @@
+"""Movie Identification, Encode and filing, end to end: the real app with a fake drive,
+makemkvcon, ffmpeg/ffprobe, NAS folder and web (TMDB, Plex).
+
+The fake BD (tests/data/makemkv-info-bd.txt) is "Example Movie", label EXAMPLE_MOVIE;
+its Main Feature (Title 1) runs 2:01:33, i.e. 121.5 minutes.
+"""
+
+from __future__ import annotations
+
+import html
+import json
+from urllib.parse import parse_qs
+
+from ama.archive import extended_path
+from ama.discs import DiscStatus, ReviewReason
+from ama.drive import DiscType
+from ama.moviearchive import EncodeStatus
+from tests.conftest import eventually, make_harness
+from tests.fakes import probe_stream
+
+FOLDER = "Example Movie (2016) {tmdb-1234}"
+
+
+def _rip(harness, label="EXAMPLE_MOVIE", disc_type=DiscType.BD) -> None:
+    harness.makemkv.release()
+    harness.drive.insert(disc_type, label)
+    eventually(lambda: harness.drive.ejected >= 1)
+
+
+def _wait_for(harness, status: DiscStatus):
+    eventually(lambda: harness.services.discs.list(status), timeout=5)
+    return harness.services.discs.list(status)[0]
+
+
+def _filed(harness):
+    return extended_path(harness.nas_root / "Movies" / FOLDER / f"{FOLDER}.mkv")
+
+
+def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client, harness):
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+
+    rec = _wait_for(harness, DiscStatus.FILED)
+    assert rec.title == "Example Movie (2016)"
+    assert _filed(harness).read_bytes() == b"HEVC Example_Movie_t00.mkv"  # the Main Feature
+    eventually(lambda: not rec.scratch_dir.exists())  # the lossless Rip is gone (ADR-0002)
+    scan = [r for r in harness.web.plex_requests if "/refresh" in r.url.path]
+    assert scan and scan[0].url.path == "/library/sections/1/refresh"
+    assert parse_qs(scan[0].url.query.decode())["path"] == [f"/volume1/media/Movies/{FOLDER}"]
+    encode = harness.ffmpeg.encodes()[0]
+    assert encode[encode.index("-cq") + 1] == "22"  # BD's CQ from config
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "Identified as Example Movie (2016)" in log and "Encode finished" in log
+    page = html.unescape(client.get("/").text)
+    assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # Filed today
+
+
+def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_path):
+    root = tmp_path / "disc"
+    (root / "BDMV" / "META" / "DL").mkdir(parents=True)
+    (root / "BDMV" / "META" / "DL" / "bdmt_eng.xml").write_text(
+        "<di:name>Arrival</di:name>", encoding="utf-8")
+    harness.drive.root = root
+    harness.web.add_film("Arrival", 329865, "Arrival", runtime=118)
+    _rip(harness, label="ARRIVAL_BD")
+    rec = _wait_for(harness, DiscStatus.FILED)
+    assert rec.title == "Arrival (2016)"
+    first = harness.web.tmdb_requests[0]
+    assert first.url.params["query"] == "Arrival"
+    assert "tmdb-key" not in "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+
+
+def test_runtime_mismatch_and_ambiguous_matches_are_left_for_review_not_encoded(tmp_path):
+    h = make_harness(_dir(tmp_path / "a"))
+    h.web.add_film("Example Movie", 1, "Example Movie", runtime=95)
+    with _client(h):
+        _rip(h)
+        rec = _wait_for(h, DiscStatus.REVIEW)
+        assert rec.review_reason == ReviewReason.RUNTIME_MISMATCH
+        saved = json.loads((rec.scratch_dir / "tmdb.json").read_text(encoding="utf-8"))
+        assert [c["id"] for c in saved["candidates"]] == [1]  # kept for Review
+        assert (rec.scratch_dir / "Example_Movie_t00.mkv").exists()
+    assert h.ffmpeg.calls == []
+
+    h = make_harness(_dir(tmp_path / "b"))
+    h.web.add_film("Example Movie", 1, "Example Movie", runtime=121)
+    h.web.add_film("Example Movie", 2, "Example Movie", runtime=120, year=1987)
+    with _client(h) as c:
+        _rip(h)
+        assert _wait_for(h, DiscStatus.REVIEW).review_reason == ReviewReason.MULTIPLE_MATCHES
+        assert "Several films match" in html.unescape(c.get("/").text)  # Needs Review bin
+    assert h.ffmpeg.calls == []
+
+    h = make_harness(_dir(tmp_path / "c"))
+    with _client(h):
+        _rip(h)
+        assert _wait_for(h, DiscStatus.REVIEW).review_reason == ReviewReason.NO_MATCH
+
+
+def _client(h):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    return TestClient(create_app(h.services))
+
+
+def _dir(path):
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def test_a_non_english_film_keeps_its_original_language_track(harness, client):
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122,
+                         original_language="ja", original_title="例の映画")
+    harness.ffmpeg.streams = [
+        probe_stream(0, "video", "h264", height=1080),
+        probe_stream(1, "audio", "dts", "eng", "Surround 5.1", default=1),
+        probe_stream(2, "audio", "truehd", "jpn", "Surround 5.1"),
+        probe_stream(3, "audio", "ac3", "fra"),
+        probe_stream(4, "subtitle", "hdmv_pgs_subtitle", "eng"),
+    ]
+    _rip(harness)
+    _wait_for(harness, DiscStatus.FILED)
+    args = harness.ffmpeg.encodes()[0]
+    maps = [args[i + 1] for i, a in enumerate(args) if a == "-map"]
+    assert maps == ["0:0", "0:1", "0:2", "0:4"]
+    assert args[args.index("-disposition:a:1") + 1] == "default+original"
+
+
+def test_encodes_run_one_at_a_time_first_in_first_out_with_live_progress(client, harness):
+    harness.ffmpeg.hold = True
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    harness.web.add_film("Other Movie", 99, "Other Movie", runtime=122, year=2001)
+    _rip(harness)
+    eventually(harness.ffmpeg.encoding.is_set)
+    eventually(lambda: "40%" in html.unescape(client.get("/").text))
+    page = html.unescape(client.get("/").text)
+    assert 'sse-swap="encode"' in page and "Example Movie (2016)" in page
+
+    # A second Disc rips while the first Encode runs, and waits its turn.
+    harness.makemkv.disc_name = "Other Movie"
+    harness.drive.insert(DiscType.BD, "OTHER_MOVIE")
+    eventually(lambda: harness.drive.ejected == 2)
+    movies = harness.services.movie_archive.movies
+    eventually(lambda: movies.get(2) is not None)
+    assert movies.get(1).status == EncodeStatus.ENCODING
+    assert movies.get(2).status == EncodeStatus.QUEUED
+    assert len(harness.ffmpeg.encodes()) == 1
+    assert "Next in line" in html.unescape(client.get("/").text)
+
+    harness.ffmpeg.release()
+    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=5)
+    encoded = [c[c.index("-i") + 1] for c in harness.ffmpeg.encodes()]
+    assert ["/1/" in p.replace("\\", "/") for p in encoded] == [True, False]
+
+
+def test_a_rip_runs_while_an_encode_is_in_progress(client, harness):
+    harness.ffmpeg.hold = True
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+    eventually(harness.ffmpeg.encoding.is_set)
+    harness.makemkv.ripped_ids.clear()
+    harness.drive.insert(DiscType.DVD, "SOMETHING_ELSE")
+    eventually(lambda: harness.drive.ejected == 2)
+    assert harness.makemkv.ripped_ids == [0, 1]  # ripped while the Encode was still going
+    assert harness.ffmpeg.encoding.is_set()
+    harness.ffmpeg.release()
+
+
+def test_a_failed_encode_keeps_the_rip_and_is_retried_after_a_restart(tmp_path):
+    h = make_harness(tmp_path)
+    h.ffmpeg.exit_code = 1
+    h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with _client(h):
+        _rip(h)
+        eventually(lambda: (m := h.services.movie_archive.movies.get(1)) is not None
+                   and m.status == EncodeStatus.FAILED)
+        rec = h.services.discs.get(1)
+        assert rec.status == DiscStatus.RIPPED
+        assert (rec.scratch_dir / "Example_Movie_t00.mkv").exists()
+        log = "\n".join(map(str, h.services.discs.log_lines(1)))
+        assert "OpenEncodeSessionEx failed" in log and "The Encode didn't work" in log
+
+    # Restart with ffmpeg fixed: the Encode is tried again and filed.
+    h2 = make_harness(tmp_path)
+    h2.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with _client(h2):
+        _wait_for(h2, DiscStatus.FILED)
+
+
+def test_an_encode_waits_for_the_nas_then_files(tmp_path):
+    h = make_harness(tmp_path, nas_reachable=False)
+    h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with _client(h):
+        _rip(h)
+        eventually(lambda: (m := h.services.movie_archive.movies.get(1)) is not None
+                   and m.status == EncodeStatus.ENCODED)
+        assert h.services.discs.get(1).status == DiscStatus.RIPPED
+        h.share["reachable"] = True
+        _wait_for(h, DiscStatus.FILED)
+    assert len(h.ffmpeg.encodes()) == 1  # filed from the finished Encode, not re-encoded

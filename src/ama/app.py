@@ -26,10 +26,12 @@ from ama.db import Database
 from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
+from ama.moviearchive import MovieArchiver, Movies
 from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
+from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
 from ama.web import STATIC_DIR, auth, discs_pages, pages, review_pages
@@ -49,11 +51,12 @@ class Services:
     archive: Archive
     musicbrainz: MusicBrainz
     cd_archive: CdArchiver
+    movie_archive: MovieArchiver
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
-                self.tools.run, self.cd_archive.run]
+                self.tools.run, self.cd_archive.run, self.movie_archive.run]
 
 
 def build_services(
@@ -65,6 +68,7 @@ def build_services(
     tool: ToolLookup | None = None,
     make_tools: Callable[[EventBus], Tools] | None = None,
     http: httpx.Client | None = None,
+    disc_root: Callable[[], Path | None] | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
@@ -80,6 +84,11 @@ def build_services(
     cd_tracks = CdTracks(db)
     archive = Archive(Path(cfg.nas.unc))
     mb = MusicBrainz(http)
+    plex = Plex(cfg.plex, http, archive.root)
+    if disc_root is None:
+        def disc_root() -> Path | None:
+            device = drive.device()
+            return Path(device + "\\") if device else None
     return Services(
         config=cfg,
         db=db,
@@ -91,12 +100,15 @@ def build_services(
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
-                              streamer=streamer),
+                              streamer=streamer, disc_root=disc_root),
         archive=archive,
         musicbrainz=mb,
-        cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive,
-                              Plex(cfg.plex, http, archive.root), bus,
+        cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds),
+        movie_archive=MovieArchiver(discs, Movies(db), Tmdb(http, cfg.tmdb.api_key), nas,
+                                    archive, plex, bus, cfg.encode.cq, tool, streamer,
+                                    interval=cfg.drive.poll_seconds,
+                                    retry_seconds=cfg.nas.retry_seconds),
     )
 
 

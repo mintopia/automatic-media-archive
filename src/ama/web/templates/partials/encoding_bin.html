@@ -1,0 +1,24 @@
+{#- Now page: the Encoding bin. Topic "encode". `encoding`: Movies not yet filed, FIFO;
+    `encode_job`: the Encode running now (live progress), or None; `encode_next`: the
+    Disc id that encodes next. -#}
+<section class="bin enc">
+  <div class="tab">Encoding <span class="c">{{ encoding | length }}</span></div>
+  <div class="box">
+  {%- for m in encoding %}
+    {%- set job = encode_job if encode_job and encode_job.movie.disc_id == m.disc_id else None %}
+    {%- if job %}
+    <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="/discs/{{ m.disc_id }}">{{ m.film.name }}</a></div><div class="bar thin enc" aria-label="{{ job.progress.pct }}%"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>
+    {%- else %}
+    <div class="row compact"><div class="dtype">{{ disc_types[m.disc_id] }}</div><div><div class="tt"><a href="/discs/{{ m.disc_id }}">{{ m.film.name }}</a></div><div class="ts">
+      {%- if m.status == "encoded" %}Encoded · filing to the NAS
+      {%- elif m.status == "failed" %}The Encode didn't work · retried when the app restarts
+      {%- elif m.disc_id == encode_next %}Next in line
+      {%- else %}Waiting{% endif %}</div></div>
+      {%- if m.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Waiting</span>{% endif %}</div>
+    {%- endif %}
+  {%- endfor %}
+  {%- if not encoding %}
+    <p class="pad ts">Nothing waiting to encode.</p>
+  {%- endif %}
+  </div>
+</section>

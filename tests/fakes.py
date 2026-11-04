@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -20,6 +21,7 @@ class FakeDrive:
         self._error: Exception | None = None
         self.ejected = 0
         self.stuck = False  # eject() fails and the Disc stays in
+        self.root: Path | None = None  # the Disc's filesystem (e.g. BDMV/META), if a test makes one
 
     def insert(self, disc_type: DiscType, label: str = "") -> None:
         self.state = DiscPresent(disc_type, label)
@@ -97,6 +99,7 @@ class FakeMakemkv:
         self.fail_title: int | None = None
         self.ripped_ids: list[int] = []
         self.ripping = False
+        self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
         self._go = threading.Event()
 
     def release(self) -> None:
@@ -112,6 +115,11 @@ class FakeMakemkv:
             return 127
         if "info" in args:
             out = _lines("makemkv-info-bd.txt")
+            if self.disc_name is not None:
+                volume = self.disc_name.upper().replace(" ", "_")
+                out = [f'CINFO:2,0,"{self.disc_name}"' if ln.startswith("CINFO:2,") else
+                       f'CINFO:32,0,"{volume}"' if ln.startswith("CINFO:32,") else ln
+                       for ln in out]
             if args[-1] == "disc:9999":
                 out = [ln for ln in out if ln.startswith(("MSG:1005", "DRV:"))]
             for ln in out:
@@ -297,6 +305,22 @@ class FakeWeb:
                                "Location": [{"id": 2, "path": "/volume1/media/Movies"}]}]
         self.plex_requests: list[httpx.Request] = []
         self.requests: list[httpx.Request] = []
+        # TMDB: search results per (case-folded) query, /movie/{id} details by id.
+        self.tmdb_search: dict[str, list[dict]] = {}
+        self.tmdb_movies: dict[int, dict] = {}
+        self.tmdb_offline = False
+        self.tmdb_requests: list[httpx.Request] = []
+
+    def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
+                 original_language: str = "en", original_title: str | None = None) -> None:
+        """TMDB knows this film, and finds it when searched for `query`."""
+        date = f"{year}-11-10"
+        self.tmdb_search.setdefault(query.casefold(), []).append(
+            {"id": id_, "title": title, "original_title": original_title or title,
+             "release_date": date, "original_language": original_language})
+        self.tmdb_movies[id_] = {"id": id_, "title": title, "runtime": runtime,
+                                 "original_title": original_title or title,
+                                 "release_date": date, "original_language": original_language}
 
     def transport(self) -> httpx.MockTransport:
         return httpx.MockTransport(self.handle)
@@ -317,6 +341,16 @@ class FakeWeb:
                 return httpx.Response(200, content=self.covers[release],
                                       headers={"content-type": "image/jpeg"})
             return httpx.Response(404)
+        if url.host == "api.themoviedb.org":
+            self.tmdb_requests.append(request)
+            if self.tmdb_offline:
+                raise httpx.ConnectError("no network", request=request)
+            if url.path == "/3/search/movie":
+                query = url.params.get("query", "").casefold()
+                return httpx.Response(200, json={"page": 1, "results":
+                                                 self.tmdb_search.get(query, [])})
+            movie = self.tmdb_movies.get(int(url.path.rsplit("/", 1)[-1]))
+            return httpx.Response(200, json=movie) if movie else httpx.Response(404)
         if url.host == "plex":
             self.plex_requests.append(request)
             if url.path == "/library/sections":
@@ -326,16 +360,94 @@ class FakeWeb:
         return httpx.Response(404)
 
 
-class FakeTools:
-    """One `Streamer` for the app: makemkvcon calls go to `makemkv`, the rest to `cyanrip`."""
+def probe_stream(index: int, kind: str, codec: str, lang: str = "", title: str = "",
+                 **extra) -> dict:
+    """One stream as ffprobe's JSON shows it (dispositions as keyword flags)."""
+    disp = {k: int(extra.pop(k)) for k in ("default", "forced", "comment", "hearing_impaired",
+                                           "attached_pic") if k in extra}
+    return {"index": index, "codec_type": kind, "codec_name": codec,
+            "tags": {k: v for k, v in (("language", lang), ("title", title)) if v},
+            "disposition": {"default": 0, "forced": 0, "comment": 0, "hearing_impaired": 0,
+                            "attached_pic": 0, **disp}, **extra}
 
-    def __init__(self, makemkv: FakeMakemkv, cyanrip: FakeCyanrip) -> None:
-        self.makemkv = makemkv
-        self.cyanrip = cyanrip
+
+class FakeFfmpeg:
+    """A `Streamer` playing ffprobe (answers `streams`) and an ffmpeg Encode.
+
+    The Encode streams `-progress` blocks; with `hold` it stays at 40% until
+    `release()`. It then writes the output file, or fails with `exit_code`.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+        self.streams: list[dict] = [
+            probe_stream(0, "video", "h264", height=1080),
+            probe_stream(1, "audio", "truehd", "eng", "Surround 7.1", default=1),
+            probe_stream(2, "audio", "ac3", "fra", "Surround 5.1"),
+            probe_stream(3, "audio", "ac3", "eng", "Commentary"),
+            probe_stream(4, "subtitle", "hdmv_pgs_subtitle", "eng"),
+            probe_stream(5, "subtitle", "hdmv_pgs_subtitle", "fra"),
+        ]
+        self.duration = 7293.0
+        self.exit_code = 0
+        self.hold = False
+        self.encoding = threading.Event()  # set while an Encode is running
+        self._go = threading.Event()
+
+    def release(self) -> None:
+        self._go.set()
+
+    def encodes(self) -> list[list[str]]:
+        return [c for c in self.calls if "ffmpeg" in Path(c[0]).name.lower()]
+
+    def _block(self, on_line: Callable[[str], None], fraction: float) -> None:
+        for ln in ("frame=1000", "fps=48.0", f"out_time_us={int(self.duration * fraction * 1e6)}",
+                   "speed=2.00x", "progress=continue"):
+            on_line(ln)
 
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
                  cwd: Path | None = None) -> int:
-        fake = self.makemkv if "makemkv" in Path(args[0]).name.lower() else self.cyanrip
+        args = list(args)
+        self.calls.append(args)
+        if "ffprobe" in Path(args[0]).name.lower():
+            out = json.dumps({"streams": self.streams, "chapters": [{"id": 0}, {"id": 1}],
+                              "format": {"duration": str(self.duration)}}, indent=1)
+            for ln in out.splitlines():
+                on_line(ln)
+            return 0
+        src, dest = Path(args[args.index("-i") + 1]), Path(args[-1])
+        assert src.exists(), f"Encode source missing: {src}"
+        self.encoding.set()
+        try:
+            self._block(on_line, 0.1)
+            on_line("[hevc_nvenc @ 0000020] a harmless warning")
+            while self.hold and not self._go.wait(0.01):
+                self._block(on_line, 0.4)  # lets the caller abort us
+            if self.exit_code:
+                on_line("[hevc_nvenc @ 0000020] OpenEncodeSessionEx failed: unsupported device")
+                return self.exit_code
+            dest.write_bytes(b"HEVC " + src.name.encode())
+            on_line("progress=end")
+            return 0
+        finally:
+            self.encoding.clear()
+
+
+class FakeTools:
+    """One `Streamer` for the app, routing on the program: makemkvcon -> `makemkv`,
+    ffmpeg/ffprobe -> `ffmpeg`, the rest -> `cyanrip`."""
+
+    def __init__(self, makemkv: FakeMakemkv, cyanrip: FakeCyanrip,
+                 ffmpeg: FakeFfmpeg | None = None) -> None:
+        self.makemkv = makemkv
+        self.cyanrip = cyanrip
+        self.ffmpeg = ffmpeg or FakeFfmpeg()
+
+    def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
+                 cwd: Path | None = None) -> int:
+        name = Path(args[0]).name.lower()
+        fake = (self.makemkv if "makemkv" in name else
+                self.ffmpeg if "ffmpeg" in name or "ffprobe" in name else self.cyanrip)
         return fake(args, on_line, cwd)
 
 
