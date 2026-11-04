@@ -75,6 +75,38 @@ def test_licence_error_is_a_hard_stop_shown_as_a_makemkv_problem(client, harness
     assert ripped_files(harness) == []
 
 
+def test_a_uhd_rips_in_libredrive_mode(client, harness):
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
+    eventually(lambda: harness.drive.ejected == 1)
+    assert ripped_files(harness) == ["1/Example_Movie_t00.mkv", "1/Example_Movie_t01.mkv"]
+    log = client.get("/discs/1/log").text
+    assert "Using LibreDrive mode" in log
+    assert "Ripped" in page_text(client, "/discs/1")
+
+
+def test_a_uhd_the_drive_wont_open_without_libredrive_is_scanned_once_more(client, harness):
+    harness.makemkv.libredrive_refusals = 1  # e.g. the drive just reset its LibreDrive mode
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
+    eventually(lambda: harness.drive.ejected == 1)
+    assert ripped_files(harness) == ["1/Example_Movie_t00.mkv", "1/Example_Movie_t01.mkv"]
+    log = client.get("/discs/1/log").text
+    assert "LibreDrive compatible drive is required" in log
+    assert "Reading the Disc once more" in log
+
+
+def test_a_uhd_that_needs_libredrive_fails_with_advice_and_ejects(client, harness):
+    harness.makemkv.libredrive_refusals = 2
+    harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
+    eventually(lambda: harness.drive.ejected == 1)
+    assert not any("mkv" in c for c in harness.makemkv.calls)  # nothing ripped
+    assert ripped_files(harness) == []
+    page = page_text(client, "/discs/1")
+    assert "can't decrypt this UHD Blu-ray" in page
+    assert "LibreDrive" in page and "Open MakeMKV" in page
+
+
 def test_failed_rip_ejects_deletes_partial_files_and_keeps_the_log(client, harness):
     harness.makemkv.fail_title = 1
     harness.makemkv.release()

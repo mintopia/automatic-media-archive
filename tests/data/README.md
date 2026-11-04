@@ -20,3 +20,11 @@
 - `makemkv-unregistered-v2.0.0.txt`: **real** output of `makemkvcon64 -r --cache=1 info disc:9999`
   with MakeMKV 2.0.0 and no `app_Key` in `HKCU\Software\MakeMKV`, drive empty, 2026-11-04.
   It runs normally; the registration check reads the registry, not this output.
+- `ffprobe/hdr10-source.json`: **real** `ffprobe -v error -select_streams v:0 -read_intervals
+  %+#1 -show_streams -show_frames -of json` (AMA's ffprobe 9.0.2) of a 3 s 3840x2160 HDR10
+  clip made with libx265 (`hdr10=1`, master-display G(13250,34500)B(7500,3000)R(34000,16000)
+  WP(15635,16450)L(10000000,50), max-cll 1000,400), 2026-11-04. Frame side data = SEI.
+- `ffprobe/hdr10-encode.json`: the same command on that clip after AMA's hevc_nvenc Encode
+  (`-hwaccel cuda`, temporal AQ, b_ref_mode middle, explicit colour tags) on the archive PC's
+  RTX 3060 Ti, driver 621.01. Stream side data comes back with reduced fractions (17/25).
+- The LibreDrive lines in `FakeMakemkv` are not captured: no UHD Disc has been scanned yet.

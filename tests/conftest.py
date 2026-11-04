@@ -52,7 +52,7 @@ def make_config(tmp_path, password: str = "") -> Config:
         plex=PlexConfig(url="http://plex:32400", token="plex-token", nas_path="/volume1/media"),
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
-        encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=22)),
+        encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=24)),
         tmdb=TmdbConfig(api_key="tmdb-key"),
     )
 
