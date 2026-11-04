@@ -42,6 +42,7 @@ class ReviewReason(StrEnum):
     NO_MATCH = "no_match"                    # TMDB has no film named like the Disc
     RUNTIME_MISMATCH = "runtime_mismatch"    # films found, none within 5 min of the Main Feature
     MULTIPLE_MATCHES = "multiple_matches"    # several films fit name and runtime
+    EPISODES = "episodes"                    # looks like TV: Titles -> Episodes needs a human (#13)
     DECOY_PLAYLISTS = "decoy_playlists"      # many near-identical Titles: which is the film? (#9)
 
 

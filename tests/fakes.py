@@ -336,6 +336,29 @@ class FakeWeb:
         self.discord: list[httpx.Request] = []
         self.ntfy: list[httpx.Request] = []
         self.notify_status = 200
+        # TMDB TV: search results per (case-folded) query, /tv/{id}, /tv/{id}/season/{n}.
+        self.tmdb_tv_search: dict[str, list[dict]] = {}
+        self.tmdb_series: dict[int, dict] = {}
+        self.tmdb_seasons: dict[tuple[int, int], dict] = {}
+
+    def add_series(self, query: str, id_: int, name: str, year: int,
+                   seasons: dict[int, list[tuple[int, str, int]]],
+                   original_language: str = "en") -> None:
+        """TMDB knows this series (`seasons`: number -> [(episode, name, runtime)]) and
+        finds it when searched for `query`."""
+        date = f"{year}-07-09"
+        self.tmdb_tv_search.setdefault(query.casefold(), []).append(
+            {"id": id_, "name": name, "original_name": name, "first_air_date": date,
+             "original_language": original_language})
+        self.tmdb_series[id_] = {
+            "id": id_, "name": name, "first_air_date": date,
+            "original_language": original_language,
+            "seasons": [{"season_number": n, "episode_count": len(eps)}
+                        for n, eps in sorted(seasons.items())]}
+        for n, eps in seasons.items():
+            self.tmdb_seasons[(id_, n)] = {"season_number": n, "episodes": [
+                {"season_number": n, "episode_number": e, "name": t, "runtime": r}
+                for e, t, r in eps]}
 
     def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
                  original_language: str = "en", original_title: str | None = None,
@@ -378,6 +401,15 @@ class FakeWeb:
                 query = url.params.get("query", "").casefold()
                 return httpx.Response(200, json={"page": 1, "results":
                                                  self.tmdb_search.get(query, [])})
+            if url.path == "/3/search/tv":
+                query = url.params.get("query", "").casefold()
+                return httpx.Response(200, json={"page": 1, "results":
+                                                 self.tmdb_tv_search.get(query, [])})
+            if url.path.startswith("/3/tv/"):
+                parts = url.path.split("/")  # "", "3", "tv", id[, "season", n]
+                found = (self.tmdb_seasons.get((int(parts[3]), int(parts[5])))
+                         if len(parts) == 6 else self.tmdb_series.get(int(parts[3])))
+                return httpx.Response(200, json=found) if found else httpx.Response(404)
             movie = self.tmdb_movies.get(int(url.path.rsplit("/", 1)[-1]))
             return httpx.Response(200, json=movie) if movie else httpx.Response(404)
         if url.host in ("discord.com", "ntfy.sh"):
