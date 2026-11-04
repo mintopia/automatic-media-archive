@@ -94,6 +94,85 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
     assert '<option value="S02E01" selected>S02E01 · Merger</option>' in season2
 
 
+def _filed_names(harness) -> list[str]:
+    root = extended_path(harness.nas_root / SHOW)
+    return sorted(p.relative_to(root).as_posix() for p in root.rglob("*.mkv"))
+
+
+def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client):
+    _the_office(harness)
+    rec = _in_review(harness, _tv_disc(harness))
+    r = client.post(f"/review/{rec.id}/episodes", follow_redirects=False, data={
+        "series": str(OFFICE), "season": "1",
+        "t1": "S01E03", "t2": "S01E05", "t3": "S00E01", "t4": "discard", "t5": "extra"})
+    assert r.status_code == 303 and r.headers["location"] == "/review"
+
+    filed = eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+                       timeout=10) or harness.services.discs.get(rec.id)
+    assert filed.title == "The Office (2001) · 3 Episodes"
+    assert _filed_names(harness) == [
+        "Other/THE_OFFICE_S1_D2 - Title 5.mkv",
+        "Season 00/The Office - s00e01 - Christmas Special (1).mkv",
+        "Season 01/The Office - s01e03 - The Quiz.mkv",
+        "Season 01/The Office - s01e05 - New Girl.mkv"]
+    root = extended_path(harness.nas_root / SHOW)
+    assert (root / "Season 01/The Office - s01e03 - The Quiz.mkv").read_bytes() == \
+        f"HEVC {LABEL}_t00.mkv".encode()  # Title 1
+    assert len(harness.ffmpeg.encodes()) == 4  # the Play all is never encoded
+    eventually(lambda: not rec.scratch_dir.exists())  # the Rip is gone (ADR-0002)
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "Review: The Office (2001) (TMDB 2996); Title 1 = S01E03" in log
+    assert "Title 5 = Extra; 1 discarded" in log
+    assert "Nothing needs you right now" in _page(client, "/review")
+    assert "The Office (2001) · 3 Episodes" in _page(client, "/")  # Filed today
+
+
+def test_a_mapping_is_checked_and_ignored_once_the_disc_has_left_review(harness, client):
+    _the_office(harness)
+    rec = _in_review(harness, _tv_disc(harness))
+    base = {"series": str(OFFICE), "season": "1", "t4": "discard", "t5": "discard"}
+    twice = client.post(f"/review/{rec.id}/episodes",
+                        data=base | {"t1": "S01E04", "t2": "S01E04", "t3": "S01E06"})
+    assert twice.status_code == 400
+    assert "Titles 1 and 2 are both S01E04" in html.unescape(twice.text)
+    assert '<option value="S01E06" selected>' in twice.text  # the choices are kept
+    nothing = client.post(f"/review/{rec.id}/episodes",
+                          data=base | {"t1": "extra", "t2": "discard", "t3": "discard"})
+    assert nothing.status_code == 400 and "Map at least one Title" in nothing.text
+    unknown = client.post(f"/review/{rec.id}/episodes",
+                          data=base | {"t1": "S01E99", "t2": "discard", "t3": "discard"})
+    assert unknown.status_code == 400
+    assert not harness.services.tv_archive.titles.has(rec.id)
+
+    ok = base | {"t1": "S01E01", "t2": "discard", "t3": "discard"}
+    assert client.post(f"/review/{rec.id}/episodes", data=ok,
+                       follow_redirects=False).status_code == 303
+    again = client.post(f"/review/{rec.id}/episodes", follow_redirects=False,
+                        data=ok | {"t1": "S01E02"})
+    assert again.status_code == 303
+    [only] = harness.services.tv_archive.titles.for_disc(rec.id)
+    assert only.episode.code == "S01E01"
+    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+               timeout=10)
+
+
+def test_any_video_disc_in_review_can_be_marked_as_tv_and_back(harness, client):
+    _the_office(harness)
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=121)
+    harness.web.add_film("Example Movie", 78, "Example Movie", runtime=122, year=2020)
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # a film's Disc, two films fit
+    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=5)
+    [rec] = harness.services.discs.list(DiscStatus.REVIEW)
+    assert "It's TV episodes" in _page(client, f"/review/{rec.id}")
+    r = client.post(f"/review/{rec.id}/kind", data={"kind": "tv"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == f"/review/{rec.id}"
+    page = _page(client, f"/review/{rec.id}?q=THE OFFICE")
+    assert "Which episode is each Title?" in page and "The Office (2001)" in page
+    client.post(f"/review/{rec.id}/kind", data={"kind": "film"})
+    assert "Which film is on this Disc?" in _page(client, f"/review/{rec.id}")
+
+
 def test_the_user_can_search_for_another_series(harness, client):
     _the_office(harness)
     harness.web.add_series("The Office US", 2316, "The Office", 2005, {1: [(1, "Pilot", 23)]})

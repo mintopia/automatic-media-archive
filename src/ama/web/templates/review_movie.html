@@ -51,7 +51,9 @@
         </div></div>
       </section>
       <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a></p>
+      <p class="ts">Not a film? <button class="btn quiet" type="submit" form="as-tv">It's TV episodes</button></p>
     </div>
   </form>
+  <form id="as-tv" method="post" action="/review/{{ record.id }}/kind"><input type="hidden" name="kind" value="tv"></form>
 </main>
 {% endblock %}
