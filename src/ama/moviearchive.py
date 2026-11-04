@@ -35,11 +35,12 @@ from pathlib import Path
 
 import httpx
 
-from ama import encode, review
+from ama import encode, picture, review
 from ama.archive import Archive, FilingError
 from ama.config import CqConfig
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord, TitleStatus
+from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus
 from ama.nas import NasConnected, NasMonitor
@@ -325,6 +326,8 @@ class MovieArchiver:
             except ValueError as e:
                 return self._failed(rec, f"Couldn't read the Main Feature ({e}; ffprobe exit "
                                          f"{code})", probe_lines[-LOG_TAIL:])
+            pic = await self._analyse_picture(rec, ffmpeg, src, probe)
+            self._discs.log(rec.id, pic.describe())
             cq = encode.cq_for(self._cq, rec.disc_type)
             self._discs.log(rec.id, f"Encoding Title {title.number} as {movie.film.name}: HEVC "
                                     f"10-bit, CQ {cq}; keeping {len(sel.audio)} audio and "
@@ -346,7 +349,8 @@ class MovieArchiver:
 
             tmp.unlink(missing_ok=True)
             started = self._clock()
-            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, movie.film.name)
+            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, movie.film.name,
+                                      video_filter=pic.filters)
             try:
                 code = await asyncio.to_thread(self._stream, args, on_line)
             except asyncio.CancelledError:
@@ -365,6 +369,37 @@ class MovieArchiver:
             return True
         finally:
             self.current = None
+
+    async def _analyse_picture(self, rec: DiscRecord, ffmpeg: Path, src: Path,
+                               probe: encode.Probe) -> picture.Picture:
+        """Sample the Main Feature for black bars and, on a DVD, its scan type (#10).
+
+        A sample that fails just counts for nothing: the Encode then crops less,
+        never more.
+        """
+        video = probe.video
+        assert video is not None  # select_streams already insisted on one
+        dvd = rec.disc_type == DiscType.DVD
+        runs: list[list[str]] = []
+        for at in picture.sample_times(probe.duration_s):
+            lines: list[str] = []
+
+            def on_line(line: str, lines: list[str] = lines) -> None:
+                if self._abort:
+                    raise _Aborted
+                lines.append(line)
+
+            try:
+                await asyncio.to_thread(self._stream,
+                                        picture.sample_args(ffmpeg, src, at, idet=dvd), on_line)
+            except asyncio.CancelledError:
+                self._abort = True
+                raise
+            except OSError:
+                pass
+            runs.append(lines)
+        return picture.analyse(runs, width=video.width, height=video.height,
+                               fps=video.frame_rate, detect_scan=dvd)
 
     def _failed(self, rec: DiscRecord, why: str, tail: list[str]) -> bool:
         for line in tail:

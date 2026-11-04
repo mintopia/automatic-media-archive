@@ -148,3 +148,24 @@ def test_cq_comes_from_the_disc_type():
     from ama.encode import cq_for
     cq = CqConfig(dvd=19, bd=22, uhd=24)
     assert [cq_for(cq, t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [19, 22, 24]
+
+
+def test_probe_reads_the_video_size_and_frame_rate_for_picture_analysis():
+    text = json.dumps({"streams": [_s(0, "video", "mpeg2video") | {
+        "width": 720, "height": 480, "r_frame_rate": "30000/1001"}], "format": {}})
+    video = parse_probe(text).video
+    assert video is not None and (video.width, video.height) == (720, 480)
+    assert abs(video.frame_rate - 29.97) < 0.01
+    unknown = parse_probe(json.dumps({"streams": [_s(0, "video", "h264") | {
+        "r_frame_rate": "0/0"}]})).video
+    assert unknown is not None and unknown.frame_rate == 0.0
+
+
+def test_the_picture_filters_go_in_as_one_video_filter_chain():
+    sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
+    plain = ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=20, title="X")
+    assert "-vf" not in plain
+    args = ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=20, title="X",
+                       video_filter="bwdif,crop=720:360:0:60")
+    assert args[args.index("-vf") + 1] == "bwdif,crop=720:360:0:60"
+    assert args.index("-vf") > args.index("-i")

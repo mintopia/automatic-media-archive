@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import html
 import json
+from pathlib import Path
 from urllib.parse import parse_qs
+
+import pytest
 
 from ama.archive import extended_path
 from ama.discs import DiscStatus, ReviewReason
@@ -199,3 +202,57 @@ def test_an_encode_waits_for_the_nas_then_files(tmp_path):
         h.share["reachable"] = True
         _wait_for(h, DiscStatus.FILED)
     assert len(h.ffmpeg.encodes()) == 1  # filed from the finished Encode, not re-encoded
+
+
+def _picture_sample(name: str) -> list[str]:
+    path = Path(__file__).parent / "data" / "ffmpeg" / f"sample-{name}.txt"
+    return path.read_text(encoding="utf-8").splitlines()
+
+
+def _dvd_video(**extra) -> dict:
+    return probe_stream(0, "video", "mpeg2video", width=720, height=480,
+                        r_frame_rate="30000/1001", **extra)
+
+
+@pytest.mark.parametrize("sample, vf, said", [
+    ("telecined", "fieldmatch=order=tff:combmatch=full,"
+                  "bwdif=mode=send_frame:parity=auto:deint=interlaced,decimate,crop=720:360:0:60",
+     "telecined film (TFF), detelecined to film rate; cropped 720x480 to 720x360 at 0,60"),
+    ("interlaced", "bwdif=mode=send_field:parity=auto:deint=all",
+     "interlaced (TFF), deinterlaced to one frame per field; no black bars to crop"),
+])
+def test_a_dvd_is_encoded_progressive_and_cropped(client, harness, sample, vf, said):
+    harness.ffmpeg.streams[0] = _dvd_video()
+    harness.ffmpeg.sample_output = _picture_sample(sample)
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness, disc_type=DiscType.DVD)
+
+    rec = _wait_for(harness, DiscStatus.FILED)
+    runs = harness.ffmpeg.samples()
+    assert len(runs) == 10 and all(r[r.index("-vf") + 1].startswith("idet,") for r in runs)
+    encode = harness.ffmpeg.encodes()[0]
+    assert encode[encode.index("-vf") + 1] == vf
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert f"Picture: {said}" in log
+
+
+def test_a_letterboxed_bd_is_cropped_without_scan_detection(client, harness):
+    harness.ffmpeg.sample_output = [
+        "[Parsed_cropdetect_0 @ 0000] x1:0 x2:1919 y1:140 y2:939 w:1920 h:800 x:0 y:140 "
+        "pts:1 t:1.0 limit:0.100000 crop=1920:800:0:140"]
+    harness.ffmpeg.streams[0] = probe_stream(0, "video", "h264", width=1920, height=1080,
+                                             r_frame_rate="24000/1001")
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+
+    _wait_for(harness, DiscStatus.FILED)
+    assert all("idet" not in r[r.index("-vf") + 1] for r in harness.ffmpeg.samples())
+    encode = harness.ffmpeg.encodes()[0]
+    assert encode[encode.index("-vf") + 1] == "crop=1920:800:0:140"
+
+
+def test_a_film_with_no_bars_and_nothing_to_fix_gets_no_video_filter(client, harness):
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+    _wait_for(harness, DiscStatus.FILED)
+    assert "-vf" not in harness.ffmpeg.encodes()[0]

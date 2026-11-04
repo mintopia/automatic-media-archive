@@ -1,0 +1,266 @@
+Input #0, matroska,webm, from 'telecined.mkv':
+  Metadata:
+    ENCODER         : Lavf63.1.102
+  Duration: 00:00:59.99, start: 0.000000, bitrate: 5973 kb/s
+  Stream #0:0: Video: mpeg2video (Main), yuv420p(tv, top coded first (swapped)), 720x480 [SAR 1:1 DAR 3:2], 29.97 fps, 29.97 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc63.1.102 mpeg2video
+      DURATION        : 00:00:59.993000000
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 2277376 vbv_delay: N/A
+[Parsed_idet_0 @ 0000029ade1ff5c0] Repeated Fields: Neither:     0 Top:     0 Bottom:     0
+[Parsed_idet_0 @ 0000029ade1ff5c0] Single frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:     0
+[Parsed_idet_0 @ 0000029ade1ff5c0] Multi frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:     0
+Stream mapping:
+  Stream #0:0 -> #0:0 (mpeg2video (native) -> wrapped_avframe (native))
+Output #0, null, to 'pipe:':
+  Metadata:
+    encoder         : Lavf63.1.102
+  Stream #0:0: Video: wrapped_avframe, yuv420p(tv, top coded first (swapped)), 720x480 [SAR 1:1 DAR 3:2], q=2-31, 200 kb/s, 29.97 fps, 29.97 tbn
+    Metadata:
+      encoder         : Lavc63.1.102 wrapped_avframe
+      DURATION        : 00:00:59.993000000
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:72 t:0.072000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:105 t:0.105000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:138 t:0.138000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:172 t:0.172000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:205 t:0.205000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:239 t:0.239000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:272 t:0.272000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:305 t:0.305000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:339 t:0.339000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:372 t:0.372000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:405 t:0.405000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:439 t:0.439000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:472 t:0.472000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:506 t:0.506000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:539 t:0.539000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:572 t:0.572000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:606 t:0.606000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:639 t:0.639000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:672 t:0.672000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:706 t:0.706000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:739 t:0.739000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:772 t:0.772000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:806 t:0.806000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:839 t:0.839000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:873 t:0.873000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:906 t:0.906000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:939 t:0.939000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:973 t:0.973000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1006 t:1.006000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1039 t:1.039000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1073 t:1.073000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1106 t:1.106000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1139 t:1.139000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1173 t:1.173000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1206 t:1.206000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1240 t:1.240000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1273 t:1.273000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1306 t:1.306000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1340 t:1.340000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1373 t:1.373000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1406 t:1.406000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1440 t:1.440000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1473 t:1.473000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1507 t:1.507000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1540 t:1.540000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1573 t:1.573000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1607 t:1.607000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1640 t:1.640000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1673 t:1.673000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1707 t:1.707000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1740 t:1.740000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1773 t:1.773000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1807 t:1.807000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1840 t:1.840000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1874 t:1.874000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1907 t:1.907000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1940 t:1.940000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1974 t:1.974000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2007 t:2.007000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2040 t:2.040000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2074 t:2.074000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2107 t:2.107000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2140 t:2.140000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2174 t:2.174000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2207 t:2.207000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2241 t:2.241000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2274 t:2.274000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2307 t:2.307000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2341 t:2.341000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2374 t:2.374000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2407 t:2.407000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2441 t:2.441000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2474 t:2.474000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2508 t:2.508000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2541 t:2.541000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2574 t:2.574000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2608 t:2.608000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2641 t:2.641000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2674 t:2.674000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2708 t:2.708000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2741 t:2.741000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2774 t:2.774000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2808 t:2.808000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2841 t:2.841000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2875 t:2.875000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2908 t:2.908000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2941 t:2.941000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2975 t:2.975000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3008 t:3.008000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3041 t:3.041000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3075 t:3.075000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3108 t:3.108000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3141 t:3.141000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3175 t:3.175000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3208 t:3.208000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3242 t:3.242000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3275 t:3.275000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3308 t:3.308000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3342 t:3.342000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3375 t:3.375000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3408 t:3.408000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3442 t:3.442000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3475 t:3.475000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3509 t:3.509000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3542 t:3.542000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3575 t:3.575000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3609 t:3.609000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3642 t:3.642000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3675 t:3.675000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3709 t:3.709000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3742 t:3.742000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3775 t:3.775000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3809 t:3.809000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3842 t:3.842000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3876 t:3.876000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3909 t:3.909000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3942 t:3.942000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3976 t:3.976000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4009 t:4.009000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4042 t:4.042000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4076 t:4.076000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4109 t:4.109000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4142 t:4.142000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4176 t:4.176000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4209 t:4.209000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4243 t:4.243000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4276 t:4.276000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4309 t:4.309000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4343 t:4.343000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4376 t:4.376000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4409 t:4.409000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4443 t:4.443000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4476 t:4.476000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4510 t:4.510000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4543 t:4.543000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4576 t:4.576000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4610 t:4.610000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4643 t:4.643000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4676 t:4.676000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4710 t:4.710000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4743 t:4.743000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4776 t:4.776000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4810 t:4.810000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4843 t:4.843000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4877 t:4.877000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4910 t:4.910000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4943 t:4.943000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4977 t:4.977000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5010 t:5.010000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5043 t:5.043000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5077 t:5.077000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5110 t:5.110000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5143 t:5.143000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5177 t:5.177000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5210 t:5.210000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5244 t:5.244000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5277 t:5.277000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5310 t:5.310000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5344 t:5.344000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5377 t:5.377000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5410 t:5.410000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5444 t:5.444000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5477 t:5.477000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5511 t:5.511000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5544 t:5.544000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5577 t:5.577000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5611 t:5.611000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5644 t:5.644000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5677 t:5.677000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5711 t:5.711000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5744 t:5.744000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5777 t:5.777000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5811 t:5.811000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5844 t:5.844000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5878 t:5.878000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5911 t:5.911000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5944 t:5.944000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5978 t:5.978000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6011 t:6.011000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6044 t:6.044000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6078 t:6.078000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6111 t:6.111000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6144 t:6.144000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6178 t:6.178000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6211 t:6.211000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6245 t:6.245000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6278 t:6.278000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6311 t:6.311000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6345 t:6.345000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6378 t:6.378000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6411 t:6.411000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6445 t:6.445000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6478 t:6.478000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6512 t:6.512000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6545 t:6.545000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6578 t:6.578000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6612 t:6.612000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6645 t:6.645000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6678 t:6.678000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6712 t:6.712000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6745 t:6.745000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6778 t:6.778000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6812 t:6.812000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6845 t:6.845000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6879 t:6.879000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6912 t:6.912000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6945 t:6.945000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6979 t:6.979000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7012 t:7.012000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7045 t:7.045000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7079 t:7.079000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7112 t:7.112000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7145 t:7.145000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7179 t:7.179000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7212 t:7.212000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7246 t:7.246000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7279 t:7.279000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7312 t:7.312000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7346 t:7.346000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7379 t:7.379000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7412 t:7.412000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7446 t:7.446000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7479 t:7.479000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7513 t:7.513000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7546 t:7.546000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7579 t:7.579000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7613 t:7.613000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7646 t:7.646000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7679 t:7.679000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7713 t:7.713000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7746 t:7.746000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7779 t:7.779000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7813 t:7.813000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7846 t:7.846000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7880 t:7.880000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7913 t:7.913000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7946 t:7.946000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7980 t:7.980000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 0000029adfd8df00] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8013 t:8.013000 limit:0.100000 crop=720:360:0:60
+[Parsed_idet_0 @ 0000029ade23a680] Repeated Fields: Neither:   145 Top:    48 Bottom:    48
+[Parsed_idet_0 @ 0000029ade23a680] Single frame detection: TFF:   212 BFF:    21 Progressive:     8 Undetermined:     0
+[Parsed_idet_0 @ 0000029ade23a680] Multi frame detection: TFF:   241 BFF:     0 Progressive:     0 Undetermined:     0
+[out#0/null @ 0000029ade1e3e00] video:99KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+frame=  240 fps=0.0 q=-0.0 Lsize=N/A time=00:00:08.00 bitrate=N/A speed= 147x elapsed=0:00:00.05    

@@ -60,6 +60,8 @@ class Stream:
     hearing_impaired: bool = False
     attached_pic: bool = False
     height: int = 0
+    width: int = 0
+    frame_rate: float = 0.0  # 0 = unknown
 
     @property
     def english(self) -> bool:
@@ -86,9 +88,21 @@ class Probe:
     chapters: int = 0
 
     @property
+    def video(self) -> Stream | None:
+        return next((s for s in self.streams if s.kind == "video" and not s.attached_pic), None)
+
+    @property
     def height(self) -> int:
-        video = next((s for s in self.streams if s.kind == "video" and not s.attached_pic), None)
-        return video.height if video else 0
+        return self.video.height if self.video else 0
+
+
+def _rate(text: object) -> float:
+    """ffprobe's `r_frame_rate` ("30000/1001"); 0.0 when absent or "0/0"."""
+    num, _, den = str(text or "").partition("/")
+    try:
+        return float(num) / float(den or 1)
+    except (ValueError, ZeroDivisionError):
+        return 0.0
 
 
 def parse_probe(text: str) -> Probe:
@@ -110,7 +124,8 @@ def parse_probe(text: str) -> Probe:
             language="" if lang == "und" else lang, title=str(tags.get("title", "")),
             default=bool(d.get("default")), forced=bool(d.get("forced")),
             comment=bool(d.get("comment")), hearing_impaired=bool(d.get("hearing_impaired")),
-            attached_pic=bool(d.get("attached_pic")), height=int(s.get("height") or 0)))
+            attached_pic=bool(d.get("attached_pic")), height=int(s.get("height") or 0),
+            width=int(s.get("width") or 0), frame_rate=_rate(s.get("r_frame_rate"))))
     try:
         duration = float((data.get("format") or {}).get("duration") or 0)
     except ValueError:
@@ -180,11 +195,14 @@ def _flags(*named: tuple[str, bool]) -> str:
 
 
 def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
-                title: str) -> list[str]:
+                title: str, video_filter: str | None = None) -> list[str]:
+    """`video_filter`: the `-vf` chain from `picture.Picture.filters` (#10), if any."""
     args = [str(exe), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "warning",
             "-progress", "pipe:1", "-y", "-hwaccel", "cuda", "-i", str(src)]
     for s in sel.streams:
         args += ["-map", f"0:{s.index}"]
+    if video_filter:
+        args += ["-vf", video_filter]
     args += ["-map_chapters", "0", "-map_metadata", "0", "-metadata", f"title={title}",
              *VIDEO_OPTS[:8], "-cq", str(cq), *VIDEO_OPTS[8:],
              "-c:a", "copy", "-c:s", "copy"]
