@@ -331,6 +331,16 @@ State as a mark, never a toast. A notice has a 24px icon column, a bold first li
 ### Frames
 Title thumbnails in a 3-up grid of 16:9 tiles with 1px hairline gaps. Tiles come in thumb, dark, mid and lite tones, with 600 / 11px captions. Mockup frames are synthetic placeholders.
 
+### Per-Job Settings Panel
+A Job's settings as overrides of the global ones (`docs/mockups/job-settings-*.html`).
+- **Summary line:** on the rip card, a hairline-topped line at the foot of the drive body names only what differs from the defaults ("CQ 20 (default 22)") and ends with a Settings / Hide settings toggle (44px target).
+- **Panel:** an `ink` bin, "This Job's settings", in two columns: Encode on the left, then Library, Identification and Rip stacked on the right. One column under 720px, with labels above controls. CD Jobs show only Identification, Library and Rip.
+- **Group:** a 700 / 15px heading with its state at the right, then label and control pairs. An editable group ends with "Can change until <Phase> starts" or "until Filed".
+- **Override:** the control gets an `ink` border and 600 weight, with "Default <value> · Reset" in 12px `ink-2` under it.
+- **Saving:** each control saves on change, and a `filed-ink` check reading "Saved" appears by the group heading (`role="status"`).
+- **Locked:** a lock icon and "Locked at Ripping start", "Locked at Encoding start" or "Locked when Filed", with the stored values as a definition list in `ink-2` and no controls. An override stays named: "Changed for this Job · default <value>".
+- **Rejected edit:** an attention notice at the top of the panel says the group locked first and the change wasn't saved.
+
 ### Log
 A rip log on the always-dark `log-ground`, in 13px / 1.6 monospace, with whitespace preserved, a maximum height of 320px and scrolling. Error lines are the warm `#F08A70`.
 

@@ -9,3 +9,4 @@ ama-startup-error.log
 *.sqlite3-*
 logs/
 .claude
+.visual-companion/
