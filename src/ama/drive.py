@@ -16,7 +16,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 
 log = logging.getLogger(__name__)
 
@@ -202,7 +202,6 @@ def default_probe(letter: str | None) -> DriveProbe:
 class DriveMonitor:
     """Polls the probe and publishes `drive` on the bus when the state changes."""
 
-    TOPIC = "drive"
 
     def __init__(self, probe: DriveProbe, bus: EventBus, interval: float) -> None:
         self._probe = probe
@@ -225,7 +224,7 @@ class DriveMonitor:
             if has_disc(state) and not has_disc(self.state):
                 self.insertion += 1
             self.state = state
-            self._bus.publish(self.TOPIC)
+            self._bus.publish(Topic.DRIVE)
 
     def device(self) -> str | None:
         return self._probe.device()

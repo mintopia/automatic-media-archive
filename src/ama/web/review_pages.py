@@ -15,7 +15,7 @@ import httpx
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import cdreview, review, tvreview
+from ama import cdreview, tvreview
 from ama.cyanrip import ArStatus
 from ama.discs import DiscRecord, DiscStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
@@ -24,6 +24,7 @@ from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, extras_pages, movie_review_pages, set_review_pages, \
     tv_review_pages, view_context
 from ama.web.review_items import plural
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -55,7 +56,7 @@ def _decided(services, rec: DiscRecord) -> Response:
 
 
 def _publish(services) -> None:
-    for topic in (review.TOPIC, "rip"):
+    for topic in (Topic.REVIEW, Topic.RIP):
         services.bus.publish(topic)
 
 

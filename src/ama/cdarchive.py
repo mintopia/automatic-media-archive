@@ -24,34 +24,29 @@ import asyncio
 import json
 import logging
 import re
-import time
 from pathlib import Path
 
 import httpx
 from mutagen.flac import FLAC
 
-from ama import cdreview, cyanrip, musicbrainz, review
-from ama.archive import Archive, FilingError, safe_name
+from ama import cdreview, cyanrip, filing, musicbrainz
+from ama.archive import Archive, safe_name
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
 from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason
 from ama.drive import DiscType
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.media import Album, MediaStore
 from ama.musicbrainz import Match, MusicBrainz
-from ama.nas import NasConnected, NasMonitor
+from ama.nas import NasMonitor
 from ama.plex import Plex
+from ama.retry import Backoff, RetryLater
 
 log = logging.getLogger(__name__)
 
-TOPIC = "filed"
 MUSIC = Path("Music")
 MB_FILE = cdreview.MB_FILE
-
-
-class RetryLater(Exception):
-    """Something outside AMA (network, NAS) isn't available yet; try this Disc again later."""
 
 
 # ---- deciding ----------------------------------------------------------------
@@ -174,8 +169,7 @@ class CdArchiver:
         self._plex = plex
         self._bus = bus
         self._interval = interval
-        self.retry_seconds = retry_seconds
-        self._not_before: dict[int, float] = {}  # Disc id -> monotonic time of next try
+        self.backoff = Backoff(retry_seconds)
 
     async def run(self) -> None:
         await asyncio.to_thread(self._discs.clean_filed_scratch)
@@ -186,22 +180,22 @@ class CdArchiver:
     async def check_once(self) -> None:
         waiting = self._discs.list(DiscStatus.RIPPED, include_dismissed=True, types={DiscType.CD})
         for rec in reversed(waiting):  # oldest first
-            if time.monotonic() < self._not_before.get(rec.id, 0.0):
+            if not self.backoff.due(rec.id):
                 continue
             try:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
-                self._discs.log(rec.id, f"{e}; trying again in a while", error=True)
-                self._not_before[rec.id] = time.monotonic() + self.retry_seconds
+                if self.backoff.later(rec.id):
+                    self._discs.log(rec.id, f"{e}; trying again in a while", error=True)
             except Exception:
                 log.exception("CD Identification/filing of Disc %s crashed", rec.id)
-                self._not_before[rec.id] = time.monotonic() + self.retry_seconds
+                self.backoff.later(rec.id)
             else:
-                self._not_before.pop(rec.id, None)
+                self.backoff.done(rec.id)
             self._publish()
 
     def _publish(self) -> None:
-        for topic in ("rip", TOPIC, review.TOPIC):
+        for topic in (Topic.RIP, Topic.FILED, Topic.REVIEW):
             self._bus.publish(topic)
 
     # -- one Disc (runs in a worker thread) --
@@ -248,8 +242,7 @@ class CdArchiver:
 
     def file(self, rec: DiscRecord, match: Match, disc_id: str) -> None:
         """Tag, file and verify this Disc as `match`, then delete its scratch and tell Plex."""
-        if not isinstance(self._nas.status, NasConnected):
-            raise RetryLater("The NAS isn't connected")
+        filing.require_nas(self._nas)
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}
         renamed: dict[str, str] = {}
@@ -282,16 +275,10 @@ class CdArchiver:
             cached = self._covers.path(art)
             assert cached is not None
             files[f"cover{cached.suffix}"] = cached
-        try:
+        with filing.to_nas():
             folder = self._archive.place(album_folder(match), files)
-        except (OSError, FilingError) as e:
-            raise RetryLater(f"Couldn't file to the NAS ({e})") from e
         title = f"{match.release.title} — {match.release.artist}"
         self._media.save(rec.id, Album.of(match, disc_id, art))
         self._discs.mark_filed(rec.id, title, folder)
         self._discs.log(rec.id, f"Filed {len(files)} files to {folder}; scratch deleted")
-        try:
-            self._discs.log(rec.id, self._plex.scan(folder))
-        except httpx.HTTPError as e:
-            self._discs.log(rec.id, f"Couldn't ask Plex to scan the folder ({e}); "
-                                    "Plex will find it on its next scan", error=True)
+        filing.scan(self._plex, self._discs, rec.id, folder)

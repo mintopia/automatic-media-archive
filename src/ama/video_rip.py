@@ -28,7 +28,7 @@ from ama.discs import (
     TitleStatus,
 )
 from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
@@ -104,7 +104,6 @@ class _Fail(Exception):
 
 
 class VideoRipper:
-    TOPIC = "rip"
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
@@ -377,8 +376,8 @@ class VideoRipper:
 
     def _publish(self) -> None:
         self._last_publish = self._clock()
-        self._bus.publish(self.TOPIC)
-        self._bus.publish(DriveMonitor.TOPIC)
+        self._bus.publish(Topic.RIP)
+        self._bus.publish(Topic.DRIVE)
 
     def _publish_soon(self) -> None:
         """From the makemkvcon thread: publish on the loop, at most every PUBLISH_EVERY_SECONDS."""

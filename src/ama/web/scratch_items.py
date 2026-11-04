@@ -53,7 +53,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
                              sticker=("rip", "Ripping")))
     review = [_item(i.record, i.title, f"Needs Review · {i.action.lower()}", href=i.href)
               for i in review_items(services)]
-    job = services.movie_archive.current
+    job = services.movie_archive.encoder.current
     movies = services.movie_archive.movies
     for rec in sorted(discs.list(DiscStatus.RIPPED, include_dismissed=True), key=lambda r: r.id):
         movie = movies.get(rec.id)
@@ -95,7 +95,7 @@ def _rip_pct(services: Services, rec: DiscRecord) -> int:
 
 def scratch_context(services: Services) -> dict:
     items = scratch_items(services)
-    job = services.movie_archive.current
+    job = services.movie_archive.encoder.current
     freeing = next((i for i in items if job and i.record.id == job.disc.id), None)
     return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items),
             "encode_freeing": (freeing.gb, job.progress.eta_s) if freeing and job else None}

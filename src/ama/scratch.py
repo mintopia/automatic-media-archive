@@ -19,12 +19,11 @@ from typing import NamedTuple, Protocol
 
 from ama.config import ScratchConfig
 from ama.drive import DiscType, DriveMonitor
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 
 log = logging.getLogger(__name__)
 
 GB = 1000**3
-TOPIC = "scratch"
 
 
 class DiskSpace(Protocol):
@@ -131,5 +130,5 @@ class ScratchGate:
         return True
 
     def _publish(self) -> None:
-        self._bus.publish(TOPIC)
-        self._bus.publish(DriveMonitor.TOPIC)
+        self._bus.publish(Topic.SCRATCH)
+        self._bus.publish(Topic.DRIVE)

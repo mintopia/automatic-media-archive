@@ -1,84 +1,59 @@
-"""Movie Identification, Encode and filing to the Archive (#6).
+"""Movie Identification, Encode and filing to the Archive.
 
-`MovieArchiver.run()` runs two loops side by side, both independent of Rips
-(which run in their own task, so a Rip and an Encode overlap freely):
+`MovieArchiver.run()` runs two loops side by side, both independent of Rips:
 
 - Identification: each `ripped` video Disc with no Identification yet is searched
-  on TMDB (`tmdb.py`) using the hints saved at Rip time and its Main Feature (the
-  longest Title). A confident match joins the Encode queue (`movies` table); any
-  other outcome leaves the Disc for Review with its reason, and the TMDB
-  candidates are kept in scratch (`tmdb.json`) for Review to choose from.
-- Encode: one at a time, oldest queued first. ffprobe picks the streams
-  (`encode.py`), ffmpeg hevc_nvenc writes `encode.tmp.mkv`, renamed to
-  `encode.mkv` on success. It is then filed as
-  `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID}.mkv` (temp name ->
-  rename, verified; `archive.py`), the Disc marked filed and its scratch (the
-  lossless Rip, ADR-0002) deleted, and Plex asked to scan the folder.
-- Extras (#8): after the Main Feature, every other ripped Title is Encoded the
-  same way (`extra_t<n>.mkv`) and filed with the film to its `Other/` folder
-  (`extras.py`). An Extra whose Encode fails is left out; it never holds up the film.
+  on TMDB using the hints saved at Rip time and its Main Feature (the longest
+  Title). A confident match joins the Encode queue (`movies`); any other outcome
+  leaves the Disc for Review with its reason, and the TMDB candidates are kept in
+  scratch (`tmdb.json`) for Review to choose from.
+- Encode: one at a time, oldest queued first, through the shared `Encoder`; then
+  every other ripped Title as an Extra (one that fails is left out). Filed to
+  `Movies/Title (Year) {tmdb-ID}/` with its Extras under `Other/`; the Disc's
+  scratch (the lossless Rip, ADR-0002) is deleted and Plex asked to scan.
 
-Network/NAS trouble retries every `retry_seconds`. An Encode cut short by a
-restart, or one that failed, is queued again at the next start; its Rip is kept.
+An Encode cut short by a restart, or one that failed, is queued again at the next
+start; its Rip is kept.
 """
 
 from __future__ import annotations
 
 import asyncio
-import collections
 import json
 import logging
-import os
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
-import httpx
-
-from ama import decoys, encode, hdr, picture, review
+from ama import decoys, filing
 from ama import extras as extras_mod
-from ama.covers import Covers
-from ama.media import MediaStore, screen
-from ama.archive import Archive, FilingError, extended_path
+from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
-from ama.config import CqConfig
+from ama.covers import Covers
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
-from ama.encode import EncodeProgress, ProgressReader
+from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
 from ama.events import EventBus
 from ama.extras import Category, Extras, ExtraStatus
-from ama.nas import NasConnected, NasMonitor
+from ama.media import MediaStore, screen
+from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Streamer
+from ama.retry import Backoff, RetryLater
 from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, load_hints, \
     movie_file_stem, movie_folder, search_terms, title_matches
-from ama.tools import ToolLookup, ToolUnavailable
 from ama.tv import looks_like_tv, might_be_tv, series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 
 log = logging.getLogger(__name__)
 
-TOPIC = "encode"
 TMDB_FILE = "tmdb.json"
 ENCODE_TMP = "encode.tmp.mkv"
 ENCODED = "encode.mkv"
-PUBLISH_EVERY_SECONDS = 0.5
-LOG_TAIL = 15  # ffmpeg warning lines kept for the Disc log when an Encode fails
-
-
-class RetryLater(Exception):
-    """Something outside AMA (TMDB, NAS, a tool) isn't available yet."""
-
-
-class EncodeStatus(StrEnum):
-    QUEUED = "queued"
-    ENCODING = "encoding"
-    ENCODED = "encoded"  # waiting to be filed
-    FAILED = "failed"
 
 
 @dataclass(frozen=True)
@@ -101,6 +76,7 @@ class Movies:
     def __init__(self, db: Database, now: Callable[[], datetime] = datetime.now) -> None:
         self._db = db
         self._now = now
+        self._queue = EncodeQueue(db, "movies", "encode_status")
 
     _COLS = ("disc_id, tmdb_id, title, original_title, year, original_language, runtime_min, "
              "title_number, encode_status, queued_at, video_height")
@@ -112,15 +88,15 @@ class Movies:
                      EncodeStatus(status), datetime.fromisoformat(queued), height)
 
     def enqueue(self, disc_id: int, film: Candidate, title_number: int) -> None:
-        """Queue the Disc's Main Feature for Encode as `film` (idempotent; #7 calls this too)."""
+        """Queue the Disc's Main Feature for Encode as `film` (idempotent; Review calls it too)."""
         self._db.execute(
-            f"INSERT INTO movies ({self._COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, 0) "
+            f"INSERT INTO movies ({self._COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
             "ON CONFLICT (disc_id) DO UPDATE SET tmdb_id = excluded.tmdb_id, "
             "title = excluded.title, original_title = excluded.original_title, "
             "year = excluded.year, original_language = excluded.original_language, "
             "runtime_min = excluded.runtime_min, title_number = excluded.title_number",
             (disc_id, film.id, film.title, film.original_title, film.year,
-             film.original_language, film.runtime_min, title_number,
+             film.original_language, film.runtime_min, title_number, EncodeStatus.QUEUED,
              self._now().isoformat(timespec="seconds")))
 
     def get(self, disc_id: int) -> Movie | None:
@@ -130,11 +106,8 @@ class Movies:
 
     def queue(self) -> list[Movie]:
         """Movies not yet filed, first in first out."""
-        rows = self._db.execute(
-            f"SELECT {', '.join('m.' + c.strip() for c in self._COLS.split(','))} FROM movies m "
-            "JOIN discs d ON d.id = m.disc_id WHERE d.status = 'ripped' "
-            "ORDER BY m.queued_at, m.disc_id").fetchall()
-        return [self._movie(r) for r in rows]
+        cols = ", ".join("q." + c.strip() for c in self._COLS.split(","))
+        return [self._movie(r) for r in self._queue.waiting(cols, "q.queued_at, q.disc_id")]
 
     def set_status(self, disc_id: int, status: EncodeStatus, video_height: int | None = None
                    ) -> None:
@@ -144,20 +117,7 @@ class Movies:
 
     def requeue_unfinished(self) -> list[int]:
         """At startup: Encodes cut short, or failed, go back in the queue (Rips are kept)."""
-        rows = self._db.execute("SELECT disc_id FROM movies "
-                                "WHERE encode_status IN ('encoding', 'failed')").fetchall()
-        self._db.execute("UPDATE movies SET encode_status = 'queued' "
-                         "WHERE encode_status IN ('encoding', 'failed')")
-        return [r[0] for r in rows]
-
-
-@dataclass(frozen=True)
-class EncodeJob:
-    """The Encode in progress (memory only), for the UI."""
-
-    disc: DiscRecord
-    name: str  # what is being encoded: "Arrival (2016)", "The Office - s01e04 - The Quiz"
-    progress: EncodeProgress
+        return self._queue.requeue(EncodeStatus.ENCODING, EncodeStatus.FAILED)
 
 
 @dataclass(frozen=True)
@@ -170,35 +130,21 @@ class FiledMovie:
 
 
 def main_feature(titles: tuple[TitleRecord, ...]) -> TitleRecord | None:
-    """The Main Feature: the longest Title ripped (decoys/TV are Review's job, #7/#9)."""
+    """The Main Feature: the longest Title ripped (decoys and TV are Review's job)."""
     ripped = [t for t in titles if t.status == TitleStatus.RIPPED]
     return max(ripped, key=lambda t: (t.duration_s, -t.number), default=None)
 
 
-UHD_MIN_HEIGHT = 1500  # taller than this is a 4K (UHD) picture, whatever the Disc looked like
-
-
-def encode_disc_type(disc_type: DiscType, video_height: int) -> DiscType:
-    """The Disc Type to Encode as: a 4K Main Feature is a UHD's (BD/UHD detection is a guess)."""
-    return DiscType.UHD if video_height > UHD_MIN_HEIGHT else disc_type
-
-
 def plex_version(disc_type: DiscType, video_height: int) -> str | None:
-    """The Plex version name (`... - 4K.mkv`), so a film's BD and UHD share a folder (#11)."""
+    """The Plex version name (`... - 4K.mkv`), so a film's BD and UHD share a folder."""
     if encode_disc_type(disc_type, video_height) == DiscType.UHD:
         return "4K"
     return "1080p" if disc_type == DiscType.BD else None
 
 
-class _Aborted(Exception):
-    pass
-
-
 class MovieArchiver:
-    TOPIC = TOPIC
-
     def __init__(self, discs: DiscStore, movies: Movies, tmdb: Tmdb, nas: NasMonitor,
-                 archive: Archive, plex: Plex, bus: EventBus, cq: CqConfig, tool: ToolLookup,
+                 archive: Archive, plex: Plex, bus: EventBus, encoder: Encoder,
                  streamer: Streamer, interval: float, retry_seconds: float = 60.0,
                  clock: Callable[[], float] = time.monotonic,
                  claimed: Callable[[int], bool] = lambda disc_id: False, *,
@@ -213,25 +159,15 @@ class MovieArchiver:
         self._archive = archive
         self._plex = plex
         self._bus = bus
-        self._cq = cq
-        self._tool = tool
-        self._stream = streamer
+        self.encoder = encoder
+        self._stream = streamer  # for Extras' stills
         self._interval = interval
-        self.retry_seconds = retry_seconds
-        self._clock = clock
-        self._claimed = claimed  # Discs another stage files (TV, #13): not identified here
-        self.current: EncodeJob | None = None
-        self.encoder = asyncio.Lock()  # one Encode at a time, whoever asks (films, TV)
-        self._not_before: dict[tuple[str, int], float] = {}
-        self._warned: set[tuple[str, int]] = set()
-        self._abort = False
-        self._last_publish = 0.0
-        self._loop: asyncio.AbstractEventLoop | None = None
+        self.backoff = Backoff(retry_seconds, clock)
+        self._claimed = claimed  # Discs another stage files (TV): not identified here
 
     # -- lifecycle ----------------------------------------------------------
 
     async def run(self) -> None:
-        self._loop = asyncio.get_running_loop()
         self.recover()
         await asyncio.gather(self._every(self.identify_once), self._every(self.encode_once))
 
@@ -245,18 +181,9 @@ class MovieArchiver:
             self._discs.log(disc_id, "Encode queued again after a restart")
         self.extras.requeue_unfinished()
 
-    def _due(self, key: tuple[str, int]) -> bool:
-        return self._clock() >= self._not_before.get(key, 0.0)
-
     def _later(self, key: tuple[str, int], why: str) -> None:
-        if key not in self._warned:  # log a stuck step once, not every minute
+        if self.backoff.later(key):
             self._discs.log(key[1], f"{why}; trying again in a while", error=True)
-            self._warned.add(key)
-        self._not_before[key] = self._clock() + self.retry_seconds
-
-    def _done(self, key: tuple[str, int]) -> None:
-        self._not_before.pop(key, None)
-        self._warned.discard(key)
 
     # -- Identification -----------------------------------------------------
 
@@ -266,7 +193,7 @@ class MovieArchiver:
         for rec in reversed(waiting):  # oldest first
             key = ("identify", rec.id)
             if (self.movies.get(rec.id) is not None or self._claimed(rec.id)
-                    or not self._due(key)):
+                    or not self.backoff.due(key)):
                 continue
             try:
                 await asyncio.to_thread(self.identify, rec)
@@ -276,7 +203,7 @@ class MovieArchiver:
                 log.exception("Movie Identification of Disc %s crashed", rec.id)
                 self._later(key, "Identification went wrong (see the app's log file)")
             else:
-                self._done(key)
+                self.backoff.done(key)
             self._publish()
 
     def identify(self, rec: DiscRecord) -> None:
@@ -346,10 +273,9 @@ class MovieArchiver:
 
     async def encode_once(self) -> None:
         """Encode (or file) the first Movie in the queue that can go now."""
-        self._loop = asyncio.get_running_loop()
         for movie in self.movies.queue():
             key = ("encode", movie.disc_id)
-            if movie.status == EncodeStatus.FAILED or not self._due(key):
+            if movie.status == EncodeStatus.FAILED or not self.backoff.due(key):
                 continue
             rec = self._discs.get(movie.disc_id)
             assert rec is not None
@@ -368,16 +294,16 @@ class MovieArchiver:
                 continue
             finally:
                 self._publish()
-            self._done(key)
+            self.backoff.done(key)
             return  # one at a time; the next waits for the next pass
 
     async def _encode(self, rec: DiscRecord, movie: Movie) -> bool:
         """Run the Encode; True when `encode.mkv` is ready. Raises RetryLater for tools."""
-        ffmpeg, ffprobe = self.encode_tools()
+        ffmpeg, ffprobe = self.encoder.tools()
         title = next(t for t in rec.titles if t.number == movie.title_number)
         self.movies.set_status(rec.id, EncodeStatus.ENCODING)
         movie = self.movies.get(rec.id) or movie
-        height = await self.encode_title(rec, title, movie.film.name,
+        height = await self.encoder.encode_title(rec, title, movie.film.name,
                                          movie.film.original_language,
                                          rec.scratch_dir / ENCODED, ffmpeg, ffprobe)
         if height is None:
@@ -398,9 +324,9 @@ class MovieArchiver:
             title = by_number.get(extra.title_number)
             if title is None or extra.status not in (ExtraStatus.QUEUED, ExtraStatus.ENCODING):
                 continue
-            ffmpeg, ffprobe = self.encode_tools()
+            ffmpeg, ffprobe = self.encoder.tools()
             self.extras.set_status(rec.id, extra.title_number, ExtraStatus.ENCODING)
-            height = await self.encode_title(rec, title, extra.name,
+            height = await self.encoder.encode_title(rec, title, extra.name,
                                              movie.film.original_language,
                                              rec.scratch_dir / extra.encoded, ffmpeg, ffprobe,
                                              extra=True)
@@ -429,176 +355,17 @@ class MovieArchiver:
             else:
                 tmp.unlink(missing_ok=True)
 
-    def encode_tools(self) -> tuple[Path, Path]:
-        """(ffmpeg, ffprobe); RetryLater while they aren't ready."""
-        try:
-            return self._tool("ffmpeg"), self._tool("ffprobe")
-        except ToolUnavailable as e:
-            raise RetryLater(f"{e.name} isn't ready yet") from None
-
-    async def encode_title(self, rec: DiscRecord, title: TitleRecord, name: str,
-                           original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,
-                           extra: bool = False) -> int | None:
-        """Encode one ripped Title of `rec` to `done` (written as `<stem>.tmp.mkv`, then
-        renamed), tagged `name`. Returns its picture height, or None if the Encode failed
-        (logged; the Rip is kept). One Encode at a time across callers (`encoder`).
-        `extra`: a film's Extra (#8), Encoded as what it is (a UHD's HD Extra gets BD's
-        CQ) and left out if it fails."""
-        async with self.encoder:
-            return await self._encode_title(rec, title, name, original_language, done,
-                                            ffmpeg, ffprobe, extra)
-
-    async def _encode_title(self, rec: DiscRecord, title: TitleRecord, name: str,
-                            original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,
-                            extra: bool) -> int | None:
-        then = (f"The Extra “{name}” is left out; the film is filed without it" if extra
-                else "The Rip is kept; the Encode will be tried again when the app restarts")
-        src = rec.scratch_dir / title.file
-        tmp = done.with_name(f"{done.stem}.tmp.mkv")
-        self._abort = False
-        self.current = EncodeJob(rec, name, EncodeProgress(0.0))
-        self._publish()
-        try:
-            probe_lines: list[str] = []
-            code = await asyncio.to_thread(self._stream, encode.ffprobe_args(ffprobe, src),
-                                           probe_lines.append)
-            try:
-                probe = encode.parse_probe("\n".join(probe_lines))
-                sel = encode.select_streams(probe, original_language)
-            except ValueError as e:
-                return self._failed(rec, then,f"Couldn't read Title {title.number} ({e}; ffprobe exit "
-                                         f"{code})", probe_lines[-LOG_TAIL:])
-            source_hdr = await self._probe_hdr(ffprobe, src)
-            if isinstance(source_hdr, str):
-                return self._failed(rec, then,f"Couldn't read the colour of Title {title.number} "
-                                         f"({source_hdr})", [])
-            kind = encode_disc_type(
-                DiscType.BD if extra and rec.disc_type == DiscType.UHD else rec.disc_type,
-                probe.height)
-            if kind != rec.disc_type and not extra:
-                self._discs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
-                                        f"its Main Feature is 4K, so it is encoded as a UHD")
-            cq = encode.cq_for(self._cq, kind)
-            pic = await self._analyse_picture(rec, ffmpeg, src, probe)
-            self._discs.log(rec.id, pic.describe())
-            self._discs.log(rec.id, f"Encoding Title {title.number} as {name}: HEVC "
-                                    f"10-bit, CQ {cq}; keeping {len(sel.audio)} audio and "
-                                    f"{len(sel.subtitles)} subtitle tracks, {probe.chapters} "
-                                    "chapters")
-            if source_hdr.is_hdr10:
-                dropped = [n for n, on in (("Dolby Vision", source_hdr.dolby_vision),
-                                           ("HDR10+", source_hdr.hdr10_plus)) if on]
-                self._discs.log(rec.id, f"HDR10: {source_hdr}" + (
-                    f"; {' and '.join(dropped)} metadata will be dropped (ADR-0003)"
-                    if dropped else ""))
-            reader = ProgressReader(probe.duration_s or title.duration_s)
-            tail: collections.deque[str] = collections.deque(maxlen=LOG_TAIL)
-
-            def on_line(line: str) -> None:
-                if self._abort:
-                    raise _Aborted
-                if not reader.is_progress(line):
-                    tail.append(line)
-                    return
-                p = reader.feed(line)
-                if p is not None and self.current is not None:
-                    self.current = EncodeJob(rec, name, p)
-                    self._publish_soon()
-
-            tmp.unlink(missing_ok=True)
-            started = self._clock()
-            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, name,
-                                      colour=source_hdr.colour if source_hdr.is_hdr10 else None,
-                                      video_filter=pic.filters)
-            try:
-                code = await asyncio.to_thread(self._stream, args, on_line)
-            except asyncio.CancelledError:
-                self._abort = True  # kills ffmpeg; recover() requeues it next start
-                raise
-            except OSError as e:
-                return self._failed(rec, then,f"ffmpeg couldn't be started ({e.strerror or e})", [])
-            if code != 0 or not tmp.exists():
-                tmp.unlink(missing_ok=True)
-                return self._failed(rec, then,f"ffmpeg stopped with exit code {code}", list(tail))
-            if source_hdr.is_hdr10:
-                encoded_hdr = await self._probe_hdr(ffprobe, tmp)
-                lost = ([f"ffprobe couldn't read it ({encoded_hdr})"]
-                        if isinstance(encoded_hdr, str)
-                        else hdr.differences(source_hdr, encoded_hdr))
-                if lost:
-                    tmp.unlink(missing_ok=True)
-                    return self._failed(rec, then,"the Encode didn't keep the HDR10 metadata: "
-                                             + "; ".join(lost), [])
-                self._discs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
-            os.replace(tmp, done)
-            minutes = max(1, round((self._clock() - started) / 60))
-            self._discs.log(rec.id, f"Encode{f' of the Extra “{name}”' if extra else ''} "
-                                    f"finished in {minutes} min "
-                                    f"({done.stat().st_size / 1000**3:.1f} GB)")
-            return probe.height
-        finally:
-            self.current = None
-
-    async def _analyse_picture(self, rec: DiscRecord, ffmpeg: Path, src: Path,
-                               probe: encode.Probe) -> picture.Picture:
-        """Sample the Main Feature for black bars and, on a DVD, its scan type (#10).
-
-        A sample that fails just counts for nothing: the Encode then crops less,
-        never more.
-        """
-        video = probe.video
-        assert video is not None  # select_streams already insisted on one
-        dvd = rec.disc_type == DiscType.DVD
-        runs: list[list[str]] = []
-        for at in picture.sample_times(probe.duration_s):
-            lines: list[str] = []
-
-            def on_line(line: str, lines: list[str] = lines) -> None:
-                if self._abort:
-                    raise _Aborted
-                lines.append(line)
-
-            try:
-                await asyncio.to_thread(self._stream,
-                                        picture.sample_args(ffmpeg, src, at, idet=dvd), on_line)
-            except asyncio.CancelledError:
-                self._abort = True
-                raise
-            except OSError:
-                pass
-            runs.append(lines)
-        return picture.analyse(runs, width=video.width, height=video.height,
-                               fps=video.frame_rate, detect_scan=dvd)
-
-
-    async def _probe_hdr(self, ffprobe: Path, path: Path) -> hdr.HdrInfo | str:
-        """The video's colour and HDR10 metadata, or why it couldn't be read."""
-        lines: list[str] = []
-        code = await asyncio.to_thread(self._stream, hdr.probe_args(ffprobe, path), lines.append)
-        try:
-            return hdr.parse_hdr("\n".join(lines))
-        except ValueError as e:
-            return f"{e}; ffprobe exit {code}"
-
-    def _failed(self, rec: DiscRecord, then: str, why: str, tail: list[str]) -> None:
-        for line in tail:
-            self._discs.log(rec.id, line, error=True)
-        self._discs.log(rec.id, f"The Encode didn't work: {why}. {then}", error=True)
-
     # -- filing -------------------------------------------------------------
 
     def file(self, rec: DiscRecord, movie: Movie) -> None:
         """File `encode.mkv` into the Archive, then delete the Disc's scratch and tell Plex."""
-        if not isinstance(self._nas.status, NasConnected):
-            raise RetryLater("The NAS isn't connected")
+        filing.require_nas(self._nas)
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
         rel = movie_folder(movie.film)
-        try:
+        with filing.to_nas():
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED})
             extras = self._file_extras(rec, rel)
-        except (OSError, FilingError) as e:
-            raise RetryLater(f"Couldn't file to the NAS ({e})") from e
         film = movie.film
         self._media.save(rec.id, screen(self._tmdb, self._covers, False, film.id, film.title,
                                         film.year, lambda text: self._discs.log(rec.id, text)))
@@ -607,18 +374,11 @@ class MovieArchiver:
         if extras:
             self._discs.log(rec.id, f"Filed {extras} Extra{'s' if extras != 1 else ''} to "
                                     f"{Category.OTHER.value}")
-        try:
-            self._discs.log(rec.id, self._plex.scan(folder))
-        except httpx.HTTPError as e:
-            self._discs.log(rec.id, f"Couldn't ask Plex to scan the folder ({e}); "
-                                    "Plex will find it on its next scan", error=True)
+        filing.scan(self._plex, self._discs, rec.id, folder)
 
     def _file_extras(self, rec: DiscRecord, rel: Path) -> int:
         """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are filed.
-
-        Each file name is chosen once and saved before copying, so a retry reuses it; a
-        name another Disc of the film already uses gets a number.
-        """
+        Each name is saved before copying so a retry reuses it."""
         film = self._archive.root / rel
         taken = {e.file.casefold() for e in self.extras.of(rec.id) if e.file}
         for e in self.extras.of(rec.id):
@@ -636,14 +396,11 @@ class MovieArchiver:
         return sum(e.status == ExtraStatus.FILED for e in self.extras.of(rec.id))
 
     def sort_extras(self, rec: DiscRecord, changes: dict[int, tuple[str, Category]]) -> int:
-        """The user sorted a filed Disc's Extras ({Title: (name, category)}): move each
-        changed one to its Plex folder and ask Plex to rescan; how many moved.
-
-        Marks the Extras sorted (publish `review` after). Blocking: call in a thread.
-        Raises RetryLater if the NAS can't be reached.
-        """
-        if not isinstance(self._nas.status, NasConnected) or rec.archive_dir is None:
-            raise RetryLater("The NAS isn't connected")
+        """Move each Extra the user re-sorted ({Title: (name, category)}) to its Plex folder
+        and mark the Disc's Extras sorted; how many moved. Blocking: call in a thread."""
+        filing.require_nas(self._nas)
+        if rec.archive_dir is None:
+            raise RetryLater("The Disc has no folder in the Archive")
         film = rec.archive_dir
         filed = {e.title_number: e for e in self.extras.of(rec.id)
                  if e.status == ExtraStatus.FILED}
@@ -667,11 +424,7 @@ class MovieArchiver:
             moved += 1
         self.extras.mark_reviewed(rec.id)
         if moved:
-            try:
-                self._discs.log(rec.id, self._plex.scan(film))
-            except httpx.HTTPError as err:
-                self._discs.log(rec.id, f"Couldn't ask Plex to scan the folder ({err}); "
-                                        "Plex will find it on its next scan", error=True)
+            filing.scan(self._plex, self._discs, rec.id, film)
         return moved
 
     # -- for the UI ---------------------------------------------------------
@@ -682,24 +435,16 @@ class MovieArchiver:
                                      for e in self.extras.of(r.id)))
                 for r in recs if (m := self.movies.get(r.id))]
 
-    def queue_view(self) -> dict:
+    def queue_view(self) -> dict[str, Any]:
         """The Encoding bin: the queue, the running Encode and who's next."""
         queue = self.movies.queue()
         next_up = next((m.disc_id for m in queue if m.status == EncodeStatus.QUEUED), None)
         types = {m.disc_id: rec.disc_type for m in queue if (rec := self._discs.get(m.disc_id))}
-        return {"encoding": queue, "encode_job": self.current, "encode_next": next_up,
+        return {"encoding": queue, "encode_job": self.encoder.current, "encode_next": next_up,
                 "disc_types": types}
 
     # -- publishing ---------------------------------------------------------
 
     def _publish(self) -> None:
-        self._last_publish = self._clock()
-        for topic in (TOPIC, "rip", "filed", review.TOPIC):
+        for topic in PIPELINE_TOPICS:
             self._bus.publish(topic)
-
-    def _publish_soon(self) -> None:
-        """From the ffmpeg thread: publish on the loop, at most every PUBLISH_EVERY_SECONDS."""
-        if self._clock() - self._last_publish < PUBLISH_EVERY_SECONDS or self._loop is None:
-            return
-        self._last_publish = self._clock()
-        self._loop.call_soon_threadsafe(self._bus.publish, TOPIC)

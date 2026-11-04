@@ -13,6 +13,7 @@ from ama.drive import DiscType
 from ama.extras import ExtraStatus
 from ama.media import Album, Screen
 from ama.web import TEMPLATES, view_context
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -100,6 +101,6 @@ def dismiss(request: Request, disc_id: int, next: Annotated[str, Form()] = "") -
     rec = _disc_or_404(services, disc_id)
     if rec.status == DiscStatus.FAILED:
         services.discs.dismiss(disc_id)
-        services.bus.publish("rip")
-        services.bus.publish("drive")
+        services.bus.publish(Topic.RIP)
+        services.bus.publish(Topic.DRIVE)
     return RedirectResponse("/", status_code=303)

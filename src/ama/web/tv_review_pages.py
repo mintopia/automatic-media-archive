@@ -17,9 +17,8 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ama import review, sets, tvreview
+from ama import sets, tvreview
 from ama.discs import DiscRecord, DiscStatus
-from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviereview import ripped_titles
 from ama.sets import Library, SetKey
 from ama.tmdb import Episode, Series, TmdbError, load_hints
@@ -28,6 +27,7 @@ from ama.tvarchive import planned
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
 from ama.web.movie_review_pages import TitleChoice, _title_choice
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -176,6 +176,6 @@ async def episodes(request: Request, disc_id: int) -> Response:
                                                for k in kept)
                                    + f"; {len(titles) - len(kept)} discarded")
         services.discs.log(rec.id, f"Queued {n} Episode{'s' if n != 1 else ''} for Encode")
-        for topic in (review.TOPIC, "rip", ENCODE_TOPIC):
+        for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return RedirectResponse("/review", status_code=303)

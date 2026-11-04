@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from ama.config import NasConfig
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.proc import Runner, run
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,6 @@ class NasMonitor:
     (re)mapped. Publishes `nas` on the bus when the status changes.
     """
 
-    TOPIC = "nas"
 
     def __init__(
         self,
@@ -82,7 +81,7 @@ class NasMonitor:
         if status != self.status:
             log.info("nas: %s", status)
             self.status = status
-            self.bus.publish(self.TOPIC)
+            self.bus.publish(Topic.NAS)
 
     async def run(self) -> None:
         while True:

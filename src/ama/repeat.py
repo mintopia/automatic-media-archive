@@ -17,7 +17,7 @@ from pathlib import Path
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore
 from ama.drive import DiscType, DriveMonitor
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 
 log = logging.getLogger(__name__)
 
@@ -161,5 +161,5 @@ class RepeatGuard:
             return str(rec.archive_dir)
 
     def _publish(self) -> None:
-        self._bus.publish(DriveMonitor.TOPIC)  # the drive card
-        self._bus.publish("rip")               # the Ripping bin
+        self._bus.publish(Topic.DRIVE)  # the drive card
+        self._bus.publish(Topic.RIP)    # the Ripping bin

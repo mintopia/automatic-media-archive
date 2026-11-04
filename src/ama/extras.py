@@ -20,6 +20,7 @@ from ama import decoys
 from ama.archive import safe_name
 from ama.db import Database
 from ama.discs import TitleRecord, TitleStatus
+from ama.encoder import EncodeQueue, EncodeStatus
 
 
 class Category(StrEnum):
@@ -35,12 +36,7 @@ class Category(StrEnum):
     TRAILERS = "Trailers"
 
 
-class ExtraStatus(StrEnum):
-    QUEUED = "queued"
-    ENCODING = "encoding"
-    ENCODED = "encoded"  # waiting to be filed with the film
-    FAILED = "failed"    # left out; the film is filed without it
-    FILED = "filed"
+ExtraStatus = EncodeStatus  # a FAILED Extra is left out; the film is filed without it
 
 
 @dataclass(frozen=True)
@@ -153,13 +149,14 @@ class Extras:
 
     def to_sort(self) -> list[int]:
         """Filed Discs whose Extras nobody has looked at yet, oldest first."""
-        rows = self._db.execute("SELECT DISTINCT disc_id FROM extras WHERE status = 'filed' "
-                                "AND reviewed = 0 ORDER BY disc_id").fetchall()
+        rows = self._db.execute("SELECT DISTINCT disc_id FROM extras WHERE status = ? "
+                                "AND reviewed = 0 ORDER BY disc_id",
+                                (EncodeStatus.FILED,)).fetchall()
         return [r[0] for r in rows]
 
     def requeue_unfinished(self) -> None:
         """At startup: Extra Encodes cut short go back in the queue."""
-        self._db.execute("UPDATE extras SET status = 'queued' WHERE status = 'encoding'")
+        EncodeQueue(self._db, "extras", "status").requeue(EncodeStatus.ENCODING)
 
     def still(self, disc_id: int, number: int, pct: int) -> Path:
         return self.stills_dir / str(disc_id) / f"t{number}_{pct}.jpg"

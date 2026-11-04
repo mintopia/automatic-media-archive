@@ -26,7 +26,7 @@ from ama.cyanrip import ArResult, ArStatus, Report
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, Failure, FailureKind
 from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, cd_fingerprint
 from ama.scratch import ScratchGate
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-TOPIC = "rip"
 SCRATCH_SUBDIR = "cd"
 
 
@@ -286,8 +285,8 @@ class CdRipper:
             self._publish()
 
     def _publish(self) -> None:
-        self._bus.publish(TOPIC)
-        self._bus.publish("drive")
+        self._bus.publish(Topic.RIP)
+        self._bus.publish(Topic.DRIVE)
 
     async def _eject(self, disc_id: int | None) -> None:
         try:

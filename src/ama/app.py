@@ -28,6 +28,7 @@ from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
 from ama.db import Database
 from ama.discs import DiscStore
+from ama.encoder import Encoder
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.media import MediaStore, film_guess
@@ -119,8 +120,9 @@ def build_services(
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
-    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
-                                  tool, streamer, interval=cfg.drive.poll_seconds,
+    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
+    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
+                                  streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
                                   media=media, covers=covers)
@@ -152,7 +154,7 @@ def build_services(
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
-        tv_archive=TvArchiver(discs, tv_titles, movie_archive, nas, archive, plex, bus,
+        tv_archive=TvArchiver(discs, tv_titles, encoder, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
                               covers=covers),

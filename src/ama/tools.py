@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Literal
 
 from ama.config import ToolsConfig
-from ama.events import EventBus
+from ama.events import EventBus, Topic
 from ama.proc import Runner, run
 
 log = logging.getLogger(__name__)
@@ -244,7 +244,6 @@ _BANNER = re.compile(r"MakeMKV v(\d[\w.]*)")
 
 
 class Tools:
-    TOPIC = "tools"
     PROGRESS_PUBLISH_SECONDS = 0.5
 
     def __init__(
@@ -308,7 +307,7 @@ class Tools:
         self._loop = asyncio.get_running_loop()
         for pin in self.pins:
             await asyncio.to_thread(self._provision_pin, pin)
-            self.bus.publish(self.TOPIC)
+            self.bus.publish(Topic.TOOLS)
 
     def _set(self, names: Sequence[str], status: ToolStatus, progress: bool = False) -> None:
         for n in names:
@@ -318,7 +317,7 @@ class Tools:
             return
         self._last_progress = now
         if self._loop is not None:
-            self._loop.call_soon_threadsafe(self.bus.publish, self.TOPIC)
+            self._loop.call_soon_threadsafe(self.bus.publish, Topic.TOOLS)
 
     def _provision_pin(self, pin: Pin) -> None:
         wanted = [m for m in pin.members if self._override(m.name) is None]
@@ -379,7 +378,7 @@ class Tools:
         if status != self._status["makemkvcon"]:
             log.info("makemkv: %s", status)
         self._status["makemkvcon"] = status
-        self.bus.publish(self.TOPIC)
+        self.bus.publish(Topic.TOOLS)
         return status
 
     def _preflight(self) -> MakemkvStatus:

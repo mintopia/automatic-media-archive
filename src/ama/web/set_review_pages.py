@@ -20,15 +20,15 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ama import review, sets, tvreview
+from ama import sets, tvreview
 from ama.discs import DiscRecord, DiscStatus
-from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviereview import ripped_titles
 from ama.sets import Answer, DiscSet, Library, SetKey
 from ama.tmdb import load_hints, search_terms
 from ama.tv import series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
+from ama.events import Topic
 
 router = APIRouter()
 
@@ -141,5 +141,5 @@ def _file_as_bonus(services, rec: DiscRecord, film_set: DiscSet) -> None:
     if services.discs.requeue(rec.id):
         services.discs.log(rec.id, f"Queued {len(titles)} Title{'s' if len(titles) != 1 else ''}"
                                    f" for Encode as Extras of {film_set.name}")
-        for topic in (review.TOPIC, "rip", ENCODE_TOPIC):
+        for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
