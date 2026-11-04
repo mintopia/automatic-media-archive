@@ -271,3 +271,9 @@ a.tab{text-decoration:none}a.tab:hover{text-decoration:underline;text-underline-
 .diffnote{color:var(--rev-ink);font-weight:600}
 td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 @media (max-width:720px){.edition .cover{width:56px;height:56px}}
+/* Long album titles (FFVII) must not widen the page on a phone */
+.drive .title{overflow-wrap:break-word}.crumb span{min-width:0;overflow-wrap:anywhere}
+@media (max-width:720px){.drive{grid-template-columns:minmax(0,1fr)}.drive .body{min-width:0}}
+.preview .tbl{width:100%}
+.preview>summary{flex-wrap:wrap}
+@media (max-width:720px){.edition{flex-direction:column;gap:10px}}

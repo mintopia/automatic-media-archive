@@ -128,9 +128,15 @@ def _edition(m: Match, show_title: bool, others: list[Match] = (),
         facts.append(("Discs", f"{r.disc_total} CDs · this is disc {m.disc_number}"))
     facts.append(("Tracks", str(len(m.tracks))))
     titles = [{t.number: t.title for t in o.tracks} for o in others]
+
+    def differs(number: int, title: str) -> bool:
+        """Titled differently elsewhere, and this title isn't the one most editions share."""
+        theirs = [o[number] for o in titles if number in o]
+        same = 1 + theirs.count(title)
+        return same < 1 + len(theirs) and same * 2 <= 1 + len(theirs)
+
     tracks = tuple(EditionTrack(t.number, t.title, t.artist if t.artist != r.artist else "",
-                                (seconds or {}).get(t.number, 0.0),
-                                any(o.get(t.number, t.title) != t.title for o in titles))
+                                (seconds or {}).get(t.number, 0.0), differs(t.number, t.title))
                    for t in m.tracks)
     return Edition(m, heading, tuple(facts), tracks)
 

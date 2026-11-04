@@ -85,6 +85,9 @@ def test_each_edition_previews_its_track_list_and_the_title_differences_show(har
     # Track 1 is the same in every edition; track 2's title differs, and is marked.
     assert '<td class="diff">Another Buster Sword<' in english
     assert '<td class="diff">The Unknown Journey Continues' not in english
+    # The two Japanese editions agree, so it's the English one whose titles stand out.
+    assert 'class="diff"' not in japanese and "differ from the other editions" not in japanese
+    assert "23 titles differ from the other editions" in english
     # Covers come from the Cover Art Archive (cached), not another MusicBrainz call.
     assert f"/review/{rec.id}/cover/{SPECIAL}" in _edition_block(page, SPECIAL)
     assert client.get(f"/review/{rec.id}/cover/{SPECIAL}").content == COVER

@@ -115,7 +115,8 @@ def filed_discs(services: Services, limit: int = 100) -> list:
     """Filed Discs, newest first, as CdDiscs, FiledMovies and FiledTv (History)."""
     return sorted([*services.cd.discs(DiscStatus.FILED, limit=limit),
                    *services.movie_archive.filed(limit), *services.tv_archive.filed(limit)],
-                  key=lambda d: d.record.filed_at or d.record.started_at, reverse=True)[:limit]
+                  key=lambda d: (d.record.filed_at or d.record.started_at, d.record.id),
+                  reverse=True)[:limit]
 
 
 def _tools_context(services: Services) -> dict[str, Any]:
