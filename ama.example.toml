@@ -21,14 +21,18 @@ letter = ""
 poll_seconds = 3
 
 [tools]
-# Full path to the cyanrip executable used for CD Rips (ADR-0004). Leave it
-# empty to use the copy AMA manages (ADR-0006). Until that exists, empty means
-# `cyanrip` on PATH. Prefer a nightly build: 0.9.3.1 misses AccurateRip for
-# about half of Discs on Windows (cyanrip issue #145).
-cyanrip = ''
-# MakeMKV's command-line program, used for DVD and Blu-ray Rips. MakeMKV is
-# yours to install and register (ADR-0006); this is where it installs by default.
-makemkvcon = 'C:\Program Files (x86)\MakeMKV\makemkvcon64.exe'
+# External programs (ADR-0006). AMA downloads its own pinned, hash-checked
+# ffmpeg/ffprobe (Encodes) and cyanrip (CD Rips) at startup into `dir`
+# (empty = %LOCALAPPDATA%\ama\tools). The first start needs internet and ~0.5 GB.
+dir = ""
+# Full path to use instead of AMA's own copy. Used as-is: no download, no
+# version or hash check. Empty = AMA's pinned copy.
+ffmpeg = ""
+ffprobe = ""
+cyanrip = ""
+# MakeMKV is yours to install and register; AMA never does either (docs/deploy.md).
+# Empty = look in C:\Program Files (x86)\MakeMKV and C:\Program Files\MakeMKV.
+makemkvcon = ""
 
 [cd]
 # Drive read offset in samples (EAC convention). +667 is the AccurateRip value

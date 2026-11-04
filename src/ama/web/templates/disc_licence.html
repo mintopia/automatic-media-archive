@@ -8,7 +8,7 @@
       <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>
       <div><b>{{ disc.failure.headline }}</b>{{ disc.failure.advice }}</div>
     </div>
-    <p class="ts">This isn't a problem with the Disc. Once the key is fixed, insert it again.</p>
+    <p class="ts">This isn't a problem with the Disc. Once MakeMKV is fixed (<a href="/makemkv">check it here</a>), insert the Disc again.</p>
     <form class="actions" method="post" action="/discs/{{ disc.id }}/dismiss">
       <button class="btn pri" type="submit">OK</button><a class="btn quiet" href="#log" onclick="document.querySelector('#log details').open=true">Show the log</a>
     </form>

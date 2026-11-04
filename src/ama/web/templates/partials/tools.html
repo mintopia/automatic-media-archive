@@ -1,0 +1,15 @@
+{%- from "partials/makemkv_problem.html" import headline -%}
+{%- for t in tools -%}
+{%- set st = t.status -%}
+{%- if (st | kind) == "ToolDownloading" -%}
+<div class="notice ok" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#layers"/></svg><div><b>Getting {{ st.label }}</b>{{ t.needed_for }} wait until it's in; everything else carries on.
+{%- if st.total %}<span style="display:flex;align-items:center;gap:10px;margin-top:6px"><span class="meter" role="meter" aria-valuenow="{{ st.done }}" aria-valuemin="0" aria-valuemax="{{ st.total }}" aria-label="Downloaded"><i style="width:{{ (100 * st.done / st.total) | round(1) }}%"></i></span><span class="ts">{{ (st.done / 1000000) | round | int }} / {{ (st.total / 1000000) | round | int }} MB</span></span>
+{%- else %}<span class="ts" style="display:block;margin-top:4px">{{ (st.done / 1000000) | round | int }} MB so far</span>{% endif -%}
+</div></div>
+{%- elif (st | kind) == "ToolFailed" -%}
+<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't download {{ st.label }}</b>{{ t.needed_for }} wait until it's in; everything else carries on. Retrying every {% if retry_seconds == 60 %}minute{% else %}{{ retry_seconds | round | int }} seconds{% endif %}.<span class="ts" style="display:block;margin-top:4px">Error: {{ st.detail }}</span></div></div>
+{%- endif -%}
+{%- endfor -%}
+{%- if (makemkv | kind) not in ("ToolReady", "ToolPending") -%}
+<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>DVD and Blu-ray Rips are paused</b>{{ headline(makemkv) }} CDs still work. <a href="/makemkv">What to do</a></div></div>
+{%- endif -%}

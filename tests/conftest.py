@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -20,10 +21,24 @@ from ama.config import (
     NasConfig,
     PathsConfig,
     PlexConfig,
+    ToolsConfig,
     WebConfig,
 )
+from ama.events import EventBus
 from ama.proc import ProcResult
-from tests.fakes import FakeCyanrip, FakeDrive, FakeMakemkv, FakeRunner, FakeTools, FakeWeb
+from ama.tools import Tools
+from tests.fakes import (
+    FakeCyanrip,
+    FakeDrive,
+    FakeFetch,
+    FakeMakemkv,
+    FakeRunner,
+    FakeTools,
+    FakeWeb,
+)
+
+MAKEMKV_OK = ('MSG:1005,0,1,"MakeMKV v2.0.0 win(x64-release) started","%1 started",'
+              '"MakeMKV v2.0.0 win(x64-release)"\n')
 
 
 def make_config(tmp_path, password: str = "") -> Config:
@@ -47,13 +62,17 @@ class Harness:
     drive: FakeDrive
     share: dict  # {"reachable": bool}
     runner: FakeRunner
-    makemkv: FakeMakemkv
+    makemkv: FakeMakemkv  # the makemkvcon that Video Rips run
     cyanrip: FakeCyanrip
+    makemkv_check: dict  # {"key", "output"}: what the MakeMKV preflight sees next
     web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex
     nas_root: Path
 
 
-def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Harness:
+def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
+                 fetch: FakeFetch | None = None, pins: tuple | None = None) -> Harness:
+    """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
+    MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
     cfg = make_config(tmp_path, password)
     drive = FakeDrive()
     share = {"reachable": nas_reachable}
@@ -62,13 +81,30 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Ha
     makemkv = FakeMakemkv(drive)
     cyanrip = FakeCyanrip(drive)
     web = FakeWeb()
+    makemkv_check = {"key": "T-test", "output": MAKEMKV_OK}
+    exe = tmp_path / "MakeMKV" / "makemkvcon64.exe"
+    exe.parent.mkdir(exist_ok=True)
+    exe.write_bytes(b"")
+    fakes = {} if fetch else {n: str(tmp_path / f"{n}.exe") for n in ("ffmpeg", "ffprobe", "cyanrip")}
+
+    def make_tools(bus: EventBus) -> Tools:
+        return Tools(ToolsConfig(dir=str(tmp_path / "tools"), **fakes), bus,
+                     runner=FakeRunner(lambda a: ProcResult(0, makemkv_check["output"])),
+                     fetch=fetch or FakeFetch({}), read_key=lambda: makemkv_check["key"],
+                     makemkv_candidates=[exe], retry_seconds=0.05,
+                     **({} if pins is None else {"pins": pins}))
+
     services = build_services(cfg, probe=drive, runner=runner,
                               nas_exists=lambda p: share["reachable"],
                               streamer=FakeTools(makemkv, cyanrip),
+                              make_tools=make_tools,
                               http=httpx.Client(transport=web.transport()))
+    # Preflight now, so a Disc inserted right after startup never races the first check.
+    asyncio.run(services.tools.check_makemkv())
     services.cd_archive.retry_seconds = 0.05
     services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
-    return Harness(services, drive, share, runner, makemkv, cyanrip, web, Path(cfg.nas.unc))
+    return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check, web,
+                   Path(cfg.nas.unc))
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

@@ -1,13 +1,12 @@
 """Wiring: build the long-lived services, and the FastAPI app that serves them.
 
 `build_services` is the one place real OS/process adapters are chosen; tests
-pass fakes for `probe`, `runner`, `streamer`, `tool`, `nas_exists` and `http` (an
-httpx client, e.g. over a MockTransport). `create_app`'s lifespan
+pass fakes for `probe`, `runner`, `streamer`, `tool`, `make_tools`, `nas_exists`
+and `http` (an httpx client, e.g. over a MockTransport). `create_app`'s lifespan
 starts every background monitor as an asyncio task and cancels them on exit.
 """
 
 from __future__ import annotations
-
 import asyncio
 import os
 from collections.abc import AsyncIterator, Callable
@@ -19,7 +18,6 @@ import httpx
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from ama import tools
 from ama.archive import Archive
 from ama.cdarchive import CdArchiver
 from ama.cdrip import CdRipper, CdTracks
@@ -32,7 +30,7 @@ from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
-from ama.tools import ToolLookup
+from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
 from ama.web import STATIC_DIR, auth, discs_pages, pages
 
@@ -47,6 +45,7 @@ class Services:
     discs: DiscStore
     cd: CdRipper
     video_rip: VideoRipper
+    tools: Tools
     archive: Archive
     musicbrainz: MusicBrainz
     cd_archive: CdArchiver
@@ -54,7 +53,7 @@ class Services:
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
-                self.cd_archive.run]
+                self.tools.run, self.cd_archive.run]
 
 
 def build_services(
@@ -64,12 +63,14 @@ def build_services(
     nas_exists: Callable[[str], bool] = os.path.isdir,
     streamer: Streamer = stream,
     tool: ToolLookup | None = None,
+    make_tools: Callable[[EventBus], Tools] | None = None,
     http: httpx.Client | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
     db = Database(cfg.paths.state_db)
-    tool = tool or tools.lookup(cfg.tools)
+    tools = make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner)
+    tool = tool or tools.path
     drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                          interval=cfg.drive.poll_seconds)
     discs = DiscStore(db, cfg.paths.scratch)
@@ -85,6 +86,7 @@ def build_services(
         bus=bus,
         drive=drive,
         nas=nas,
+        tools=tools,
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds),

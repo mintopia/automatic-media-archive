@@ -17,3 +17,6 @@
   139f3172's barcode. No `release-group`/`label-info` (not in that `inc`).
 - `cyanrip/info-ffvii-rebirth-disc1.txt`: **real** `cyanrip -d D: -I -N -U` stdout for the
   same Disc (cyanrip 0.9.3).
+- `makemkv-unregistered-v2.0.0.txt`: **real** output of `makemkvcon64 -r --cache=1 info disc:9999`
+  with MakeMKV 2.0.0 and no `app_Key` in `HKCU\Software\MakeMKV`, drive empty, 2026-11-04.
+  It runs normally; the registration check reads the registry, not this output.

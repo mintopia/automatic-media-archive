@@ -26,6 +26,18 @@ def now(request: Request) -> Response:
     return TEMPLATES.TemplateResponse(request, "now.html", ctx)
 
 
+@router.get("/makemkv", response_class=HTMLResponse)
+def makemkv(request: Request) -> Response:
+    ctx = view_context(_services(request)) | {"current": "/"}
+    return TEMPLATES.TemplateResponse(request, "makemkv.html", ctx)
+
+
+@router.post("/makemkv/check")
+async def makemkv_check(request: Request) -> Response:
+    await _services(request).tools.check_makemkv()
+    return RedirectResponse("/makemkv", status_code=303)
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request) -> Response:
     if not auth.auth_required(_services(request)):

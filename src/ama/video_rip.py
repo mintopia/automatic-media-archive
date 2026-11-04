@@ -31,6 +31,7 @@ from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
+from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +189,12 @@ class VideoRipper:
         self._publish()
 
     async def _rip_titles(self, disc: DiscRecord) -> Failure | None:
-        exe = self._exe()
+        try:
+            exe = self._exe()
+        except ToolUnavailable as e:  # the MakeMKV preflight hasn't passed (ADR 0006)
+            return Failure(FailureKind.LICENCE, makemkv_headline(e.status),
+                           "DVDs and Blu-rays can't be ripped until MakeMKV is fixed. CDs still "
+                           "work. The MakeMKV page says what to do.")
         try:
             _, out = await self._makemkv(disc, makemkv.drives_args(exe), quiet=True)
             source = makemkv.pick_source(makemkv.parse_scan_records(out).drives)
