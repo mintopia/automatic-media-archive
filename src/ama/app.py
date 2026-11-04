@@ -32,11 +32,13 @@ from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
+from ama.repeat import RepeatGuard
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
-from ama.web import STATIC_DIR, auth, discs_pages, pages, review_pages, scratch_pages
+from ama.web import (STATIC_DIR, auth, discs_pages, pages, repeat_pages, review_pages,
+                     scratch_pages)
 
 
 @dataclass
@@ -54,6 +56,7 @@ class Services:
     musicbrainz: MusicBrainz
     cd_archive: CdArchiver
     movie_archive: MovieArchiver
+    repeat: RepeatGuard
     scratch: ScratchGate
 
     def background_tasks(self) -> list[Callable[[], object]]:
@@ -90,6 +93,7 @@ def build_services(
     archive = Archive(Path(cfg.nas.unc))
     mb = MusicBrainz(http)
     plex = Plex(cfg.plex, http, archive.root)
+    repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -103,9 +107,11 @@ def build_services(
         tools=tools,
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
-                    tool=tool, interval=cfg.drive.poll_seconds, scratch=scratch),
+                    tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
+                    scratch=scratch),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
-                              streamer=streamer, disc_root=disc_root, scratch=scratch),
+                              streamer=streamer, repeat=repeat, scratch=scratch,
+                              disc_root=disc_root),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
@@ -114,6 +120,7 @@ def build_services(
                                     archive, plex, bus, cfg.encode.cq, tool, streamer,
                                     interval=cfg.drive.poll_seconds,
                                     retry_seconds=cfg.nas.retry_seconds),
+        repeat=repeat,
         scratch=scratch,
     )
 
@@ -136,5 +143,6 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(pages.router)
     app.include_router(discs_pages.router)
     app.include_router(review_pages.router)
+    app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     return app

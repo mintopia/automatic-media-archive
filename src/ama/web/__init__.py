@@ -95,6 +95,7 @@ def view_context(services: Services) -> dict[str, Any]:
                         key=lambda d: d.record.filed_at, reverse=True),
         **services.movie_archive.queue_view(),
         "drive": services.drive.state,
+        "repeat": services.repeat.pending,  # an archived Disc waiting for the user (#16)
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
