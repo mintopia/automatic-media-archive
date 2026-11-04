@@ -33,7 +33,7 @@ from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
-from ama.tmdb import DiscHints, bd_meta_title, save_hints
+from ama.tmdb import Candidate, DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -109,7 +109,10 @@ class VideoRipper:
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
                  scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
-                 disc_root: Callable[[], Path | None] = lambda: None) -> None:
+                 disc_root: Callable[[], Path | None] = lambda: None,
+                 guess: Callable[[str], Candidate | None] | None = None) -> None:
+        self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
+        self.likely: Candidate | None = None  # while ripping; only for show
         self._drive = drive
         self._scratch = scratch
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
@@ -188,9 +191,10 @@ class VideoRipper:
         self._repeat.remember(disc.id, fingerprint)
         shutil.rmtree(disc.scratch_dir, ignore_errors=True)
         disc.scratch_dir.mkdir(parents=True, exist_ok=True)
-        self.disc, self.progress = disc, RipProgress()
+        self.disc, self.progress, self.likely = disc, RipProgress(), None
         self._store.log(disc.id, f"Ripping {inserted.disc_type.long_name} “{disc.name}”")
         self._publish()
+        guessing = asyncio.create_task(self._guess(disc.label))             if self._guesser and disc.label else None
         try:
             failure = await self._rip_titles(disc)
         except asyncio.CancelledError:
@@ -214,8 +218,20 @@ class VideoRipper:
         except OSError as e:
             log.warning("eject failed: %s", e)
             self._store.log(disc.id, f"Couldn't eject the Disc: {e}", error=True)
-        self.disc, self.progress = self._store.get(disc.id), None
+        if guessing:
+            guessing.cancel()
+        self.disc, self.progress, self.likely = self._store.get(disc.id), None, None
         self._publish()
+
+    async def _guess(self, label: str) -> None:
+        assert self._guesser is not None
+        try:
+            self.likely = await asyncio.to_thread(self._guesser, label)
+        except Exception:
+            log.exception("film guess failed")
+            return
+        if self.likely is not None and self.progress is not None:
+            self._publish()
 
     async def _rip_titles(self, disc: DiscRecord) -> Failure | None:
         try:

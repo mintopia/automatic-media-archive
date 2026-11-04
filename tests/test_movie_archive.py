@@ -77,8 +77,11 @@ def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_
     _rip(harness, label="ARRIVAL_BD")
     rec = _wait_for(harness, DiscStatus.FILED)
     assert rec.title == "Arrival (2016)"
-    first = harness.web.tmdb_requests[0]
-    assert first.url.params["query"] == "Arrival"
+    searches = [r.url.params["query"] for r in harness.web.tmdb_requests
+                if r.url.path == "/3/search/movie"]
+    # The guess shown while ripping uses only the label; Identification asks title first.
+    assert "ARRIVAL" in searches
+    assert [q for q in searches if q != "ARRIVAL"][0] == "Arrival"
     assert "tmdb-key" not in "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
 
 

@@ -104,6 +104,7 @@ def view_context(services: Services) -> dict[str, Any]:
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_disc": services.video_rip.disc,
         "rip_progress": services.video_rip.progress,
+        "rip_likely": services.video_rip.likely,  # a film guessed from the label, only for show
         "rip_failure": next(iter(services.discs.list(DiscStatus.FAILED, types=VIDEO_DISC_TYPES)),
                             None),
         **_tools_context(services),

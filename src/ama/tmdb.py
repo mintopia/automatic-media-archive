@@ -287,3 +287,15 @@ class Tmdb:
             return None
         r.raise_for_status()
         return r.content
+
+    def guess(self, volume_label: str) -> Candidate | None:
+        """A likely film for a Disc being ripped, from its volume label alone (only for show:
+        Identification decides). None when TMDB has none or can't be asked."""
+        terms = search_terms(DiscHints(volume_label=volume_label))
+        if not self.configured or not terms:
+            return None
+        try:
+            found = self.search(terms[0], limit=1)
+        except TmdbError:
+            return None
+        return found[0] if found else None

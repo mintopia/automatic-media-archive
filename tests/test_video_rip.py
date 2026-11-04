@@ -168,3 +168,23 @@ def test_a_disc_identified_before_the_tray_opens_still_shows_as_ripped(client, h
     eventually(lambda: harness.services.video_rip.progress is None)
     page = page_text(client, "/disc")
     assert "Disc ejected at" in page and "See what went wrong" not in page
+
+
+def test_while_ripping_a_likely_film_is_guessed_from_the_volume_label(client, harness):
+    harness.web.add_film("Heat", 949, "Heat", runtime=170, year=1995)
+    harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
+    eventually(lambda: "Likely" in page_text(client, "/"))
+    for page in (page_text(client, "/"), page_text(client, "/disc")):
+        assert "Heat (1995)" in page and "from the Disc label" in page
+    harness.makemkv.release()
+    eventually(lambda: harness.drive.ejected == 1)
+
+
+def test_a_film_guess_tmdb_cant_give_is_left_out_quietly(client, harness):
+    harness.web.tmdb_offline = True
+    harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
+    eventually(lambda: "Title 1 of 2" in page_text(client, "/disc"))
+    eventually(lambda: harness.web.tmdb_requests)
+    assert "Likely" not in page_text(client, "/disc") and "TMDB" not in page_text(client, "/disc")
+    harness.makemkv.release()
+    eventually(lambda: harness.drive.ejected == 1)

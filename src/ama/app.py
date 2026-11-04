@@ -138,7 +138,7 @@ def build_services(
                     scratch=scratch, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
-                              disc_root=disc_root),
+                              disc_root=disc_root, guess=tmdb.guess),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
