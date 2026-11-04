@@ -112,8 +112,10 @@ def test_a_bonus_disc_files_its_titles_as_extras_in_the_films_folder(harness, cl
         "Other/EXAMPLE_MOVIE_BONUS - Title 2.mkv",
         "Other/EXAMPLE_MOVIE_BONUS - Title 3.mkv"}
     assert harness.services.movie_archive.movies.get(rec.id) is None  # not a film of its own
-    scans = [r.url.query for r in harness.web.plex_requests if "/refresh" in r.url.path]
-    assert len(scans) == 2 and scans[0] == scans[1]  # the film's folder, both times
+    def scans():  # Plex is asked just after the Disc is marked filed
+        return [r.url.query for r in harness.web.plex_requests if "/refresh" in r.url.path]
+    eventually(lambda: len(scans()) == 2)
+    assert scans()[0] == scans()[1]  # the film's folder, both times
     now = _page(client, "/")
     assert "Example Movie (2016) · 3 Extras" in now and "Movies · 3 Extras" in now
 

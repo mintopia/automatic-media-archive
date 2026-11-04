@@ -67,6 +67,37 @@ def test_a_tv_disc_always_goes_to_review_even_when_a_film_matches(harness, clien
     assert "Looks like TV episodes" in queue and "Match episodes" in queue
 
 
+def _searched_films(harness) -> list[str]:
+    return [r.url.params["query"] for r in harness.web.tmdb_requests
+            if r.url.path == "/3/search/movie"]
+
+
+def test_a_tv_disc_of_many_equal_length_episodes_is_tv_not_decoys(harness, client):
+    episodes = [(n, 22 * 60, str(n)) for n in range(1, 11)]
+    rec = _in_review(harness, _tv_disc(harness, "SPACED_D1", episodes))
+    assert rec.review_reason == ReviewReason.EPISODES
+    assert _searched_films(harness) == []
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "decoy" not in log
+
+
+def test_a_films_two_cuts_are_identified_as_the_film_not_tv(harness, client):
+    harness.web.add_film("BLADE RUNNER", 78, "Blade Runner", runtime=117, year=1982)
+    cuts = [(1, 117 * 60, "1-20"), (2, 112 * 60, "1-18,21"), (3, 14 * 60, "30")]
+    rec = _tv_disc(harness, "BLADE_RUNNER", cuts, DiscType.BD)
+    eventually(lambda: harness.services.movie_archive.movies.get(rec.id) is not None, timeout=5)
+    assert harness.services.discs.get(rec.id).review_reason is None
+
+
+def test_two_episode_length_titles_are_tv_only_when_tmdb_knows_the_series(harness, client):
+    two = [(1, 44 * 60, "1"), (2, 46 * 60, "2")]
+    harness.web.add_series("THE WIRE", 1438, "The Wire", 2002, {1: [(1, "The Target", 62)]})
+    rec = _in_review(harness, _tv_disc(harness, "THE_WIRE_S1_D1", two))
+    assert rec.review_reason == ReviewReason.EPISODES
+    other = _in_review(harness, _tv_disc(harness, "LOST_FOOTAGE", two))
+    assert other.review_reason != ReviewReason.EPISODES
+
+
 def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harness, client):
     _the_office(harness)
     rec = _in_review(harness, _tv_disc(harness))

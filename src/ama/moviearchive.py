@@ -54,10 +54,10 @@ from ama.extras import Category, Extras, ExtraStatus
 from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
 from ama.proc import Streamer
-from ama.tmdb import Candidate, Tmdb, TmdbError, decide, load_hints, movie_file_stem, \
-    movie_folder, search_terms
+from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, load_hints, \
+    movie_file_stem, movie_folder, search_terms, title_matches
 from ama.tools import ToolLookup, ToolUnavailable
-from ama.tv import looks_like_tv
+from ama.tv import looks_like_tv, might_be_tv, series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 
 log = logging.getLogger(__name__)
@@ -283,19 +283,18 @@ class MovieArchiver:
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
-        # TV is never accepted as a film, however well one fits. Decoy playlists (#9) look
-        # like several same-length Titles too, but are a film's: they win.
-        if looks_like_tv(rec.titles) and decoys.detect(
-                t for t in rec.titles if t.status == TitleStatus.RIPPED) is None:
-            self._discs.mark_review(rec.id, ReviewReason.EPISODES)
-            self._discs.log(rec.id, "Several Titles are episode-length, so this looks like TV. "
-                                    "Needs Review: match the Titles to Episodes")
+        # TV is never accepted as a film, however well one fits.
+        if looks_like_tv(rec.titles):
+            self._to_tv_review(rec, "Several Titles are episode-length, so this looks like TV")
             return
         if not self._tmdb.configured:
             raise RetryLater("No TMDB API key is set in ama.toml ([tmdb] api_key)")
-        terms = search_terms(load_hints(rec.scratch_dir, rec.label))
+        hints = load_hints(rec.scratch_dir, rec.label)
+        terms = search_terms(hints)
         try:
             candidates = self._tmdb.candidates(terms) if terms else []
+            series = (self._series_named(series_terms(hints))
+                      if might_be_tv(rec.titles) else None)
         except TmdbError as e:
             raise RetryLater(str(e)) from None
         (rec.scratch_dir / TMDB_FILE).write_text(json.dumps(
@@ -303,6 +302,10 @@ class MovieArchiver:
              "candidates": [c.to_json() for c in candidates]}, ensure_ascii=False),
             encoding="utf-8")
         film, reason = decide(candidates, main.duration_s)
+        if film is None and series is not None:
+            self._to_tv_review(rec, f"Two Titles are episode-length and TMDB knows the series "
+                                    f"{series.title}, so this looks like TV")
+            return
         searched = ", ".join(f"“{t}”" for t in terms) or "nothing (the Disc has no usable name)"
         found = decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)
         if found is not None:
@@ -326,6 +329,18 @@ class MovieArchiver:
                                 f"min; Main Feature is Title {main.number}, {main.duration})")
         self.movies.enqueue(rec.id, film, main.number)
         self._discs.log(rec.id, "Queued for Encode")
+
+    def _to_tv_review(self, rec: DiscRecord, why: str) -> None:
+        self._discs.mark_review(rec.id, ReviewReason.EPISODES)
+        self._discs.log(rec.id, f"{why}. Needs Review: match the Titles to Episodes")
+
+    def _series_named(self, terms: list[str]) -> Series | None:
+        """The first TMDB series titled exactly like one of `terms`. Raises TmdbError."""
+        for term in terms:
+            for series in self._tmdb.search_tv(term, limit=3):
+                if title_matches({"title": series.name}, term):
+                    return series
+        return None
 
     # -- Encode -------------------------------------------------------------
 

@@ -44,6 +44,13 @@ def test_a_few_versions_of_the_film_or_a_set_of_episodes_are_not_decoys():
     assert decoys.detect(trailers) is None
 
 
+def test_equal_length_episodes_are_not_decoys():
+    episodes = [_t(n, 22 * 60, str(n)) for n in range(1, 11)]  # a TV Disc, timed to the second
+    assert decoys.detect(episodes) is None
+    long_episodes = [_t(n, 75 * 60, str(n)) for n in range(1, 9)]  # distinct clips
+    assert decoys.detect(long_episodes) is None
+
+
 def test_without_segment_order_to_go_on_the_pick_is_not_confident():
     same = [_t(n, 10_000 + n % 3) for n in range(1, 10)]
     found = decoys.detect(same)

@@ -7,8 +7,8 @@ from pathlib import PurePosixPath
 
 from ama.discs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints
-from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, play_alls, \
-    series_terms
+from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, \
+    might_be_tv, play_alls, series_terms
 
 
 def _t(number: int, minutes: float, segments: str = "") -> TitleRecord:
@@ -22,14 +22,24 @@ OFFICE = Series(2996, "The Office", 2001, "en")
 def test_several_episode_length_titles_look_like_tv_and_a_film_with_extras_does_not():
     episodes = [_t(1, 29, "1"), _t(2, 29.5, "2"), _t(3, 30, "3"), _t(4, 88.5, "1,2,3")]
     assert looks_like_tv(episodes)
-    assert looks_like_tv([_t(1, 44), _t(2, 46)])  # two hour-long episodes
-    assert looks_like_tv([_t(1, 88), _t(2, 89), _t(3, 87)])  # feature-length episodes
+    assert looks_like_tv([_t(1, 44), _t(2, 46), _t(3, 45)])  # hour-long episodes
+    # Two of them could be a film's cuts: only a TMDB series match says TV (see might_be_tv).
+    assert not looks_like_tv([_t(1, 44), _t(2, 46)]) and might_be_tv([_t(1, 44), _t(2, 46)])
     film_with_extras = [_t(1, 121), _t(2, 24), _t(3, 18), _t(4, 22), _t(5, 3)]
     assert not looks_like_tv(film_with_extras)
     assert not looks_like_tv([_t(1, 121)])
     assert not looks_like_tv([_t(1, 25)])  # one short Title: could be anything, not TV-shaped
     failed = TitleRecord(2, 1, 29 * 60, 1, 1, 0, "", "t02.mkv", TitleStatus.FAILED)
     assert not looks_like_tv([_t(1, 29), failed])
+
+
+def test_a_films_cuts_or_a_film_and_a_long_documentary_are_not_tv():
+    cuts = [_t(1, 120), _t(2, 130), _t(3, 12)]
+    assert not looks_like_tv(cuts) and not might_be_tv(cuts)
+    with_documentary = [_t(1, 118), _t(2, 97), _t(3, 6)]
+    assert not looks_like_tv(with_documentary) and not might_be_tv(with_documentary)
+    feature_length = [_t(1, 88), _t(2, 89), _t(3, 87)]  # well over episode length
+    assert not looks_like_tv(feature_length)
 
 
 def test_a_play_all_is_the_title_made_of_other_titles():
