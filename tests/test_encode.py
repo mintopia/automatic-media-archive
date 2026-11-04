@@ -148,3 +148,22 @@ def test_cq_comes_from_the_disc_type():
     from ama.encode import cq_for
     cq = CqConfig(dvd=19, bd=22, uhd=24)
     assert [cq_for(cq, t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [19, 22, 24]
+
+
+def test_the_encode_uses_temporal_aq_and_middle_b_frame_references():
+    sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
+    line = " ".join(ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=22,
+                                title="X"))
+    assert "-temporal-aq 1" in line and "-b_ref_mode middle" in line
+    assert "-color_trc" not in line  # SDR: ffmpeg keeps the source's tags by itself
+
+
+def test_an_hdr10_encode_is_tagged_with_the_sources_colour_description():
+    from ama.hdr import Colour
+    sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
+    args = ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=24, title="X",
+                       colour=Colour("bt2020", "smpte2084", "bt2020nc", "tv"))
+    line = " ".join(args)
+    assert ("-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
+            "-color_range tv") in line
+    assert args.index("-color_trc") < args.index("-c:a")

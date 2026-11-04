@@ -95,3 +95,14 @@ def test_rip_summary_reads_saved_and_failed_counts():
     out = lines("makemkv-mkv-title.txt")
     assert rip_summary(map(parse_line, out)) == (1, 0)
     assert rip_summary(map(parse_line, ["MSG:5011,0,0,\"x\",\"x\""])) is None
+
+
+def test_libredrive_refusal_is_told_apart_from_libredrive_mode_by_its_text():
+    from ama.makemkv import libredrive_refused
+
+    def msg(text: str) -> Msg:
+        return Msg(9999, 0, text, ())
+    assert libredrive_refused([msg("LibreDrive compatible drive is required to open this disc "
+                                   "- video can't be decrypted")])
+    assert not libredrive_refused([msg("Using LibreDrive mode (v06.3 id=0123456789AB)")])
+    assert not libredrive_refused([msg("Operation successfully completed")])

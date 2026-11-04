@@ -35,11 +35,12 @@ from pathlib import Path
 
 import httpx
 
-from ama import encode, review
+from ama import encode, hdr, review
 from ama.archive import Archive, FilingError
 from ama.config import CqConfig
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord, TitleStatus
+from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus
 from ama.nas import NasConnected, NasMonitor
@@ -162,6 +163,21 @@ def main_feature(titles: tuple[TitleRecord, ...]) -> TitleRecord | None:
     """The Main Feature: the longest Title ripped (decoys/TV are Review's job, #7/#9)."""
     ripped = [t for t in titles if t.status == TitleStatus.RIPPED]
     return max(ripped, key=lambda t: (t.duration_s, -t.number), default=None)
+
+
+UHD_MIN_HEIGHT = 1500  # taller than this is a 4K (UHD) picture, whatever the Disc looked like
+
+
+def encode_disc_type(disc_type: DiscType, video_height: int) -> DiscType:
+    """The Disc Type to Encode as: a 4K Main Feature is a UHD's (BD/UHD detection is a guess)."""
+    return DiscType.UHD if video_height > UHD_MIN_HEIGHT else disc_type
+
+
+def plex_version(disc_type: DiscType, video_height: int) -> str | None:
+    """The Plex version name (`... - 4K.mkv`), so a film's BD and UHD share a folder (#11)."""
+    if encode_disc_type(disc_type, video_height) == DiscType.UHD:
+        return "4K"
+    return "1080p" if disc_type == DiscType.BD else None
 
 
 class _Aborted(Exception):
@@ -325,11 +341,25 @@ class MovieArchiver:
             except ValueError as e:
                 return self._failed(rec, f"Couldn't read the Main Feature ({e}; ffprobe exit "
                                          f"{code})", probe_lines[-LOG_TAIL:])
-            cq = encode.cq_for(self._cq, rec.disc_type)
+            source_hdr = await self._probe_hdr(ffprobe, src)
+            if isinstance(source_hdr, str):
+                return self._failed(rec, f"Couldn't read the Main Feature's colour ({source_hdr})",
+                                    [])
+            kind = encode_disc_type(rec.disc_type, probe.height)
+            if kind != rec.disc_type:
+                self._discs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
+                                        f"its Main Feature is 4K, so it is encoded as a UHD")
+            cq = encode.cq_for(self._cq, kind)
             self._discs.log(rec.id, f"Encoding Title {title.number} as {movie.film.name}: HEVC "
                                     f"10-bit, CQ {cq}; keeping {len(sel.audio)} audio and "
                                     f"{len(sel.subtitles)} subtitle tracks, {probe.chapters} "
                                     "chapters")
+            if source_hdr.is_hdr10:
+                dropped = [n for n, on in (("Dolby Vision", source_hdr.dolby_vision),
+                                           ("HDR10+", source_hdr.hdr10_plus)) if on]
+                self._discs.log(rec.id, f"HDR10: {source_hdr}" + (
+                    f"; {' and '.join(dropped)} metadata will be dropped (ADR-0003)"
+                    if dropped else ""))
             reader = ProgressReader(probe.duration_s or title.duration_s)
             tail: collections.deque[str] = collections.deque(maxlen=LOG_TAIL)
 
@@ -346,7 +376,8 @@ class MovieArchiver:
 
             tmp.unlink(missing_ok=True)
             started = self._clock()
-            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, movie.film.name)
+            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, movie.film.name,
+                                      colour=source_hdr.colour if source_hdr.is_hdr10 else None)
             try:
                 code = await asyncio.to_thread(self._stream, args, on_line)
             except asyncio.CancelledError:
@@ -357,6 +388,16 @@ class MovieArchiver:
             if code != 0 or not tmp.exists():
                 tmp.unlink(missing_ok=True)
                 return self._failed(rec, f"ffmpeg stopped with exit code {code}", list(tail))
+            if source_hdr.is_hdr10:
+                encoded_hdr = await self._probe_hdr(ffprobe, tmp)
+                lost = ([f"ffprobe couldn't read it ({encoded_hdr})"]
+                        if isinstance(encoded_hdr, str)
+                        else hdr.differences(source_hdr, encoded_hdr))
+                if lost:
+                    tmp.unlink(missing_ok=True)
+                    return self._failed(rec, "the Encode didn't keep the HDR10 metadata: "
+                                             + "; ".join(lost), [])
+                self._discs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
             os.replace(tmp, done)
             minutes = max(1, round((self._clock() - started) / 60))
             self.movies.set_status(rec.id, EncodeStatus.ENCODED, video_height=probe.height)
@@ -365,6 +406,15 @@ class MovieArchiver:
             return True
         finally:
             self.current = None
+
+    async def _probe_hdr(self, ffprobe: Path, path: Path) -> hdr.HdrInfo | str:
+        """The video's colour and HDR10 metadata, or why it couldn't be read."""
+        lines: list[str] = []
+        code = await asyncio.to_thread(self._stream, hdr.probe_args(ffprobe, path), lines.append)
+        try:
+            return hdr.parse_hdr("\n".join(lines))
+        except ValueError as e:
+            return f"{e}; ffprobe exit {code}"
 
     def _failed(self, rec: DiscRecord, why: str, tail: list[str]) -> bool:
         for line in tail:
@@ -380,7 +430,8 @@ class MovieArchiver:
         """File `encode.mkv` into the Archive, then delete the Disc's scratch and tell Plex."""
         if not isinstance(self._nas.status, NasConnected):
             raise RetryLater("The NAS isn't connected")
-        name = f"{movie_file_stem(movie.film)}.mkv"
+        version = plex_version(rec.disc_type, movie.video_height)
+        name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
         try:
             folder = self._archive.place(movie_folder(movie.film),
                                          {name: rec.scratch_dir / ENCODED})
