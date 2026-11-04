@@ -118,3 +118,47 @@ def test_a_bonus_disc_files_its_titles_as_extras_in_the_films_folder(harness, cl
 
     again = _in_review(harness, _tv_disc(harness, "EXAMPLE_MOVIE_BONUS_2", BONUS, DiscType.BD))
     assert "Discs 1–2 filed" in _page(client, f"/review/{again.id}")
+
+
+def test_a_disc_not_part_of_a_set_is_identified_on_its_own_and_not_asked_again(harness, client):
+    _the_office(harness)
+    _file_first_office_disc(harness, client)
+    rec = _in_review(harness, _tv_disc(harness, "THE_OFFICE_S1_D2", EPISODES))
+    r = client.post(f"/review/{rec.id}/set", follow_redirects=False, data={"part": "no"})
+    assert r.status_code == 303 and r.headers["location"] == f"/review/{rec.id}"
+    page = _page(client, f"/review/{rec.id}")
+    assert "Which episode is each Title?" in page
+    # Even on its own, the series' later Disc carries on after the Episodes filed.
+    assert '<option value="S01E04" selected>' in page
+    assert f'href="/review/{rec.id}/set"' in page  # changed your mind?
+    asked = _page(client, f"/review/{rec.id}/set")
+    assert "Is this Disc part of a set?" in asked
+    assert 'name="part" value="no" checked' in asked
+
+
+def test_a_disc_named_like_no_filed_set_goes_straight_to_its_review(harness, client):
+    _the_office(harness)
+    _file_first_office_disc(harness, client)
+    harness.web.add_series("FAWLTY TOWERS", 2207, "Fawlty Towers", 1975,
+                           {1: [(1, "A Touch of Class", 30)]})
+    rec = _in_review(harness, _tv_disc(harness, "FAWLTY_TOWERS_D1", EPISODES))
+    page = _page(client, f"/review/{rec.id}")
+    assert "Which episode is each Title?" in page and "Fawlty Towers" in page
+    # Asked for, every filed set of its kind is offered.
+    asked = _page(client, f"/review/{rec.id}/set")
+    assert "The Office (2001) · Season 1" in asked
+    assert "Bonus Disc" not in asked
+
+
+def test_a_set_answer_is_checked(harness, client):
+    _the_office(harness)
+    _file_first_office_disc(harness, client)
+    rec = _in_review(harness, _tv_disc(harness, "THE_OFFICE_S1_D2", EPISODES))
+    taken = client.post(f"/review/{rec.id}/set",
+                        data={"part": "yes", "set": f"tv:{OFFICE}:1", "disc": "1"})
+    assert taken.status_code == 400
+    assert "Disc 1 of The Office (2001) · Season 1 is already filed" in html.unescape(taken.text)
+    unknown = client.post(f"/review/{rec.id}/set",
+                          data={"part": "yes", "set": "movie:1234", "disc": "2"})
+    assert unknown.status_code == 400 and "Pick the set" in unknown.text
+    assert "Is this Disc part of a set?" in _page(client, f"/review/{rec.id}")  # still asked

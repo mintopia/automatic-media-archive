@@ -69,7 +69,7 @@
     </div></section>
   </form>
   <div class="tv-foot">
-    <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a></p>
+    <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a> · <a href="/review/{{ record.id }}/set">Part of a set?</a></p>
     <form method="post" action="/review/{{ record.id }}/kind"><input type="hidden" name="kind" value="film"><button class="btn quiet" type="submit">It's a film, not TV</button></form>
   </div>
 </main>
