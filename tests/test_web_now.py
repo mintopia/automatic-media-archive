@@ -65,5 +65,7 @@ def test_inserting_and_removing_a_disc_is_pushed_live_over_sse(live_server, harn
         fragment = _read_event(lines, "drive")
         assert "DVD" in fragment and "HEAT_DISC1" in fragment
 
+        # The Rip that just started may have pushed updates rendered before the eject.
         harness.drive.eject()
-        assert "Insert a Disc" in _read_event(lines, "drive")
+        while "Insert a Disc" not in _read_event(lines, "drive"):
+            pass

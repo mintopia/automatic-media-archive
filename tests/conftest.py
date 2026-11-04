@@ -20,7 +20,7 @@ from ama.config import (
     WebConfig,
 )
 from ama.proc import ProcResult
-from tests.fakes import FakeDrive, FakeRunner
+from tests.fakes import FakeDrive, FakeMakemkv, FakeRunner
 
 UNC = r"\\nas\media"
 
@@ -38,12 +38,13 @@ def make_config(tmp_path, password: str = "") -> Config:
 
 @dataclass
 class Harness:
-    """The app wired to fakes: a controllable drive and a controllable NAS share."""
+    """The app wired to fakes: a controllable drive, NAS share and makemkvcon."""
 
     services: Services
     drive: FakeDrive
     share: dict  # {"reachable": bool}
     runner: FakeRunner
+    makemkv: FakeMakemkv
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Harness:
@@ -52,9 +53,10 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Ha
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
                                                 "The network path was not found."))
+    makemkv = FakeMakemkv(drive)
     services = build_services(cfg, probe=drive, runner=runner,
-                              nas_exists=lambda p: share["reachable"])
-    return Harness(services, drive, share, runner)
+                              nas_exists=lambda p: share["reachable"], line_runner=makemkv)
+    return Harness(services, drive, share, runner, makemkv)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:
