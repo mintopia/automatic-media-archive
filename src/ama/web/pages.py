@@ -1,4 +1,4 @@
-"""Routes: the Now page, sign-in, and the SSE stream."""
+"""Routes: the Now page, the MakeMKV check page, sign-in, and the SSE stream."""
 
 from __future__ import annotations
 
@@ -24,6 +24,18 @@ def _services(request: Request):
 def now(request: Request) -> Response:
     ctx = view_context(_services(request)) | {"current": "/"}
     return TEMPLATES.TemplateResponse(request, "now.html", ctx)
+
+
+@router.get("/makemkv", response_class=HTMLResponse)
+def makemkv(request: Request) -> Response:
+    ctx = view_context(_services(request)) | {"current": "/"}
+    return TEMPLATES.TemplateResponse(request, "makemkv.html", ctx)
+
+
+@router.post("/makemkv/check")
+async def makemkv_check(request: Request) -> Response:
+    await _services(request).tools.check_makemkv()
+    return RedirectResponse("/makemkv", status_code=303)
 
 
 @router.get("/login", response_class=HTMLResponse)

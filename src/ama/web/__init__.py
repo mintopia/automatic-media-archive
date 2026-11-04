@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
 
+from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed
+
 if TYPE_CHECKING:
     from ama.app import Services
 
@@ -30,6 +32,7 @@ NAV: list[tuple[str, str]] = [("Now", "/")]
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
     "nas": "partials/nas.html",
+    "tools": "partials/tools.html",
 }
 
 GB = 1000**3
@@ -49,7 +52,21 @@ def view_context(services: Services) -> dict[str, Any]:
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
+        **_tools_context(services),
     }
+
+
+def _tools_context(services: Services) -> dict[str, Any]:
+    tools = services.tools
+    managed = []
+    for pin in tools.pins:
+        for m in pin.members:
+            st = tools.status(m.name)
+            if isinstance(st, ToolDownloading | ToolFailed):
+                managed.append({"status": st, "needed_for": NEEDED_FOR[m.name]})
+                break
+    return {"tools": managed, "makemkv": tools.status("makemkvcon"),
+            "retry_seconds": tools.retry_seconds}
 
 
 def render_fragment(topic: str, services: Services) -> str:

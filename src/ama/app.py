@@ -1,7 +1,7 @@
 """Wiring: build the long-lived services, and the FastAPI app that serves them.
 
 `build_services` is the one place real OS/process adapters are chosen; tests
-pass fakes for `probe`, `runner` and `nas_exists`. `create_app`'s lifespan
+pass fakes for `probe`, `runner`, `nas_exists` and `make_tools`. `create_app`'s lifespan
 starts every background monitor as an asyncio task and cancels them on exit.
 """
 
@@ -22,6 +22,7 @@ from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.nas import NasMonitor
 from ama.proc import Runner, run
+from ama.tools import Tools
 from ama.web import STATIC_DIR, auth, pages
 
 
@@ -32,10 +33,11 @@ class Services:
     bus: EventBus
     drive: DriveMonitor
     nas: NasMonitor
+    tools: Tools
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.drive.run, self.nas.run]
+        return [self.drive.run, self.nas.run, self.tools.run]
 
 
 def build_services(
@@ -43,6 +45,7 @@ def build_services(
     probe: DriveProbe | None = None,
     runner: Runner = run,
     nas_exists: Callable[[str], bool] = os.path.isdir,
+    make_tools: Callable[[EventBus], Tools] | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
@@ -53,6 +56,7 @@ def build_services(
         drive=DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                            interval=cfg.drive.poll_seconds),
         nas=NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists),
+        tools=make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner),
     )
 
 

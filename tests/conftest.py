@@ -17,12 +17,17 @@ from ama.config import (
     EncodeConfig,
     NasConfig,
     PathsConfig,
+    ToolsConfig,
     WebConfig,
 )
+from ama.events import EventBus
 from ama.proc import ProcResult
-from tests.fakes import FakeDrive, FakeRunner
+from ama.tools import Tools
+from tests.fakes import FakeDrive, FakeFetch, FakeRunner
 
 UNC = r"\\nas\media"
+MAKEMKV_OK = ('MSG:1005,0,1,"MakeMKV v2.0.0 win(x64-release) started","%1 started",'
+              '"MakeMKV v2.0.0 win(x64-release)"\n')
 
 
 def make_config(tmp_path, password: str = "") -> Config:
@@ -44,17 +49,33 @@ class Harness:
     drive: FakeDrive
     share: dict  # {"reachable": bool}
     runner: FakeRunner
+    makemkv: dict  # {"key": str, "output": str}: what the fake MakeMKV says on the next check
 
 
-def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Harness:
+def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
+                 fetch: FakeFetch | None = None) -> Harness:
+    """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
+    MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
     cfg = make_config(tmp_path, password)
     drive = FakeDrive()
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
                                                 "The network path was not found."))
+    makemkv = {"key": "T-test", "output": MAKEMKV_OK}
+    exe = tmp_path / "MakeMKV" / "makemkvcon64.exe"
+    exe.parent.mkdir(exist_ok=True)
+    exe.write_bytes(b"")
+    fakes = {} if fetch else {n: str(tmp_path / f"{n}.exe") for n in ("ffmpeg", "ffprobe", "cyanrip")}
+
+    def make_tools(bus: EventBus) -> Tools:
+        return Tools(ToolsConfig(dir=str(tmp_path / "tools"), **fakes), bus,
+                     runner=FakeRunner(lambda a: ProcResult(0, makemkv["output"])),
+                     fetch=fetch or FakeFetch({}), read_key=lambda: makemkv["key"],
+                     makemkv_candidates=[exe], retry_seconds=0.05)
+
     services = build_services(cfg, probe=drive, runner=runner,
-                              nas_exists=lambda p: share["reachable"])
-    return Harness(services, drive, share, runner)
+                              nas_exists=lambda p: share["reachable"], make_tools=make_tools)
+    return Harness(services, drive, share, runner, makemkv)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

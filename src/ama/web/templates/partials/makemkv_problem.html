@@ -1,0 +1,31 @@
+{#- What's wrong with MakeMKV and how to fix it, per preflight status (ADR 0006). -#}
+{%- set download = '<a href="https://www.makemkv.com/download/">https://www.makemkv.com/download/</a>' -%}
+{%- set beta = '<a href="https://forum.makemkv.com/forum/viewtopic.php?t=1053">https://forum.makemkv.com/forum/viewtopic.php?t=1053</a>' -%}
+{%- macro headline(st) -%}
+{%- set k = st | kind -%}
+{%- if k == "MakemkvMissing" -%}Can't find MakeMKV on this PC.
+{%- elif k == "MakemkvTooOld" -%}MakeMKV v{{ st.version }} is too old to run.
+{%- elif k == "MakemkvUnregistered" -%}MakeMKV isn't registered.
+{%- elif k == "MakemkvKeyRejected" -%}MakeMKV says its licence key isn't valid.
+{%- elif k == "MakemkvBroken" -%}MakeMKV didn't run properly.
+{%- else -%}Checking MakeMKV…
+{%- endif -%}
+{%- endmacro -%}
+{%- macro body(st) -%}
+{%- set k = st | kind -%}
+DVDs and Blu-rays can't be ripped until this is fixed. CDs still work.
+{% if k == "MakemkvMissing" -%}
+Download MakeMKV from {{ download | safe }} and install it while signed in as the Windows user AMA runs as, then open it and register it (Help → Register).
+Installed somewhere else? Set <code>[tools] makemkvcon</code> in ama.toml to the full path of <code>makemkvcon64.exe</code>.
+<span class="ts" style="display:block;margin-top:4px">Looked for: {{ st.searched | join(", ") }}</span>
+{%- elif k == "MakemkvTooOld" -%}
+Download the latest version from {{ download | safe }} and install it over this one. Entering a registration key also keeps an old version working: open MakeMKV, go to Help → Register.
+{%- elif k == "MakemkvUnregistered" -%}
+Open MakeMKV on the archive PC, go to Help → Register, and enter your key. While MakeMKV is in beta you can use the free beta key posted at {{ beta | safe }}. It changes every month or two, so come back here when it runs out.
+{%- elif k == "MakemkvKeyRejected" -%}
+Open MakeMKV on the archive PC, go to Help → Register, and enter the key again. Using the beta key? Get the current one from {{ beta | safe }}.
+{%- elif k == "MakemkvBroken" -%}
+Try opening MakeMKV on the archive PC. If it won't start, reinstall it from {{ download | safe }}.
+<span class="ts" style="display:block;margin-top:4px">{{ st.detail }}</span>
+{%- endif -%}
+{%- endmacro -%}
