@@ -16,7 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import moviereview, review
+from ama import decoys, moviereview, review
 from ama.discs import DiscRecord, DiscStatus, TitleRecord
 from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviearchive import main_feature
@@ -25,6 +25,7 @@ from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_
 from ama.tmdb import Candidate, TmdbError, movie_folder, search_terms, load_hints
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
+from ama.web.review_items import plural
 
 router = APIRouter()
 
@@ -45,6 +46,7 @@ class Frame:
 @dataclass(frozen=True)
 class TitleChoice:
     title: TitleRecord
+    label: str         # "Title 6", or "Title 6 · 00805.mpls" for a decoy version
     note: str          # "2 h 50 m 14 s · likely the film"
     frames: tuple[Frame, ...]
     pending: bool      # some stills are still being taken
@@ -61,8 +63,8 @@ def _video_in_review(services, disc_id: int) -> DiscRecord | None:
     return rec if rec.status == DiscStatus.REVIEW else None
 
 
-def _title_choice(services, rec: DiscRecord, t: TitleRecord, main: TitleRecord | None
-                  ) -> TitleChoice:
+def _title_choice(services, rec: DiscRecord, t: TitleRecord, main: TitleRecord | None,
+                  found: decoys.Decoys | None = None) -> TitleChoice:
     frames = []
     for pct in POSITIONS:
         ready = thumb_path(rec.scratch_dir, t.number, pct).exists()
@@ -70,10 +72,34 @@ def _title_choice(services, rec: DiscRecord, t: TitleRecord, main: TitleRecord |
                             if ready else None))
     pending = any(f.src is None and (rec.id, t.number, f.pct) not in services.thumbnails.failed
                   for f in frames)
-    note = short_duration(t.duration_s, with_seconds=True)
-    if main is not None and t.number == main.number:
+    note, label = short_duration(t.duration_s, with_seconds=True), f"Title {t.number}"
+    if found is not None and t in found.versions:
+        label += f" · {t.source}" if t.source else ""
+        if found.confident:
+            note += " · likely the film" if t == found.likely else " · scenes out of order"
+    elif found is None and main is not None and t.number == main.number:
         note += " · the longest, likely the film"
-    return TitleChoice(t, note, tuple(frames), pending)
+    return TitleChoice(t, label, note, tuple(frames), pending)
+
+
+def _ordered(titles: list[TitleRecord], main: TitleRecord | None,
+             found: decoys.Decoys | None) -> list[TitleRecord]:
+    """The picked Title first; with decoys, the other versions next; then longest first."""
+    def key(t: TitleRecord):
+        version = found is not None and t in found.versions
+        return (main is None or t.number != main.number, not version,
+                0 if version else -t.duration_s, t.number)
+    return sorted(titles, key=key)
+
+
+def _more_label(hidden: list[TitleRecord], found: decoys.Decoys | None) -> str:
+    """"Show 11 more versions and 2 other Titles" for the collapsed rows."""
+    versions = sum(found is not None and t in found.versions for t in hidden)
+    others = len(hidden) - versions
+    parts = [plural(versions, "more version")] if versions else []
+    if others:
+        parts.append(plural(others, "other Title" if versions else "more Title"))
+    return "Show " + " and ".join(parts)
 
 
 def _film_choice(film: Candidate, duration_s: int) -> FilmChoice:
@@ -94,7 +120,8 @@ def _find_film(services, rec: DiscRecord, film_id: int) -> Candidate:
 def page(request: Request, services, rec: DiscRecord, errors: list[str] | None = None,
          status_code: int = 200) -> Response:
     titles = ripped_titles(rec)
-    main = main_feature(rec.titles)
+    found = decoys.detect(titles)
+    main = found.likely if found else main_feature(rec.titles)
     main_s = main.duration_s if main else 0
     saved = moviereview.saved_search(rec.scratch_dir)
     q = request.query_params.get("q")
@@ -109,12 +136,13 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         films = sorted(saved.candidates, key=lambda c: not fits(c, main_s))
     choices = [_film_choice(f, main_s) for f in films]
     picked_film = next((c.film for c in choices if c.fits), films[0] if films else None)
-    ordered = sorted(titles, key=lambda t: (main is None or t.number != main.number,
-                                            -t.duration_s, t.number))
+    ordered = _ordered(titles, main, found)
+    shown = 3 if found else 4
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "q": q, "searched": "q" in request.query_params,
         "search_error": search_error, "films": choices, "picked_film": picked_film,
-        "titles": [_title_choice(services, rec, t, main) for t in ordered],
+        "titles": [_title_choice(services, rec, t, main, found) for t in ordered],
+        "shown": shown, "more_label": _more_label(ordered[shown:], found), "decoys": found,
         "picked_title": main, "main_length": short_duration(main_s),
         "errors": errors or [],
         "summary": _summary(picked_film, main),
@@ -137,7 +165,7 @@ def frames(request: Request, disc_id: int, number: int) -> Response:
     t = next((t for t in ripped_titles(rec) if t.number == number), None)
     if t is None:
         raise HTTPException(404, "No such Title")
-    choice = _title_choice(services, rec, t, None)
+    choice = _title_choice(services, rec, t, None, decoys.detect(ripped_titles(rec)))
     return TEMPLATES.TemplateResponse(request, "partials/title_frames.html",
                                       {"record": rec, "t": choice})
 
