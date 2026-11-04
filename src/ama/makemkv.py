@@ -9,7 +9,7 @@ Reference: https://www.makemkv.com/developers/usage.txt and apdefs.h.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ama.drive import DiscType
@@ -206,7 +206,7 @@ def parse_scan(lines: Iterable[str]) -> Scan:
 
 def parse_scan_records(records: Iterable[RobotLine]) -> Scan:
     scan = Scan()
-    attrs: dict[int, dict[str, object]] = {}
+    titles: dict[int, TitleInfo] = {}
     for rec in records:
         match rec:
             case Drv():
@@ -222,25 +222,26 @@ def parse_scan_records(records: Iterable[RobotLine]) -> Scan:
             case CInfo(attr=32, value=v):
                 scan.volume_name = v
             case TInfo(title=t, attr=a, value=v):
-                d = attrs.setdefault(t, {})
+                info = titles.setdefault(t, TitleInfo(id=t))
                 try:
                     match a:
-                        case 2: d["name"] = v
-                        case 9: d["duration_s"] = parse_duration(v)
-                        case 11: d["size_bytes"] = int(v)
-                        case 16: d["source"] = v
-                        case 25: d["segments_count"] = int(v)
-                        case 26: d["segments_map"] = v
-                        case 27: d["output_file"] = v
+                        case 2: info = replace(info, name=v)
+                        case 9: info = replace(info, duration_s=parse_duration(v))
+                        case 11: info = replace(info, size_bytes=int(v))
+                        case 16: info = replace(info, source=v)
+                        case 25: info = replace(info, segments_count=int(v))
+                        case 26: info = replace(info, segments_map=v)
+                        case 27: info = replace(info, output_file=v)
                 except ValueError:
                     pass
+                titles[t] = info
             case SInfo(title=t, attr=1, code=code, value=v):
-                d = attrs.setdefault(t, {})
+                info = titles.setdefault(t, TitleInfo(id=t))
                 if code == TYPE_AUDIO or (not code and v == "Audio"):
-                    d["audio"] = int(d.get("audio", 0)) + 1  # type: ignore[call-overload]
+                    titles[t] = replace(info, audio=info.audio + 1)
                 elif code == TYPE_SUBTITLES or (not code and v == "Subtitles"):
-                    d["subtitles"] = int(d.get("subtitles", 0)) + 1  # type: ignore[call-overload]
-    scan.titles = [TitleInfo(id=t, **d) for t, d in sorted(attrs.items())]  # type: ignore[arg-type]
+                    titles[t] = replace(info, subtitles=info.subtitles + 1)
+    scan.titles = [titles[t] for t in sorted(titles)]
     return scan
 
 

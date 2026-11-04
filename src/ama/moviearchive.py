@@ -30,7 +30,7 @@ import json
 import logging
 import os
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -235,9 +235,9 @@ class MovieArchiver:
         self.recover()
         await asyncio.gather(self._every(self.identify_once), self._every(self.encode_once))
 
-    async def _every(self, step: Callable[[], object]) -> None:
+    async def _every(self, step: Callable[[], Awaitable[object]]) -> None:
         while True:
-            await step()  # type: ignore[misc]
+            await step()
             await asyncio.sleep(self._interval)
 
     def recover(self) -> None:

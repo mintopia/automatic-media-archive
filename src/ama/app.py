@@ -96,7 +96,7 @@ def build_services(
     make_tools: Callable[[EventBus], Tools] | None = None,
     http: httpx.Client | None = None,
     disc_root: Callable[[], Path | None] | None = None,
-    disk_usage: DiskUsageFn = shutil.disk_usage,  # type: ignore[assignment]
+    disk_usage: DiskUsageFn = shutil.disk_usage,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()

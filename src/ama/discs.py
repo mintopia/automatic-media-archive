@@ -11,6 +11,7 @@ Archive, which deletes its scratch.
 
 from __future__ import annotations
 
+import builtins
 import logging
 import shutil
 from collections.abc import Callable, Collection, Iterable
@@ -306,7 +307,7 @@ class DiscStore:
         self._db.execute("INSERT INTO disc_log (disc_id, at, error, text) VALUES (?, ?, ?, ?)",
                          (disc_id, self._ts(), int(error), text))
 
-    def log_lines(self, disc_id: int) -> list[LogLine]:
+    def log_lines(self, disc_id: int) -> builtins.list[LogLine]:  # `list` here is the method above
         rows = self._db.execute(
             "SELECT at, error, text FROM disc_log WHERE disc_id = ? ORDER BY id",
             (disc_id,)).fetchall()

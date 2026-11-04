@@ -15,7 +15,7 @@ import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Protocol
 
 from ama.config import ScratchConfig
 from ama.drive import DiscType, DriveMonitor
@@ -27,13 +27,24 @@ GB = 1000**3
 TOPIC = "scratch"
 
 
+class DiskSpace(Protocol):
+    """What `shutil.disk_usage` returns, in bytes."""
+
+    @property
+    def total(self) -> int: ...
+    @property
+    def used(self) -> int: ...
+    @property
+    def free(self) -> int: ...
+
+
 class DiskUsage(NamedTuple):
     total: int
     used: int
     free: int
 
 
-DiskUsageFn = Callable[[Path], DiskUsage]
+DiskUsageFn = Callable[[Path], DiskSpace]
 
 
 @dataclass(frozen=True)
@@ -80,7 +91,7 @@ class Refusal:
 
 class ScratchGate:
     def __init__(self, cfg: ScratchConfig, root: Path, drive: DriveMonitor, bus: EventBus,
-                 disk_usage: DiskUsageFn = shutil.disk_usage) -> None:  # type: ignore[assignment]
+                 disk_usage: DiskUsageFn = shutil.disk_usage) -> None:
         self._cfg = cfg
         self._root = root
         self._drive = drive
