@@ -331,6 +331,10 @@ class FakeWeb:
         self.tmdb_movies: dict[int, dict] = {}
         self.tmdb_offline = False
         self.tmdb_requests: list[httpx.Request] = []
+        # Notifications (#15): what Discord and ntfy were sent; `notify_status` = their answer.
+        self.discord: list[httpx.Request] = []
+        self.ntfy: list[httpx.Request] = []
+        self.notify_status = 200
 
     def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
                  original_language: str = "en", original_title: str | None = None,
@@ -375,6 +379,11 @@ class FakeWeb:
                                                  self.tmdb_search.get(query, [])})
             movie = self.tmdb_movies.get(int(url.path.rsplit("/", 1)[-1]))
             return httpx.Response(200, json=movie) if movie else httpx.Response(404)
+        if url.host in ("discord.com", "ntfy.sh"):
+            (self.discord if url.host == "discord.com" else self.ntfy).append(request)
+            if self.notify_status == 0:
+                raise httpx.ConnectError("no network", request=request)
+            return httpx.Response(self.notify_status, json={})
         if url.host == "plex":
             self.plex_requests.append(request)
             if url.path == "/library/sections":
