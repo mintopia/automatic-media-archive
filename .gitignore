@@ -8,3 +8,4 @@ ama-startup-error.log
 *.sqlite3
 *.sqlite3-*
 logs/
+.claude
