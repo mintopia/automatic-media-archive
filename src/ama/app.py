@@ -32,10 +32,12 @@ from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
+from ama.repeat import RepeatGuard
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
-from ama.web import STATIC_DIR, auth, discs_pages, movie_review_pages, pages, review_pages
+from ama.web import STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages, \
+    review_pages
 
 
 @dataclass
@@ -55,6 +57,7 @@ class Services:
     movie_archive: MovieArchiver
     tmdb: Tmdb
     thumbnails: Thumbnailer
+    repeat: RepeatGuard
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
@@ -90,6 +93,7 @@ def build_services(
     mb = MusicBrainz(http)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive.root)
+    repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -103,9 +107,9 @@ def build_services(
         tools=tools,
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
-                    tool=tool, interval=cfg.drive.poll_seconds),
+                    tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
-                              streamer=streamer, disc_root=disc_root),
+                              streamer=streamer, repeat=repeat, disc_root=disc_root),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
@@ -116,6 +120,7 @@ def build_services(
                                     retry_seconds=cfg.nas.retry_seconds),
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
+        repeat=repeat,
     )
 
 
@@ -138,4 +143,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(discs_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
+    app.include_router(repeat_pages.router)
     return app
