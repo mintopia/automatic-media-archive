@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -10,6 +11,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from ama.discs import DiscRecord, DiscStatus, FailureKind
 from ama.drive import DiscType
 from ama.extras import ExtraStatus
+from ama.media import Album
 from ama.web import TEMPLATES, view_context
 
 router = APIRouter()
@@ -51,7 +53,11 @@ def _cd_page(request: Request, services, rec: DiscRecord) -> Response:
     cd = services.cd.current
     live = cd is not None and cd.disc_id == rec.id
     view = cd if live else services.cd.disc(rec.id)
-    ctx |= {"live": live, "view": view, "title": rec.label or "Unknown CD"}
+    album = services.media.get(rec.id) if rec.status == DiscStatus.FILED else None
+    if isinstance(album, Album):
+        ctx |= {"view": replace(view, album=album), "album": album}
+        return TEMPLATES.TemplateResponse(request, "disc_cd_filed.html", ctx)
+    ctx |= {"live": live, "view": view, "title": rec.title or rec.label or "Unknown CD"}
     return TEMPLATES.TemplateResponse(request, "disc_cd.html", ctx)
 
 

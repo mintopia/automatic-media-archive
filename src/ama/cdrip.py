@@ -34,6 +34,7 @@ from ama.tools import ToolLookup, ToolUnavailable
 
 if TYPE_CHECKING:
     from ama.cdguess import Guess, Guesser
+    from ama.media import Album
 
 log = logging.getLogger(__name__)
 
@@ -101,9 +102,10 @@ class CdDisc:
 
     record: DiscRecord
     tracks: list[Track] = field(default_factory=list)
+    album: Album | None = None  # what it was filed as (media.py), once filed
 
     def track_title(self, number: int) -> str | None:
-        return None
+        return self.album.track_title(number) if self.album else None
 
     @property
     def hidden_track(self) -> Track | None:
