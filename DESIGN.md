@@ -334,7 +334,7 @@ Title thumbnails in a 3-up grid of 16:9 tiles with 1px hairline gaps. Tiles come
 ### Per-Job Settings Panel
 A Job's settings as overrides of the global ones (`docs/mockups/job-settings-*.html`).
 - **Summary line:** on the rip card, a hairline-topped line at the foot of the drive body names only what differs from the defaults ("CQ 20 (default 22)") and ends with a Settings / Hide settings toggle (44px target).
-- **Panel:** an `ink` bin, "This Job's settings", in two columns: Encode on the left, then Library, Identification and Rip stacked on the right. One column under 720px, with labels above controls. CD Jobs show only Identification, Library and Rip.
+- **Panel:** an `ink` bin, "This Job's settings", in two columns: Encode on the left, with Library and Identification stacked on the right for video Jobs. CD Jobs show Identification on the left, with Library and Rip on the right. One column under 720px, with labels above controls. A group lists only settings that exist in `ama.toml`, and a group with none is left out (video Rips have no Rip settings).
 - **Group:** a 700 / 15px heading with its state at the right, then label and control pairs. An editable group ends with "Can change until <Phase> starts" or "until Filed".
 - **Override:** the control gets an `ink` border and 600 weight, with "Default <value> · Reset" as a 13px `ink-2` hint under it; Reset keeps a 44px hit area. Beside a control on desktop, the label is 400 / 14px `ink-2`.
 - **Saving:** each control saves on change, and a `filed-ink` check reading "Saved" appears by the group heading (`role="status"`, inserted on save so it is announced).
