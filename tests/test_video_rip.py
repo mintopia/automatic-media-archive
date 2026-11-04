@@ -149,3 +149,22 @@ def test_a_rip_interrupted_by_a_restart_is_failed_not_retried(tmp_path):
         assert "Failed" in page and "stopped during the Rip" in page
         assert not partial.exists()
         assert h2.makemkv.calls == []
+
+
+def test_a_disc_identified_before_the_tray_opens_still_shows_as_ripped(client, harness,
+                                                                       monkeypatch):
+    from ama.discs import DiscStatus
+
+    eject = harness.drive.eject
+
+    def slow_eject() -> None:  # the tray takes longer than Identification
+        eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW))
+        eject()
+
+    monkeypatch.setattr(harness.drive, "eject", slow_eject)
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # TMDB doesn't know it: Review
+    eventually(lambda: harness.drive.ejected == 1)
+    eventually(lambda: harness.services.video_rip.progress is None)
+    page = page_text(client, "/disc")
+    assert "Disc ejected at" in page and "See what went wrong" not in page
