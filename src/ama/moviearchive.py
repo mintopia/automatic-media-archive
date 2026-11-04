@@ -39,7 +39,7 @@ from ama import encode, hdr, picture, review
 from ama.archive import Archive, FilingError
 from ama.config import CqConfig
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord, TitleStatus
+from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord,     TitleStatus
 from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus
@@ -49,6 +49,7 @@ from ama.proc import Streamer
 from ama.tmdb import Candidate, Tmdb, TmdbError, decide, load_hints, movie_file_stem, \
     movie_folder, search_terms
 from ama.tools import ToolLookup, ToolUnavailable
+from ama.tv import looks_like_tv
 from ama.video_rip import VIDEO_DISC_TYPES
 
 log = logging.getLogger(__name__)
@@ -264,6 +265,11 @@ class MovieArchiver:
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
+        if looks_like_tv(rec.titles):  # never accepted as a film, however well one fits
+            self._discs.mark_review(rec.id, ReviewReason.EPISODES)
+            self._discs.log(rec.id, "Several Titles are episode-length, so this looks like TV. "
+                                    "Needs Review: match the Titles to Episodes")
+            return
         if not self._tmdb.configured:
             raise RetryLater("No TMDB API key is set in ama.toml ([tmdb] api_key)")
         terms = search_terms(load_hints(rec.scratch_dir, rec.label))
