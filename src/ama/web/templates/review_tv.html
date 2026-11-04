@@ -3,7 +3,7 @@
 {%- macro option(value, label, picked) %}<option value="{{ value }}"{% if value == picked %} selected{% endif %}>{{ label }}</option>{% endmacro %}
 {% block main %}
 <main class="tv">
-  <div class="page-head">
+  <div class="page-head gap">
     <div>
       <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
       <h1>Which episode is each Title?</h1>
@@ -54,7 +54,7 @@
       {%- for row in titles %}{% set t = row.choice %}{% set picked = row.picked %}
       <div class="titem{% if row.play_all %} flag{% endif %}">
         {% include "partials/title_frames.html" %}
-        <div><div class="tt">Title {{ t.title.number }}</div><div class="ts">{{ short_duration(t.title.duration_s) }}</div>
+        <div><div class="tt">Title {{ t.title.number }}</div><div class="ts">{{ t.title.duration_s | minutes }}</div>
           {%- if row.play_all %}<div class="ts note">Looks like all the episodes joined together (“Play all”), usually safe to discard</div>{% endif %}</div>
         <div class="field"><label for="t{{ t.title.number }}">Episode</label>
           <select class="select" id="t{{ t.title.number }}" name="t{{ t.title.number }}">

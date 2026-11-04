@@ -85,7 +85,7 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
     assert "“Play all”" in page
     assert page.count('value="discard" selected') == 1
     assert page.count('value="extra" selected') == 1
-    assert "1 h 28 m" in page and "29 m" in page
+    assert "1 h 29 m" in page and "29 min" in page
     for pct in (10, 50, 90):
         assert f"/review/{rec.id}/titles/4/frames/{pct}" in page
 
@@ -149,6 +149,24 @@ def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harn
     eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=10)
     assert len(harness.ffmpeg.encodes()) == 4
     assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # Filed today
+
+
+def test_a_failed_episode_encode_keeps_the_rip_and_is_queued_again_at_restart(harness, client):
+    _the_office(harness)
+    harness.ffmpeg.exit_code = 1
+    rec = _in_review(harness, _tv_disc(harness))
+    client.post(f"/review/{rec.id}/episodes", data={
+        "series": str(OFFICE), "season": "1",
+        "t1": "S01E01", "t2": "discard", "t3": "discard", "t4": "discard", "t5": "discard"})
+    titles = harness.services.tv_archive.titles
+    eventually(lambda: titles.for_disc(rec.id)[0].status == "failed")
+    assert harness.services.discs.get(rec.id).status == DiscStatus.RIPPED
+    assert (rec.scratch_dir / f"{LABEL}_t00.mkv").exists()
+
+    harness.ffmpeg.exit_code = 0
+    harness.services.tv_archive.recover()  # what the next start does
+    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+               timeout=10)
 
 
 def test_a_mapping_is_checked_and_ignored_once_the_disc_has_left_review(harness, client):

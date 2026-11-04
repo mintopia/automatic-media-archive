@@ -20,7 +20,7 @@ from fastapi.responses import RedirectResponse, Response
 from ama import review, tvreview
 from ama.discs import DiscRecord, DiscStatus
 from ama.moviearchive import TOPIC as ENCODE_TOPIC
-from ama.moviereview import ripped_titles, short_duration
+from ama.moviereview import ripped_titles
 from ama.tmdb import Episode, Series, TmdbError, load_hints
 from ama.tv import play_alls, season_folder, series_folder, series_terms
 from ama.tvarchive import planned
@@ -102,7 +102,7 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         if series else "",
         "titles": [TvTitle(_title_choice(services, rec, t, None), t.number in joined,
                            picks.get(t.number, tvreview.EXTRA)) for t in titles],
-        "errors": errors or [], "short_duration": short_duration,
+        "errors": errors or [],
         "extra": tvreview.EXTRA, "discard": tvreview.DISCARD,
     }
     return TEMPLATES.TemplateResponse(request, "review_tv.html", ctx, status_code=status_code)
