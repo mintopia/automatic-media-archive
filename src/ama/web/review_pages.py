@@ -20,8 +20,8 @@ from ama.discs import DiscRecord, DiscStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
 from ama.musicbrainz import Match
 from ama.video_rip import VIDEO_DISC_TYPES
-from ama.web import TEMPLATES, movie_review_pages, set_review_pages, tv_review_pages, \
-    view_context
+from ama.web import TEMPLATES, extras_pages, movie_review_pages, set_review_pages, \
+    tv_review_pages, view_context
 from ama.web.review_items import plural
 
 router = APIRouter()
@@ -60,7 +60,9 @@ def _publish(services) -> None:
 
 @router.get("/review", response_class=HTMLResponse)
 def queue(request: Request) -> Response:
-    ctx = view_context(_services(request)) | {"current": "/review"}
+    services = _services(request)
+    ctx = view_context(services) | {"current": "/review",
+                                    "extras_to_sort": extras_pages.to_sort(services)}
     return TEMPLATES.TemplateResponse(request, "review.html", ctx)
 
 

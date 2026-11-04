@@ -221,6 +221,11 @@ textarea.input{padding:10px 12px;font:inherit;resize:vertical}
 .frame img+span{position:relative;padding:3px 5px;border-radius:2px;background:rgba(23,24,26,.72);color:#ECEDEF}
 .more-titles>summary{cursor:pointer;list-style:none}.more-titles>summary::-webkit-details-marker{display:none}.more-titles[open]>summary{display:none}
 @media (max-width:720px){.title-row{grid-template-columns:22px minmax(0,1fr)}.title-row .frames{grid-column:1/-1}}
+/* Extras (#8, docs/mockups/review-extras.html); .titem/.colhead shared with TV Review */
+main.extras{max-width:1064px}
+.titem:first-child{border-top:0}
+.ctl{display:flex;flex-direction:column;gap:8px}
+.notice.ok{display:grid;color:inherit;font-weight:inherit}
 /* TV Review (#13): docs/mockups/review-tv.html */
 main.tv{max-width:920px}
 .titem{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;align-items:center;padding:16px 18px;border-top:1px solid var(--rule)}

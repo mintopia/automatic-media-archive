@@ -147,7 +147,7 @@ def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harn
 
     harness.ffmpeg.release()
     eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=10)
-    assert len(harness.ffmpeg.encodes()) == 4
+    assert len(harness.ffmpeg.encodes()) == 5  # 3 Episodes, the film and its Extra (#8)
     assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # Filed today
 
 

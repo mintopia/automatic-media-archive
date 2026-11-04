@@ -135,9 +135,9 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
 def _file_as_bonus(services, rec: DiscRecord, film_set: DiscSet) -> None:
     """Queue every ripped Title as an Extra of the film and hand the Disc back."""
     titles = ripped_titles(rec)
-    services.tv_archive.titles.enqueue(
-        rec.id, film_set.show,
-        [(t.number, None, sets.bonus_path(film_set, rec.label, t.number)) for t in titles])
+    paths = sets.bonus_paths(film_set, rec, titles)
+    services.tv_archive.titles.enqueue(rec.id, film_set.show,
+                                       [(t.number, None, paths[t.number]) for t in titles])
     if services.discs.requeue(rec.id):
         services.discs.log(rec.id, f"Queued {len(titles)} Title{'s' if len(titles) != 1 else ''}"
                                    f" for Encode as Extras of {film_set.name}")

@@ -105,11 +105,12 @@ def test_a_bonus_disc_files_its_titles_as_extras_in_the_films_folder(harness, cl
     filed = _filed(harness, rec)
     assert filed.title == "Example Movie (2016) · 3 Extras"
     root = extended_path(harness.nas_root / FILM)
-    assert sorted(p.relative_to(root).as_posix() for p in root.rglob("*.mkv")) == [
-        "Example Movie (2016) {tmdb-1234} - 1080p.mkv",
+    files = {p.relative_to(root).as_posix() for p in root.rglob("*.mkv")}
+    assert "Example Movie (2016) {tmdb-1234} - 1080p.mkv" in files  # Disc 1, untouched
+    assert {f for f in files if "BONUS" in f} == {
         "Other/EXAMPLE_MOVIE_BONUS - Title 1.mkv",
         "Other/EXAMPLE_MOVIE_BONUS - Title 2.mkv",
-        "Other/EXAMPLE_MOVIE_BONUS - Title 3.mkv"]
+        "Other/EXAMPLE_MOVIE_BONUS - Title 3.mkv"}
     assert harness.services.movie_archive.movies.get(rec.id) is None  # not a film of its own
     scans = [r.url.query for r in harness.web.plex_requests if "/refresh" in r.url.path]
     assert len(scans) == 2 and scans[0] == scans[1]  # the film's folder, both times

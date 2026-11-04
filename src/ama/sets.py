@@ -24,10 +24,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import PurePosixPath
 
-from ama.archive import safe_name
+from ama import extras
 from ama.db import Database
-from ama.discs import DiscRecord
-from ama.tmdb import Candidate, Series, movie_folder
+from ama.discs import DiscRecord, TitleRecord
+from ama.tmdb import Candidate, Series, load_hints, movie_folder
 from ama.tv import season_folder, series_folder
 
 ANSWER_FILE = "set.json"
@@ -106,10 +106,14 @@ class DiscSet:
         return next((n for d, n in self.members if d == disc_id), None)
 
 
-def bonus_path(film_set: DiscSet, disc_label: str, title_number: int) -> PurePosixPath:
-    """Where a bonus Disc's Title is filed: `<film folder>/Other/<label> - Title N.mkv`."""
-    return (film_set.folder / "Other"
-            / f"{safe_name(disc_label or 'Disc')} - Title {title_number}.mkv")
+def bonus_paths(film_set: DiscSet, rec: DiscRecord, titles: Iterable[TitleRecord]
+                ) -> dict[int, PurePosixPath]:
+    """Where a bonus Disc's Titles are filed: `<film folder>/Other/<name>.mkv`, named the
+    way a film's Extras are (#8)."""
+    hints = load_hints(rec.scratch_dir, rec.label)
+    names = extras.default_names(titles, (hints.disc_name, hints.volume_name, rec.label,
+                                          film_set.show.name, film_set.show.title), rec.label)
+    return {n: extras.plex_path(film_set.folder, name) for n, name in names.items()}
 
 
 def film(show: Series) -> Candidate:

@@ -13,6 +13,9 @@
           <p class="ts">Then we work out which film this is. If we're sure, it's encoded and filed to Movies. If not, it waits in Review with pictures from each Title so you can choose.</p>
         </div></div>
       </section>
+      {%- if extras_href %}
+      <p class="ts">Its Extras are filed under Other. <a href="{{ extras_href }}">Sort the Extras</a> if you like.</p>
+      {%- endif %}
     </div>
   </div>
 </main>

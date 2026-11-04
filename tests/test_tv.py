@@ -50,7 +50,7 @@ def test_episodes_are_filed_with_plex_tv_naming_and_specials_in_season_00():
         "Christmas Special_ Part 2.mkv")
     assert episode_path(Series(1, "Show", None), Episode(12, 103, "")) == PurePosixPath(
         "TV/Show {tmdb-1}/Season 12/Show - s12e103.mkv")
-    assert extra_path(OFFICE, "THE_OFFICE_S1_D2", 5) == PurePosixPath(
+    assert extra_path(OFFICE, "THE_OFFICE_S1_D2 - Title 5") == PurePosixPath(
         "TV/The Office (2001) {tmdb-2996}/Other/THE_OFFICE_S1_D2 - Title 5.mkv")
 
 

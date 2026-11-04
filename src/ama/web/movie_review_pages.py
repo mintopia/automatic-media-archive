@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 
 from ama import decoys, moviereview, review
 from ama.discs import DiscRecord, DiscStatus, TitleRecord
+from ama.extras import extra_titles
 from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviearchive import main_feature
 from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_duration, \
@@ -145,14 +146,16 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         "shown": shown, "more_label": _more_label(ordered[shown:], found), "decoys": found,
         "picked_title": main, "main_length": short_duration(main_s),
         "errors": errors or [],
-        "summary": _summary(picked_film, main),
+        "summary": _summary(picked_film, main, rec),
     }
     return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
 
 
-def _summary(film: Candidate | None, title: TitleRecord | None) -> dict:
+def _summary(film: Candidate | None, title: TitleRecord | None, rec: DiscRecord) -> dict:
+    n = len(extra_titles(rec.titles, title.number)) if title else 0
     return {"film": film.name if film else "",
             "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
+            "extras": f"{n} Extra{'s' if n != 1 else ''}, filed under Other" if n else "",
             "folder": movie_folder(film).as_posix() if film else ""}
 
 
@@ -194,7 +197,7 @@ def decision(request: Request, disc_id: int, film: int = 0, title: int = 0) -> R
     except TmdbError:
         candidate = None
     return TEMPLATES.TemplateResponse(request, "partials/movie_decision.html",
-                                      {"summary": _summary(candidate, t)})
+                                      {"summary": _summary(candidate, t, rec)})
 
 
 @router.post("/review/{disc_id}/film", response_class=HTMLResponse)

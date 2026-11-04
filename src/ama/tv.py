@@ -21,6 +21,7 @@ import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
+from ama import extras
 from ama.archive import safe_name
 from ama.discs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints, Episode, Series, clean_term
@@ -48,9 +49,10 @@ def episode_path(series: Series, ep: Episode) -> PurePosixPath:
     return series_folder(series) / season_folder(ep.season) / f"{stem}.mkv"
 
 
-def extra_path(series: Series, disc_label: str, title_number: int) -> PurePosixPath:
-    """A Title kept as an Extra of the show: `Other/<Disc label> - Title N.mkv`."""
-    return series_folder(series) / "Other" / f"{safe_name(disc_label or 'Disc')} - Title {title_number}.mkv"
+def extra_path(series: Series, name: str) -> PurePosixPath:
+    """A Title kept as an Extra of the show: `Other/<name>.mkv`, named and placed the way
+    a film's Extras are (`extras.default_names`, `extras.plex_path`)."""
+    return extras.plex_path(series_folder(series), name)
 
 
 _SEASON_OR_DISC = re.compile(

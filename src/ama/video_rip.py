@@ -89,7 +89,7 @@ def title_records(keep: list[makemkv.TitleInfo]) -> list[TitleRecord]:
     return [TitleRecord(number=n, makemkv_id=t.id, duration_s=t.duration_s,
                         size_bytes=t.size_bytes, audio=t.audio, subtitles=t.subtitles,
                         segments=t.segments_map, file=t.output_file or f"title_t{t.id:02d}.mkv",
-                        source=t.source)
+                        source=t.source, name=t.name)
             for n, t in enumerate(keep, start=1)]
 
 
