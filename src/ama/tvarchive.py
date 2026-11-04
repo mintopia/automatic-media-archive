@@ -34,7 +34,8 @@ from ama.events import EventBus
 from ama.moviearchive import TOPIC, MovieArchiver, RetryLater
 from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
-from ama.tmdb import Episode, Series
+from ama.extras import default_names
+from ama.tmdb import Episode, Series, load_hints
 from ama.tv import episode_path, extra_path, series_folder
 from ama.tvreview import Kept
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -73,10 +74,16 @@ class TvTitle:
 
 def planned(series: Series, rec: DiscRecord, kept: Iterable[Kept]
             ) -> list[tuple[int, Episode | None, PurePosixPath]]:
-    """(Title, Episode or None for an Extra, Archive path) for each kept Title."""
+    """(Title, Episode or None for an Extra, Archive path) for each kept Title. Extras are
+    named as a film's are (`extras.default_names`)."""
+    kept = list(kept)
+    hints = load_hints(rec.scratch_dir, rec.label)
+    names = default_names([k.title for k in kept if not k.episode],
+                          (hints.disc_name, hints.volume_name, rec.label, series.name,
+                           series.title), rec.label)
     return [(k.title.number, k.episode,
              episode_path(series, k.episode) if k.episode
-             else extra_path(series, rec.label, k.title.number)) for k in kept]
+             else extra_path(series, names[k.title.number])) for k in kept]
 
 
 class TvTitles:

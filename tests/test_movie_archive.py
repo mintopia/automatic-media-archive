@@ -160,7 +160,8 @@ def test_encodes_run_one_at_a_time_first_in_first_out_with_live_progress(client,
     harness.ffmpeg.release()
     eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=5)
     encoded = [c[c.index("-i") + 1] for c in harness.ffmpeg.encodes()]
-    assert ["/1/" in p.replace("\\", "/") for p in encoded] == [True, False]
+    # Each Disc's Main Feature and Extra, the first Disc's first.
+    assert ["/1/" in p.replace("\\", "/") for p in encoded] == [True, True, False, False]
 
 
 def test_a_rip_runs_while_an_encode_is_in_progress(client, harness):
@@ -207,7 +208,8 @@ def test_an_encode_waits_for_the_nas_then_files(tmp_path):
         assert h.services.discs.get(1).status == DiscStatus.RIPPED
         h.share["reachable"] = True
         _wait_for(h, DiscStatus.FILED)
-    assert len(h.ffmpeg.encodes()) == 1  # filed from the finished Encode, not re-encoded
+    # filed from the finished Encodes (Main Feature + Extra), not re-encoded
+    assert len(h.ffmpeg.encodes()) == 2
 
 
 def _picture_sample(name: str) -> list[str]:
@@ -235,7 +237,8 @@ def test_a_dvd_is_encoded_progressive_and_cropped(client, harness, sample, vf, s
 
     rec = _wait_for(harness, DiscStatus.FILED)
     runs = harness.ffmpeg.samples()
-    assert len(runs) == 10 and all(r[r.index("-vf") + 1].startswith("idet,") for r in runs)
+    # 10 for the Main Feature, 10 for its Extra
+    assert len(runs) == 20 and all(r[r.index("-vf") + 1].startswith("idet,") for r in runs)
     encode = harness.ffmpeg.encodes()[0]
     assert encode[encode.index("-vf") + 1] == vf
     log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
@@ -279,7 +282,7 @@ def test_a_uhd_is_encoded_keeping_its_hdr10_metadata_checked_and_filed_as_the_4k
     assert ("-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
             "-color_range tv") in line
     probed = [c[-1] for c in harness.ffmpeg.calls if "-show_frames" in c]
-    assert probed[-1].endswith("encode.tmp.mkv")  # the finished Encode itself was checked
+    assert any(p.endswith("encode.tmp.mkv") for p in probed)  # the finished Encode was checked
     log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
     assert "HDR10 metadata kept: 0.005-1000 nits" in log and "MaxCLL 1000, MaxFALL 400" in log
 
@@ -313,7 +316,10 @@ def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(cl
 
     folder = extended_path(harness.nas_root / "Movies" / FOLDER)
     assert sorted(p.name for p in folder.iterdir()) == [
-        f"{FOLDER} - 1080p.mkv", f"{FOLDER} - 4K.mkv"]
+        f"{FOLDER} - 1080p.mkv", f"{FOLDER} - 4K.mkv", "Other"]
+    # Both Discs' Extras are kept, each named after its Disc.
+    assert sorted(p.name for p in (folder / "Other").iterdir()) == [
+        "EXAMPLE_MOVIE - Title 2.mkv", "EXAMPLE_MOVIE_UHD - Title 2.mkv"]
     filed = harness.services.discs.list(DiscStatus.FILED)
     assert filed[0].archive_dir == filed[1].archive_dir
 

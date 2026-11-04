@@ -27,6 +27,7 @@ from ama.db import Database
 from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
+from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
@@ -40,8 +41,8 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages,
-                     review_pages, scratch_pages, tv_review_pages)
+from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, movie_review_pages, pages,
+                     repeat_pages, review_pages, scratch_pages, tv_review_pages)
 
 
 @dataclass
@@ -106,7 +107,8 @@ def build_services(
     tv_titles = TvTitles(db)
     movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
                                   tool, streamer, interval=cfg.drive.poll_seconds,
-                                  retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has)
+                                  retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
+                                  extras=Extras(db, cfg.paths.state_db.parent / STILLS))
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -160,6 +162,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(discs_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
+    app.include_router(extras_pages.router)
     app.include_router(tv_review_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
