@@ -130,13 +130,14 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 .jobset .fld label{color:var(--ink2)}
 .jobset .fld .select{font-size:14px}
 .jobset .fld .select.ov{border-color:var(--ink);font-weight:600}
-.jobset .note{grid-column:2;margin-top:-6px;font-size:12px;color:var(--ink2)}
-.jobset .note a{color:var(--ink);text-underline-offset:2px}
+.jobset .note{grid-column:2;margin-top:-6px;font-size:13px;color:var(--ink2)}
+/* Hit area grows to 44px without moving the line */
+.jobset .note a{display:inline-block;padding:13px 6px;margin:-13px -6px;color:var(--ink);text-underline-offset:2px}
 .jobset .grp.locked h3,.jobset .grp.locked dt,.jobset .grp.locked dd{color:var(--ink2)}
 .jobset .grp.locked dd{font-weight:400}
 .jobset dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;font-size:14px}
 .jobset dd{text-align:right;overflow-wrap:anywhere}
-.jobset dd small{display:block;font-size:12px}
+.jobset dd small{display:block;font-size:13px}
 .jobset-notice{margin:18px 18px 0}
 @media (max-width:720px){
   .jobset{grid-template-columns:minmax(0,1fr)}
