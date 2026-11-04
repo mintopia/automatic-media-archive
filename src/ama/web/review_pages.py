@@ -14,13 +14,13 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from ama import cdreview, review
+from ama import cdreview, review, tvreview
 from ama.cyanrip import ArStatus
 from ama.discs import DiscRecord, DiscStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
 from ama.musicbrainz import Match
 from ama.video_rip import VIDEO_DISC_TYPES
-from ama.web import TEMPLATES, extras_pages, movie_review_pages, view_context
+from ama.web import TEMPLATES, extras_pages, movie_review_pages, tv_review_pages, view_context
 from ama.web.review_items import plural
 
 router = APIRouter()
@@ -73,6 +73,8 @@ def review_page(request: Request, disc_id: int) -> Response:
         return RedirectResponse(f"/discs/{disc_id}", status_code=303)
     if rec.disc_type == DiscType.CD:
         return _cd_page(request, services, rec)
+    if rec.disc_type in VIDEO_DISC_TYPES and tvreview.wants_tv(rec):
+        return tv_review_pages.page(request, services, rec)
     if rec.disc_type in VIDEO_DISC_TYPES:
         return movie_review_pages.page(request, services, rec)
     raise HTTPException(404, "This Disc Type has no Review page yet")

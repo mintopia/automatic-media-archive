@@ -74,6 +74,38 @@ class Candidate:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class Series:
+    """A TV series on TMDB (#13)."""
+
+    id: int
+    name: str
+    year: int | None               # of its first air date
+    original_language: str = ""    # ISO 639-1
+    seasons: tuple[int, ...] = ()  # season numbers TMDB has (0 = specials); () = not fetched
+
+    @property
+    def title(self) -> str:
+        """How it is shown and filed: "The Office (2001)"."""
+        return f"{self.name} ({self.year})" if self.year else self.name
+
+
+@dataclass(frozen=True)
+class Episode:
+    season: int   # 0 = specials
+    number: int
+    name: str
+    runtime_min: int = 0  # 0 = TMDB doesn't know
+
+    @property
+    def code(self) -> str:
+        return f"S{self.season:02d}E{self.number:02d}"
+
+
+def _year(date: str | None) -> int | None:
+    return int(date[:4]) if date and date[:4].isdigit() else None
+
+
 _JUNK = re.compile(
     r"^(disc|disk|dvd|bd|bluray|blu-ray|uhd|4k|hd|ws|fs|widescreen|fullscreen|16x9|4x3|ntsc|"
     r"pal|r[0-9]|video|edition|special|se|d[0-9]|disc[0-9]+|disk[0-9]+|cd[0-9]?|[0-9]+of[0-9]+)$",
@@ -213,3 +245,28 @@ class Tmdb:
         results = self._get("/search/movie", {"query": query, "include_adult": "false"})
         return [self.movie(int(r["id"]), r) for r in results.get("results", [])[:limit]
                 if r.get("id")]
+
+    # -- TV (#13) -------------------------------------------------------------
+
+    def search_tv(self, query: str, limit: int = MAX_DETAILS) -> list[Series]:
+        """TMDB's best `limit` series for a free-text search. Raises TmdbError."""
+        results = self._get("/search/tv", {"query": query, "include_adult": "false"})
+        return [Series(int(r["id"]), r.get("name") or r.get("original_name") or "",
+                       _year(r.get("first_air_date")), r.get("original_language") or "")
+                for r in results.get("results", [])[:limit] if r.get("id")]
+
+    def series(self, series_id: int) -> Series:
+        """One series with its season numbers. Raises TmdbError."""
+        d = self._get(f"/tv/{series_id}", {})
+        return Series(int(series_id), d.get("name") or d.get("original_name") or "",
+                      _year(d.get("first_air_date")), d.get("original_language") or "",
+                      tuple(sorted(int(s["season_number"]) for s in d.get("seasons") or []
+                                   if s.get("season_number") is not None)))
+
+    def season(self, series_id: int, number: int) -> list[Episode]:
+        """A season's Episodes in order (season 0 = specials). Raises TmdbError."""
+        d = self._get(f"/tv/{series_id}/season/{number}", {})
+        return sorted((Episode(int(e.get("season_number", number)), int(e["episode_number"]),
+                               e.get("name") or "", int(e.get("runtime") or 0))
+                       for e in d.get("episodes") or [] if e.get("episode_number") is not None),
+                      key=lambda e: e.number)

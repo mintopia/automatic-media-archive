@@ -90,10 +90,12 @@ def view_context(services: Services) -> dict[str, Any]:
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
         "filed": sorted((d for d in [*cd.discs(DiscStatus.FILED, limit=100),
-                                     *services.movie_archive.filed()]
+                                     *services.movie_archive.filed(),
+                                     *services.tv_archive.filed()]
                          if d.record.filed_at and d.record.filed_at.date() == date.today()),
                         key=lambda d: d.record.filed_at, reverse=True),
         **services.movie_archive.queue_view(),
+        **services.tv_archive.queue_view(),  # TV Episodes not yet filed (#13)
         "drive": services.drive.state,
         "repeat": services.repeat.pending,  # an archived Disc waiting for the user (#16)
         "nas": services.nas.status,

@@ -53,9 +53,9 @@ def test_extras_are_named_from_the_disc_unless_the_name_is_just_the_discs():
                            TitleStatus.RIPPED, name=name)
 
     names = default_names([t(2, "Trailer"), t(3, "ARRIVAL"), t(4, ""), t(5, "Trailer"),
-                           t(6, "Acoustic Design")], ("Arrival", "ARRIVAL_BD"))
-    assert names == {2: "Trailer (Title 2)", 3: "Title 3", 4: "Title 4",
-                     5: "Trailer (Title 5)", 6: "Acoustic Design"}
+                           t(6, "Acoustic Design")], ("Arrival", "ARRIVAL_BD"), "ARRIVAL_BD")
+    assert names == {2: "Trailer (Title 2)", 3: "ARRIVAL_BD - Title 3",
+                     4: "ARRIVAL_BD - Title 4", 5: "Trailer (Title 5)", 6: "Acoustic Design"}
 
 
 def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
@@ -68,7 +68,7 @@ def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
     assert (folder / f"{FOLDER} - 1080p.mkv").exists()
     assert not (folder / "Other").exists()
     log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
-    assert "The Extra “Title 2” is left out; the film is filed without it" in log
+    assert "The Extra “EXAMPLE_MOVIE - Title 2” is left out; the film is filed without it" in log
 
 
 def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harness):
@@ -82,7 +82,7 @@ def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harn
     r = client.post("/review/1/film", data={"film": 1234, "title": 2})  # the short one, oddly
     assert r.status_code == 200
     _rip_and_file_wait(harness)
-    assert (_film_folder(harness) / "Other" / "Title 1.mkv").read_bytes() == \
+    assert (_film_folder(harness) / "Other" / "EXAMPLE_MOVIE - Title 1.mkv").read_bytes() == \
         b"HEVC Example_Movie_t00.mkv"
 
 
@@ -141,7 +141,7 @@ def test_leaving_the_extras_as_they_are_takes_them_off_the_review_list(client, h
     assert f"/discs/{rec.id}/extras" in client.get("/review").text
     client.post(f"/discs/{rec.id}/extras/leave")
     assert f"/discs/{rec.id}/extras" not in client.get("/review").text
-    assert extended_path(_film_folder(harness) / "Other" / "Title 2.mkv").exists()
+    assert extended_path(_film_folder(harness) / "Other" / "EXAMPLE_MOVIE - Title 2.mkv").exists()
 
 
 def test_a_filed_film_links_to_its_extras_from_now_and_its_disc_page(client, harness):

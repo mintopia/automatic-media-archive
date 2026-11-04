@@ -317,9 +317,9 @@ def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(cl
     folder = extended_path(harness.nas_root / "Movies" / FOLDER)
     assert sorted(p.name for p in folder.iterdir()) == [
         f"{FOLDER} - 1080p.mkv", f"{FOLDER} - 4K.mkv", "Other"]
-    # Both Discs' Extras are kept: the second one's same-named Extra gets a number.
+    # Both Discs' Extras are kept, each named after its Disc.
     assert sorted(p.name for p in (folder / "Other").iterdir()) == [
-        "Title 2 (2).mkv", "Title 2.mkv"]
+        "EXAMPLE_MOVIE - Title 2.mkv", "EXAMPLE_MOVIE_UHD - Title 2.mkv"]
     filed = harness.services.discs.list(DiscStatus.FILED)
     assert filed[0].archive_dir == filed[1].archive_dir
 

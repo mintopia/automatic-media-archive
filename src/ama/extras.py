@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from ama import decoys
 from ama.archive import safe_name
@@ -68,19 +68,32 @@ def extra_titles(titles: Iterable[TitleRecord], main_feature: int) -> list[Title
     return [t for t in ripped if t.number != main_feature and t.number not in versions]
 
 
-def default_names(titles: Iterable[TitleRecord], not_names: Iterable[str]) -> dict[int, str]:
-    """{Title number: name in Plex}: the Title's name on the Disc, unless it's blank or just
-    one of `not_names` (the Disc's or film's name, which MakeMKV gives every Title), then
-    "Title N". A name several Extras share gets " (Title N)" so each file is distinct."""
+def unnamed(disc_label: str, title_number: int) -> str:
+    """An Extra with no name of its own: "<Disc label> - Title N", so the same Title
+    number from another Disc of the film or show doesn't collide."""
+    return f"{disc_label or 'Disc'} - Title {title_number}"
+
+
+def default_names(titles: Iterable[TitleRecord], not_names: Iterable[str],
+                  disc_label: str) -> dict[int, str]:
+    """{Title number: name in Plex} for a Disc's Extras (films and TV alike): the Title's
+    name on the Disc, unless it's blank or just one of `not_names` (the Disc's, film's or
+    show's name, which MakeMKV gives every Title), then `unnamed`. A name several Extras
+    share gets " (Title N)" so each file is distinct."""
     generic = {n.strip().casefold() for n in not_names if n.strip()}
     titles = list(titles)
     names = {t.number: (t.name.strip() if t.name.strip().casefold() not in generic | {""}
-                        else f"Title {t.number}") for t in titles}
+                        else unnamed(disc_label, t.number)) for t in titles}
     counts: dict[str, int] = {}
     for name in names.values():
         counts[name.casefold()] = counts.get(name.casefold(), 0) + 1
     return {n: f"{name} (Title {n})" if counts[name.casefold()] > 1 else name
             for n, name in names.items()}
+
+
+def plex_path(folder: PurePosixPath, name: str) -> PurePosixPath:
+    """Where a newly filed Extra goes: `<film or show folder>/Other/<name>.mkv`."""
+    return folder / file_name(Category.OTHER, name, lambda _: False)
 
 
 def file_name(category: Category, name: str, taken: Callable[[str], bool]) -> str:

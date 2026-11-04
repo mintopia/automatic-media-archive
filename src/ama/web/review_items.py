@@ -48,6 +48,8 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
     ReviewReason.RUNTIME_MISMATCH: ("Found on TMDB, but the running time doesn't match · "
                                     "confirm the film", "Confirm film"),
     ReviewReason.MULTIPLE_MATCHES: ("Several films match · pick yours", "Choose film"),
+    ReviewReason.EPISODES: ("Looks like TV episodes · match each Title to an Episode",
+                            "Match episodes"),
     ReviewReason.DECOY_PLAYLISTS: ("Suspected decoy playlists · check which Title is the film",
                                    "Choose Title"),
 }
