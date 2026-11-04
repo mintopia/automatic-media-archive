@@ -3,9 +3,21 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
+
+from ama.web import TEMPLATES, filed_discs, view_context
 
 router = APIRouter()
+
+LIMIT = 500  # rows on the History page
+
+
+@router.get("/history", response_class=HTMLResponse)
+def history(request: Request) -> Response:
+    services = request.app.state.services
+    ctx = view_context(services) | {"current": "/history",
+                                    "history": filed_discs(services, LIMIT)}
+    return TEMPLATES.TemplateResponse(request, "history.html", ctx)
 
 
 @router.get("/covers/{name}")

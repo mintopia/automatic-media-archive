@@ -262,3 +262,4 @@ a.radio.pick{color:inherit;text-decoration:none;align-items:center}
   .drive .cell.art.poster img{width:48px;height:72px}
   .drive .cell.art span{padding:0}
 }
+a.tab{text-decoration:none}a.tab:hover{text-decoration:underline;text-underline-offset:3px}

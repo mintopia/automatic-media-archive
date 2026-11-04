@@ -64,7 +64,7 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
     assert "Identified as Example Movie (2016)" in log and "Encode finished" in log
     page = html.unescape(client.get("/").text)
-    assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # Filed today
+    assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # History, on Now
 
 
 def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_path):

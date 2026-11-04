@@ -124,7 +124,7 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
     assert "Review: The Office (2001) (TMDB 2996); Title 1 = S01E03" in log
     assert "Title 5 = Extra; 1 discarded" in log
     assert "Nothing needs you right now" in _page(client, "/review")
-    assert "The Office (2001) · 3 Episodes" in _page(client, "/")  # Filed today
+    assert "The Office (2001) · 3 Episodes" in _page(client, "/")  # History, on Now
 
 
 def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harness, client):
@@ -148,7 +148,7 @@ def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harn
     harness.ffmpeg.release()
     eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=10)
     assert len(harness.ffmpeg.encodes()) == 5  # 3 Episodes, the film and its Extra (#8)
-    assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # Filed today
+    assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # History, on Now
 
 
 def test_a_failed_episode_encode_keeps_the_rip_and_is_queued_again_at_restart(harness, client):

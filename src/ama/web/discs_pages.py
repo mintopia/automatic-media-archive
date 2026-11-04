@@ -44,8 +44,13 @@ def disc_page(request: Request, disc_id: int) -> Response:
     return _video_page(request, services, rec)
 
 
+def _section(rec: DiscRecord) -> str:
+    """The nav section a Disc's page is in: History once it's Ripped (failures stay on Now)."""
+    return "/" if rec.status in (DiscStatus.RIPPING, DiscStatus.FAILED) else "/history"
+
+
 def _cd_page(request: Request, services, rec: DiscRecord) -> Response:
-    ctx = view_context(services) | {"current": "/", "record": rec}
+    ctx = view_context(services) | {"current": _section(rec), "record": rec}
     if rec.status == DiscStatus.FAILED:
         tracks = services.cd.disc(rec.id).tracks
         ctx |= {"log": services.discs.log_lines(rec.id), "track_count": len(tracks)}
@@ -65,7 +70,7 @@ def _video_page(request: Request, services, disc: DiscRecord) -> Response:
     active = services.video_rip.active
     if active is not None and active.id == disc.id:
         return RedirectResponse("/disc", status_code=303)
-    ctx = view_context(services) | {"current": "/", "disc": disc}
+    ctx = view_context(services) | {"current": _section(disc), "disc": disc}
     if disc.status == DiscStatus.FAILED:
         ctx["log_lines"] = services.discs.log_lines(disc.id)
         licence = disc.failure is not None and disc.failure.kind == FailureKind.LICENCE

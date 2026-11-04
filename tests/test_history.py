@@ -67,6 +67,40 @@ def test_a_filed_cds_page_shows_what_it_is_without_scratch_or_the_web(harness, c
     assert client.get(cover).content == COVER
 
 
+def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(harness, client):
+    rec = _file_ffvii(harness)
+    cover = f"/covers/release-{SPECIAL}.jpg"
+
+    page = unescape(client.get("/history").text)
+    assert "<title>History · Automatic Media Archive</title>" in page
+    assert '<a href="/history" aria-current="page">History</a>' in page   # in the nav
+    row = page[page.index(f'href="/discs/{rec.id}"') - 400:]
+    assert cover in row[:800] and ALBUM in row[:800]
+
+    now = unescape(client.get("/").text)
+    assert '<a href="/history">History</a>' in now
+    assert "Filed today" not in now
+    assert 'History <span class="c">1</span>' in now and cover in now
+
+
+def test_the_section_is_called_history_on_every_disc_page_never_ripped_or_filed(harness, client):
+    harness.cyanrip.disc_id = DISC_1   # MusicBrainz offline: it stays ripped, waiting
+    harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
+    harness.drive.insert(DiscType.CD)
+    eventually(lambda: harness.services.discs.list(DiscStatus.RIPPED))
+    rec = harness.services.discs.list(DiscStatus.RIPPED)[0]
+    page = unescape(client.get(f"/discs/{rec.id}").text)
+    crumb = page[page.index('class="crumb"'):]
+    crumb = crumb[:crumb.index("</div>")]
+    assert '<a href="/history">History</a>' in crumb and "Ripped" not in crumb
+    assert "· History · Automatic Media Archive</title>" in page
+
+
+def test_history_is_empty_until_something_is_filed(client):
+    page = unescape(client.get("/history").text)
+    assert "Nothing filed yet" in page
+
+
 POSTER = b"\xff\xd8\xff\xe0 fake poster"
 
 
