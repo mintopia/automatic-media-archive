@@ -109,6 +109,7 @@ class FakeMakemkv:
         self.ripped_ids: list[int] = []
         self.ripping = False
         self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
+        self.title_names: dict[int, str] = {}  # makemkv Title id -> its name (TINFO 2)
         # A UHD scan says "Using LibreDrive mode"; this many `info` runs refuse it instead.
         self.libredrive_refusals = 0
         self._go = threading.Event()
@@ -130,6 +131,9 @@ class FakeMakemkv:
                 volume = self.disc_name.upper().replace(" ", "_")
                 out = [f'CINFO:2,0,"{self.disc_name}"' if ln.startswith("CINFO:2,") else
                        f'CINFO:32,0,"{volume}"' if ln.startswith("CINFO:32,") else ln
+                       for ln in out]
+            for tid, name in self.title_names.items():
+                out = [f'TINFO:{tid},2,0,"{name}"' if ln.startswith(f"TINFO:{tid},2,") else ln
                        for ln in out]
             if args[-1] == "disc:9999":
                 out = [ln for ln in out if ln.startswith(("MSG:1005", "DRV:"))]

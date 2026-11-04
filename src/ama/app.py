@@ -27,6 +27,7 @@ from ama.db import Database
 from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
+from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
@@ -124,7 +125,8 @@ def build_services(
         movie_archive=MovieArchiver(discs, Movies(db), tmdb, nas,
                                     archive, plex, bus, cfg.encode.cq, tool, streamer,
                                     interval=cfg.drive.poll_seconds,
-                                    retry_seconds=cfg.nas.retry_seconds),
+                                    retry_seconds=cfg.nas.retry_seconds,
+                                    extras=Extras(db, cfg.paths.state_db.parent / STILLS)),
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,

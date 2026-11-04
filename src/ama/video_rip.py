@@ -241,7 +241,8 @@ class VideoRipper:
             titles = [TitleRecord(number=n, makemkv_id=t.id, duration_s=t.duration_s,
                                   size_bytes=t.size_bytes, audio=t.audio, subtitles=t.subtitles,
                                   segments=t.segments_map,
-                                  file=t.output_file or f"title_t{t.id:02d}.mkv")
+                                  file=t.output_file or f"title_t{t.id:02d}.mkv",
+                                  name=t.name)
                       for n, t in enumerate(sel.keep, start=1)]
             self._store.set_titles(disc.id, titles,
                                    skipped_short=scan.skipped_short + len(sel.short),

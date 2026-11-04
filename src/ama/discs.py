@@ -95,6 +95,7 @@ class TitleRecord:
     segments: str
     file: str
     status: TitleStatus = TitleStatus.WAITING
+    name: str = ""  # MakeMKV's name for the Title (TINFO 2); often just the Disc's name
 
     @property
     def duration(self) -> str:
@@ -175,14 +176,14 @@ class DiscStore:
          short, dupes, reason, title, archive_dir, filed_at) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
-            "status FROM titles WHERE disc_id = ? ORDER BY number", (id_,)).fetchall()
+            "status, name FROM titles WHERE disc_id = ? ORDER BY number", (id_,)).fetchall()
         return DiscRecord(
             id=id_, disc_type=DiscType(dtype), label=label, status=DiscStatus(status),
             failure=Failure(FailureKind(fkind), fhead or "", fadv or "") if fkind else None,
             scratch_dir=Path(scratch), started_at=datetime.fromisoformat(started),
             finished_at=datetime.fromisoformat(finished) if finished else None,
             dismissed=bool(dismissed), skipped_short=short, skipped_duplicates=dupes,
-            titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8])) for t in titles),
+            titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8]), name=t[9]) for t in titles),
             review_reason=ReviewReason(reason) if reason else None, title=title,
             archive_dir=Path(archive_dir) if archive_dir else None,
             filed_at=datetime.fromisoformat(filed_at) if filed_at else None,
@@ -220,9 +221,9 @@ class DiscStore:
         for t in titles:
             self._db.execute(
                 "INSERT INTO titles (disc_id, number, makemkv_id, duration_s, size_bytes, audio, "
-                "subtitles, segments, file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "subtitles, segments, file, status, name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (disc_id, t.number, t.makemkv_id, t.duration_s, t.size_bytes, t.audio,
-                 t.subtitles, t.segments, t.file, str(t.status)))
+                 t.subtitles, t.segments, t.file, str(t.status), t.name))
         self._db.execute("UPDATE discs SET skipped_short = ?, skipped_duplicates = ? WHERE id = ?",
                          (skipped_short, skipped_duplicates, disc_id))
 
