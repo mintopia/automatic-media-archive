@@ -408,7 +408,7 @@ class FakeFfmpeg:
 
     def __init__(self) -> None:
         self.calls: list[list[str]] = []
-        self.thumbnails: list[list[str]] = []  # still-frame grabs (`-frames:v 1`), not Encodes
+        self.thumbnails: list[list[str]] = []  # Review stills (`-frames:v` to a .jpg), not Encodes
         self.thumbnail_exit_code = 0
         self.streams: list[dict] = [
             probe_stream(0, "video", "h264", height=1080),
@@ -454,7 +454,7 @@ class FakeFfmpeg:
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
                  cwd: Path | None = None) -> int:
         args = list(args)
-        if "-frames:v" in args:
+        if "-frames:v" in args and args[-1].endswith(".jpg"):  # a Review still, not analysis
             self.thumbnails.append(args)
             if not self.thumbnail_exit_code:
                 Path(args[-1]).write_bytes(b"\xff\xd8 fake jpeg")
