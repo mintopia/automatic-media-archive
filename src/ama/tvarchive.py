@@ -36,7 +36,7 @@ from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
 from ama.extras import default_names
 from ama.tmdb import Episode, Series, load_hints
-from ama.tv import episode_path, extra_path, series_folder
+from ama.tv import episode_path, extra_path
 from ama.tvreview import Kept
 from ama.video_rip import VIDEO_DISC_TYPES
 
@@ -122,6 +122,13 @@ class TvTitles:
     def for_disc(self, disc_id: int) -> list[TvTitle]:
         rows = self._db.execute(f"SELECT {self._COLS} FROM tv_titles WHERE disc_id = ? "
                                 "ORDER BY title_number", (disc_id,)).fetchall()
+        return [self._row(r) for r in rows]
+
+    def in_season(self, series_id: int, season: int) -> list[TvTitle]:
+        """Every Disc's Episodes of the series' season (a set's earlier Discs, #14)."""
+        rows = self._db.execute(f"SELECT {self._COLS} FROM tv_titles WHERE tmdb_id = ? AND "
+                                "season = ? AND path LIKE 'TV/%' ORDER BY episode",
+                                (series_id, season)).fetchall()
         return [self._row(r) for r in rows]
 
     def queue(self) -> list[TvTitle]:
@@ -254,9 +261,11 @@ class TvArchiver:
     def _finish(self, rec: DiscRecord, rows: list[TvTitle]) -> None:
         series = rows[0].series
         n = sum(1 for r in rows if r.episode)
-        show = self._archive.root / Path(series_folder(series))
-        self._discs.mark_filed(rec.id, f"{series.title} · {n} Episode{'s' if n != 1 else ''}",
-                               show)
+        # The show's folder, or the film's for a bonus Disc (#14): `TV/<show>`, `Movies/<film>`
+        show = self._archive.root / Path(*rows[0].path.parts[:2])
+        what = (f"{n} Episode{'s' if n != 1 else ''}" if n
+                else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
+        self._discs.mark_filed(rec.id, f"{series.title} · {what}", show)
         self._discs.log(rec.id, f"All kept Titles filed to {show}; scratch deleted")
         try:
             self._discs.log(rec.id, self._plex.scan(show))

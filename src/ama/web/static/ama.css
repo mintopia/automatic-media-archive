@@ -238,3 +238,10 @@ main.tv{max-width:920px}
 .tv-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap}.tv-foot form{margin:0}
 a.radio.pick{color:inherit;text-decoration:none;align-items:center}
 @media (max-width:720px){.titem{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.colhead{display:none}}
+
+/* Sets (docs/mockups/review-set.html, review-set-bonus.html) */
+.bin .box.set-list{margin-top:14px;border-top-width:1px;border-top-color:var(--rule)}
+.set-disc{margin-top:14px;max-width:200px}
+.radio .input{width:100%;height:auto;margin:0}
+.radio>div>label{display:block;cursor:pointer}
+.set-where{display:none}

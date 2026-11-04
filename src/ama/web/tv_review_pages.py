@@ -17,10 +17,11 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ama import review, tvreview
+from ama import review, sets, tvreview
 from ama.discs import DiscRecord, DiscStatus
 from ama.moviearchive import TOPIC as ENCODE_TOPIC
 from ama.moviereview import ripped_titles
+from ama.sets import Library, SetKey
 from ama.tmdb import Episode, Series, TmdbError, load_hints
 from ama.tv import play_alls, season_folder, series_folder, series_terms
 from ama.tvarchive import planned
@@ -57,6 +58,23 @@ def _default_season(series: Series) -> int:
     return min((s for s in series.seasons if s > 0), default=0 if series.seasons else 1)
 
 
+def _after_earlier_discs(services, rec: DiscRecord, series: Series | None, season: int | None,
+                         episodes: list[Episode]) -> list[Episode]:
+    """The season's Episodes after the last one other Discs of the series took (#14): a
+    later Disc of a set carries on. Attached as Disc N, only Discs numbered below N count."""
+    if series is None or season is None:
+        return episodes
+    earlier: set[int] | None = None
+    ans = sets.answer(rec)
+    if ans and ans.key == SetKey(Library.TV, series.id, season):
+        filed = services.sets.find(ans.key)
+        earlier = {d for d, n in filed.members if n < ans.number} if filed else set()
+    taken = [t.episode.number for t in services.tv_archive.titles.in_season(series.id, season)
+             if t.episode and t.disc_id != rec.id and (earlier is None or t.disc_id in earlier)]
+    last = max(taken, default=0)
+    return [e for e in episodes if e.number > last]
+
+
 def page(request: Request, services, rec: DiscRecord, errors: list[str] | None = None,
          status_code: int = 200, series_id: int | None = None, season: int | None = None,
          chosen: dict[int, str] | None = None) -> Response:
@@ -67,6 +85,10 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
     q = (params.get("q") or "").strip() if "q" in params else (terms or [""])[0]
     series_id = series_id or _int(params.get("series"))
     season = season if season is not None else _int(params.get("season"))
+    attached = sets.answer(rec)
+    if (attached and attached.key and attached.key.library == Library.TV and not searching
+            and series_id is None):
+        series_id, season = attached.key.tmdb_id, attached.key.season
     results: list[Series] = []
     series: Series | None = None
     episodes: list[Episode] = []
@@ -92,7 +114,8 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         tmdb_error = str(e)
     titles = ripped_titles(rec)
     joined = play_alls(titles)
-    picks = chosen or tvreview.suggest(titles, episodes)
+    picks = chosen or tvreview.suggest(
+        titles, _after_earlier_discs(services, rec, series, season, episodes))
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "q": q, "searching": searching or series is None,
         "results": results, "series": series, "season": season or 0,
