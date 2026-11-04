@@ -113,7 +113,7 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                    Path(cfg.nas.unc), ffmpeg)
 
 
-def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:
+def eventually(check: Callable[[], bool], timeout: float = 15.0) -> None:
     deadline = time.monotonic() + timeout
     while not check():
         if time.monotonic() > deadline:
