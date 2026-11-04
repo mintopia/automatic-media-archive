@@ -1,0 +1,197 @@
+"""Movie Review (#7): pick the film on TMDB and the Title that is the Main Feature.
+
+`GET /review/{id}` for a video Disc renders `page()` (dispatched from
+review_pages). The films offered are the ones #6's search found (`tmdb.json`);
+`?q=` searches TMDB again. Each ripped Title shows stills at 10/50/90% that the
+Thumbnailer takes in the background; until they exist the frames poll
+`/review/{id}/titles/{n}/frames`. Confirming queues the Encode
+(`Movies.enqueue`) and hands the Disc back to the Encode pipeline.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Annotated
+
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+
+from ama import moviereview, review
+from ama.discs import DiscRecord, DiscStatus, TitleRecord
+from ama.moviearchive import TOPIC as ENCODE_TOPIC
+from ama.moviearchive import main_feature
+from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_duration, \
+    thumb_path
+from ama.tmdb import Candidate, TmdbError, movie_folder, search_terms, load_hints
+from ama.video_rip import VIDEO_DISC_TYPES
+from ama.web import TEMPLATES, view_context
+
+router = APIRouter()
+
+
+@dataclass(frozen=True)
+class FilmChoice:
+    film: Candidate
+    note: str   # "Michael Mann · 2 h 50 m · matches the Disc"
+    fits: bool
+
+
+@dataclass(frozen=True)
+class Frame:
+    pct: int
+    src: str | None  # None: not taken (yet)
+
+
+@dataclass(frozen=True)
+class TitleChoice:
+    title: TitleRecord
+    note: str          # "2 h 50 m 14 s · likely the film"
+    frames: tuple[Frame, ...]
+    pending: bool      # some stills are still being taken
+
+
+def _services(request: Request):
+    return request.app.state.services
+
+
+def _video_in_review(services, disc_id: int) -> DiscRecord | None:
+    rec = services.discs.get(disc_id)
+    if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
+        raise HTTPException(404, "No such video Disc")
+    return rec if rec.status == DiscStatus.REVIEW else None
+
+
+def _title_choice(services, rec: DiscRecord, t: TitleRecord, main: TitleRecord | None
+                  ) -> TitleChoice:
+    frames = []
+    for pct in POSITIONS:
+        ready = thumb_path(rec.scratch_dir, t.number, pct).exists()
+        frames.append(Frame(pct, f"/review/{rec.id}/titles/{t.number}/frames/{pct}.jpg"
+                            if ready else None))
+    pending = any(f.src is None and (rec.id, t.number, f.pct) not in services.thumbnails.failed
+                  for f in frames)
+    note = short_duration(t.duration_s, with_seconds=True)
+    if main is not None and t.number == main.number:
+        note += " · the longest, likely the film"
+    return TitleChoice(t, note, tuple(frames), pending)
+
+
+def _film_choice(film: Candidate, duration_s: int) -> FilmChoice:
+    parts = [film.director] if film.director else []
+    if film.runtime_min:
+        parts.append(short_duration(film.runtime_min * 60))
+    parts.append(runtime_note(film, duration_s))
+    return FilmChoice(film, " · ".join(parts), fits(film, duration_s))
+
+
+def _find_film(services, rec: DiscRecord, film_id: int) -> Candidate:
+    """The chosen film: from the saved search if it's there, else asked of TMDB."""
+    saved = next((c for c in moviereview.saved_search(rec.scratch_dir).candidates
+                  if c.id == film_id), None)
+    return saved or services.tmdb.movie(film_id)
+
+
+def page(request: Request, services, rec: DiscRecord, errors: list[str] | None = None,
+         status_code: int = 200) -> Response:
+    titles = ripped_titles(rec)
+    main = main_feature(rec.titles)
+    main_s = main.duration_s if main else 0
+    saved = moviereview.saved_search(rec.scratch_dir)
+    q = request.query_params.get("q")
+    search_error = None
+    if q is not None and q.strip():
+        try:
+            films = services.tmdb.search(q.strip())
+        except TmdbError as e:
+            films, search_error = [], str(e)
+    else:
+        q = (saved.terms or search_terms(load_hints(rec.scratch_dir, rec.label)) or [""])[0]
+        films = sorted(saved.candidates, key=lambda c: not fits(c, main_s))
+    choices = [_film_choice(f, main_s) for f in films]
+    picked_film = next((c.film for c in choices if c.fits), films[0] if films else None)
+    ordered = sorted(titles, key=lambda t: (main is None or t.number != main.number,
+                                            -t.duration_s, t.number))
+    ctx = view_context(services) | {
+        "current": "/review", "record": rec, "q": q, "searched": "q" in request.query_params,
+        "search_error": search_error, "films": choices, "picked_film": picked_film,
+        "titles": [_title_choice(services, rec, t, main) for t in ordered],
+        "picked_title": main, "main_length": short_duration(main_s),
+        "errors": errors or [],
+        "summary": _summary(picked_film, main),
+    }
+    return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
+
+
+def _summary(film: Candidate | None, title: TitleRecord | None) -> dict:
+    return {"film": film.name if film else "",
+            "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
+            "folder": movie_folder(film).as_posix() if film else ""}
+
+
+@router.get("/review/{disc_id}/titles/{number}/frames", response_class=HTMLResponse)
+def frames(request: Request, disc_id: int, number: int) -> Response:
+    services = _services(request)
+    rec = services.discs.get(disc_id)
+    if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
+        raise HTTPException(404, "No such video Disc")
+    t = next((t for t in ripped_titles(rec) if t.number == number), None)
+    if t is None:
+        raise HTTPException(404, "No such Title")
+    choice = _title_choice(services, rec, t, None)
+    return TEMPLATES.TemplateResponse(request, "partials/title_frames.html",
+                                      {"record": rec, "t": choice})
+
+
+@router.get("/review/{disc_id}/titles/{number}/frames/{pct}.jpg")
+def frame(request: Request, disc_id: int, number: int, pct: int) -> Response:
+    rec = _services(request).discs.get(disc_id)
+    if rec is None or pct not in POSITIONS:
+        raise HTTPException(404, "No such picture")
+    path = thumb_path(rec.scratch_dir, number, pct)
+    if not path.is_file():
+        raise HTTPException(404, "No such picture")
+    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/review/{disc_id}/decision", response_class=HTMLResponse)
+def decision(request: Request, disc_id: int, film: int = 0, title: int = 0) -> Response:
+    """The "When you confirm" facts for the film and Title currently picked."""
+    services = _services(request)
+    rec = _video_in_review(services, disc_id)
+    if rec is None:
+        return HTMLResponse("")
+    t = next((t for t in ripped_titles(rec) if t.number == title), None)
+    try:
+        candidate = _find_film(services, rec, film) if film else None
+    except TmdbError:
+        candidate = None
+    return TEMPLATES.TemplateResponse(request, "partials/movie_decision.html",
+                                      {"summary": _summary(candidate, t)})
+
+
+@router.post("/review/{disc_id}/film", response_class=HTMLResponse)
+def confirm(request: Request, disc_id: int, film: Annotated[int, Form()] = 0,
+            title: Annotated[int, Form()] = 0) -> Response:
+    services = _services(request)
+    rec = _video_in_review(services, disc_id)
+    if rec is None:
+        return RedirectResponse("/review", status_code=303)
+    t = next((t for t in ripped_titles(rec) if t.number == title), None)
+    if t is None:
+        raise HTTPException(400, "That Title isn't one of this Disc's ripped Titles")
+    if not film:
+        raise HTTPException(400, "Pick a film")
+    try:
+        candidate = _find_film(services, rec, film)
+    except TmdbError as e:
+        return page(request, services, rec, [f"Couldn't look the film up: {e}. Try again."],
+                    status_code=503)
+    services.movie_archive.movies.enqueue(rec.id, candidate, t.number)
+    if services.discs.requeue(rec.id):
+        services.discs.log(rec.id, f"Review: identified as {candidate.name} (TMDB "
+                                   f"{candidate.id}); Main Feature is Title {t.number} "
+                                   f"({t.duration})")
+        services.discs.log(rec.id, "Queued for Encode")
+        for topic in (review.TOPIC, "rip", ENCODE_TOPIC):
+            services.bus.publish(topic)
+    return RedirectResponse("/review", status_code=303)

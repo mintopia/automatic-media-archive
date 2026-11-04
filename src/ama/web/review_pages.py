@@ -19,7 +19,8 @@ from ama.cyanrip import ArStatus
 from ama.discs import DiscRecord, DiscStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
 from ama.musicbrainz import Match
-from ama.web import TEMPLATES, view_context
+from ama.video_rip import VIDEO_DISC_TYPES
+from ama.web import TEMPLATES, movie_review_pages, view_context
 from ama.web.review_items import plural
 
 router = APIRouter()
@@ -70,6 +71,8 @@ def review_page(request: Request, disc_id: int) -> Response:
         return RedirectResponse(f"/discs/{disc_id}", status_code=303)
     if rec.disc_type == DiscType.CD:
         return _cd_page(request, services, rec)
+    if rec.disc_type in VIDEO_DISC_TYPES:
+        return movie_review_pages.page(request, services, rec)
     raise HTTPException(404, "This Disc Type has no Review page yet")
 
 

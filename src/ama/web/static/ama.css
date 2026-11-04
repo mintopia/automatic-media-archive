@@ -211,3 +211,13 @@ form.actions{margin:0}
 .page-head.gap{margin-bottom:24px}
 textarea.input{padding:10px 12px;font:inherit;resize:vertical}
 .errors{color:var(--rev-ink);font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px}
+/* Movie Review (#7): Title rows with stills (review-movie mockup) */
+.title-row{display:grid;grid-template-columns:22px minmax(0,1fr) 300px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--rule);cursor:pointer}
+.box>.title-row:first-child{border-top:0}
+.title-row>input{width:18px;height:18px;accent-color:var(--ink)}
+.title-row:has(>input:checked){background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.frame{position:relative;overflow:hidden}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame img+span{position:relative;padding:3px 5px;border-radius:2px;background:rgba(23,24,26,.72);color:#ECEDEF}
+.more-titles>summary{cursor:pointer;list-style:none}.more-titles>summary::-webkit-details-marker{display:none}.more-titles[open]>summary{display:none}
+@media (max-width:720px){.title-row{grid-template-columns:22px minmax(0,1fr)}.title-row .frames{grid-column:1/-1}}

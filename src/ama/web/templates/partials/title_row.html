@@ -1,0 +1,1 @@
+<label class="title-row"><input type="radio" name="title" value="{{ t.title.number }}"{% if picked_title and t.title.number == picked_title.number %} checked{% endif %}><div><div class="tt">Title {{ t.title.number }}</div><div class="ts">{{ t.note }}</div></div>{% include "partials/title_frames.html" %}</label>

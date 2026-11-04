@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Review film{% endblock %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
+      <h1>Which film is on this Disc?</h1>
+      <p class="sub">{{ record.disc_type.long_name }}{% if record.label %} labelled “{{ record.label }}”{% endif %} · main Title runs {{ main_length }}</p>
+    </div>
+  </div>
+  <form id="search" method="get" action="/review/{{ record.id }}"></form>
+  <form id="decide" method="post" action="/review/{{ record.id }}/film" class="split"
+        hx-get="/review/{{ record.id }}/decision" hx-trigger="change[target.type=='radio']" hx-target="#summary" hx-swap="innerHTML">
+    <div class="stack">
+      {%- if errors %}
+      <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+      {%- endif %}
+      <section class="bin rev" aria-labelledby="films-h">
+        <h2 class="tab" id="films-h">{% if searched %}Search results{% else %}Likely films{% endif %} <span class="c">{{ films | length }}</span></h2>
+        <div class="box">
+          <div class="pad search" style="border-bottom:1px solid var(--rule)"><label class="sr" for="q">Search films</label><svg class="i" aria-hidden="true" style="left:36px;top:35px"><use href="/static/icons.svg#search"/></svg><input class="input" id="q" name="q" type="search" form="search" value="{{ q }}" placeholder="Film title" enterkeyhint="search"></div>
+          {%- for c in films %}
+          <label class="radio"><input type="radio" name="film" value="{{ c.film.id }}"{% if picked_film and c.film.id == picked_film.id %} checked{% endif %}><div><div class="tt">{{ c.film.name }}</div><div class="ts">{{ c.note }}</div></div>{% if c.fits %}<span class="stk fil">Same length</span>{% else %}<span></span>{% endif %}</label>
+          {%- endfor %}
+          {%- if search_error %}
+          <p class="pad ts" role="alert">{{ search_error }}</p>
+          {%- elif not films %}
+          <p class="pad ts">{% if q %}TMDB has no film called “{{ q }}”.{% else %}This Disc has no usable name.{% endif %} Search for the film's title above.</p>
+          {%- endif %}
+        </div>
+      </section>
+      <section class="bin ink" aria-labelledby="titles-h">
+        <h2 class="tab" id="titles-h">Which Title is the film? <span class="c">{{ titles | length }}</span></h2>
+        <div class="box">
+          {%- for t in titles[:4] %}{% include "partials/title_row.html" %}{% endfor %}
+          {%- if titles | length > 4 %}
+          <details class="more-titles"><summary class="more">Show {{ titles | length - 4 }} more Title{{ "s" if titles | length - 4 != 1 }}</summary>
+            {%- for t in titles[4:] %}{% include "partials/title_row.html" %}{% endfor %}
+          </details>
+          {%- endif %}
+        </div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="next-h">
+        <h2 class="tab" id="next-h">When you confirm</h2>
+        <div class="box"><div class="pad stack" style="gap:14px">
+          <div id="summary">{% include "partials/movie_decision.html" %}</div>
+          <div class="actions"><button class="btn pri" type="submit"{% if not films %} disabled{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Encode and file</button></div>
+        </div></div>
+      </section>
+      <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a></p>
+    </div>
+  </form>
+</main>
+{% endblock %}
