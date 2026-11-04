@@ -1,4 +1,4 @@
-"""Extras (#8): every ripped Title of a movie Disc that isn't the Main Feature.
+"""Extras: every ripped Title of a movie Disc that isn't the Main Feature.
 
 `MovieArchiver` Encodes them after the Main Feature and files them with it, to
 `<film folder>/Other/<name>.mkv`, named from the Title's name on the Disc (Plex's
@@ -57,7 +57,7 @@ class Extra:
 
 def extra_titles(titles: Iterable[TitleRecord], main_feature: int) -> list[TitleRecord]:
     """The Disc's Extras: every ripped Title but the Main Feature and, on a Disc with
-    decoy playlists (#9), the other near-identical versions of the film."""
+    decoy playlists, the other near-identical versions of the film."""
     ripped = [t for t in titles if t.status == TitleStatus.RIPPED]
     found = decoys.detect(ripped)
     versions = {t.number for t in found.versions} if found else set()

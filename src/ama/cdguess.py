@@ -25,11 +25,8 @@ log = logging.getLogger(__name__)
 
 def likely(tracks: list[Track], candidates: Sequence[Match],
            mcn: str | None) -> tuple[Match | None, int]:
-    """The most likely of the releases that fit the Rip, and how many fit.
-
-    Likeliest: the release whose barcode is the Disc's MCN, then an Official one, then
-    MusicBrainz's order.
-    """
+    """The likeliest release that fits the Rip (barcode = MCN, then Official, then MusicBrainz's
+    order), and how many fit."""
     fitting = cdreview.fitting(tracks, list(candidates))
     if not fitting:
         return None, 0
@@ -59,18 +56,14 @@ class Guesser:
 
     async def follow(self, live: CdRip, mcn: str | None, publish: Callable[[], None],
                      retry_seconds: Callable[[], float]) -> None:
-        """Guess until there is a guess, or MusicBrainz says it doesn't know the Disc.
-
-        MusicBrainz trouble (offline, 503) is quiet: the card keeps showing the Disc ID
-        and track count, and this asks again after `retry_seconds()`. Cancelled when the
-        Rip ends.
-        """
+        """Guess until there is a guess or MusicBrainz doesn't know the Disc; MusicBrainz trouble
+        just retries, quietly."""
         while True:
             try:
                 response = await asyncio.to_thread(self._mb.lookup, live.mb_disc_id)
                 break
             except (httpx.HTTPError, ValueError) as e:
-                log.info("Early MusicBrainz lookup failed (%s); trying again later",
+                log.info("Early Identification from MusicBrainz failed (%s); trying again later",
                          type(e).__name__)
                 await asyncio.sleep(retry_seconds())
         if response is None:

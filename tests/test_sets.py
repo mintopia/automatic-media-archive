@@ -1,7 +1,7 @@
 """Video multi-disc sets (#14), end to end: the real app with fakes for ffmpeg, the NAS
 folder and the web (TMDB, Plex).
 
-A later Disc of a set (the next Disc of a TV season, a film's bonus Disc) is attached
+A later Disc of a set (the next Disc of a TV season, a film's Extras Disc) is attached
 to the set in Review: it reuses the set's Identification and its Episodes/Extras go
 into the set's existing Plex folder.
 """
@@ -86,14 +86,14 @@ def _file_example_movie(harness):
     return harness.services.discs.list(DiscStatus.FILED)[0]
 
 
-def test_a_bonus_disc_files_its_titles_as_extras_in_the_films_folder(harness, client):
+def test_an_extras_disc_files_its_titles_as_extras_in_the_films_folder(harness, client):
     _file_example_movie(harness)
     rec = _in_review(harness, _tv_disc(harness, "EXAMPLE_MOVIE_BONUS", BONUS, DiscType.BD))
 
     asked = _page(client, f"/review/{rec.id}")
     assert "Is this Disc part of a set?" in asked
     assert "Blu-ray labelled “EXAMPLE_MOVIE_BONUS” · BD · 3 Titles ripped" in asked
-    assert "Bonus Disc for a film already filed" in asked
+    assert "Extras Disc for a film already filed" in asked
     assert "Example Movie (2016)" in asked
     assert "Disc 1 filed · Movies / Example Movie (2016) {tmdb-1234}" in asked
     assert "Movies / Example Movie (2016) {tmdb-1234} / Other" in asked  # Where it goes
@@ -150,7 +150,7 @@ def test_a_disc_named_like_no_filed_set_goes_straight_to_its_review(harness, cli
     # Asked for, every filed set of its kind is offered.
     asked = _page(client, f"/review/{rec.id}/set")
     assert "The Office (2001) · Season 1" in asked
-    assert "Bonus Disc" not in asked
+    assert "Extras Disc" not in asked
 
 
 def test_a_set_answer_is_checked(harness, client):

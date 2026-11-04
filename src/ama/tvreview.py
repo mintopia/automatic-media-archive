@@ -1,4 +1,4 @@
-"""TV Review (#13): mapping a Disc's ripped Titles to Episodes.
+"""TV Review: mapping a Disc's ripped Titles to Episodes.
 
 A video Disc in Review is TV when it looked like TV at Identification
 (`ReviewReason.EPISODES`), or when the user marked it so (`mark`, saved to

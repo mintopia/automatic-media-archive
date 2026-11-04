@@ -159,11 +159,8 @@ def licence_problem(msg: Msg, disc_type: DiscType) -> bool:
 
 
 def libredrive_refused(messages: Iterable[Msg]) -> bool:
-    """True when MakeMKV can't open a UHD because the drive isn't in LibreDrive mode.
-
-    Keyed on text: the MSG code isn't known yet (notes/research/makemkvcon.md §6).
-    "Using LibreDrive mode (...)" is the good case.
-    """
+    """Whether MakeMKV couldn't open a UHD for want of LibreDrive mode (by text: the MSG code is
+    unknown)."""
     return any("libredrive" in (t := m.text.lower()) and "required" in t for m in messages)
 
 

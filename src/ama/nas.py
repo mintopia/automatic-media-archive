@@ -35,11 +35,8 @@ NasStatus = NasConnecting | NasConnected | NasUnreachable
 
 
 class NasMonitor:
-    """Connects the share at startup and re-checks it every `retry_seconds`.
-
-    `check()` is idempotent: a reachable share is left alone, otherwise it is
-    (re)mapped. Publishes `nas` on the bus when the status changes.
-    """
+    """Connects the share at startup and re-checks it every `retry_seconds` (`check()` is
+    idempotent)."""
 
 
     def __init__(

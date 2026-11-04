@@ -115,7 +115,7 @@ class TvTitles:
         return [self._row(r) for r in rows]
 
     def in_season(self, series_id: int, season: int) -> list[TvTitle]:
-        """Every Disc's Episodes of the series' season (a set's earlier Discs, #14)."""
+        """Every Disc's Episodes of the series' season (a set's earlier Discs)."""
         rows = self._db.execute(f"SELECT {self._COLS} FROM tv_titles WHERE tmdb_id = ? AND "
                                 "season = ? AND path LIKE 'TV/%' ORDER BY episode",
                                 (series_id, season)).fetchall()
@@ -238,11 +238,11 @@ class TvArchiver:
     def _finish(self, rec: DiscRecord, rows: list[TvTitle]) -> None:
         series = rows[0].series
         n = sum(1 for r in rows if r.episode)
-        # The show's folder, or the film's for a bonus Disc: `TV/<show>`, `Movies/<film>`
+        # The show's folder, or the film's for an Extras Disc: `TV/<show>`, `Movies/<film>`
         show = self._archive.root / Path(*rows[0].path.parts[:2])
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
-        # A bonus Disc is filed as its film's Extras: keep the film, not the "series".
+        # An Extras Disc is filed as its film's Extras: keep the film, not the "series".
         film = n == 0 and show.parent.name == "Movies"
         self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
                                         series.name, series.year,

@@ -50,7 +50,7 @@ FRAGMENTS: dict[str, str] = {
     "filed": "partials/filed_bin.html",
     "encode": "partials/encoding_bin.html",
     "review": "partials/review_bin.html",
-    # The scratch page body (#12): one partial, live on each topic that changes what it shows.
+    # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
     "scratch-encode": "partials/scratch.html",
@@ -99,9 +99,9 @@ def view_context(services: Services) -> dict[str, Any]:
         "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
         "contents_of": lambda d: contents_of(services, d),
         **services.movie_archive.queue_view(),
-        **services.tv_archive.queue_view(),  # TV Episodes not yet filed (#13)
+        **services.tv_archive.queue_view(),  # TV Episodes not yet filed
         "drive": services.drive.state,
-        "repeat": services.repeat.pending,  # an archived Disc waiting for the user (#16)
+        "repeat": services.repeat.pending,  # an archived Disc waiting for the user
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,

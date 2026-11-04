@@ -153,10 +153,8 @@ class MediaStore:
 
 def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year: int | None,
            log: Callable[[str], None]) -> Screen:
-    """What to keep for a filed film or series: TMDB's overview and poster, best effort.
-
-    TMDB trouble is logged and leaves them out; it never holds up filing.
-    """
+    """A filed film's or series' TMDB overview and poster, best effort: trouble is logged, never
+    holds up filing."""
     overview, poster = "", None
     try:
         overview, path = tmdb.overview(tv, tmdb_id)

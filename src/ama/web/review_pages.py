@@ -224,9 +224,7 @@ def _cd_in_review(services, disc_id: int) -> DiscRecord | None:
 
 @router.get("/review/{disc_id}/cover/{release_id}")
 def edition_cover(request: Request, disc_id: int, release_id: str) -> Response:
-    """An offered edition's front cover, from the Cover Art Archive (cached, covers.py).
-
-    Only for editions this Disc's saved MusicBrainz answer offers; no MusicBrainz call.
+    """An offered edition's cached front cover (only editions the saved MusicBrainz answer offers).
     """
     services = request.app.state.services
     rec = services.discs.get(disc_id)

@@ -83,7 +83,7 @@ class Backfill:
             tv, tmdb_id, title, year = False, movie.film.id, movie.film.title, movie.film.year
         elif rows := self._tv.for_disc(rec.id):
             series = rows[0].series
-            # A bonus Disc's rows are its film's Extras, filed under Movies/.
+            # An Extras Disc's rows are its film's Extras, filed under Movies/.
             tv = any(r.episode for r in rows) or rows[0].path.parts[0] != "Movies"
             tmdb_id, title, year = series.id, series.name, series.year
         else:

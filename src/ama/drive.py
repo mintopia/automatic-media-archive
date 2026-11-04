@@ -106,12 +106,8 @@ class DriveProbe(Protocol):
 
 
 class WindowsDriveProbe:
-    """Reads the optical drive through Win32 (GetVolumeInformationW) and its root.
-
-    `letter` is e.g. "D:"; None picks the first drive Windows reports as CD-ROM.
-    Classification is cached per volume (serial number + label) so a loaded
-    Disc is only listed once, not every poll.
-    """
+    """The optical drive through Win32; classification is cached per volume so a Disc's files are
+    listed once, not every poll."""
 
     def __init__(self, letter: str | None = None) -> None:
         import ctypes
@@ -230,10 +226,7 @@ class DriveMonitor:
         return self._probe.device()
 
     async def eject(self) -> None:
-        """Eject the Disc, then re-read the drive so `state` reflects it at once.
-
-        Raises OSError if the drive refuses (the drive is re-read either way).
-        """
+        """Eject the Disc and re-read the drive; raises OSError if the drive refuses."""
         try:
             await asyncio.to_thread(self._probe.eject)
         finally:

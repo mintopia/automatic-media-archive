@@ -53,10 +53,8 @@ MB_FILE = cdreview.MB_FILE
 
 def review_reason(tracks: list[Track], candidates: list[Match],
                   rip_accepted: bool = False) -> ReviewReason | None:
-    """Why this Rip + these MusicBrainz matches can't be filed automatically (None = file it).
-
-    `rip_accepted`: a human accepted the Rip in Review, so AccurateRip no longer matters.
-    """
+    """Why this Rip and these matches can't be filed automatically (None = file it); an accepted
+    Rip skips AccurateRip."""
     audio = cdreview.audio_tracks(tracks)  # AccurateRip doesn't cover a hidden track
     verdicts = {t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in audio}
     if not rip_accepted:

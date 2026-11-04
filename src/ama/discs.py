@@ -42,12 +42,12 @@ class ReviewReason(StrEnum):
     NOT_ACCURATE = "not_accurate"            # a track didn't match AccurateRip
     NOT_IN_ACCURATERIP = "not_in_accuraterip"
     ACCURATERIP_UNAVAILABLE = "accuraterip_unavailable"  # couldn't be checked
-    # video (#6)
+    # video
     NO_MATCH = "no_match"                    # TMDB has no film named like the Disc
     RUNTIME_MISMATCH = "runtime_mismatch"    # films found, none within 5 min of the Main Feature
     MULTIPLE_MATCHES = "multiple_matches"    # several films fit name and runtime
-    EPISODES = "episodes"                    # looks like TV: Titles -> Episodes needs a human (#13)
-    DECOY_PLAYLISTS = "decoy_playlists"      # many near-identical Titles: which is the film? (#9)
+    EPISODES = "episodes"                    # looks like TV: Titles -> Episodes needs a human
+    DECOY_PLAYLISTS = "decoy_playlists"      # many near-identical Titles: which is the film?
 
 
 class TitleStatus(StrEnum):
@@ -101,7 +101,7 @@ class TitleRecord:
     segments: str
     file: str
     status: TitleStatus = TitleStatus.WAITING
-    source: str = ""  # the Disc's playlist, e.g. "00800.mpls" (TINFO 16; "" before #9)
+    source: str = ""  # the Disc's playlist, e.g. "00800.mpls" (TINFO 16; "" on older Rips)
     name: str = ""  # MakeMKV's name for the Title (TINFO 2); often just the Disc's name
 
     @property
@@ -283,10 +283,8 @@ class DiscStore:
         return cur.rowcount == 1
 
     def mark_filed(self, disc_id: int, title: str, archive_dir: Path) -> None:
-        """The Disc is verified in the Archive: record that, then delete its scratch.
-
-        Idempotent; `clean_filed_scratch` finishes the deletion if a crash came between.
-        """
+        """Record the Disc as filed, then delete its scratch (`clean_filed_scratch` finishes a
+        cut-off delete)."""
         self._db.execute(
             "UPDATE discs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
             "filed_at = COALESCE(filed_at, ?) WHERE id = ?",

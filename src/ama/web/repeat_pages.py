@@ -1,4 +1,4 @@
-"""Repeat-Disc warning (#16): the user's choice for an already-archived Disc."""
+"""Repeat-Disc warning: the user's choice for an already-archived Disc."""
 
 from __future__ import annotations
 

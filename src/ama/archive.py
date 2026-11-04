@@ -75,11 +75,8 @@ class Archive:
         self.copy = copy
 
     def place(self, folder: Path, files: Mapping[str, Path]) -> Path:
-        """Put `files` ({name in folder: source}) into `root/folder`; return that folder.
-
-        Raises FilingError (or OSError) unless every file ends up in place,
-        byte-identical to its source. Sources are left alone.
-        """
+        """Copy `files` ({name: source}) into `root/folder`, verified byte-identical; the folder.
+        Raises FilingError or OSError."""
         folder_path = self.root / folder
         dest = extended_path(folder_path)
         dest.mkdir(parents=True, exist_ok=True)

@@ -316,7 +316,7 @@ class VideoRipper:
         return makemkv.parse_scan_records(out)
 
     async def _save_hints(self, disc: DiscRecord, scan: makemkv.Scan) -> None:
-        """Keep what the Disc says it is, for Identification after it's ejected (#6)."""
+        """Keep what the Disc says it is, for Identification after it's ejected."""
         root = self._disc_root()
         bd_title = await asyncio.to_thread(bd_meta_title, root) if root else ""
         save_hints(disc.scratch_dir, DiscHints(volume_label=disc.label, disc_name=scan.disc_name,
@@ -333,10 +333,8 @@ class VideoRipper:
     async def _makemkv(self, disc: DiscRecord, args: list[str],
                        on_record: Callable[[RobotLine], None] | None = None,
                        quiet: bool = False) -> tuple[int, list[RobotLine]]:
-        """Run makemkvcon, logging its messages (only licence ones if `quiet`).
-
-        Raises _Fail on a licence error or if the program can't be started.
-        """
+        """Run makemkvcon, logging its messages (only licence ones if `quiet`); raises _Fail on a
+        licence error or if it won't start."""
         records: list[RobotLine] = []
         licence = False
 

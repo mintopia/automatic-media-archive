@@ -1,4 +1,4 @@
-"""Set Review (#14): "Is this Disc part of a set?", asked before a video Disc's Review.
+"""Set Review: "Is this Disc part of a set?", asked before a video Disc's Review.
 
 `GET /review/{id}` shows it (dispatched from review_pages) while the question is
 unanswered and a filed set's name matches the Disc's names; `GET /review/{id}/set`
@@ -8,7 +8,7 @@ Disc, films otherwise). `POST /review/{id}/set`:
 - `part=no`: the Disc is identified on its own (its normal Review page next).
 - `part=yes&set=<key>&disc=N`, TV: recorded, then the Episode mapping, which starts at
   the set's series and season and carries on after the earlier Discs' Episodes.
-- the same for a film: a bonus Disc. Every ripped Title is queued as an Extra of the
+- the same for a film: an Extras Disc. Every ripped Title is queued as an Extra of the
   film (`tv_titles`, filed by the TvArchiver into `<film folder>/Other/`) and the Disc
   leaves Review.
 """
@@ -23,7 +23,7 @@ from fastapi.responses import RedirectResponse, Response
 from ama import sets, tvreview
 from ama.discs import DiscRecord, DiscStatus
 from ama.moviereview import ripped_titles
-from ama.sets import Answer, DiscSet, Library, SetKey
+from ama.sets import Answer, DiscSet, SetKind, SetKey
 from ama.tmdb import load_hints, search_terms
 from ama.tv import series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -37,16 +37,16 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def library_of(rec: DiscRecord) -> Library:
-    return Library.TV if tvreview.wants_tv(rec) else Library.MOVIE
+def kind_of(rec: DiscRecord) -> SetKind:
+    return SetKind.TV if tvreview.wants_tv(rec) else SetKind.MOVIE
 
 
 def offered(services, rec: DiscRecord, everything: bool = False) -> list[DiscSet]:
     """Filed sets the Disc could belong to: those named like it (then, with `everything`,
     the rest)."""
-    library = library_of(rec)
-    filed = services.sets.filed(library)
-    terms = (series_terms if library == Library.TV else search_terms)(
+    kind = kind_of(rec)
+    filed = services.sets.filed(kind)
+    terms = (series_terms if kind == SetKind.TV else search_terms)(
         load_hints(rec.scratch_dir, rec.label))
     named = sets.matching(filed, terms)
     return named + [s for s in filed if s not in named] if everything else named
@@ -68,7 +68,7 @@ def page(request: Request, services, rec: DiscRecord, everything: bool = False,
                                  else "")
     chosen = next((s for s in offer if str(s.key) == picked), first)
     ctx = view_context(services) | {
-        "current": "/review", "record": rec, "tv": library_of(rec) == Library.TV,
+        "current": "/review", "record": rec, "tv": kind_of(rec) == SetKind.TV,
         "titles": len(ripped_titles(rec)), "sets": offer, "picked": picked,
         "part": form.get("part") or ("no" if (ans and not ans.key) or not offer else "yes"),
         "disc": form.get("disc") or (ans.number if ans and ans.key else
@@ -109,7 +109,7 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
     if part != "yes":
         raise HTTPException(400, "part is yes or no")
     key = SetKey.parse(set_)
-    chosen = services.sets.find(key) if key and key.library == library_of(rec) else None
+    chosen = services.sets.find(key) if key and key.kind == kind_of(rec) else None
     number = int(disc) if disc.strip().isdigit() else 0
     errors = []
     if chosen is None:
@@ -126,16 +126,16 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
     sets.save_answer(rec, Answer(chosen.key, number))
     services.sets.attach(rec.id, chosen.key, number)
     services.discs.log(rec.id, f"Review: Disc {number} of the set {chosen.name}")
-    if chosen.key.library == Library.TV:
+    if chosen.key.kind == SetKind.TV:
         return RedirectResponse(f"/review/{rec.id}", status_code=303)
-    _file_as_bonus(services, rec, chosen)
+    _file_as_extras_disc(services, rec, chosen)
     return RedirectResponse("/review", status_code=303)
 
 
-def _file_as_bonus(services, rec: DiscRecord, film_set: DiscSet) -> None:
+def _file_as_extras_disc(services, rec: DiscRecord, film_set: DiscSet) -> None:
     """Queue every ripped Title as an Extra of the film and hand the Disc back."""
     titles = ripped_titles(rec)
-    paths = sets.bonus_paths(film_set, rec, titles)
+    paths = sets.extras_disc_paths(film_set, rec, titles)
     services.tv_archive.titles.enqueue(rec.id, film_set.show,
                                        [(t.number, None, paths[t.number]) for t in titles])
     if services.discs.requeue(rec.id):

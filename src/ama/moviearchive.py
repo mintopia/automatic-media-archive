@@ -313,7 +313,7 @@ class MovieArchiver:
         return True
 
     async def _encode_extras(self, rec: DiscRecord, movie: Movie) -> None:
-        """Encode each Extra not Encoded yet (#8). One that fails is left out, logged."""
+        """Encode each Extra not Encoded yet. One that fails is left out, logged."""
         titles = extras_mod.extra_titles(rec.titles, movie.title_number)
         hints = load_hints(rec.scratch_dir, rec.label)
         self.extras.plan(rec.id, extras_mod.default_names(

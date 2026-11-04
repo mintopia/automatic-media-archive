@@ -91,12 +91,8 @@ def _track(t: dict[str, Any]) -> TrackInfo:
 
 
 class MusicBrainz:
-    """The MusicBrainz and Cover Art Archive web services, over one shared httpx client.
-
-    The client must carry AMA's User-Agent (MusicBrainz requires contact info).
-    Requests to MusicBrainz are spaced `min_interval` apart (its limit is 1/s per IP).
-    Network errors and 5xx raise httpx.HTTPError: the caller retries later.
-    """
+    """MusicBrainz and the Cover Art Archive over the shared client, spaced `min_interval` apart
+    (MusicBrainz allows 1/s per IP)."""
 
     BASE = "https://musicbrainz.org/ws/2"
     CAA = "https://coverartarchive.org"

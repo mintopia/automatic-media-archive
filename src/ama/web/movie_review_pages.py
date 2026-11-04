@@ -1,7 +1,7 @@
-"""Movie Review (#7): pick the film on TMDB and the Title that is the Main Feature.
+"""Movie Review: pick the film on TMDB and the Title that is the Main Feature.
 
 `GET /review/{id}` for a video Disc renders `page()` (dispatched from
-review_pages). The films offered are the ones #6's search found (`tmdb.json`);
+review_pages). The films offered are the ones Identification's search found (`tmdb.json`);
 `?q=` searches TMDB again. Each ripped Title shows stills at 10/50/90% that the
 Thumbnailer takes in the background; until they exist the frames poll
 `/review/{id}/titles/{n}/frames`. Confirming queues the Encode

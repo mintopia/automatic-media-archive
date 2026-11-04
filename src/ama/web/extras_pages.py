@@ -1,4 +1,4 @@
-"""Sorting a filed film's Extras (#8): optional, never blocks filing.
+"""Sorting a filed film's Extras: optional, never blocks filing.
 
 `GET /discs/{id}/extras` lists the Extras filed to the film's folder with their
 stills (taken before scratch was deleted), a name and a Plex category each.

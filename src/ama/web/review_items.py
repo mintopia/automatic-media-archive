@@ -43,7 +43,7 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
                                       "accept or discard", "Check Rip"),
     ReviewReason.ACCURATERIP_UNAVAILABLE: ("The online check couldn't be reached · "
                                            "accept or discard", "Check Rip"),
-    # video (#6; the Movie Review page itself is #7)
+    # video
     ReviewReason.NO_MATCH: ("Not found on TMDB · identify the film", "Identify"),
     ReviewReason.RUNTIME_MISMATCH: ("Found on TMDB, but the running time doesn't match · "
                                     "confirm the film", "Confirm film"),
