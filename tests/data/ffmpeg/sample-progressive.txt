@@ -1,0 +1,266 @@
+Input #0, matroska,webm, from 'smooth.mkv':
+  Metadata:
+    ENCODER         : Lavf63.1.102
+  Duration: 00:00:20.02, start: 0.000000, bitrate: 6002 kb/s
+  Stream #0:0: Video: mpeg2video (Main), yuv420p(tv, progressive), 720x480 [SAR 1:1 DAR 3:2], 23.98 fps, 23.98 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc63.1.102 mpeg2video
+      DURATION        : 00:00:20.020000000
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 1703936 vbv_delay: N/A
+[Parsed_idet_0 @ 0000024428384000] Repeated Fields: Neither:     0 Top:     0 Bottom:     0
+[Parsed_idet_0 @ 0000024428384000] Single frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:     0
+[Parsed_idet_0 @ 0000024428384000] Multi frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:     0
+Stream mapping:
+  Stream #0:0 -> #0:0 (mpeg2video (native) -> wrapped_avframe (native))
+Output #0, null, to 'pipe:':
+  Metadata:
+    encoder         : Lavf63.1.102
+  Stream #0:0: Video: wrapped_avframe, yuv420p(tv, progressive), 720x480 [SAR 1:1 DAR 3:2], q=2-31, 200 kb/s, 23.98 fps, 23.98 tbn
+    Metadata:
+      encoder         : Lavc63.1.102 wrapped_avframe
+      DURATION        : 00:00:20.020000000
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:85 t:0.085000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:127 t:0.127000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:169 t:0.169000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:211 t:0.211000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:252 t:0.252000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:294 t:0.294000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:336 t:0.336000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:377 t:0.377000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:419 t:0.419000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:461 t:0.461000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:503 t:0.503000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:544 t:0.544000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:586 t:0.586000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:628 t:0.628000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:669 t:0.669000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:711 t:0.711000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:753 t:0.753000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:794 t:0.794000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:836 t:0.836000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:878 t:0.878000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:920 t:0.920000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:961 t:0.961000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1003 t:1.003000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1045 t:1.045000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1086 t:1.086000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1128 t:1.128000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1170 t:1.170000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1212 t:1.212000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1253 t:1.253000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1295 t:1.295000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1337 t:1.337000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1378 t:1.378000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1420 t:1.420000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1462 t:1.462000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1504 t:1.504000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1545 t:1.545000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1587 t:1.587000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1629 t:1.629000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1670 t:1.670000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1712 t:1.712000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1754 t:1.754000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1795 t:1.795000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1837 t:1.837000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1879 t:1.879000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1921 t:1.921000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:1962 t:1.962000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2004 t:2.004000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2046 t:2.046000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2087 t:2.087000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2129 t:2.129000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2171 t:2.171000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2213 t:2.213000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2254 t:2.254000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2296 t:2.296000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2338 t:2.338000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2379 t:2.379000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2421 t:2.421000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2463 t:2.463000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2505 t:2.505000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2546 t:2.546000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2588 t:2.588000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2630 t:2.630000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2671 t:2.671000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2713 t:2.713000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2755 t:2.755000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2796 t:2.796000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2838 t:2.838000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2880 t:2.880000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2922 t:2.922000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:2963 t:2.963000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3005 t:3.005000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3047 t:3.047000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3088 t:3.088000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3130 t:3.130000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3172 t:3.172000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3214 t:3.214000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3255 t:3.255000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3297 t:3.297000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3339 t:3.339000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3380 t:3.380000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3422 t:3.422000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3464 t:3.464000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3506 t:3.506000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3547 t:3.547000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3589 t:3.589000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3631 t:3.631000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3672 t:3.672000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3714 t:3.714000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3756 t:3.756000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3797 t:3.797000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3839 t:3.839000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3881 t:3.881000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3923 t:3.923000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:3964 t:3.964000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4006 t:4.006000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4048 t:4.048000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4089 t:4.089000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4131 t:4.131000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4173 t:4.173000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4215 t:4.215000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4256 t:4.256000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4298 t:4.298000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4340 t:4.340000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4381 t:4.381000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4423 t:4.423000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4465 t:4.465000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4507 t:4.507000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4548 t:4.548000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4590 t:4.590000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4632 t:4.632000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4673 t:4.673000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4715 t:4.715000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4757 t:4.757000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4798 t:4.798000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4840 t:4.840000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4882 t:4.882000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4924 t:4.924000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:4965 t:4.965000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5007 t:5.007000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5049 t:5.049000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5090 t:5.090000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5132 t:5.132000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5174 t:5.174000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5216 t:5.216000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5257 t:5.257000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5299 t:5.299000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5341 t:5.341000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5382 t:5.382000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5424 t:5.424000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5466 t:5.466000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5508 t:5.508000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5549 t:5.549000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5591 t:5.591000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5633 t:5.633000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5674 t:5.674000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5716 t:5.716000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5758 t:5.758000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5799 t:5.799000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5841 t:5.841000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5883 t:5.883000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5925 t:5.925000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:5966 t:5.966000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6008 t:6.008000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6050 t:6.050000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6091 t:6.091000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6133 t:6.133000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6175 t:6.175000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6217 t:6.217000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6258 t:6.258000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6300 t:6.300000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6342 t:6.342000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6383 t:6.383000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6425 t:6.425000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6467 t:6.467000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6509 t:6.509000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6550 t:6.550000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6592 t:6.592000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6634 t:6.634000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6675 t:6.675000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6717 t:6.717000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6759 t:6.759000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6800 t:6.800000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6842 t:6.842000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6884 t:6.884000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6926 t:6.926000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:6967 t:6.967000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7009 t:7.009000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7051 t:7.051000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7092 t:7.092000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7134 t:7.134000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7176 t:7.176000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7218 t:7.218000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7259 t:7.259000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7301 t:7.301000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7343 t:7.343000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7384 t:7.384000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7426 t:7.426000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7468 t:7.468000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7510 t:7.510000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7551 t:7.551000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7593 t:7.593000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7635 t:7.635000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7676 t:7.676000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7718 t:7.718000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7760 t:7.760000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7801 t:7.801000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7843 t:7.843000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7885 t:7.885000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7927 t:7.927000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:7968 t:7.968000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8010 t:8.010000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8052 t:8.052000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8093 t:8.093000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8135 t:8.135000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8177 t:8.177000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8219 t:8.219000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8260 t:8.260000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8302 t:8.302000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8344 t:8.344000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8385 t:8.385000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8427 t:8.427000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8469 t:8.469000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8511 t:8.511000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8552 t:8.552000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8594 t:8.594000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8636 t:8.636000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8677 t:8.677000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8719 t:8.719000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8761 t:8.761000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8802 t:8.802000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8844 t:8.844000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8886 t:8.886000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8928 t:8.928000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:8969 t:8.969000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9011 t:9.011000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9053 t:9.053000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9094 t:9.094000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9136 t:9.136000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9178 t:9.178000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9220 t:9.220000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9261 t:9.261000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9303 t:9.303000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9345 t:9.345000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9386 t:9.386000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9428 t:9.428000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9470 t:9.470000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9512 t:9.512000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9553 t:9.553000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9595 t:9.595000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9637 t:9.637000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9678 t:9.678000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9720 t:9.720000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9762 t:9.762000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9803 t:9.803000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9845 t:9.845000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9887 t:9.887000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9929 t:9.929000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:9970 t:9.970000 limit:0.100000 crop=720:360:0:60
+[Parsed_cropdetect_1 @ 00000244311272c0] x1:0 x2:719 y1:60 y2:419 w:720 h:360 x:0 y:60 pts:10012 t:10.012000 limit:0.100000 crop=720:360:0:60
+[Parsed_idet_0 @ 00000244365d4640] Repeated Fields: Neither:   241 Top:     0 Bottom:     0
+[Parsed_idet_0 @ 00000244365d4640] Single frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:   241
+[Parsed_idet_0 @ 00000244365d4640] Multi frame detection: TFF:     0 BFF:     0 Progressive:     0 Undetermined:   241
+[out#0/null @ 0000024428362d80] video:99KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+frame=  240 fps=0.0 q=-0.0 Lsize=N/A time=00:00:10.01 bitrate=N/A speed=74.9x elapsed=0:00:00.13    

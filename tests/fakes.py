@@ -423,13 +423,23 @@ class FakeFfmpeg:
         self.exit_code = 0
         self.hold = False
         self.encoding = threading.Event()  # set while an Encode is running
+        self.sample_output: list[str] = []  # what each picture-analysis run prints (#10)
         self._go = threading.Event()
 
     def release(self) -> None:
         self._go.set()
 
+    @staticmethod
+    def _is_sample(args: Sequence[str]) -> bool:
+        return list(args[-3:]) == ["-f", "null", "-"]
+
     def encodes(self) -> list[list[str]]:
-        return [c for c in self.calls if "ffmpeg" in Path(c[0]).name.lower()]
+        return [c for c in self.calls
+                if "ffmpeg" in Path(c[0]).name.lower() and not self._is_sample(c)]
+
+    def samples(self) -> list[list[str]]:
+        """The picture-analysis runs (idet/cropdetect to the null muxer)."""
+        return [c for c in self.calls if self._is_sample(c)]
 
     def _block(self, on_line: Callable[[str], None], fraction: float) -> None:
         for ln in ("frame=1000", "fps=48.0", f"out_time_us={int(self.duration * fraction * 1e6)}",
@@ -450,6 +460,10 @@ class FakeFfmpeg:
             out = json.dumps({"streams": self.streams, "chapters": [{"id": 0}, {"id": 1}],
                               "format": {"duration": str(self.duration)}}, indent=1)
             for ln in out.splitlines():
+                on_line(ln)
+            return 0
+        if self._is_sample(args):
+            for ln in self.sample_output:
                 on_line(ln)
             return 0
         src, dest = Path(args[args.index("-i") + 1]), Path(args[-1])
