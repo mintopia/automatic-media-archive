@@ -21,6 +21,7 @@ from ama.config import (
     NasConfig,
     PathsConfig,
     PlexConfig,
+    TmdbConfig,
     ToolsConfig,
     WebConfig,
 )
@@ -31,6 +32,7 @@ from tests.fakes import (
     FakeCyanrip,
     FakeDrive,
     FakeFetch,
+    FakeFfmpeg,
     FakeMakemkv,
     FakeRunner,
     FakeTools,
@@ -51,6 +53,7 @@ def make_config(tmp_path, password: str = "") -> Config:
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
         encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=22)),
+        tmdb=TmdbConfig(api_key="tmdb-key"),
     )
 
 
@@ -65,8 +68,9 @@ class Harness:
     makemkv: FakeMakemkv  # the makemkvcon that Video Rips run
     cyanrip: FakeCyanrip
     makemkv_check: dict  # {"key", "output"}: what the MakeMKV preflight sees next
-    web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex
+    web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex, TMDB
     nas_root: Path
+    ffmpeg: FakeFfmpeg  # ffprobe + the Encode
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
@@ -94,17 +98,19 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                      makemkv_candidates=[exe], retry_seconds=0.05,
                      **({} if pins is None else {"pins": pins}))
 
+    ffmpeg = FakeFfmpeg()
     services = build_services(cfg, probe=drive, runner=runner,
                               nas_exists=lambda p: share["reachable"],
-                              streamer=FakeTools(makemkv, cyanrip),
+                              streamer=FakeTools(makemkv, cyanrip, ffmpeg),
                               make_tools=make_tools,
-                              http=httpx.Client(transport=web.transport()))
+                              http=httpx.Client(transport=web.transport()),
+                              disc_root=lambda: drive.root)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
     services.cd_archive.retry_seconds = 0.05
     services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
     return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check, web,
-                   Path(cfg.nas.unc))
+                   Path(cfg.nas.unc), ffmpeg)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

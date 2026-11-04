@@ -31,6 +31,7 @@ from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
+from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -89,8 +90,10 @@ class VideoRipper:
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer,
-                 clock: Callable[[], float] = time.monotonic) -> None:
+                 clock: Callable[[], float] = time.monotonic,
+                 disc_root: Callable[[], Path | None] = lambda: None) -> None:
         self._drive = drive
+        self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
         self._store = store
         self._bus = bus
         self._exe = makemkvcon
@@ -205,6 +208,7 @@ class VideoRipper:
             code, out = await self._makemkv(disc, makemkv.info_args(exe, source,
                                                                     MIN_TITLE_SECONDS))
             scan = makemkv.parse_scan_records(out)
+            await self._save_hints(disc, scan)
             if not scan.titles:
                 return Failure(FailureKind.DISC, "MakeMKV couldn't read this Disc.", _DISC_ADVICE)
             sel = makemkv.select_titles(scan.titles, MIN_TITLE_SECONDS)
@@ -262,6 +266,13 @@ class VideoRipper:
             return None
         except _Fail as f:
             return f.failure
+
+    async def _save_hints(self, disc: DiscRecord, scan: makemkv.Scan) -> None:
+        """Keep what the Disc says it is, for Identification after it's ejected (#6)."""
+        root = self._disc_root()
+        bd_title = await asyncio.to_thread(bd_meta_title, root) if root else ""
+        save_hints(disc.scratch_dir, DiscHints(volume_label=disc.label, disc_name=scan.disc_name,
+                                               bd_title=bd_title, volume_name=scan.volume_name))
 
     def _eta(self, started: float | None, overall: float) -> int | None:
         if started is None or overall < 0.01:

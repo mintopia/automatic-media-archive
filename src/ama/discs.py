@@ -38,6 +38,10 @@ class ReviewReason(StrEnum):
     NOT_ACCURATE = "not_accurate"            # a track didn't match AccurateRip
     NOT_IN_ACCURATERIP = "not_in_accuraterip"
     ACCURATERIP_UNAVAILABLE = "accuraterip_unavailable"  # couldn't be checked
+    # video (#6)
+    NO_MATCH = "no_match"                    # TMDB has no film named like the Disc
+    RUNTIME_MISMATCH = "runtime_mismatch"    # films found, none within 5 min of the Main Feature
+    MULTIPLE_MATCHES = "multiple_matches"    # several films fit name and runtime
 
 
 class TitleStatus(StrEnum):

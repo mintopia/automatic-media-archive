@@ -42,6 +42,7 @@ FRAGMENTS: dict[str, str] = {
     "rip-failed": "partials/rip_failed.html",
     "cd-rip": "partials/cd_rip_live.html",
     "filed": "partials/filed_bin.html",
+    "encode": "partials/encoding_bin.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
@@ -87,8 +88,11 @@ def view_context(services: Services) -> dict[str, Any]:
         "cd_last_id": cd.last_disc_id,
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
-        "filed": [d for d in cd.discs(DiscStatus.FILED, limit=100)
-                  if d.record.filed_at and d.record.filed_at.date() == date.today()],
+        "filed": sorted((d for d in [*cd.discs(DiscStatus.FILED, limit=100),
+                                     *services.movie_archive.filed()]
+                         if d.record.filed_at and d.record.filed_at.date() == date.today()),
+                        key=lambda d: d.record.filed_at, reverse=True),
+        **services.movie_archive.queue_view(),
         "drive": services.drive.state,
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,

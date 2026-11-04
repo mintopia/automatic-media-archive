@@ -73,6 +73,13 @@ class Drv:
 
 
 @dataclass(frozen=True)
+class CInfo:
+    attr: int
+    code: int
+    value: str
+
+
+@dataclass(frozen=True)
 class TInfo:
     title: int
     attr: int
@@ -89,7 +96,7 @@ class SInfo:
     value: str
 
 
-RobotLine = Msg | Progress | Drv | TInfo | SInfo | None
+RobotLine = Msg | Progress | Drv | CInfo | TInfo | SInfo | None
 
 
 def split_fields(s: str) -> list[str]:
@@ -128,6 +135,8 @@ def parse_line(line: str) -> RobotLine:
                 return Progress(int(f[0]), int(f[1]), int(f[2]))
             case "DRV" if len(f) >= 6:
                 return Drv(int(f[0]), int(f[1]), int(f[3]), f[4], f[5], f[6] if len(f) > 6 else "")
+            case "CINFO" if len(f) >= 3:
+                return CInfo(int(f[0]), int(f[1]), f[2])
             case "TINFO" if len(f) >= 4:
                 return TInfo(int(f[0]), int(f[1]), int(f[2]), f[3])
             case "SINFO" if len(f) >= 5:
@@ -177,6 +186,8 @@ class Scan:
     messages: list[Msg] = field(default_factory=list)
     skipped_short: int = 0  # dropped by MakeMKV's --minlength
     skipped_duplicates: int = 0  # dropped by MakeMKV as equal to another title
+    disc_name: str = ""  # CINFO 2: MakeMKV's name for the Disc
+    volume_name: str = ""  # CINFO 32
 
 
 def parse_scan(lines: Iterable[str]) -> Scan:
@@ -197,6 +208,10 @@ def parse_scan_records(records: Iterable[RobotLine]) -> Scan:
                     scan.skipped_short += 1
                 elif rec.code == MSG_TITLE_DUPLICATE or "is equal to title" in rec.text:
                     scan.skipped_duplicates += 1
+            case CInfo(attr=2, value=v):
+                scan.disc_name = v
+            case CInfo(attr=32, value=v):
+                scan.volume_name = v
             case TInfo(title=t, attr=a, value=v):
                 d = attrs.setdefault(t, {})
                 try:

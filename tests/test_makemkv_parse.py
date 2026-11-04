@@ -77,6 +77,11 @@ def test_scan_lists_titles_with_durations_sizes_and_tracks():
     assert scan.skipped_duplicates == 1
 
 
+def test_scan_reads_the_discs_name_and_volume_name():
+    scan = parse_scan(lines("makemkv-info-bd.txt"))
+    assert (scan.disc_name, scan.volume_name) == ("Example Movie", "EXAMPLE_MOVIE")
+
+
 def test_select_drops_exact_duplicates_and_short_titles():
     scan = parse_scan(lines("makemkv-info-bd.txt"))
     sel = select_titles(scan.titles, min_seconds=30)
