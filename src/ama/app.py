@@ -21,7 +21,9 @@ from fastapi.staticfiles import StaticFiles
 
 from ama.archive import Archive
 from ama.cdarchive import CdArchiver
+from ama.cdguess import Guesser
 from ama.cdrip import CdRipper, CdTracks
+from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
 from ama.db import Database
 from ama.discs import DiscStore
@@ -42,7 +44,8 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, movie_review_pages, pages,
+from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
+                     movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      tv_review_pages)
 
@@ -69,6 +72,7 @@ class Services:
     tv_archive: TvArchiver
     notifier: Notifier
     sets: DiscSets
+    covers: Covers
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
@@ -104,6 +108,7 @@ def build_services(
     cd_tracks = CdTracks(db)
     archive = Archive(Path(cfg.nas.unc))
     mb = MusicBrainz(http)
+    covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
@@ -126,7 +131,7 @@ def build_services(
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch),
+                    scratch=scratch, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               disc_root=disc_root),
@@ -144,6 +149,7 @@ def build_services(
                               retry_seconds=cfg.nas.retry_seconds),
         notifier=Notifier(discs, bus, channels(cfg, http)),
         sets=DiscSets(db),
+        covers=covers,
     )
 
 
@@ -171,4 +177,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(set_review_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
+    app.include_router(history_pages.router)
     return app

@@ -194,6 +194,7 @@ class FakeCyanrip:
         self.enhanced_cd = False  # an UnrecognisedDisc that is really an enhanced CD
         self.calls: list[list[str]] = []
         self.disc_id = "iV4zYu5_g1huHgbfxS6qgxQBL_A-"  # MusicBrainz Disc ID
+        self.mcn: str | None = None  # the Disc's barcode, if it carries one
         self.tracks: list[tuple[int, float]] = [(1, 200.0), (2, 100.0), (3, 300.0)]
         self.preemphasis: set[int] = set()
         self.data_track: int | None = None
@@ -227,6 +228,7 @@ class FakeCyanrip:
                   "Device model:   PIONEER BD-RW   BDR-S11J 1.01 SCSI CD-ROM",
                   "Offset:         +667 samples", f"Disc tracks:    {len(self.tracks)}",
                   f"DiscID:         {self.disc_id}",
+                  *([f"Disc MCN:       {self.mcn}"] if self.mcn else []),
                   f"AccurateRip:    {'found' if self.in_accuraterip else 'not found'}", "",
                   "Gaps:"]
         if any(n == 0 for n, _ in self.tracks):

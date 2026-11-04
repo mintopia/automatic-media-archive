@@ -27,7 +27,7 @@
           <tbody>
           {%- for t in view.tracks %}
             {%- set now = live and t.number == view.current and not t.ripped %}
-            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else "Track " ~ t.number }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
+            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else (view.track_title(t.number) or "Track " ~ t.number) }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
               <td class="st">
               {%- if t.ripped -%}
                 {%- set s = t.ar.status if t.ar else "unavailable" -%}

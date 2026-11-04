@@ -1,11 +1,23 @@
-{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Disc page. -#}
+{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Disc page.
+    `cd.guess` (a likely release from MusicBrainz, only for show) fills in the album, artist and cover while it rips. -#}
 {%- set tag = heading or "div" -%}
+{%- set g = cd.guess if cd else none -%}
 <div class="drive">
+  {%- if g and g.cover %}
+  <div class="cell art"><img src="/covers/{{ g.cover }}" alt="Cover of {{ g.match.release.title }}"><span>Audio CD</span></div>
+  {%- else %}
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+  {%- endif %}
   <div class="body">
     {%- if cd %}
-    <{{ tag }} class="title">{% if link %}<a href="/discs/{{ cd.disc_id }}">{{ cd.label or "Unknown CD" }}</a>{% else %}{{ cd.label or "Unknown CD" }}{% endif %}</{{ tag }}>
-    <div class="meta">{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
+    {%- set name = g.match.release.title if g else (cd.label or "Unknown CD") %}
+    <{{ tag }} class="title">{% if link %}<a href="/discs/{{ cd.disc_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
+    <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
+    {%- if g %}
+    <div class="guess">Likely{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} releases</span>{% endif %} on MusicBrainz. Confirmed after the Rip.</div>
+    {%- elif cd.mb_disc_id %}
+    <div class="guess">Disc ID <span class="mono" style="overflow-wrap:anywhere">{{ cd.mb_disc_id }}</span></div>
+    {%- endif %}
     <div class="status"><span class="stk rip">Ripping</span><span class="ts">{{ cd.position() }}</span></div>
     <div class="prog">
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ cd.percent | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ '%.1f' | format(cd.percent) }}%"></i></div><div class="eta">{% if cd.eta_seconds is not none %}<span class="nw">{{ cd.eta_seconds | left }}</span> · {% endif %}the Disc ejects when it's done</div></div>
