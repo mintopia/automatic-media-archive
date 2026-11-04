@@ -31,6 +31,7 @@ from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
+from ama.repeat import RepeatGuard, video_fingerprint
 from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
@@ -89,13 +90,14 @@ class VideoRipper:
     TOPIC = "rip"
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
-                 makemkvcon: Callable[[], Path], streamer: Streamer,
+                 makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None) -> None:
         self._drive = drive
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
         self._store = store
         self._bus = bus
+        self._repeat = repeat
         self._exe = makemkvcon
         self._run_lines = streamer
         self._clock = clock
@@ -152,14 +154,19 @@ class VideoRipper:
             return
         self._handled = state
         assert isinstance(state, DiscPresent)
-        await self.rip(state)
+        # Repeat-Disc warning (#16): a Disc already in the Archive waits for the user.
+        fingerprint = await asyncio.to_thread(video_fingerprint, self._disc_root(),
+                                              state.disc_type)
+        if await self._repeat.admit(state.disc_type, fingerprint):
+            await self.rip(state, fingerprint)
 
     # -- the Rip -----------------------------------------------------------
 
-    async def rip(self, inserted: DiscPresent) -> None:
+    async def rip(self, inserted: DiscPresent, fingerprint: str | None = None) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
         disc = self._store.create(inserted.disc_type, inserted.label, "video")
+        self._repeat.remember(disc.id, fingerprint)
         shutil.rmtree(disc.scratch_dir, ignore_errors=True)
         disc.scratch_dir.mkdir(parents=True, exist_ok=True)
         self.disc, self.progress = disc, RipProgress()
