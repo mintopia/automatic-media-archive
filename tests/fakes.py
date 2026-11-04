@@ -346,10 +346,13 @@ class FakeWeb:
         self.tmdb_tv_search: dict[str, list[dict]] = {}
         self.tmdb_series: dict[int, dict] = {}
         self.tmdb_seasons: dict[tuple[int, int], dict] = {}
+        # TMDB images (image.tmdb.org) by poster path, e.g. "/abc.jpg".
+        self.tmdb_images: dict[str, bytes] = {}
 
     def add_series(self, query: str, id_: int, name: str, year: int,
                    seasons: dict[int, list[tuple[int, str, int]]],
-                   original_language: str = "en") -> None:
+                   original_language: str = "en", overview: str = "",
+                   poster_path: str | None = None) -> None:
         """TMDB knows this series (`seasons`: number -> [(episode, name, runtime)]) and
         finds it when searched for `query`."""
         date = f"{year}-07-09"
@@ -358,7 +361,8 @@ class FakeWeb:
              "original_language": original_language})
         self.tmdb_series[id_] = {
             "id": id_, "name": name, "first_air_date": date,
-            "original_language": original_language,
+            "original_language": original_language, "overview": overview,
+            "poster_path": poster_path,
             "seasons": [{"season_number": n, "episode_count": len(eps)}
                         for n, eps in sorted(seasons.items())]}
         for n, eps in seasons.items():
@@ -368,7 +372,8 @@ class FakeWeb:
 
     def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
                  original_language: str = "en", original_title: str | None = None,
-                 director: str = "") -> None:
+                 director: str = "", overview: str = "",
+                 poster_path: str | None = None) -> None:
         """TMDB knows this film, and finds it when searched for `query`."""
         date = f"{year}-11-10"
         self.tmdb_search.setdefault(query.casefold(), []).append(
@@ -377,6 +382,7 @@ class FakeWeb:
         self.tmdb_movies[id_] = {"id": id_, "title": title, "runtime": runtime,
                                  "original_title": original_title or title,
                                  "release_date": date, "original_language": original_language,
+                                 "overview": overview, "poster_path": poster_path,
                                  "credits": {"crew": [{"job": "Director", "name": director}]
                                              if director else []}}
 
@@ -418,6 +424,10 @@ class FakeWeb:
                 return httpx.Response(200, json=found) if found else httpx.Response(404)
             movie = self.tmdb_movies.get(int(url.path.rsplit("/", 1)[-1]))
             return httpx.Response(200, json=movie) if movie else httpx.Response(404)
+        if url.host == "image.tmdb.org":
+            self.tmdb_requests.append(request)
+            image = None if self.tmdb_offline else                 self.tmdb_images.get("/" + url.path.rsplit("/", 1)[-1])
+            return httpx.Response(200, content=image, headers={"content-type": "image/jpeg"})                 if image else httpx.Response(404)
         if url.host in ("discord.com", "ntfy.sh"):
             (self.discord if url.host == "discord.com" else self.ntfy).append(request)
             if self.notify_status == 0:

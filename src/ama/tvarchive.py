@@ -27,6 +27,8 @@ from pathlib import Path, PurePosixPath
 import httpx
 
 from ama import review
+from ama.covers import Covers
+from ama.media import MediaStore, screen
 from ama.archive import Archive, FilingError
 from ama.db import Database
 from ama.discs import DiscRecord, DiscStatus, DiscStore
@@ -35,7 +37,7 @@ from ama.moviearchive import TOPIC, MovieArchiver, RetryLater
 from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
 from ama.extras import default_names
-from ama.tmdb import Episode, Series, load_hints
+from ama.tmdb import Episode, Series, Tmdb, load_hints
 from ama.tv import episode_path, extra_path
 from ama.tvreview import Kept
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -171,8 +173,11 @@ def encoded_path(rec: DiscRecord, number: int) -> Path:
 class TvArchiver:
     def __init__(self, discs: DiscStore, titles: TvTitles, encoder: MovieArchiver,
                  nas: NasMonitor, archive: Archive, plex: Plex, bus: EventBus, interval: float,
-                 retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic
-                 ) -> None:
+                 retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic, *,
+                 tmdb: Tmdb, media: MediaStore, covers: Covers) -> None:
+        self._tmdb = tmdb
+        self._media = media
+        self._covers = covers
         self._discs = discs
         self.titles = titles
         self._encoder = encoder
@@ -265,6 +270,11 @@ class TvArchiver:
         show = self._archive.root / Path(*rows[0].path.parts[:2])
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
+        # A bonus Disc (#14) is filed as its film's Extras: keep the film, not the "series".
+        film = n == 0 and show.parent.name == "Movies"
+        self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
+                                        series.name, series.year,
+                                        lambda text: self._discs.log(rec.id, text)))
         self._discs.mark_filed(rec.id, f"{series.title} · {what}", show)
         self._discs.log(rec.id, f"All kept Titles filed to {show}; scratch deleted")
         try:

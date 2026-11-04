@@ -119,7 +119,8 @@ def build_services(
     movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, cfg.encode.cq,
                                   tool, streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
-                                  extras=Extras(db, cfg.paths.state_db.parent / STILLS))
+                                  extras=Extras(db, cfg.paths.state_db.parent / STILLS),
+                                  media=media, covers=covers)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -149,7 +150,8 @@ def build_services(
         scratch=scratch,
         tv_archive=TvArchiver(discs, tv_titles, movie_archive, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
-                              retry_seconds=cfg.nas.retry_seconds),
+                              retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
+                              covers=covers),
         notifier=Notifier(discs, bus, channels(cfg, http)),
         sets=DiscSets(db),
         covers=covers,

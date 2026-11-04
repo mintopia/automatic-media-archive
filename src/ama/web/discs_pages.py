@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from ama.discs import DiscRecord, DiscStatus, FailureKind
 from ama.drive import DiscType
 from ama.extras import ExtraStatus
-from ama.media import Album
+from ama.media import Album, Screen
 from ama.web import TEMPLATES, view_context
 
 router = APIRouter()
@@ -72,7 +72,9 @@ def _video_page(request: Request, services, disc: DiscRecord) -> Response:
         ctx["log_open"] = not licence
         return TEMPLATES.TemplateResponse(
             request, "disc_licence.html" if licence else "disc_failed.html", ctx)
+    screen = services.media.get(disc.id) if disc.status == DiscStatus.FILED else None
     ctx |= {"rip_disc": disc, "rip_progress": None, "live": False,
+            "screen": screen if isinstance(screen, Screen) else None,
             "extras_href": f"/discs/{disc.id}/extras" if disc.status == DiscStatus.FILED
             and any(e.status == ExtraStatus.FILED
                     for e in services.movie_archive.extras.of(disc.id)) else None}

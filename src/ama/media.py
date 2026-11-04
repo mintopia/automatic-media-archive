@@ -9,11 +9,16 @@ cover or poster cached by `covers.Covers`, so the page needs neither scratch
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Literal
 
+import httpx
+
+from ama.covers import Covers
 from ama.db import Database
 from ama.musicbrainz import Match
+from ama.tmdb import Tmdb, TmdbError
 
 MB = "https://musicbrainz.org"
 CAA = "https://coverartarchive.org"
@@ -133,3 +138,24 @@ class MediaStore:
         row = self._db.execute("SELECT info FROM media_info WHERE disc_id = ?",
                                (disc_id,)).fetchone()
         return from_json(row[0]) if row else None
+
+
+def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year: int | None,
+           log: Callable[[str], None]) -> Screen:
+    """What to keep for a filed film or series: TMDB's overview and poster, best effort.
+
+    TMDB trouble is logged and leaves them out; it never holds up filing.
+    """
+    overview, poster = "", None
+    try:
+        overview, path = tmdb.overview(tv, tmdb_id)
+        stem = f"tmdb-{'tv' if tv else 'movie'}-{tmdb_id}"
+        poster = covers.cached(stem)
+        if path and poster is None:
+            data = tmdb.poster(path)
+            poster = covers.store(stem, data, "jpg") if data else None
+    except TmdbError as e:
+        log(f"No overview or poster kept: {e}")
+    except (httpx.HTTPError, OSError) as e:
+        log(f"No poster kept: couldn't fetch it from TMDB ({type(e).__name__})")
+    return Screen(tmdb_id, title, year, tv=tv, overview=overview, poster=poster)
