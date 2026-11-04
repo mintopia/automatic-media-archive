@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ripping Arrival · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<style>
+.tbl .num{text-align:right;color:var(--ink2);white-space:nowrap}
+.tbl .st{width:200px}
+.ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
+.ok .i{width:16px;height:16px}
+.wait{color:var(--ink3)}
+.tbl tr.now td{background:var(--well)}
+.skipped{padding:12px 14px;border-top:1px solid var(--rule);color:var(--ink2);font-size:13px}
+@media (max-width:720px){.tbl .hide-m{display:none}.tbl .st{width:auto}.tbl td,.tbl th{padding:10px 8px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+</header>
+<main>
+  <div class="crumb"><a href="now.html">Now</a><svg class="i"><use href="assets/icons.svg#chevron"/></svg><span>Disc in drive</span></div>
+  <div class="split">
+    <div class="stack">
+      <div class="drive">
+        <div class="cell"><svg class="i"><use href="assets/icons.svg#disc"/></svg><span>Blu-ray</span></div>
+        <div class="body">
+          <h1 class="title">ARRIVAL</h1>
+          <div class="meta">Disc name from the drive · 6 Titles to rip · <span class="nw">34.8 GB</span></div>
+          <div class="status"><span class="stk rip">Ripping</span><span class="ts">Title 2 of 6</span></div>
+          <div class="prog">
+            <div style="flex:1"><div class="bar"><i style="width:71%"></i></div><div class="eta"><span class="nw">8 min left</span> · the Disc ejects when it's done</div></div>
+            <div class="pct">71%</div>
+          </div>
+        </div>
+      </div>
+      <section class="bin rip" aria-labelledby="titles-h">
+        <h2 class="tab" id="titles-h">Titles <span class="c">6</span></h2>
+        <div class="box">
+          <table class="tbl">
+            <thead><tr><th>Title</th><th class="num">Length</th><th class="num hide-m">Size</th><th class="num hide-m">Audio</th><th class="num hide-m">Subtitles</th><th class="st">Status</th></tr></thead>
+            <tbody>
+              <tr><td>Title 1</td><td class="num">1:56:32</td><td class="num hide-m">29.1 GB</td><td class="num hide-m">5</td><td class="num hide-m">14</td><td class="st"><span class="ok"><svg class="i"><use href="assets/icons.svg#check"/></svg>Ripped</span></td></tr>
+              <tr class="now"><td><b>Title 2</b></td><td class="num">0:24:10</td><td class="num hide-m">2.8 GB</td><td class="num hide-m">2</td><td class="num hide-m">6</td><td class="st">Ripping 58%<div class="bar thin" aria-label="58%"><i style="width:58%"></i></div></td></tr>
+              <tr><td>Title 3</td><td class="num">0:18:44</td><td class="num hide-m">2.1 GB</td><td class="num hide-m">2</td><td class="num hide-m">6</td><td class="st wait">Waiting</td></tr>
+              <tr><td>Title 4</td><td class="num">0:09:02</td><td class="num hide-m">0.6 GB</td><td class="num hide-m">1</td><td class="num hide-m">4</td><td class="st wait">Waiting</td></tr>
+              <tr><td>Title 5</td><td class="num">0:02:31</td><td class="num hide-m">0.2 GB</td><td class="num hide-m">1</td><td class="num hide-m">2</td><td class="st wait">Waiting</td></tr>
+              <tr><td>Title 6</td><td class="num">0:01:05</td><td class="num hide-m">0.1 GB</td><td class="num hide-m">1</td><td class="num hide-m">0</td><td class="st wait">Waiting</td></tr>
+            </tbody>
+          </table>
+          <p class="skipped">Not ripped: 11 Titles shorter than 30 seconds (menus, logos) and 2 exact duplicates of Title 1.</p>
+        </div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="next-h">
+        <h2 class="tab" id="next-h">After the Rip</h2>
+        <div class="box"><div class="pad" style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+          <p>Everything is copied off the Disc first, so the drive is free again quickly.</p>
+          <p class="ts">Then we work out which film this is. If we're sure, it's encoded and filed to Movies. If not, it waits in Review with pictures from each Title so you can choose.</p>
+        </div></div>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

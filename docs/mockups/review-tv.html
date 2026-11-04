@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Match episodes · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<style>
+.titem{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;align-items:center;padding:16px 18px;border-top:1px solid var(--rule)}
+.titem:first-child{border-top:0}
+.titem.flag{background:var(--notice)}
+.colhead{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;padding:10px 18px;border-bottom:1px solid var(--rule);color:var(--ink2);font-size:13px;font-weight:600}
+main{max-width:920px}
+.ctl{display:flex;flex-direction:column;gap:8px}
+.radio .input{width:100%;height:auto;margin:0}
+@media (max-width:720px){.titem{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.colhead{display:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+</header>
+<main>
+  <div class="page-head"><div><div class="crumb"><a href="now.html">Now</a><svg class="i"><use href="assets/icons.svg#chevron"/></svg><span>Review</span></div><h1>Which episode is each Title?</h1><p class="sub">The Office (UK) Series 1 — Disc 2 · DVD · 6 Titles ripped</p></div><div class="actions"><a class="btn quiet" href="now.html">Not now</a><a class="btn pri" href="now.html">File episodes</a></div></div>
+  <div class="box" style="margin-bottom:28px"><div class="pad" style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-end">
+    <dl class="facts"><dt>Series</dt><dd><b>The Office (2001)</b> · TMDB · <a href="#">Change</a></dd><dt>Filed to</dt><dd>TV / The Office (2001) / Season 01</dd></dl>
+    <div class="field" style="min-width:200px"><label for="season">Season</label><select class="select" id="season"><option>Season 1</option><option>Season 2</option><option>Specials (Season 00)</option></select></div>
+  </div></div>
+  <section class="bin rev"><div class="tab">Titles <span class="c">6</span></div><div class="box"><div class="colhead"><span>Thumbnails (synthetic)</span><span>Title</span><span></span></div><div class="titem "><div class="frames"><div class="frame mid" aria-hidden="true"><span>10%</span></div><div class="frame dark" aria-hidden="true"><span>50%</span></div><div class="frame lite" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 1</div><div class="ts">29 min</div></div><div class="field"><label for="e0">Episode</label><select class="select" id="e0" aria-label="Episode"><option selected>S01E04 · The Quiz</option><option>S01E05 · New Girl</option><option>S01E06 · Judgement</option><option>Special (Season 00)</option><option>Extra</option><option>Discard (not an episode)</option></select></div></div><div class="titem "><div class="frames"><div class="frame lite" aria-hidden="true"><span>10%</span></div><div class="frame mid" aria-hidden="true"><span>50%</span></div><div class="frame dark" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 2</div><div class="ts">29 min</div></div><div class="field"><label for="e1">Episode</label><select class="select" id="e1" aria-label="Episode"><option>S01E04 · The Quiz</option><option selected>S01E05 · New Girl</option><option>S01E06 · Judgement</option><option>Special (Season 00)</option><option>Extra</option><option>Discard (not an episode)</option></select></div></div><div class="titem "><div class="frames"><div class="frame dark" aria-hidden="true"><span>10%</span></div><div class="frame mid" aria-hidden="true"><span>50%</span></div><div class="frame mid" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 3</div><div class="ts">30 min</div></div><div class="field"><label for="e2">Episode</label><select class="select" id="e2" aria-label="Episode"><option>S01E04 · The Quiz</option><option>S01E05 · New Girl</option><option selected>S01E06 · Judgement</option><option>Special (Season 00)</option><option>Extra</option><option>Discard (not an episode)</option></select></div></div><div class="titem flag"><div class="frames"><div class="frame mid" aria-hidden="true"><span>10%</span></div><div class="frame lite" aria-hidden="true"><span>50%</span></div><div class="frame dark" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 4</div><div class="ts">2 h 58 m</div><div class="ts" style="color:var(--rev-ink);font-weight:600;margin-top:4px">Looks like all the episodes joined together (“Play all”), usually safe to discard</div></div><div class="field"><label for="e3">Episode</label><select class="select" id="e3" aria-label="Episode"><option>S01E04 · The Quiz</option><option>S01E05 · New Girl</option><option>S01E06 · Judgement</option><option>Special (Season 00)</option><option>Extra</option><option selected>Discard (not an episode)</option></select></div></div><div class="titem "><div class="frames"><div class="frame lite" aria-hidden="true"><span>10%</span></div><div class="frame lite" aria-hidden="true"><span>50%</span></div><div class="frame mid" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 5</div><div class="ts">24 min</div></div><div class="field"><label for="e4">Episode</label><select class="select" id="e4" aria-label="Episode"><option>S01E04 · The Quiz</option><option>S01E05 · New Girl</option><option>S01E06 · Judgement</option><option>Special (Season 00)</option><option selected>Extra</option><option>Discard (not an episode)</option></select></div></div><div class="titem "><div class="frames"><div class="frame dark" aria-hidden="true"><span>10%</span></div><div class="frame dark" aria-hidden="true"><span>50%</span></div><div class="frame mid" aria-hidden="true"><span>90%</span></div></div><div><div class="tt">Title 6</div><div class="ts">3 min</div></div><div class="field"><label for="e5">Episode</label><select class="select" id="e5" aria-label="Episode"><option>S01E04 · The Quiz</option><option>S01E05 · New Girl</option><option>S01E06 · Judgement</option><option>Special (Season 00)</option><option selected>Extra</option><option>Discard (not an episode)</option></select></div></div></div></section>
+</main>
+</body>
+</html>

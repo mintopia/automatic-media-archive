@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Now · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review</a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="0" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:0.0%"></i></span><b>0 / 256 GB</b></a>
+</header>
+<main>
+  <div class="notice" role="status" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg><div><b>Can't reach the NAS (\\nas\media)</b>Check it's switched on. Retrying every minute; finished Discs wait safely until it's back.</div></div>
+  <div class="split">
+    <div class="stack">
+      <section aria-labelledby="drive-h">
+        <h2 id="drive-h" class="sr">Disc in drive</h2>
+        <div class="drive empty">
+          <div class="cell"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#eject"/></svg><span>Drive empty</span></div>
+          <div class="body">
+            <div class="title">Insert a Disc</div>
+            <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
+          </div>
+        </div>
+      </section>
+      <section class="bin rev">
+        <div class="tab">Needs Review <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing needs you right now. You'll get a notification when a Disc needs a decision.</p></div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin rip">
+        <div class="tab">Ripping <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing ripping.</p></div>
+      </section>
+      <section class="bin enc">
+        <div class="tab">Encoding <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing waiting to encode.</p></div>
+      </section>
+      <section class="bin fil">
+        <div class="tab">Filed today <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing filed yet today.</p></div>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

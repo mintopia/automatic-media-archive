@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ripping OK Computer · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<style>
+.tbl .n{width:48px;color:var(--ink2)}
+.tbl .len{width:80px;color:var(--ink2)}
+.tbl .st{width:260px}
+.ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
+.ok .i{width:16px;height:16px}
+.wait{color:var(--ink3)}
+.tbl tr.now td{background:var(--well)}
+.notes{display:flex;flex-direction:column;gap:10px;font-size:14px}
+@media (max-width:720px){.tbl .len{display:none}.tbl .st{width:auto}.tbl td,.tbl th{padding:10px 8px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+</header>
+<main>
+  <div class="crumb"><a href="now.html">Now</a><svg class="i"><use href="assets/icons.svg#chevron"/></svg><span>Disc in drive</span></div>
+  <div class="split">
+    <div class="stack">
+      <div class="drive">
+        <div class="cell"><svg class="i"><use href="assets/icons.svg#disc"/></svg><span>Audio CD</span></div>
+        <div class="body">
+          <h1 class="title">OK Computer</h1>
+          <div class="meta">Radiohead · 12 tracks · <span class="nw">53 min</span></div>
+          <div class="status"><span class="stk rip">Ripping</span><span class="ts">Track 5 of 12</span></div>
+          <div class="prog">
+            <div style="flex:1"><div class="bar"><i style="width:38%"></i></div><div class="eta"><span class="nw">9 min left</span> · the Disc ejects when it's done</div></div>
+            <div class="pct">38%</div>
+          </div>
+        </div>
+      </div>
+      <section class="bin rip" aria-labelledby="tracks-h">
+        <h2 class="tab" id="tracks-h">Tracks <span class="c">12</span></h2>
+        <div class="box">
+          <table class="tbl">
+            <thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th><th class="st">Status</th></tr></thead>
+            <tbody>
+              <tr><td class="n">1</td><td>Airbag</td><td class="len">4:44</td><td class="st"><span class="ok"><svg class="i"><use href="assets/icons.svg#check"/></svg>Verified (confidence 12)</span></td></tr>
+              <tr><td class="n">2</td><td>Paranoid Android</td><td class="len">6:23</td><td class="st"><span class="ok"><svg class="i"><use href="assets/icons.svg#check"/></svg>Verified (confidence 12)</span></td></tr>
+              <tr><td class="n">3</td><td>Subterranean Homesick Alien</td><td class="len">4:27</td><td class="st"><span class="ok"><svg class="i"><use href="assets/icons.svg#check"/></svg>Verified (confidence 11)</span></td></tr>
+              <tr><td class="n">4</td><td>Exit Music (For a Film)</td><td class="len">4:24</td><td class="st"><span class="ok"><svg class="i"><use href="assets/icons.svg#check"/></svg>Verified (confidence 12)</span></td></tr>
+              <tr class="now"><td class="n">5</td><td><b>Let Down</b></td><td class="len">4:59</td><td class="st">Ripping 45%<div class="bar thin" aria-label="45%"><i style="width:45%"></i></div></td></tr>
+              <tr><td class="n">6</td><td>Karma Police</td><td class="len">4:21</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">7</td><td>Fitter Happier</td><td class="len">1:57</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">8</td><td>Electioneering</td><td class="len">3:50</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">9</td><td>Climbing Up the Walls</td><td class="len">4:45</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">10</td><td>No Surprises</td><td class="len">3:48</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">11</td><td>Lucky</td><td class="len">4:19</td><td class="st wait">Waiting</td></tr>
+              <tr><td class="n">12</td><td>The Tourist</td><td class="len">5:24</td><td class="st wait">Waiting</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="found-h">
+        <h2 class="tab" id="found-h">Found on this CD</h2>
+        <div class="box"><div class="pad notes">
+          <p><b>Hidden track before track 1</b><br><span class="ts">0:38 of audio before Airbag. It's being kept as track 0.</span></p>
+          <p><b>Pre-emphasis</b><br><span class="ts">This CD was mastered with pre-emphasis. The files are marked so players can correct it; the audio itself isn't changed.</span></p>
+        </div></div>
+      </section>
+      <section class="bin fil" aria-labelledby="next-h">
+        <h2 class="tab" id="next-h">After the Rip</h2>
+        <div class="box"><div class="pad notes">
+          <p>Each track is checked against AccurateRip, a database of other people's rips of the same CD. Higher confidence means more matching rips.</p>
+          <p class="ts">Then it's matched on MusicBrainz and filed to Music. If more than one edition matches, it waits in Review.</p>
+        </div></div>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

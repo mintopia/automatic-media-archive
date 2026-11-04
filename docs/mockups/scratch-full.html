@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Not enough space · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter full" role="meter" aria-valuenow="212" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:82.8%"></i></span><b>212 / 256 GB</b></a>
+</header>
+<main>
+  <div class="split">
+    <div class="stack">
+      <section aria-labelledby="sf-h">
+        <div class="drive">
+          <div class="cell"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#eject"/></svg><span>Blu-ray</span></div>
+          <div class="body">
+            <h1 id="sf-h" class="title">Ejected: not enough space</h1>
+            <div class="meta">The Matrix (1999) · Blu-ray was not ripped. 212 of 256 GB of scratch is in use; a Blu-ray needs up to 50 GB.</div>
+            <p style="margin-top:12px"><b>Finish a Review to free space,</b> then put the Disc back in.</p>
+            <div class="actions" style="margin-top:20px"><a class="btn pri" href="review-movie.html">Go to Review</a></div>
+          </div>
+        </div>
+      </section>
+      <section class="bin ink">
+        <div class="tab">Using scratch <span class="c">212 GB</span></div>
+        <div class="box">
+          <div class="row"><div class="dtype">UHD</div><div><div class="tt">Blade Runner 2049</div><div class="ts">Ripping · 62% · <b>104 GB</b></div></div><span class="stk rip" style="justify-self:start">Ripping</span></div>
+          <div class="row"><div class="dtype">BD</div><div><div class="tt">Blu-ray labelled “HEAT_DISC1”</div><div class="ts">Needs Review · which film? · <b>46 GB</b></div></div><a class="btn" href="review-movie.html">Review</a></div>
+          <div class="row"><div class="dtype">DVD</div><div><div class="tt">The Office (UK) Series 1 — Disc 2</div><div class="ts">Needs Review · match episodes · <b>7 GB</b></div></div><a class="btn" href="review-tv.html">Review</a></div>
+          <div class="row"><div class="dtype">CD</div><div><div class="tt">OK Computer — Radiohead</div><div class="ts">Needs Review · choose edition · <b>1 GB</b></div></div><a class="btn" href="review-cd.html">Review</a></div>
+          <div class="row"><div class="dtype">BD</div><div><div class="tt">Arrival (2016)</div><div class="ts">Encoding · 41% · <b>46 GB</b></div></div><span class="stk enc" style="justify-self:start">Encoding</span></div>
+          <div class="row"><div class="dtype">DVD</div><div><div class="tt">Spirited Away (2001)</div><div class="ts">Waiting to encode · <b>8 GB</b></div></div><span class="stk enc" style="justify-self:start">Waiting</span></div>
+        </div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin rev"><div class="tab">Needs Review <span class="c">3</span></div><div class="box"><p class="pad ts">Each finished Review lets its Disc encode and file, freeing its space.</p></div></section>
+      <section class="bin enc"><div class="tab">Encoding <span class="c">2</span></div><div class="box"><p class="pad ts">Space frees up as each Encode is filed: about 46 GB in 22 min.</p></div></section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

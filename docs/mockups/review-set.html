@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Part of a set? · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<style>
+.titem{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;align-items:center;padding:16px 18px;border-top:1px solid var(--rule)}
+.titem:first-child{border-top:0}
+.titem.flag{background:var(--notice)}
+.colhead{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;padding:10px 18px;border-bottom:1px solid var(--rule);color:var(--ink2);font-size:13px;font-weight:600}
+.ctl{display:flex;flex-direction:column;gap:8px}
+.radio .input{width:100%;height:auto;margin:0}
+@media (max-width:720px){.titem{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.colhead{display:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+</header>
+<main>
+  <div class="page-head"><div><div class="crumb"><a href="now.html">Now</a><svg class="i"><use href="assets/icons.svg#chevron"/></svg><span>Review</span></div><h1>Is this Disc part of a set?</h1><p class="sub">The Office (UK) Series 1 — Disc 3 · DVD · 4 Titles ripped</p></div><div class="actions"><a class="btn quiet" href="now.html">Not now</a><a class="btn pri" href="review-tv.html">Continue</a></div></div>
+  <div class="solo"><div class="stack">
+  <section class="bin rev"><div class="tab">This Disc</div><div class="box">
+    <label class="radio on"><input type="radio" name="set" checked><div><div class="tt">Part of an existing set</div><div class="ts">Episodes and Extras go into the same Plex folder as the other Discs.</div>
+      <div class="box" style="margin-top:14px;border-top-width:1px;border-top-color:var(--rule)">
+        <label class="radio on"><input type="radio" name="which" checked><div><div class="tt">The Office (UK) Series 1</div><div class="ts">Discs 1–2 filed · TV / The Office (2001) / Season 01</div></div><span class="stk fil">2 filed</span></label>
+        <label class="radio"><input type="radio" name="which"><div><div class="tt">The Office (UK) Series 2</div><div class="ts">Disc 1 filed</div></div><span class="stk fil">1 filed</span></label>
+      </div>
+      <div class="field" style="margin-top:14px;max-width:200px"><label for="dn">This is Disc</label><input class="input" id="dn" type="number" min="1" value="3"><span class="hint">of the set</span></div>
+    </div><span></span></label>
+    <label class="radio"><input type="radio" name="set"><div><div class="tt">Not part of a set</div><div class="ts">Identify it on its own.</div></div><span></span></label>
+  </div></section>
+  </div></div>
+</main>
+</body>
+</html>
