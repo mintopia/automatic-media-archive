@@ -201,3 +201,13 @@ form.actions{margin:0}
 .actions button.btn{appearance:none}
 .drive .title a,.row .tt a{color:inherit;text-decoration:none}
 .drive .title a:hover,.row .tt a:hover{text-decoration:underline;text-decoration-thickness:2px}
+
+/* Review (docs/mockups/review-cd.html) */
+.radio:has(>input:checked){background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.radio .stk.sel{visibility:hidden}.radio:has(>input:checked) .stk.sel{visibility:visible}
+@media (max-width:720px){.radio .stk{display:none}}
+.manual{border-top:1px solid var(--rule)}.manual summary{display:list-item;list-style:inside disclosure-closed;padding:16px 18px;font-weight:600;cursor:pointer;min-height:44px}.manual[open] summary{list-style-type:disclosure-open}.manual summary:hover{background:var(--well)}
+.manual>.pad{padding:18px}
+.page-head.gap{margin-bottom:24px}
+textarea.input{padding:10px 12px;font:inherit;resize:vertical}
+.errors{color:var(--rev-ink);font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px}

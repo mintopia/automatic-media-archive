@@ -14,7 +14,7 @@
 <header class="top">
   <a class="brand" href="/">Automatic Media Archive</a>
   <nav class="nav" aria-label="Main">
-    {%- for label, href in nav %}<a href="{{ href }}"{% if href == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
+    {%- for label, href in nav %}<a href="{{ href }}"{% if href == current %} aria-current="page"{% endif %}>{{ label }}{% if href == "/review" and review %}<span class="count" aria-label="{{ review | length }} waiting">{{ review | length }}</span>{% endif %}</a>{% endfor -%}
   </nav>
   {%- if scratch %}
   <div class="scratch" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="{{ scratch.used_gb }}" aria-valuemin="0" aria-valuemax="{{ scratch.total_gb }}" aria-label="Scratch used"><i style="width:{{ scratch.pct }}%"></i></span><b>{{ scratch.used_gb }} / {{ scratch.total_gb }} GB</b></div>
