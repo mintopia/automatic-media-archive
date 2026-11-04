@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from ama import decoys
 from ama.archive import safe_name
 from ama.db import Database
 from ama.discs import TitleRecord, TitleStatus
@@ -59,8 +60,12 @@ class Extra:
 
 
 def extra_titles(titles: Iterable[TitleRecord], main_feature: int) -> list[TitleRecord]:
-    """The Disc's Extras: every ripped Title but the Main Feature."""
-    return [t for t in titles if t.status == TitleStatus.RIPPED and t.number != main_feature]
+    """The Disc's Extras: every ripped Title but the Main Feature and, on a Disc with
+    decoy playlists (#9), the other near-identical versions of the film."""
+    ripped = [t for t in titles if t.status == TitleStatus.RIPPED]
+    found = decoys.detect(ripped)
+    versions = {t.number for t in found.versions} if found else set()
+    return [t for t in ripped if t.number != main_feature and t.number not in versions]
 
 
 def default_names(titles: Iterable[TitleRecord], not_names: Iterable[str]) -> dict[int, str]:

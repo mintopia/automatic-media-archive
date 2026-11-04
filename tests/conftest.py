@@ -16,9 +16,11 @@ from ama.app import Services, build_services, create_app
 from ama.config import (
     Config,
     CqConfig,
+    DiscordConfig,
     DriveConfig,
     EncodeConfig,
     NasConfig,
+    NtfyConfig,
     PathsConfig,
     PlexConfig,
     TmdbConfig,
@@ -44,8 +46,10 @@ MAKEMKV_OK = ('MSG:1005,0,1,"MakeMKV v2.0.0 win(x64-release) started","%1 starte
               '"MakeMKV v2.0.0 win(x64-release)"\n')
 
 
-def make_config(tmp_path, password: str = "") -> Config:
+def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str = "") -> Config:
     return Config(
+        discord=DiscordConfig(webhook_url=discord),
+        ntfy=NtfyConfig(topic=ntfy_topic),
         web=WebConfig(password=password),
         drive=DriveConfig(poll_seconds=0.01),
         # The "NAS share" is a local folder; reachability is faked by `nas_exists`.
@@ -76,10 +80,11 @@ class Harness:
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
-                 fetch: FakeFetch | None = None, pins: tuple | None = None) -> Harness:
+                 fetch: FakeFetch | None = None, pins: tuple | None = None,
+                 discord: str = "", ntfy_topic: str = "") -> Harness:
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
     MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
-    cfg = make_config(tmp_path, password)
+    cfg = make_config(tmp_path, password, discord, ntfy_topic)
     drive = FakeDrive()
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"

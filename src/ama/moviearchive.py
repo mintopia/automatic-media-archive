@@ -38,13 +38,13 @@ from pathlib import Path
 
 import httpx
 
-from ama import encode, hdr, picture, review
+from ama import decoys, encode, hdr, picture, review
 from ama import extras as extras_mod
 from ama.archive import Archive, FilingError, extended_path
 from ama.archive import move as archive_move
 from ama.config import CqConfig
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord, TitleStatus
+from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus
@@ -294,6 +294,17 @@ class MovieArchiver:
             encoding="utf-8")
         film, reason = decide(candidates, main.duration_s)
         searched = ", ".join(f"“{t}”" for t in terms) or "nothing (the Disc has no usable name)"
+        found = decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)
+        if found is not None:
+            likely = found.likely
+            name = f"Title {likely.number}" + (f" ({likely.source})" if likely.source else "")
+            self._discs.log(rec.id, f"Suspected decoy playlists: {len(found.versions)} Titles "
+                                    f"run within {decoys.DURATION_TOLERANCE_S} s of each other; "
+                                    + (f"{name} plays in order, likely the film"
+                                       if found.confident else
+                                       "none plays more in order than the others"))
+            if film is not None:  # confident, but which Title is the film is for Review
+                reason, film = ReviewReason.DECOY_PLAYLISTS, None
         if film is None:
             assert reason is not None
             self._discs.mark_review(rec.id, reason)

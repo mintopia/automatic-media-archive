@@ -32,6 +32,7 @@ from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
+from ama.notify import Notifier, channels
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
@@ -63,12 +64,13 @@ class Services:
     thumbnails: Thumbnailer
     repeat: RepeatGuard
     scratch: ScratchGate
+    notifier: Notifier
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
-                self.thumbnails.run]
+                self.thumbnails.run, self.notifier.run]
 
 
 def build_services(
@@ -132,6 +134,7 @@ def build_services(
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
+        notifier=Notifier(discs, bus, channels(cfg, http)),
     )
 
 

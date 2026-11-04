@@ -109,6 +109,7 @@ class FakeMakemkv:
         self.ripped_ids: list[int] = []
         self.ripping = False
         self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
+        self.scan_file = "makemkv-info-bd.txt"  # what `info` prints (tests/data/)
         self.title_names: dict[int, str] = {}  # makemkv Title id -> its name (TINFO 2)
         # A UHD scan says "Using LibreDrive mode"; this many `info` runs refuse it instead.
         self.libredrive_refusals = 0
@@ -126,7 +127,7 @@ class FakeMakemkv:
                 on_line(ln)
             return 127
         if "info" in args:
-            out = _lines("makemkv-info-bd.txt")
+            out = _lines(self.scan_file)
             if self.disc_name is not None:
                 volume = self.disc_name.upper().replace(" ", "_")
                 out = [f'CINFO:2,0,"{self.disc_name}"' if ln.startswith("CINFO:2,") else
@@ -335,6 +336,10 @@ class FakeWeb:
         self.tmdb_movies: dict[int, dict] = {}
         self.tmdb_offline = False
         self.tmdb_requests: list[httpx.Request] = []
+        # Notifications (#15): what Discord and ntfy were sent; `notify_status` = their answer.
+        self.discord: list[httpx.Request] = []
+        self.ntfy: list[httpx.Request] = []
+        self.notify_status = 200
 
     def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
                  original_language: str = "en", original_title: str | None = None,
@@ -379,6 +384,11 @@ class FakeWeb:
                                                  self.tmdb_search.get(query, [])})
             movie = self.tmdb_movies.get(int(url.path.rsplit("/", 1)[-1]))
             return httpx.Response(200, json=movie) if movie else httpx.Response(404)
+        if url.host in ("discord.com", "ntfy.sh"):
+            (self.discord if url.host == "discord.com" else self.ntfy).append(request)
+            if self.notify_status == 0:
+                raise httpx.ConnectError("no network", request=request)
+            return httpx.Response(self.notify_status, json={})
         if url.host == "plex":
             self.plex_requests.append(request)
             if url.path == "/library/sections":

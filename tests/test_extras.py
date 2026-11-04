@@ -50,7 +50,7 @@ def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_revie
 def test_extras_are_named_from_the_disc_unless_the_name_is_just_the_discs():
     def t(number: int, name: str) -> TitleRecord:
         return TitleRecord(number, number, 60, 1, 1, 0, "1", f"t{number}.mkv",
-                           TitleStatus.RIPPED, name)
+                           TitleStatus.RIPPED, name=name)
 
     names = default_names([t(2, "Trailer"), t(3, "ARRIVAL"), t(4, ""), t(5, "Trailer"),
                            t(6, "Acoustic Design")], ("Arrival", "ARRIVAL_BD"))
@@ -84,6 +84,19 @@ def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harn
     _rip_and_file_wait(harness)
     assert (_film_folder(harness) / "Other" / "Title 1.mkv").read_bytes() == \
         b"HEVC Example_Movie_t00.mkv"
+
+
+def test_decoy_versions_of_the_film_are_not_extras(client, harness):
+    from tests.test_decoys import _heat
+
+    rec = _heat(harness)  # 14 near-identical versions of Heat, then 2 other Titles
+    page = html.unescape(client.get(f"/review/{rec.id}").text)
+    assert "<dt>Extras</dt><dd>2 Extras, filed under Other</dd>" in page
+    client.post(f"/review/{rec.id}/film", data={"film": "949", "title": "6"})
+    _rip_and_file_wait(harness)
+    other = extended_path(harness.nas_root / "Movies" / "Heat (1995) {tmdb-949}" / "Other")
+    assert len(list(other.iterdir())) == 2
+    assert len(harness.ffmpeg.encodes()) == 3  # the film and its 2 Extras, no decoys
 
 
 def _rip_and_file_wait(harness):

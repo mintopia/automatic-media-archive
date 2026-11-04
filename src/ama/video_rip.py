@@ -84,6 +84,15 @@ class RipProgress:
         return f"{minutes} min left" if minutes < 60 else f"{minutes // 60} h {minutes % 60} m left"
 
 
+def title_records(keep: list[makemkv.TitleInfo]) -> list[TitleRecord]:
+    """The Titles to rip, numbered 1.. as people see them."""
+    return [TitleRecord(number=n, makemkv_id=t.id, duration_s=t.duration_s,
+                        size_bytes=t.size_bytes, audio=t.audio, subtitles=t.subtitles,
+                        segments=t.segments_map, file=t.output_file or f"title_t{t.id:02d}.mkv",
+                        source=t.source, name=t.name)
+            for n, t in enumerate(keep, start=1)]
+
+
 class _Aborted(Exception):
     pass
 
@@ -238,12 +247,7 @@ class VideoRipper:
             if not sel.keep:
                 return Failure(FailureKind.DISC, "There are no Titles of 30 seconds or more.",
                                "Nothing on this Disc looks worth archiving.")
-            titles = [TitleRecord(number=n, makemkv_id=t.id, duration_s=t.duration_s,
-                                  size_bytes=t.size_bytes, audio=t.audio, subtitles=t.subtitles,
-                                  segments=t.segments_map,
-                                  file=t.output_file or f"title_t{t.id:02d}.mkv",
-                                  name=t.name)
-                      for n, t in enumerate(sel.keep, start=1)]
+            titles = title_records(sel.keep)
             self._store.set_titles(disc.id, titles,
                                    skipped_short=scan.skipped_short + len(sel.short),
                                    skipped_duplicates=scan.skipped_duplicates + len(sel.duplicates))
