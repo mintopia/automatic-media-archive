@@ -312,7 +312,8 @@ class FakeWeb:
         self.tmdb_requests: list[httpx.Request] = []
 
     def add_film(self, query: str, id_: int, title: str, runtime: int, year: int = 2016,
-                 original_language: str = "en", original_title: str | None = None) -> None:
+                 original_language: str = "en", original_title: str | None = None,
+                 director: str = "") -> None:
         """TMDB knows this film, and finds it when searched for `query`."""
         date = f"{year}-11-10"
         self.tmdb_search.setdefault(query.casefold(), []).append(
@@ -320,7 +321,9 @@ class FakeWeb:
              "release_date": date, "original_language": original_language})
         self.tmdb_movies[id_] = {"id": id_, "title": title, "runtime": runtime,
                                  "original_title": original_title or title,
-                                 "release_date": date, "original_language": original_language}
+                                 "release_date": date, "original_language": original_language,
+                                 "credits": {"crew": [{"job": "Director", "name": director}]
+                                             if director else []}}
 
     def transport(self) -> httpx.MockTransport:
         return httpx.MockTransport(self.handle)
@@ -380,6 +383,8 @@ class FakeFfmpeg:
 
     def __init__(self) -> None:
         self.calls: list[list[str]] = []
+        self.thumbnails: list[list[str]] = []  # still-frame grabs (`-frames:v 1`), not Encodes
+        self.thumbnail_exit_code = 0
         self.streams: list[dict] = [
             probe_stream(0, "video", "h264", height=1080),
             probe_stream(1, "audio", "truehd", "eng", "Surround 7.1", default=1),
@@ -408,6 +413,11 @@ class FakeFfmpeg:
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
                  cwd: Path | None = None) -> int:
         args = list(args)
+        if "-frames:v" in args:
+            self.thumbnails.append(args)
+            if not self.thumbnail_exit_code:
+                Path(args[-1]).write_bytes(b"\xff\xd8 fake jpeg")
+            return self.thumbnail_exit_code
         self.calls.append(args)
         if "ffprobe" in Path(args[0]).name.lower():
             out = json.dumps({"streams": self.streams, "chapters": [{"id": 0}, {"id": 1}],

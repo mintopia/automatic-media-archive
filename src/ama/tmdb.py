@@ -63,6 +63,7 @@ class Candidate:
     year: int | None
     original_language: str  # ISO 639-1
     runtime_min: int        # 0 = TMDB doesn't know
+    director: str = ""      # shown in Review to tell same-named films apart
 
     @property
     def name(self) -> str:
@@ -181,6 +182,21 @@ class Tmdb:
             raise TmdbError(f"TMDB answered HTTP {r.status_code}")
         return r.json()
 
+    def movie(self, movie_id: int, found: dict | None = None) -> Candidate:
+        """One film's details (`found`: its search result, for fields the details lack)."""
+        r = found or {}
+        d = self._get(f"/movie/{movie_id}", {"append_to_response": "credits"})
+        date = d.get("release_date") or r.get("release_date") or ""
+        crew = (d.get("credits") or {}).get("crew") or []
+        return Candidate(
+            id=int(movie_id), title=d.get("title") or r.get("title") or "",
+            original_title=d.get("original_title") or "",
+            year=int(date[:4]) if date[:4].isdigit() else None,
+            original_language=d.get("original_language") or r.get("original_language") or "",
+            runtime_min=int(d.get("runtime") or 0),
+            director=", ".join(c["name"] for c in crew
+                               if c.get("job") == "Director" and c.get("name"))[:80])
+
     def candidates(self, terms: list[str]) -> list[Candidate]:
         """Films titled like one of `terms`, with their runtimes. Raises TmdbError."""
         found: dict[int, Candidate] = {}
@@ -189,13 +205,11 @@ class Tmdb:
             for r in results.get("results", []):
                 if r.get("id") in found or len(found) >= MAX_DETAILS or not title_matches(r, term):
                     continue
-                d = self._get(f"/movie/{r['id']}", {})
-                date = d.get("release_date") or r.get("release_date") or ""
-                found[int(r["id"])] = Candidate(
-                    id=int(r["id"]), title=d.get("title") or r.get("title") or term,
-                    original_title=d.get("original_title") or "",
-                    year=int(date[:4]) if date[:4].isdigit() else None,
-                    original_language=d.get("original_language") or
-                    r.get("original_language") or "",
-                    runtime_min=int(d.get("runtime") or 0))
+                found[int(r["id"])] = self.movie(int(r["id"]), {"title": term, **r})
         return list(found.values())
+
+    def search(self, query: str, limit: int = MAX_DETAILS) -> list[Candidate]:
+        """TMDB's best `limit` films for a free-text search (Review). Raises TmdbError."""
+        results = self._get("/search/movie", {"query": query, "include_adult": "false"})
+        return [self.movie(int(r["id"]), r) for r in results.get("results", [])[:limit]
+                if r.get("id")]
