@@ -11,8 +11,9 @@ from __future__ import annotations
 import html
 
 from ama.archive import extended_path
-from ama.discs import DiscStatus
+from ama.discs import DiscStatus, TitleRecord, TitleStatus
 from ama.drive import DiscType
+from ama.extras import default_names
 from tests.conftest import eventually
 
 FOLDER = "Example Movie (2016) {tmdb-1234}"
@@ -41,9 +42,20 @@ def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_revie
 
     extra = _film_folder(harness) / "Other" / "Making Of.mkv"
     assert extra.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # Encoded from the Rip
-    assert not rec.scratch_dir.exists()
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
-    assert "Filed 1 Extra to Other" in log
+    eventually(lambda: not rec.scratch_dir.exists())
+    eventually(lambda: "Filed 1 Extra to Other" in "\n".join(
+        map(str, harness.services.discs.log_lines(rec.id))))
+
+
+def test_extras_are_named_from_the_disc_unless_the_name_is_just_the_discs():
+    def t(number: int, name: str) -> TitleRecord:
+        return TitleRecord(number, number, 60, 1, 1, 0, "1", f"t{number}.mkv",
+                           TitleStatus.RIPPED, name)
+
+    names = default_names([t(2, "Trailer"), t(3, "ARRIVAL"), t(4, ""), t(5, "Trailer"),
+                           t(6, "Acoustic Design")], ("Arrival", "ARRIVAL_BD"))
+    assert names == {2: "Trailer (Title 2)", 3: "Title 3", 4: "Title 4",
+                     5: "Trailer (Title 5)", 6: "Acoustic Design"}
 
 
 def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
@@ -57,6 +69,26 @@ def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
     assert not (folder / "Other").exists()
     log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
     assert "The Extra “Title 2” is left out; the film is filed without it" in log
+
+
+def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harness):
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # no film on TMDB: Review
+    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=5)
+    page = html.unescape(client.get("/review/1").text)
+    assert "<dt>Extras</dt><dd>1 Extra, filed under Other</dd>" in page
+
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    r = client.post("/review/1/film", data={"film": 1234, "title": 2})  # the short one, oddly
+    assert r.status_code == 200
+    _rip_and_file_wait(harness)
+    assert (_film_folder(harness) / "Other" / "Title 1.mkv").read_bytes() == \
+        b"HEVC Example_Movie_t00.mkv"
+
+
+def _rip_and_file_wait(harness):
+    eventually(lambda: harness.services.discs.list(DiscStatus.FILED), timeout=5)
+    return harness.services.discs.list(DiscStatus.FILED)[0]
 
 
 def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_folder(
@@ -97,3 +129,12 @@ def test_leaving_the_extras_as_they_are_takes_them_off_the_review_list(client, h
     client.post(f"/discs/{rec.id}/extras/leave")
     assert f"/discs/{rec.id}/extras" not in client.get("/review").text
     assert extended_path(_film_folder(harness) / "Other" / "Title 2.mkv").exists()
+
+
+def test_a_filed_film_links_to_its_extras_from_now_and_its_disc_page(client, harness):
+    _film(harness)
+    rec = _rip_and_file(harness)
+    now = html.unescape(client.get("/").text)
+    assert f'Movies · 1080p · <a href="/discs/{rec.id}/extras">1 Extra</a>' in now  # Filed today
+    disc = client.get(f"/discs/{rec.id}").text
+    assert f'href="/discs/{rec.id}/extras"' in disc

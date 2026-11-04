@@ -4,7 +4,7 @@
   <div class="box">
   {%- for d in filed[:3] %}
     <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div><div class="ts">
-      {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}
+      {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}{% if d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ d.extras }} Extra{{ "s" if d.extras != 1 }}</a>{% endif %}
       {%- else %}Music · {{ d.tracks | length }} tracks · verified{% endif %}</div></div><span class="stk fil">Filed</span></div>
   {%- endfor %}
   {%- if filed | length > 3 %}
