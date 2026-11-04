@@ -7,7 +7,7 @@
 {%- set source = ("Disc " ~ disc.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
 <div class="drive">
   {%- if g and g.poster %}
-  <div class="cell art"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ disc.disc_type.long_name }}</span></div>
+  <div class="cell art poster"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ disc.disc_type.long_name }}</span></div>
   {%- else %}
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ disc.disc_type.long_name }}</span></div>
   {%- endif %}

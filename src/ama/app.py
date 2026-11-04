@@ -20,6 +20,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from ama.archive import Archive
+from ama.backfill import Backfill
 from ama.cdarchive import CdArchiver
 from ama.cdguess import Guesser
 from ama.cdrip import CdRipper, CdTracks
@@ -75,12 +76,14 @@ class Services:
     sets: DiscSets
     covers: Covers
     media: MediaStore
+    backfill: Backfill
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
-                self.thumbnails.run, self.tv_archive.run, self.notifier.run]
+                self.thumbnails.run, self.tv_archive.run, self.notifier.run,
+                self.backfill.run]
 
 
 def build_services(
@@ -157,6 +160,8 @@ def build_services(
         sets=DiscSets(db),
         covers=covers,
         media=media,
+        backfill=Backfill(db, discs, media, mb, covers, tmdb, movie_archive.movies,
+                          tv_titles),
     )
 
 

@@ -85,6 +85,13 @@ class Album:
             out.append(("Cover Art Archive", f"{CAA}/release/{self.release_id}"))
         return out
 
+    @property
+    def source(self) -> tuple[str, str, str] | None:
+        """(name, short name, URL) of where it was identified; None if entered by hand."""
+        if not self.release_id:
+            return None
+        return "MusicBrainz release", "MB", f"{MB}/release/{self.release_id}"
+
 
 @dataclass(frozen=True)
 class Screen:
@@ -105,6 +112,10 @@ class Screen:
     @property
     def links(self) -> list[tuple[str, str]]:
         return [("TMDB", f"{TMDB}/{'tv' if self.tv else 'movie'}/{self.tmdb_id}")]
+
+    @property
+    def source(self) -> tuple[str, str, str]:
+        return "TMDB", "TMDB", self.links[0][1]
 
 
 Media = Album | Screen
