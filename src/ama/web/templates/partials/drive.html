@@ -1,0 +1,34 @@
+{%- set kind = drive | kind -%}
+{%- if kind == "DiscPresent" -%}
+<div class="drive">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ drive.disc_type.long_name }}</span></div>
+  <div class="body">
+    <div class="title">{{ drive.label or drive.disc_type.long_name }}</div>
+    <div class="meta">In the drive</div>
+  </div>
+</div>
+{%- elif kind == "UnrecognisedDisc" -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><span>Unknown Disc</span></div>
+  <div class="body">
+    <div class="title">{{ drive.label or "Not a CD, DVD or Blu-ray" }}</div>
+    <div class="meta">This isn't an Audio CD, DVD, Blu-ray or UHD Blu-ray, so we can't archive this Disc. Eject it and insert another.</div>
+  </div>
+</div>
+{%- elif kind == "DriveMissing" -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><span>No drive</span></div>
+  <div class="body">
+    <div class="title">Can't find the drive</div>
+    <div class="meta">{{ drive.reason }}. Check the drive is connected; this updates on its own.</div>
+  </div>
+</div>
+{%- else -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><span>Drive empty</span></div>
+  <div class="body">
+    <div class="title">Insert a Disc</div>
+    <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
+  </div>
+</div>
+{%- endif -%}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Now{% endblock %} · Automatic Media Archive</title>
+<link rel="preload" href="/static/fonts/archivo-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/ama.css">
+<script src="/static/theme.js"></script>
+<script src="/static/vendor/htmx.min.js" defer></script>
+<script src="/static/vendor/htmx-ext-sse.js" defer></script>
+</head>
+<body{% block body_attrs %} hx-ext="sse" sse-connect="/events"{% endblock %}>
+{% block header %}
+<header class="top">
+  <a class="brand" href="/">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main">
+    {%- for label, href in nav %}<a href="{{ href }}"{% if href == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
+  </nav>
+  {%- if scratch %}
+  <div class="scratch" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="{{ scratch.used_gb }}" aria-valuemin="0" aria-valuemax="{{ scratch.total_gb }}" aria-label="Scratch used"><i style="width:{{ scratch.pct }}%"></i></span><b>{{ scratch.used_gb }} / {{ scratch.total_gb }} GB</b></div>
+  {%- endif %}
+</header>
+{% endblock %}
+{% block main %}{% endblock %}
+</body>
+</html>

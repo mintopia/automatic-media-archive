@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block main %}
+<main>
+  <div sse-swap="nas" role="status">{% include "partials/nas.html" %}</div>
+  <div class="split">
+    <div class="stack">
+      <section aria-labelledby="drive-h">
+        <h2 id="drive-h" class="sr">Disc in drive</h2>
+        <div sse-swap="drive" aria-live="polite">{% include "partials/drive.html" %}</div>
+      </section>
+      <section class="bin rev">
+        <div class="tab">Needs Review <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing needs you right now. You'll get a notification when a Disc needs a decision.</p></div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin rip">
+        <div class="tab">Ripping <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing ripping.</p></div>
+      </section>
+      <section class="bin enc">
+        <div class="tab">Encoding <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing waiting to encode.</p></div>
+      </section>
+      <section class="bin fil">
+        <div class="tab">Filed today <span class="c">0</span></div>
+        <div class="box"><p class="pad ts">Nothing filed yet today.</p></div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
