@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
 
-from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed
+from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -25,6 +25,7 @@ STATIC_DIR = HERE / "static"
 TEMPLATES = Jinja2Templates(directory=HERE / "templates")
 # `{% if state | kind == "DiscPresent" %}`: branch on which variant a state union holds.
 TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
+TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
 NAV: list[tuple[str, str]] = [("Now", "/")]
@@ -33,6 +34,7 @@ FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
     "nas": "partials/nas.html",
     "tools": "partials/tools.html",
+    "rip": "partials/rip.html",
 }
 
 GB = 1000**3
@@ -52,6 +54,10 @@ def view_context(services: Services) -> dict[str, Any]:
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
+        # Video Rip: the Disc being ripped (else the last one), and its live progress.
+        "rip_disc": services.video_rip.disc,
+        "rip_progress": services.video_rip.progress,
+        "rip_failure": services.discs.unseen_failure(),
         **_tools_context(services),
     }
 

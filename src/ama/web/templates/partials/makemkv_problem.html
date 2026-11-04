@@ -1,16 +1,7 @@
 {#- What's wrong with MakeMKV and how to fix it, per preflight status (ADR 0006). -#}
 {%- set download = '<a href="https://www.makemkv.com/download/">https://www.makemkv.com/download/</a>' -%}
 {%- set beta = '<a href="https://forum.makemkv.com/forum/viewtopic.php?t=1053">https://forum.makemkv.com/forum/viewtopic.php?t=1053</a>' -%}
-{%- macro headline(st) -%}
-{%- set k = st | kind -%}
-{%- if k == "MakemkvMissing" -%}Can't find MakeMKV on this PC.
-{%- elif k == "MakemkvTooOld" -%}MakeMKV v{{ st.version }} is too old to run.
-{%- elif k == "MakemkvUnregistered" -%}MakeMKV isn't registered.
-{%- elif k == "MakemkvKeyRejected" -%}MakeMKV says its licence key isn't valid.
-{%- elif k == "MakemkvBroken" -%}MakeMKV didn't run properly.
-{%- else -%}Checking MakeMKV…
-{%- endif -%}
-{%- endmacro -%}
+{%- macro headline(st) -%}{{ st | makemkv_headline }}{%- endmacro -%}
 {%- macro body(st) -%}
 {%- set k = st | kind -%}
 DVDs and Blu-rays can't be ripped until this is fixed. CDs still work.

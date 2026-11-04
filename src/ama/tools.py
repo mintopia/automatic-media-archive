@@ -165,6 +165,25 @@ MakemkvStatus = (ToolReady | ToolPending | MakemkvMissing | MakemkvTooOld | Make
 ToolStatus = ManagedStatus | MakemkvStatus
 
 
+def makemkv_headline(status: ToolStatus) -> str:
+    """One sentence saying what's wrong with MakeMKV (the `/makemkv` page has the fix)."""
+    match status:
+        case MakemkvMissing():
+            return "Can't find MakeMKV on this PC."
+        case MakemkvTooOld(version=v):
+            return f"MakeMKV v{v} is too old to run."
+        case MakemkvUnregistered():
+            return "MakeMKV isn't registered."
+        case MakemkvKeyRejected():
+            return "MakeMKV says its licence key isn't valid."
+        case MakemkvBroken():
+            return "MakeMKV didn't run properly."
+        case ToolReady():
+            return "MakeMKV is ready."
+        case _:
+            return "MakeMKV hasn't been checked yet."
+
+
 class ToolUnavailable(Exception):
     def __init__(self, name: str, status: ToolStatus) -> None:
         super().__init__(f"{name} isn't available: {status}")
@@ -271,8 +290,10 @@ class Tools:
     # --- lifecycle ---
 
     async def run(self) -> None:
-        """Startup: check MakeMKV, then provision, retrying failed downloads until all are in."""
-        await self.check_makemkv()
+        """Startup: check MakeMKV while provisioning, retrying failed downloads until all are in."""
+        await asyncio.gather(self.check_makemkv(), self._provision_until_ready())
+
+    async def _provision_until_ready(self) -> None:
         while True:
             await self.provision()
             if not any(isinstance(s, ToolFailed) for s in self._status.values()):
@@ -366,6 +387,10 @@ class Tools:
             return MakemkvMissing(tuple(str(p) for p in candidates))
         try:
             result = self._runner([str(exe), "-r", "--cache=1", "info", "disc:9999"])
+        except subprocess.TimeoutExpired as e:
+            return MakemkvBroken(
+                f"{exe} started but didn't finish within {e.timeout:.0f} seconds. If the MakeMKV "
+                "window is open, it may be showing a message: answer it or close MakeMKV.")
         except (OSError, subprocess.SubprocessError) as e:
             return MakemkvBroken(f"{exe} wouldn't start: {e}")
         lines = [ln.strip() for ln in result.output.splitlines() if ln.strip()]

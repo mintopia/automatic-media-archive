@@ -1,5 +1,9 @@
 {%- set kind = drive | kind -%}
-{%- if kind == "DiscPresent" -%}
+{%- if kind == "DiscPresent" and rip_progress and rip_disc.label == drive.label -%}
+{%- with disc = rip_disc, progress = rip_progress, on_page = false -%}
+{% include "partials/rip_card.html" %}
+{%- endwith -%}
+{%- elif kind == "DiscPresent" -%}
 <div class="drive">
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ drive.disc_type.long_name }}</span></div>
   <div class="body">
@@ -30,5 +34,14 @@
     <div class="title">Insert a Disc</div>
     <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
   </div>
+</div>
+{%- endif -%}
+{%- if rip_failure and not rip_progress %}
+<div class="notice" role="alert" style="margin-top:16px">
+  {%- if rip_failure.failure.kind == "licence" %}
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>
+  {%- else %}
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't rip “{{ rip_failure.name }}”.</b>{{ rip_failure.failure.headline }} <a href="/discs/{{ rip_failure.id }}">See what went wrong</a></div>
+  {%- endif %}
 </div>
 {%- endif -%}

@@ -1,5 +1,6 @@
 """What the UI says about tools: download progress/failures, and MakeMKV problems."""
 
+import html
 import threading
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from tests.conftest import eventually, make_harness
 from tests.fakes import FakeFetch
 
 DATA = Path(__file__).parent / "data"
-TOO_OLD = (DATA / "makemkvcon-info-too-old.txt").read_text(encoding="utf-8")
+TOO_OLD = (DATA / "makemkv-licence-too-old.txt").read_text(encoding="utf-8")
 FFMPEG_URL = PINS[0].url
 CYANRIP_URL = PINS[1].url
 
@@ -76,17 +77,17 @@ def test_no_tool_notices_when_everything_is_ready(client, harness):
 ])
 def test_each_makemkv_problem_has_its_own_fix(tmp_path, output, key, expect):
     h = make_harness(tmp_path)
-    h.makemkv["key"] = key
+    h.makemkv_check["key"] = key
     if output is not None:
-        h.makemkv["output"] = output
+        h.makemkv_check["output"] = output
     if output == "":
         (tmp_path / "MakeMKV" / "makemkvcon64.exe").unlink()
     with TestClient(create_app(h.services)) as c:
         eventually(lambda: not isinstance(h.services.tools.status("makemkvcon"),
                                           (ToolReady, ToolPending)))
-        now = c.get("/").text
+        now = html.unescape(c.get("/").text)
         assert "DVD and Blu-ray Rips are paused" in now and 'href="/makemkv"' in now
-        page = c.get("/makemkv").text
+        page = html.unescape(c.get("/makemkv").text)
         for text in expect:
             assert text in page, text
         assert "CDs still work" in page
@@ -95,12 +96,37 @@ def test_each_makemkv_problem_has_its_own_fix(tmp_path, output, key, expect):
 
 def test_check_again_rechecks_makemkv(tmp_path):
     h = make_harness(tmp_path)
-    h.makemkv["key"] = ""
+    h.makemkv_check["key"] = ""
     with TestClient(create_app(h.services)) as c:
-        eventually(lambda: "isn't registered" in c.get("/makemkv").text)
-        h.makemkv["key"] = "T-fixed"
+        eventually(lambda: "isn't registered" in html.unescape(c.get("/makemkv").text))
+        h.makemkv_check["key"] = "T-fixed"
         r = c.post("/makemkv/check", follow_redirects=False)
         assert r.status_code == 303 and r.headers["location"] == "/makemkv"
-        page = c.get("/makemkv").text
+        page = html.unescape(c.get("/makemkv").text)
         assert "MakeMKV v2.0.0 is ready" in page
         assert "paused" not in c.get("/").text
+
+
+def test_video_rip_is_refused_until_makemkv_passes_its_checks(tmp_path):
+    from ama.drive import DiscType
+
+    h = make_harness(tmp_path)
+    h.makemkv_check["key"] = ""
+    h.makemkv.release()
+    with TestClient(create_app(h.services)) as c:
+        eventually(lambda: "isn't registered" in html.unescape(c.get("/makemkv").text))
+        h.drive.insert(DiscType.BD, "MATRIX_BD")
+        eventually(lambda: h.drive.ejected == 1)
+        assert h.makemkv.calls == []  # makemkvcon never ran
+        now = html.unescape(c.get("/").text)
+        assert "MakeMKV isn't registered." in now and "MATRIX_BD" in now
+        page = html.unescape(c.get("/discs/1").text)
+        assert "MakeMKV isn't registered." in page and 'href="/makemkv"' in page
+        assert "This isn't a problem with the Disc" in page
+
+        # Fixed and re-checked: the next insertion rips.
+        h.makemkv_check["key"] = "T-fixed"
+        c.post("/makemkv/check")
+        h.drive.insert(DiscType.BD, "MATRIX_BD")
+        eventually(lambda: h.drive.ejected == 2)
+        assert h.makemkv.calls

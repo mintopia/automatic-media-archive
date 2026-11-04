@@ -1,8 +1,9 @@
 """Wiring: build the long-lived services, and the FastAPI app that serves them.
 
 `build_services` is the one place real OS/process adapters are chosen; tests
-pass fakes for `probe`, `runner`, `nas_exists` and `make_tools`. `create_app`'s lifespan
-starts every background monitor as an asyncio task and cancels them on exit.
+pass fakes for `probe`, `runner`, `line_runner`, `nas_exists` and `make_tools`.
+`create_app`'s lifespan starts every background monitor as an asyncio task and
+cancels them on exit.
 """
 
 from __future__ import annotations
@@ -18,11 +19,13 @@ from fastapi.staticfiles import StaticFiles
 
 from ama.config import Config
 from ama.db import Database
+from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.nas import NasMonitor
-from ama.proc import Runner, run
+from ama.proc import LineRunner, Runner, run, stream
 from ama.tools import Tools
+from ama.video_rip import VideoRipper
 from ama.web import STATIC_DIR, auth, pages
 
 
@@ -33,11 +36,13 @@ class Services:
     bus: EventBus
     drive: DriveMonitor
     nas: NasMonitor
+    discs: DiscStore
+    video_rip: VideoRipper
     tools: Tools
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.drive.run, self.nas.run, self.tools.run]
+        return [self.drive.run, self.nas.run, self.video_rip.run, self.tools.run]
 
 
 def build_services(
@@ -45,18 +50,27 @@ def build_services(
     probe: DriveProbe | None = None,
     runner: Runner = run,
     nas_exists: Callable[[str], bool] = os.path.isdir,
+    line_runner: LineRunner = stream,
     make_tools: Callable[[EventBus], Tools] | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
+    db = Database(cfg.paths.state_db)
+    tools = make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner)
+    drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
+                         interval=cfg.drive.poll_seconds)
+    discs = DiscStore(db)
     return Services(
         config=cfg,
-        db=Database(cfg.paths.state_db),
+        db=db,
         bus=bus,
-        drive=DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
-                           interval=cfg.drive.poll_seconds),
+        drive=drive,
         nas=NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists),
-        tools=make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner),
+        tools=tools,
+        discs=discs,
+        video_rip=VideoRipper(drive, discs, bus, cfg.paths.scratch,
+                              makemkvcon=lambda: tools.path("makemkvcon"),
+                              line_runner=line_runner),
     )
 
 

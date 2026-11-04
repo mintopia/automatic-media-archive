@@ -21,8 +21,8 @@ from ama.tools import (
 from tests.fakes import FakeRunner
 
 DATA = Path(__file__).parent / "data"
-V2 = (DATA / "makemkvcon-info-v2.0.0.txt").read_text(encoding="utf-8")
-TOO_OLD = (DATA / "makemkvcon-info-too-old.txt").read_text(encoding="utf-8")
+V2 = (DATA / "makemkv-unregistered-v2.0.0.txt").read_text(encoding="utf-8")
+TOO_OLD = (DATA / "makemkv-licence-too-old.txt").read_text(encoding="utf-8")
 EXPIRED = ('MSG:1005,0,1,"MakeMKV v1.18.2 win(x64-release) started","%1 started","MakeMKV v1.18.2"\n'
            'MSG:5055,516,0,"Evaluation period has expired, shareware functionality unavailable.",'
            '"Evaluation period has expired, shareware functionality unavailable."\n')
@@ -107,3 +107,38 @@ def test_rechecking_after_the_user_fixes_it(exe):
     key["v"] = "T-abc"
     asyncio.run(tools.check_makemkv())
     assert tools.path("makemkvcon") == exe
+
+
+def test_makemkv_that_hangs_is_reported_not_waited_on_forever(exe):
+    import subprocess
+
+    def hang(args):
+        raise subprocess.TimeoutExpired(args, 120)
+
+    _, status, _ = check(exe, runner=FakeRunner(hang))
+    assert isinstance(status, MakemkvBroken) and "didn't finish" in status.detail
+
+
+def test_provisioning_does_not_wait_for_the_makemkv_check(exe, tmp_path):
+    import threading
+
+    gate = threading.Event()
+
+    def slow(args):
+        gate.wait(5)
+        return ProcResult(0, V2)
+
+    tools = Tools(ToolsConfig(dir=str(tmp_path / "t"), ffmpeg="x", ffprobe="y", cyanrip="z"),
+                  EventBus(), runner=FakeRunner(slow), read_key=lambda: "k", pins=(),
+                  makemkv_candidates=[exe])
+
+    async def go():
+        task = asyncio.create_task(tools.run())
+        await asyncio.sleep(0.2)
+        assert not task.done()  # still checking MakeMKV...
+        provisioned = tools.status("ffmpeg")  # ...but provisioning already ran
+        gate.set()
+        await task
+        return provisioned
+
+    assert isinstance(asyncio.run(go()), ToolReady)
