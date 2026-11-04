@@ -163,5 +163,5 @@ def test_real_pins_are_complete():
     names = {m.name for p in REAL for m in p.members}
     assert names == {"ffmpeg", "ffprobe", "cyanrip"}
     for p in REAL:
-        assert p.url.startswith("https://github.com/")
+        assert p.url.startswith(("https://github.com/", "https://git.mintopia.net/api/packages/"))
         assert len(p.sha256) == 64 and all(len(m.sha256) == 64 for m in p.members)
