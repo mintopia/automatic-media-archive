@@ -181,11 +181,8 @@ def is_error_line(text: str) -> bool:
 
 
 def strip_data_tracks(cue: str) -> str:
-    """Drop enhanced-CD data tracks (`FILE "…" BINARY` + its TRACK) from a cue sheet.
-
-    cyanrip never rips data tracks but still lists them, pointing at a .bin
-    that doesn't exist.
-    """
+    """Drop enhanced-CD data tracks (`FILE "…" BINARY` + its TRACK) from a cue sheet:
+    with `-X` cyanrip skips them but still lists them, pointing at a .bin it never wrote."""
     out: list[str] = []
     skipping = False
     for line in cue.splitlines(keepends=True):
