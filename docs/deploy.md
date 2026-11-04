@@ -45,7 +45,7 @@ repo's Forgejo package registry:
 | `cyanrip.exe` SHA-256 | `851d72c61df34a3a6af5fc44aa1711582ec33bb22e198560bb8d52c3a089a94a` |
 
 To rebuild or move to a new commit (needs no admin rights; about 3 GB and
-20 minutes under `%LOCALAPPDATA%\ama-build\cyanrip`):
+an hour under `%LOCALAPPDATA%\ama-build\cyanrip`):
 
 ```powershell
 # 1. edit tools\cyanrip\versions.sh: CYANRIP_COMMIT, CYANRIP_VERSION, any library pins
