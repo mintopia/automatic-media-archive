@@ -4,7 +4,9 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
+import httpx
 import pytest
 import uvicorn
 from fastapi.testclient import TestClient
@@ -17,19 +19,20 @@ from ama.config import (
     EncodeConfig,
     NasConfig,
     PathsConfig,
+    PlexConfig,
     WebConfig,
 )
 from ama.proc import ProcResult
-from tests.fakes import FakeCyanrip, FakeDrive, FakeMakemkv, FakeRunner, FakeTools
-
-UNC = r"\\nas\media"
+from tests.fakes import FakeCyanrip, FakeDrive, FakeMakemkv, FakeRunner, FakeTools, FakeWeb
 
 
 def make_config(tmp_path, password: str = "") -> Config:
     return Config(
         web=WebConfig(password=password),
         drive=DriveConfig(poll_seconds=0.01),
-        nas=NasConfig(unc=UNC, retry_seconds=0.05),
+        # The "NAS share" is a local folder; reachability is faked by `nas_exists`.
+        nas=NasConfig(unc=str(tmp_path / "nas"), retry_seconds=0.05),
+        plex=PlexConfig(url="http://plex:32400", token="plex-token", nas_path="/volume1/media"),
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
         encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=22)),
@@ -46,6 +49,8 @@ class Harness:
     runner: FakeRunner
     makemkv: FakeMakemkv
     cyanrip: FakeCyanrip
+    web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex
+    nas_root: Path
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Harness:
@@ -56,10 +61,14 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True) -> Ha
                                                 "The network path was not found."))
     makemkv = FakeMakemkv(drive)
     cyanrip = FakeCyanrip(drive)
+    web = FakeWeb()
     services = build_services(cfg, probe=drive, runner=runner,
                               nas_exists=lambda p: share["reachable"],
-                              streamer=FakeTools(makemkv, cyanrip))
-    return Harness(services, drive, share, runner, makemkv, cyanrip)
+                              streamer=FakeTools(makemkv, cyanrip),
+                              http=httpx.Client(transport=web.transport()))
+    services.cd_archive.retry_seconds = 0.05
+    services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
+    return Harness(services, drive, share, runner, makemkv, cyanrip, web, Path(cfg.nas.unc))
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

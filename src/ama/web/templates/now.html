@@ -19,10 +19,7 @@
         <div class="tab">Encoding <span class="c">0</span></div>
         <div class="box"><p class="pad ts">Nothing waiting to encode.</p></div>
       </section>
-      <section class="bin fil">
-        <div class="tab">Filed today <span class="c">0</span></div>
-        <div class="box"><p class="pad ts">Nothing filed yet today.</p></div>
-      </section>
+      <div sse-swap="filed" class="contents">{% include "partials/filed_bin.html" %}</div>
       <div sse-swap="rip-failed" class="contents">{% include "partials/rip_failed.html" %}</div>
     </div>
   </div>

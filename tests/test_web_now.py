@@ -1,3 +1,5 @@
+import html
+
 import httpx
 from fastapi.testclient import TestClient
 
@@ -29,8 +31,9 @@ def test_nas_failure_is_shown_and_clears_when_the_share_comes_back(tmp_path):
     with TestClient(create_app(h.services)) as client:
         eventually(lambda: "Can't reach the NAS" in client.get("/").text)
         page = client.get("/").text
-        assert r"\\nas\media" in page and "The network path was not found." in page
-        assert h.runner.calls[0][:3] == ["net", "use", r"\\nas\media"]
+        unc = h.services.config.nas.unc
+        assert unc in html.unescape(page) and "The network path was not found." in page
+        assert h.runner.calls[0][:3] == ["net", "use", unc]
         h.share["reachable"] = True
         eventually(lambda: "Can't reach the NAS" not in client.get("/").text)
 

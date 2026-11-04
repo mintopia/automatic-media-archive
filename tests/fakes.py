@@ -6,6 +6,8 @@ import threading
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+import httpx
+
 from ama.drive import DiscPresent, DiscType, DriveEmpty, DriveState, UnrecognisedDisc
 from ama.proc import ProcResult
 
@@ -128,6 +130,7 @@ class FakeCyanrip:
         self.drive = drive
         self.enhanced_cd = False  # an UnrecognisedDisc that is really an enhanced CD
         self.calls: list[list[str]] = []
+        self.disc_id = "iV4zYu5_g1huHgbfxS6qgxQBL_A-"  # MusicBrainz Disc ID
         self.tracks: list[tuple[int, float]] = [(1, 200.0), (2, 100.0), (3, 300.0)]
         self.preemphasis: set[int] = set()
         self.data_track: int | None = None
@@ -160,7 +163,7 @@ class FakeCyanrip:
         header = ["cyanrip 0.9.3.1 (fake)", "System device:  \\\\.\\D:",
                   "Device model:   PIONEER BD-RW   BDR-S11J 1.01 SCSI CD-ROM",
                   "Offset:         +667 samples", f"Disc tracks:    {len(self.tracks)}",
-                  "DiscID:         iV4zYu5_g1huHgbfxS6qgxQBL_A-",
+                  f"DiscID:         {self.disc_id}",
                   f"AccurateRip:    {'found' if self.in_accuraterip else 'not found'}", "",
                   "Gaps:"]
         if any(n == 0 for n, _ in self.tracks):
@@ -195,7 +198,7 @@ class FakeCyanrip:
                     self._go.wait(5)
                 tail = f", errors - {err}" if err else ""
                 on_line(f"Ripping and encoding track {n}, progress - {pct:.2f}%, ETA - 1m{tail}  ")
-            (out_dir / f"{n:02d}.flac").write_bytes(b"fLaC")
+            (out_dir / f"{n:02d}.flac").write_bytes(flac_bytes(n, secs))
             errors += err
             if err:
                 continue
@@ -237,6 +240,61 @@ class FakeCyanrip:
             else:
                 lines += ["  Accurip:       not found", "    Accurip v1:  85BCC10B"]
         return lines + [""]
+
+
+def flac_bytes(n: int, seconds: float) -> bytes:
+    """A minimal valid FLAC file (STREAMINFO only, no audio frames) that taggers accept."""
+    samples = int(seconds * 44100)
+    packed = (44100 << 44) | (1 << 41) | (15 << 36) | samples  # rate, stereo, 16-bit, length
+    info = (4096).to_bytes(2, "big") * 2 + bytes(6) + packed.to_bytes(8, "big") \
+        + n.to_bytes(16, "big")  # "MD5" slot: keeps each track's bytes distinct
+    return b"fLaC" + bytes([0x80, 0, 0, len(info)]) + info
+
+
+class FakeWeb:
+    """MusicBrainz, the Cover Art Archive and Plex, as an httpx transport.
+
+    MusicBrainz is offline until a test sets `musicbrainz[disc_id]` (a response
+    dict, or an HTTP status). `covers[release_id]` = image bytes. Plex requests
+    are recorded in `plex_requests`; its libraries are `plex_sections`.
+    """
+
+    def __init__(self) -> None:
+        self.musicbrainz: dict[str, dict | int] = {}
+        self.covers: dict[str, bytes] = {}
+        self.plex_sections = [{"key": "3", "type": "artist", "title": "Music",
+                               "Location": [{"id": 1, "path": "/volume1/media/Music"}]},
+                              {"key": "1", "type": "movie", "title": "Movies",
+                               "Location": [{"id": 2, "path": "/volume1/media/Movies"}]}]
+        self.plex_requests: list[httpx.Request] = []
+        self.requests: list[httpx.Request] = []
+
+    def transport(self) -> httpx.MockTransport:
+        return httpx.MockTransport(self.handle)
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        url = request.url
+        if url.host == "musicbrainz.org":
+            answer = self.musicbrainz.get(url.path.rsplit("/", 1)[-1])
+            if answer is None:
+                raise httpx.ConnectError("no network", request=request)
+            if isinstance(answer, int):
+                return httpx.Response(answer, json={"error": "Not Found"})
+            return httpx.Response(200, json=answer)
+        if url.host == "coverartarchive.org":
+            release = url.path.split("/")[2]
+            if release in self.covers and url.path.split("/")[1] == "release":
+                return httpx.Response(200, content=self.covers[release],
+                                      headers={"content-type": "image/jpeg"})
+            return httpx.Response(404)
+        if url.host == "plex":
+            self.plex_requests.append(request)
+            if url.path == "/library/sections":
+                return httpx.Response(200, json={"MediaContainer": {
+                    "Directory": self.plex_sections}})
+            return httpx.Response(200)
+        return httpx.Response(404)
 
 
 class FakeTools:

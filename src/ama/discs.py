@@ -4,7 +4,9 @@ Persisted in SQLite (`discs`, `disc_log`, plus video `titles`) so a failure and
 its log survive a restart, and so a Rip cut short by a restart can be cleaned
 up. A record is `ripping` while the Rip runs, then `ripped` or `failed`. A
 failed record keeps its log for the UI until the user dismisses it; its partial
-scratch files are already gone.
+scratch files are already gone. A `ripped` Disc is then Identified: it goes to
+`review` (a human must confirm the Identification) or is `filed` into the
+Archive, which deletes its scratch.
 """
 
 from __future__ import annotations
@@ -22,8 +24,20 @@ from ama.drive import DiscType
 
 class DiscStatus(StrEnum):
     RIPPING = "ripping"
-    RIPPED = "ripped"
+    RIPPED = "ripped"  # waiting for Identification / filing
+    REVIEW = "review"  # Identification needs a human (see ReviewReason)
+    FILED = "filed"    # in the Archive; scratch deleted
     FAILED = "failed"
+
+
+class ReviewReason(StrEnum):
+    """Why a Disc's Identification couldn't be accepted automatically."""
+
+    MULTIPLE_RELEASES = "multiple_releases"  # MusicBrainz knows several releases with this CD
+    NO_RELEASE = "no_release"                # MusicBrainz doesn't know this CD
+    NOT_ACCURATE = "not_accurate"            # a track didn't match AccurateRip
+    NOT_IN_ACCURATERIP = "not_in_accuraterip"
+    ACCURATERIP_UNAVAILABLE = "accuraterip_unavailable"  # couldn't be checked
 
 
 class TitleStatus(StrEnum):
@@ -109,6 +123,10 @@ class DiscRecord:
     skipped_short: int = 0
     skipped_duplicates: int = 0
     titles: tuple[TitleRecord, ...] = ()  # video Discs only
+    review_reason: ReviewReason | None = None
+    title: str = ""                 # what it was filed as, e.g. "Kid A — Radiohead"
+    archive_dir: Path | None = None
+    filed_at: datetime | None = None
 
     @property
     def name(self) -> str:
@@ -132,7 +150,8 @@ class DiscRecord:
 
 
 _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
-         "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates")
+         "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates, "
+         "review_reason, title, archive_dir, filed_at")
 
 
 class DiscStore:
@@ -147,7 +166,7 @@ class DiscStore:
 
     def _record(self, row) -> DiscRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
-         short, dupes) = row
+         short, dupes, reason, title, archive_dir, filed_at) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
             "status FROM titles WHERE disc_id = ? ORDER BY number", (id_,)).fetchall()
@@ -158,6 +177,9 @@ class DiscStore:
             finished_at=datetime.fromisoformat(finished) if finished else None,
             dismissed=bool(dismissed), skipped_short=short, skipped_duplicates=dupes,
             titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8])) for t in titles),
+            review_reason=ReviewReason(reason) if reason else None, title=title,
+            archive_dir=Path(archive_dir) if archive_dir else None,
+            filed_at=datetime.fromisoformat(filed_at) if filed_at else None,
         )
 
     def create(self, disc_type: DiscType, label: str, scratch_subdir: str) -> DiscRecord:
@@ -218,6 +240,28 @@ class DiscStore:
             (failure.kind.value, failure.headline, failure.advice, self._ts(), disc_id))
         self._db.execute("UPDATE titles SET status = 'failed' WHERE disc_id = ? "
                          "AND status = 'ripping'", (disc_id,))
+
+    def mark_review(self, disc_id: int, reason: ReviewReason) -> None:
+        self._db.execute("UPDATE discs SET status = 'review', review_reason = ? WHERE id = ?",
+                         (reason.value, disc_id))
+
+    def mark_filed(self, disc_id: int, title: str, archive_dir: Path) -> None:
+        """The Disc is verified in the Archive: record that, then delete its scratch.
+
+        Idempotent; `clean_filed_scratch` finishes the deletion if a crash came between.
+        """
+        self._db.execute(
+            "UPDATE discs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
+            "filed_at = COALESCE(filed_at, ?) WHERE id = ?",
+            (title, str(archive_dir), self._ts(), disc_id))
+        rec = self.get(disc_id)
+        if rec is not None:
+            shutil.rmtree(rec.scratch_dir, ignore_errors=True)
+
+    def clean_filed_scratch(self) -> None:
+        for rec in self.list(DiscStatus.FILED, include_dismissed=True):
+            if rec.scratch_dir.exists():
+                shutil.rmtree(rec.scratch_dir, ignore_errors=True)
 
     def dismiss(self, disc_id: int) -> None:
         self._db.execute("UPDATE discs SET dismissed = 1 WHERE id = ?", (disc_id,))
