@@ -67,7 +67,7 @@ def test_licence_error_is_a_hard_stop_shown_as_a_makemkv_problem(client, harness
     harness.drive.insert(DiscType.BD, "MATRIX_BD")
     eventually(lambda: harness.drive.ejected == 1)
     assert len(harness.makemkv.calls) == 1  # nothing else is attempted
-    eventually(lambda: "MakeMKV's licence" in page_text(client, "/"))
+    eventually(lambda: "licence key isn't valid" in page_text(client, "/"))
     page = page_text(client, "/discs/1")
     assert "licence key isn't valid" in page and "MATRIX_BD" in page
     assert "This isn't a problem with the Disc" in page

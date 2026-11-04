@@ -41,7 +41,7 @@
 {%- if rip_failure and not rip_progress %}
 <div class="notice" role="alert" style="margin-top:16px">
   {%- if rip_failure.failure.kind == "licence" %}
-  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>MakeMKV's licence key isn't valid, so “{{ rip_failure.name }}” wasn't ripped.</b>Fix the key in MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>
   {%- else %}
   <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't rip “{{ rip_failure.name }}”.</b>{{ rip_failure.failure.headline }} <a href="/discs/{{ rip_failure.id }}">See what went wrong</a></div>
   {%- endif %}

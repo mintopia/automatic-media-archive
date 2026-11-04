@@ -33,8 +33,13 @@ class DriveConfig(_Section):
 
 
 class ToolsConfig(_Section):
+    """External programs (ADR 0006). Empty = AMA's default for that tool."""
+
+    dir: str = ""  # where AMA keeps its portable tools; empty = %LOCALAPPDATA%\ama\tools
+    ffmpeg: str = ""
+    ffprobe: str = ""
     cyanrip: str = ""
-    makemkvcon: Path = Path(r"C:\Program Files (x86)\MakeMKV\makemkvcon64.exe")
+    makemkvcon: str = ""
 
 
 class CdConfig(_Section):
@@ -126,4 +131,7 @@ def load_config(path: Path) -> Config:
             "log_file": base / cfg.paths.log_file,
         }
     )
-    return cfg.model_copy(update={"paths": paths})
+    update: dict = {"paths": paths}
+    if cfg.tools.dir:
+        update["tools"] = cfg.tools.model_copy(update={"dir": str(base / cfg.tools.dir)})
+    return cfg.model_copy(update=update)

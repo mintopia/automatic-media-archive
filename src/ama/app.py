@@ -1,12 +1,12 @@
 """Wiring: build the long-lived services, and the FastAPI app that serves them.
 
 `build_services` is the one place real OS/process adapters are chosen; tests
-pass fakes for `probe`, `runner`, `streamer`, `tool` and `nas_exists`. `create_app`'s lifespan
-starts every background monitor as an asyncio task and cancels them on exit.
+pass fakes for `probe`, `runner`, `streamer`, `tool`, `make_tools` and
+`nas_exists`. `create_app`'s lifespan starts every background monitor as an
+asyncio task and cancels them on exit.
 """
 
 from __future__ import annotations
-
 import asyncio
 import os
 from collections.abc import AsyncIterator, Callable
@@ -16,7 +16,6 @@ from dataclasses import dataclass
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from ama import tools
 from ama.cdrip import CdRipper, CdTracks
 from ama.config import Config
 from ama.db import Database
@@ -25,7 +24,7 @@ from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.nas import NasMonitor
 from ama.proc import Runner, Streamer, run, stream
-from ama.tools import ToolLookup
+from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
 from ama.web import STATIC_DIR, auth, discs_pages, pages
 
@@ -40,10 +39,12 @@ class Services:
     discs: DiscStore
     cd: CdRipper
     video_rip: VideoRipper
+    tools: Tools
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run]
+        return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
+                self.tools.run]
 
 
 def build_services(
@@ -53,11 +54,13 @@ def build_services(
     nas_exists: Callable[[str], bool] = os.path.isdir,
     streamer: Streamer = stream,
     tool: ToolLookup | None = None,
+    make_tools: Callable[[EventBus], Tools] | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
     db = Database(cfg.paths.state_db)
-    tool = tool or tools.lookup(cfg.tools)
+    tools = make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner)
+    tool = tool or tools.path
     drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                          interval=cfg.drive.poll_seconds)
     discs = DiscStore(db, cfg.paths.scratch)
@@ -67,6 +70,7 @@ def build_services(
         bus=bus,
         drive=drive,
         nas=NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists),
+        tools=tools,
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, CdTracks(db), bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds),

@@ -4,6 +4,32 @@ The app runs as the logged-on user (not a Windows service), because the MakeMKV
 licence is per-user. Task Scheduler starts it at logon with `pythonw.exe`, so
 there is no console window; it logs to `logs\ama.log` (see `[paths]` in the config).
 
+## External tools (ADR 0006)
+
+**MakeMKV is yours to install and register. AMA never installs, updates or
+registers it.** Download it from <https://www.makemkv.com/download/>, install it
+while signed in as the Windows user AMA runs as, open it, and enter your key
+under Help → Register. During the beta the free key is posted at
+<https://forum.makemkv.com/forum/viewtopic.php?t=1053>; it changes every month
+or two, and MakeMKV builds expire too ("This application version is too old"),
+so expect to update or re-enter the key now and then.
+At startup AMA checks that `makemkvcon64.exe` is present (in
+`C:\Program Files (x86)\MakeMKV` or `C:\Program Files\MakeMKV`, or the
+`[tools] makemkvcon` path), that it runs, and that it is registered
+(`HKCU\Software\MakeMKV\app_Key`). Until all three pass, DVD and Blu-ray Rips are
+paused and the Now page links to `/makemkv`, which says what's wrong and how to fix
+it. After fixing it, press "I've fixed it, check again" there. CD Rips are unaffected.
+
+**ffmpeg/ffprobe and cyanrip are AMA's.** On startup AMA downloads its pinned
+portable builds (versions and SHA-256 in `src/ama/tools.py`) into
+`%LOCALAPPDATA%\ama\tools` (or `[tools] dir`), checks their hashes and unpacks
+them. The first start needs internet and about 0.5 GB; later starts download
+nothing. A corrupt tool is fetched again on the next start. Progress and
+failures show on the Now page; a missing tool pauses only the work that needs it.
+To use your own build instead, set its path under `[tools]` in `ama.toml`; it is
+used as-is. The ffmpeg build uses NVENC, which needs a recent NVIDIA driver
+(this box: 621.01 works).
+
 ## First install
 
 1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and git.

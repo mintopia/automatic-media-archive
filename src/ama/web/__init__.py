@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from ama.discs import DiscStatus
 from ama.video_rip import VIDEO_DISC_TYPES
+from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -26,6 +27,7 @@ STATIC_DIR = HERE / "static"
 TEMPLATES = Jinja2Templates(directory=HERE / "templates")
 # `{% if state | kind == "DiscPresent" %}`: branch on which variant a state union holds.
 TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
+TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
 NAV: list[tuple[str, str]] = [("Now", "/")]
@@ -33,6 +35,7 @@ NAV: list[tuple[str, str]] = [("Now", "/")]
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
     "nas": "partials/nas.html",
+    "tools": "partials/tools.html",
     "rip": "partials/rip.html",
     "ripping": "partials/ripping_bin.html",
     "rip-failed": "partials/rip_failed.html",
@@ -91,7 +94,21 @@ def view_context(services: Services) -> dict[str, Any]:
         "rip_progress": services.video_rip.progress,
         "rip_failure": next(iter(services.discs.list(DiscStatus.FAILED, types=VIDEO_DISC_TYPES)),
                             None),
+        **_tools_context(services),
     }
+
+
+def _tools_context(services: Services) -> dict[str, Any]:
+    tools = services.tools
+    managed = []
+    for pin in tools.pins:
+        for m in pin.members:
+            st = tools.status(m.name)
+            if isinstance(st, ToolDownloading | ToolFailed):
+                managed.append({"status": st, "needed_for": NEEDED_FOR[m.name]})
+                break
+    return {"tools": managed, "makemkv": tools.status("makemkvcon"),
+            "retry_seconds": tools.retry_seconds}
 
 
 def render_fragment(topic: str, services: Services) -> str:

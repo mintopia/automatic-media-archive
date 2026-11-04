@@ -27,7 +27,7 @@ from ama.discs import DiscRecord, DiscStatus, DiscStore, Failure, FailureKind
 from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
 from ama.events import EventBus
 from ama.proc import Streamer
-from ama.tools import ToolLookup
+from ama.tools import ToolLookup, ToolUnavailable
 
 log = logging.getLogger(__name__)
 
@@ -245,6 +245,10 @@ class CdRipper:
             return
         if self._handled:
             return
+        try:
+            self._tool("cyanrip")
+        except ToolUnavailable:
+            return  # wait in the drive until cyanrip is in; the Now page says why
         self._handled = True
         try:
             await self.rip(state.label, known_cd=isinstance(state, DiscPresent))
