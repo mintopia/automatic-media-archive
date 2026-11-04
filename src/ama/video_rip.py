@@ -121,7 +121,7 @@ class VideoRipper:
         self._clock = clock
         self.disc: DiscRecord | None = None  # the Disc being ripped, else the last one this run
         self.progress: RipProgress | None = None  # set only while ripping
-        self._handled: DriveState | None = None
+        self._handled: int | None = None  # the `DriveMonitor.insertion` already dealt with
         self._abort = False
         self._last_publish = 0.0
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -166,11 +166,10 @@ class VideoRipper:
 
     async def _consider(self, state: DriveState) -> None:
         if not self._is_video(state):
-            self._handled = None
             return
-        if state == self._handled:  # once per insertion: never re-rip on our own
+        if self._handled == self._drive.insertion:  # once per insertion: never re-rip on our own
             return
-        self._handled = state
+        self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)
         if await self._scratch.refuses(state.disc_type, state.label):  # #12: ejected unripped
             return

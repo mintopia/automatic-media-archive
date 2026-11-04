@@ -53,8 +53,11 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     assert rec.title == "Example Movie (2016)"
     assert _filed(harness).read_bytes() == b"HEVC Example_Movie_t00.mkv"  # the Main Feature
     eventually(lambda: not rec.scratch_dir.exists())  # the lossless Rip is gone (ADR-0002)
-    scan = [r for r in harness.web.plex_requests if "/refresh" in r.url.path]
-    assert scan and scan[0].url.path == "/library/sections/1/refresh"
+    def scans():  # Plex is told after the Disc is marked filed
+        return [r for r in harness.web.plex_requests if "/refresh" in r.url.path]
+    eventually(lambda: bool(scans()))
+    scan = scans()
+    assert scan[0].url.path == "/library/sections/1/refresh"
     assert parse_qs(scan[0].url.query.decode())["path"] == [f"/volume1/media/Movies/{FOLDER}"]
     encode = harness.ffmpeg.encodes()[0]
     assert encode[encode.index("-cq") + 1] == "22"  # BD's CQ from config

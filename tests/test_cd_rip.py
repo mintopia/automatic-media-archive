@@ -215,3 +215,21 @@ def test_cd_tool_path_comes_from_the_tool_lookup(tmp_path):
 
     asyncio.run(go())
     assert fake.calls[0][0] == str(tmp_path / "tools" / "cyanrip.exe")
+
+
+def test_a_cd_swapped_in_between_two_looks_is_still_ripped(harness):
+    """The ripper may not look at the drive while it is empty (busy box, fast swap):
+    the next CD is a new insertion all the same, even under the same label."""
+    import asyncio
+
+    async def go():
+        harness.drive.insert(DiscType.CD, "SAME")
+        await harness.services.drive.poll_once()
+        await harness.services.cd.check_once()  # rips, ejects: the drive reads empty
+        harness.drive.insert(DiscType.CD, "SAME")
+        await harness.services.drive.poll_once()  # the ripper never saw it empty
+        await harness.services.cd.check_once()
+
+    asyncio.run(go())
+    assert len(_rip_calls(harness)) == 2
+    assert len(harness.services.discs.list(DiscStatus.RIPPED)) == 2
