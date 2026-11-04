@@ -1,0 +1,69 @@
+# Automatic Media Archive configuration.
+#
+# Copy this file to `ama.toml` next to it (that copy is git-ignored, because it
+# holds secrets) and fill it in. Every setting is listed here. Unknown or
+# misspelt settings stop the app at startup with an error naming them.
+# Relative paths are relative to this file's folder.
+# In TOML, single-quoted strings are literal, so Windows paths need no escaping.
+
+[web]
+# Address and port of the LAN web UI. 0.0.0.0 = reachable from the whole LAN.
+host = "0.0.0.0"
+port = 8080
+# Shared password for the web UI. SECRET.
+# Empty = no sign-in (anyone on the LAN can use it). Set = the UI asks for it.
+password = ""
+
+[drive]
+# Optical drive letter, e.g. "D:". Empty = the first optical drive Windows reports.
+letter = ""
+# How often to check the drive for a Disc being inserted or removed (seconds).
+poll_seconds = 3
+
+[nas]
+# UNC path of the NAS share that holds the Plex library (Music/, Movies/, TV/).
+# Connected with `net use` at startup; retried while it fails.
+unc = '\\nas\media'
+# Credentials for the share. SECRET (password). Empty username = connect as the
+# logged-on Windows user.
+username = ""
+password = ""
+# How often to retry connecting while the NAS is unreachable (seconds).
+retry_seconds = 60
+
+[paths]
+# Local scratch folder for Rips awaiting Identification, Review and Encode.
+# Needs at least 256 GB free (ADR-0005). Created if missing.
+scratch = 'D:\ama-scratch'
+# SQLite state database.
+state_db = "ama.sqlite3"
+# Log file (rotated). The app also logs to the console when it has one.
+log_file = 'logs\ama.log'
+
+[tmdb]
+# TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
+api_key = ""
+
+[plex]
+# Plex Media Server URL, used to trigger a partial scan of each filed folder.
+url = "http://nas:32400"
+# Plex token (X-Plex-Token). SECRET.
+token = ""
+
+[discord]
+# Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.
+webhook_url = ""
+
+[ntfy]
+# ntfy server and topic for push notifications. Anyone who knows the topic can
+# read it, so treat the topic as a SECRET. Empty topic = ntfy notifications off.
+url = "https://ntfy.sh"
+topic = ""
+
+[encode.cq]
+# NVENC HEVC constant-quality level (CQ, 0-51, lower = better and bigger) per
+# Disc Type. CDs are never Encoded. Encodes are the permanent Archive
+# (ADR-0002), so lock these in during the pilot calibration (ticket #17).
+dvd = 20
+bd = 22
+uhd = 22
