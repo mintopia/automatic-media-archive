@@ -96,6 +96,10 @@ class DriveProbe(Protocol):
         """Open the tray. Raises OSError if the drive refuses."""
         ...
 
+    def device(self) -> str | None:
+        """The drive as ripping tools address it (e.g. "D:"), or None if there is none."""
+        ...
+
 
 class WindowsDriveProbe:
     """Reads the optical drive through Win32 (GetVolumeInformationW) and its root.
@@ -122,10 +126,38 @@ class WindowsDriveProbe:
                 return f"{c}:"
         return None
 
+    def device(self) -> str | None:
+        return self._letter or self._find_letter()
+
+    def eject(self) -> None:
+        """Open the tray (IOCTL_STORAGE_EJECT_MEDIA). Raises OSError if it can't."""
+        import ctypes
+        from ctypes import wintypes
+
+        letter = self.device()
+        if letter is None:
+            raise OSError("No optical drive found")
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.restype = wintypes.HANDLE
+        GENERIC_READ, SHARE_RW, OPEN_EXISTING = 0x80000000, 0x3, 3
+        h = k32.CreateFileW(f"\\\\.\\{letter}", GENERIC_READ, SHARE_RW, None,
+                            OPEN_EXISTING, 0, None)
+        if h in (None, wintypes.HANDLE(-1).value):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            IOCTL_STORAGE_EJECT_MEDIA = 0x2D4808
+            returned = wintypes.DWORD()
+            if not k32.DeviceIoControl(wintypes.HANDLE(h), IOCTL_STORAGE_EJECT_MEDIA, None, 0,
+                                       None, 0, ctypes.byref(returned), None):
+                raise ctypes.WinError(ctypes.get_last_error())
+        finally:
+            k32.CloseHandle(wintypes.HANDLE(h))
+        self._cache = None
+
     def probe(self) -> DriveState:
         import ctypes
 
-        letter = self._letter or self._find_letter()
+        letter = self.device()
         if letter is None:
             return DriveMissing("No optical drive found")
         root = f"{letter}\\"
@@ -156,37 +188,6 @@ class WindowsDriveProbe:
         self._cache = (key, state)
         return state
 
-    def eject(self) -> None:
-        import ctypes
-        from ctypes import wintypes
-
-        letter = self._letter or self._find_letter()
-        if letter is None:
-            raise OSError("No optical drive found")
-        k32 = self._k32
-        k32.CreateFileW.restype = wintypes.HANDLE
-        k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
-                                    ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
-                                    wintypes.HANDLE]
-        k32.DeviceIoControl.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.c_void_p,
-                                        wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD,
-                                        ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
-        k32.CloseHandle.argtypes = [wintypes.HANDLE]
-        GENERIC_READ, FILE_SHARE_READ_WRITE, OPEN_EXISTING = 0x80000000, 0x3, 3
-        IOCTL_STORAGE_EJECT_MEDIA = 0x2D4808
-        h = k32.CreateFileW(f"\\\\.\\{letter}", GENERIC_READ, FILE_SHARE_READ_WRITE, None,
-                            OPEN_EXISTING, 0, None)
-        if h is None or h == wintypes.HANDLE(-1).value:
-            raise ctypes.WinError()
-        try:
-            returned = wintypes.DWORD()
-            if not k32.DeviceIoControl(h, IOCTL_STORAGE_EJECT_MEDIA, None, 0, None, 0,
-                                       ctypes.byref(returned), None):
-                raise ctypes.WinError()
-        finally:
-            k32.CloseHandle(h)
-            self._cache = None
-
 
 def default_probe(letter: str | None) -> DriveProbe:
     if sys.platform != "win32":
@@ -216,16 +217,18 @@ class DriveMonitor:
             self.state = state
             self._bus.publish(self.TOPIC)
 
-    async def eject(self) -> bool:
-        """Eject the Disc and re-read the drive. False (and logged) if it wouldn't eject."""
+    def device(self) -> str | None:
+        return self._probe.device()
+
+    async def eject(self) -> None:
+        """Eject the Disc, then re-read the drive so `state` reflects it at once.
+
+        Raises OSError if the drive refuses (the drive is re-read either way).
+        """
         try:
             await asyncio.to_thread(self._probe.eject)
-            ok = True
-        except Exception:
-            log.exception("eject failed")
-            ok = False
-        await self.poll_once()
-        return ok
+        finally:
+            await self.poll_once()
 
     async def run(self) -> None:
         while True:

@@ -1,0 +1,15 @@
+{#- Now page: the Ripping bin. Topic "rip". -#}
+<section class="bin rip">
+  <div class="tab">Ripping <span class="c">{{ (1 if cd else 0) + ripped | length }}</span></div>
+  <div class="box">
+  {%- if cd %}
+    <div class="row compact"><div class="dtype">CD</div><div><div class="tt"><a href="/discs/{{ cd.disc_id }}">{{ cd.label or "Unknown CD" }}</a></div><div class="ts">{{ cd.position() }} · {{ cd.percent | int }}%</div></div><span class="stk rip">Ripping</span></div>
+  {%- endif %}
+  {%- for d in ripped %}
+    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} verified · waiting to be identified</div></div><span class="stk fil">Ripped</span></div>
+  {%- endfor %}
+  {%- if not cd and not ripped %}
+    <p class="pad ts">Nothing ripping.</p>
+  {%- endif %}
+  </div>
+</section>

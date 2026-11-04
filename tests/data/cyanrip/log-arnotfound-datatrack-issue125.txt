@@ -1,0 +1,935 @@
+# source: https://github.com/user-attachments/files/22989911/%2B.log
+cyanrip 0.9.3 (c23f1c4)
+System device:  /dev/cdrom
+Device model:   MATSHITA DVD-RAM UJ870BJ  1.51 SCSI CD-ROM
+Offset:         +0 samples
+Overread:       +0 frames
+Overread mode:  fill with silence in lead-in/lead-out
+Speed:          default (unchangeable)
+C2 errors:      supported by drive
+Paranoia level: max
+Frame retries:  10
+HDCD decoding:  disabled
+Album Art:      Front (From: Cover Art DB), Back (From: Cover Art DB)
+Outputs:        flac
+Disc number:    1
+Total discs:    1
+Disc tracks:    13
+Tracks to rip:  all
+DiscID:         BsJtjvMJhip5NpCmagrmVCSftLg-
+Release ID:     94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+CDDB ID:        A60BB60C
+Disc MCN:       8256466344222
+Album:          +
+Album artist:   Ed Sheeran
+AccurateRip:    found
+Total time:     00:53:36.318
+
+Gaps:
+    11400 frame pregap in track 13, dropping
+    11401 frame discontinuity between tracks 13 and 12, ignoring
+
+Cover art destination(s):
+    + [FLAC]/Front.jpg
+    + [FLAC]/Back.jpg
+
+Tracks:
+
+Repeating ripping (0 out of 1 matches for current checksum AA4AA3EF)
+
+Done; (1 out of 1 matches for current checksum AA4AA3EF)
+Track 1 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -13.5 LUFS
+    Threshold: -23.6 LUFS
+
+  Loudness range:
+    LRA:         6.0 LU
+    Threshold: -33.6 LUFS
+    LRA low:   -17.6 LUFS
+    LRA high:  -11.6 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:04:21.240
+    Samples:     11511276
+    Frames:      19577
+    Pregap LSN:  none
+    Start LSN:   0
+    End LSN:     19576
+
+  EAC CRC32:     55B55C10 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  1DFFB9BC (not found, either a new pressing, or bad rip)
+    Accurip v2:  51C8EECC (not found, either a new pressing, or bad rip)
+    Accurip 450: D9F03B57 (not found)
+
+  Metadata:
+    mbid:                          17eb8cd6-7bb0-4579-90af-dc38c1b3fc6a
+    title:                         The A Team
+    artist:                        Ed Sheeran
+    track:                         1
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100095
+    creation_time:                 2025-10-17T22:49:54
+    REPLAYGAIN_TRACK_GAIN:         -4.51 dB
+    R128_TRACK_GAIN:               124
+    REPLAYGAIN_TRACK_RANGE:        6.04 dB
+    REPLAYGAIN_TRACK_PEAK:         1.006224
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/01 - The A Team.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 66DD0E94)
+
+Done; (1 out of 1 matches for current checksum 66DD0E94)
+Track 2 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.6 LUFS
+    Threshold: -21.7 LUFS
+
+  Loudness range:
+    LRA:         3.6 LU
+    Threshold: -31.7 LUFS
+    LRA low:   -13.9 LUFS
+    LRA high:  -10.2 LUFS
+
+  True peak:
+    Peak:        0.2 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:19.180
+    Samples:     8781780
+    Frames:      14935
+    Pregap LSN:  none
+    Start LSN:   19577
+    End LSN:     34511
+
+  EAC CRC32:     9922F16B (after 2 rips)
+  Accurip:       disc found in database (max confidence: 33)
+    Accurip v1:  7880252D (not found, either a new pressing, or bad rip)
+    Accurip v2:  7E10520F (not found, either a new pressing, or bad rip)
+    Accurip 450: 117EA782 (not found)
+
+  Metadata:
+    mbid:                          dca0d867-2861-4b35-b309-897d8169edf7
+    title:                         Drunk
+    artist:                        Ed Sheeran
+    track:                         2
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100199
+    creation_time:                 2025-10-17T22:55:11
+    REPLAYGAIN_TRACK_GAIN:         -6.40 dB
+    R128_TRACK_GAIN:               -360
+    REPLAYGAIN_TRACK_RANGE:        3.65 dB
+    REPLAYGAIN_TRACK_PEAK:         1.027061
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/02 - Drunk.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 4CFB9A1F)
+
+Done; (1 out of 1 matches for current checksum 4CFB9A1F)
+Track 3 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -12.8 LUFS
+    Threshold: -23.0 LUFS
+
+  Loudness range:
+    LRA:         5.9 LU
+    Threshold: -33.0 LUFS
+    LRA low:   -17.0 LUFS
+    LRA high:  -11.1 LUFS
+
+  True peak:
+    Peak:        0.4 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:48.180
+    Samples:     10088904
+    Frames:      17158
+    Pregap LSN:  none
+    Start LSN:   34512
+    End LSN:     51669
+
+  EAC CRC32:     B30465E0 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 33)
+    Accurip v1:  442C9669 (not found, either a new pressing, or bad rip)
+    Accurip v2:  6AE50985 (not found, either a new pressing, or bad rip)
+    Accurip 450: 59727FBE (not found)
+
+  Metadata:
+    mbid:                          c1a486fb-223a-4e3d-b6fc-19def43155a5
+    title:                         U.N.I.
+    artist:                        Ed Sheeran
+    track:                         3
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100200
+    creation_time:                 2025-10-17T22:59:04
+    REPLAYGAIN_TRACK_GAIN:         -5.17 dB
+    R128_TRACK_GAIN:               -43
+    REPLAYGAIN_TRACK_RANGE:        5.94 dB
+    REPLAYGAIN_TRACK_PEAK:         1.046073
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/03 - U.N.I..flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum C5A1D071)
+
+Done; (1 out of 1 matches for current checksum C5A1D071)
+Track 4 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -12.6 LUFS
+    Threshold: -22.7 LUFS
+
+  Loudness range:
+    LRA:         3.5 LU
+    Threshold: -32.7 LUFS
+    LRA low:   -14.5 LUFS
+    LRA high:  -11.0 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:01.180
+    Samples:     7985628
+    Frames:      13581
+    Pregap LSN:  none
+    Start LSN:   51670
+    End LSN:     65250
+
+  EAC CRC32:     3A5E2F8E (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  CF1A421C (not found, either a new pressing, or bad rip)
+    Accurip v2:  BC2C3D60 (not found, either a new pressing, or bad rip)
+    Accurip 450: 5FCF3E4A (not found)
+
+  Metadata:
+    mbid:                          ca8bc972-15fe-4e2e-82dc-e578f88e64a4
+    title:                         Grade 8
+    artist:                        Ed Sheeran
+    track:                         4
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100201
+    creation_time:                 2025-10-17T23:03:19
+    REPLAYGAIN_TRACK_GAIN:         -5.43 dB
+    R128_TRACK_GAIN:               -110
+    REPLAYGAIN_TRACK_RANGE:        3.52 dB
+    REPLAYGAIN_TRACK_PEAK:         1.007385
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/04 - Grade 8.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 527FD836)
+
+Done; (1 out of 1 matches for current checksum 527FD836)
+Track 5 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -15.6 LUFS
+    Threshold: -27.0 LUFS
+
+  Loudness range:
+    LRA:        11.5 LU
+    Threshold: -37.0 LUFS
+    LRA low:   -25.0 LUFS
+    LRA high:  -13.5 LUFS
+
+  True peak:
+    Peak:       -0.5 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:48.180
+    Samples:     10090080
+    Frames:      17160
+    Pregap LSN:  none
+    Start LSN:   65251
+    End LSN:     82410
+
+  EAC CRC32:     AD8027C9 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 33)
+    Accurip v1:  107CD48B (not found, either a new pressing, or bad rip)
+    Accurip v2:  0CF73254 (not found, either a new pressing, or bad rip)
+    Accurip 450: 4B779E08 (not found)
+
+  Metadata:
+    mbid:                          904d88cd-b119-4a0b-b3da-2bef6e2972f9
+    title:                         Wake Me Up
+    artist:                        Ed Sheeran
+    track:                         5
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100202
+    creation_time:                 2025-10-17T23:06:33
+    REPLAYGAIN_TRACK_GAIN:         -2.43 dB
+    R128_TRACK_GAIN:               657
+    REPLAYGAIN_TRACK_RANGE:        11.54 dB
+    REPLAYGAIN_TRACK_PEAK:         0.939836
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/05 - Wake Me Up.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum E149AA8C)
+
+Done; (1 out of 1 matches for current checksum E149AA8C)
+Track 6 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.1 LUFS
+    Threshold: -21.3 LUFS
+
+  Loudness range:
+    LRA:         5.3 LU
+    Threshold: -31.3 LUFS
+    LRA low:   -14.8 LUFS
+    LRA high:   -9.5 LUFS
+
+  True peak:
+    Peak:        0.3 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:04:18.240
+    Samples:     11415432
+    Frames:      19414
+    Pregap LSN:  none
+    Start LSN:   82411
+    End LSN:     101824
+
+  EAC CRC32:     1EB65573 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  94F93A15 (not found, either a new pressing, or bad rip)
+    Accurip v2:  4D8769D9 (not found, either a new pressing, or bad rip)
+    Accurip 450: 380924EA (not found)
+
+  Metadata:
+    mbid:                          3835ff4d-cbdd-4294-9ffe-09b8295b1715
+    title:                         Small Bump
+    artist:                        Ed Sheeran
+    track:                         6
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100203
+    creation_time:                 2025-10-17T23:10:30
+    REPLAYGAIN_TRACK_GAIN:         -6.93 dB
+    R128_TRACK_GAIN:               -494
+    REPLAYGAIN_TRACK_RANGE:        5.26 dB
+    REPLAYGAIN_TRACK_PEAK:         1.031865
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/06 - Small Bump.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum D40FFE88)
+
+Done; (1 out of 1 matches for current checksum D40FFE88)
+Track 7 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -13.2 LUFS
+    Threshold: -24.2 LUFS
+
+  Loudness range:
+    LRA:         9.8 LU
+    Threshold: -34.2 LUFS
+    LRA low:   -20.3 LUFS
+    LRA high:  -10.5 LUFS
+
+  True peak:
+    Peak:       -0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:16.180
+    Samples:     8663004
+    Frames:      14733
+    Pregap LSN:  none
+    Start LSN:   101825
+    End LSN:     116557
+
+  EAC CRC32:     2BF00177 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  012B600F (not found, either a new pressing, or bad rip)
+    Accurip v2:  D2F62EEF (not found, either a new pressing, or bad rip)
+    Accurip 450: 94A0F3D7 (not found)
+
+  Metadata:
+    mbid:                          edb66734-d7e4-437e-a314-70e67e72d881
+    title:                         This
+    artist:                        Ed Sheeran
+    track:                         7
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100204
+    creation_time:                 2025-10-17T23:14:50
+    REPLAYGAIN_TRACK_GAIN:         -4.79 dB
+    R128_TRACK_GAIN:               54
+    REPLAYGAIN_TRACK_RANGE:        9.79 dB
+    REPLAYGAIN_TRACK_PEAK:         0.985867
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/07 - This.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 5DDE3E2A)
+
+Done; (1 out of 1 matches for current checksum 5DDE3E2A)
+Track 8 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -12.6 LUFS
+    Threshold: -22.7 LUFS
+
+  Loudness range:
+    LRA:         3.8 LU
+    Threshold: -32.7 LUFS
+    LRA low:   -15.0 LUFS
+    LRA high:  -11.1 LUFS
+
+  True peak:
+    Peak:        0.4 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:55.180
+    Samples:     10374084
+    Frames:      17643
+    Pregap LSN:  none
+    Start LSN:   116558
+    End LSN:     134200
+
+  EAC CRC32:     A221C1D5 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  772CEC97 (not found, either a new pressing, or bad rip)
+    Accurip v2:  77C12773 (not found, either a new pressing, or bad rip)
+    Accurip 450: B3FE0DC8 (not found)
+
+  Metadata:
+    mbid:                          12f09a58-e376-4847-aabb-255ede6e46db
+    title:                         The City
+    artist:                        Ed Sheeran
+    track:                         8
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100205
+    creation_time:                 2025-10-17T23:18:02
+    REPLAYGAIN_TRACK_GAIN:         -5.38 dB
+    R128_TRACK_GAIN:               -98
+    REPLAYGAIN_TRACK_RANGE:        3.83 dB
+    REPLAYGAIN_TRACK_PEAK:         1.052536
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/08 - The City.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum BC4C747A)
+
+Done; (1 out of 1 matches for current checksum BC4C747A)
+Track 9 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.0 LUFS
+    Threshold: -21.2 LUFS
+
+  Loudness range:
+    LRA:         7.0 LU
+    Threshold: -31.2 LUFS
+    LRA low:   -16.4 LUFS
+    LRA high:   -9.4 LUFS
+
+  True peak:
+    Peak:        0.2 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:03.180
+    Samples:     8096172
+    Frames:      13769
+    Pregap LSN:  none
+    Start LSN:   134201
+    End LSN:     147969
+
+  EAC CRC32:     43B38B85 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  4BC4A838 (not found, either a new pressing, or bad rip)
+    Accurip v2:  4611EE55 (not found, either a new pressing, or bad rip)
+    Accurip 450: BC94CD9D (not found)
+
+  Metadata:
+    mbid:                          28e418ee-9fb6-49e0-9f75-03184a09083b
+    title:                         Lego House
+    artist:                        Ed Sheeran
+    track:                         9
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100206
+    creation_time:                 2025-10-17T23:21:46
+    REPLAYGAIN_TRACK_GAIN:         -7.03 dB
+    R128_TRACK_GAIN:               -521
+    REPLAYGAIN_TRACK_RANGE:        7.02 dB
+    REPLAYGAIN_TRACK_PEAK:         1.020003
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/09 - Lego House.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 4CB3193E)
+
+Done; (1 out of 1 matches for current checksum 4CB3193E)
+Track 10 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.4 LUFS
+    Threshold: -21.5 LUFS
+
+  Loudness range:
+    LRA:         4.8 LU
+    Threshold: -31.5 LUFS
+    LRA low:   -14.0 LUFS
+    LRA high:   -9.2 LUFS
+
+  True peak:
+    Peak:        0.4 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:40.180
+    Samples:     9720228
+    Frames:      16531
+    Pregap LSN:  none
+    Start LSN:   147970
+    End LSN:     164500
+
+  EAC CRC32:     B34CE6C1 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  B2750C1A (not found, either a new pressing, or bad rip)
+    Accurip v2:  32D9194A (not found, either a new pressing, or bad rip)
+    Accurip 450: 3657238A (not found)
+
+  Metadata:
+    mbid:                          1893bb06-26f3-4de8-b281-eec870212fed
+    title:                         You Need Me, I Don’t Need You
+    artist:                        Ed Sheeran
+    track:                         10
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100207
+    creation_time:                 2025-10-17T23:24:36
+    REPLAYGAIN_TRACK_GAIN:         -6.56 dB
+    R128_TRACK_GAIN:               -399
+    REPLAYGAIN_TRACK_RANGE:        4.78 dB
+    REPLAYGAIN_TRACK_PEAK:         1.047593
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/10 - You Need Me, I Don’t Need You.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum 0E77EA26)
+
+Done; (1 out of 1 matches for current checksum 0E77EA26)
+Track 11 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -14.1 LUFS
+    Threshold: -24.5 LUFS
+
+  Loudness range:
+    LRA:         5.4 LU
+    Threshold: -34.5 LUFS
+    LRA low:   -18.0 LUFS
+    LRA high:  -12.6 LUFS
+
+  True peak:
+    Peak:        0.2 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:04:38.240
+    Samples:     12278028
+    Frames:      20881
+    Pregap LSN:  none
+    Start LSN:   164501
+    End LSN:     185381
+
+  EAC CRC32:     F18815D9 (after 2 rips)
+  Accurip:       disc found in database (max confidence: 33)
+    Accurip v1:  137EC84E (not found, either a new pressing, or bad rip)
+    Accurip v2:  6521D136 (not found, either a new pressing, or bad rip)
+    Accurip 450: 56482167 (not found)
+
+  Metadata:
+    mbid:                          232f4982-c146-4c68-8db6-651ba9ddc441
+    title:                         Kiss Me
+    artist:                        Ed Sheeran
+    track:                         11
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100208
+    creation_time:                 2025-10-17T23:27:56
+    REPLAYGAIN_TRACK_GAIN:         -3.90 dB
+    R128_TRACK_GAIN:               280
+    REPLAYGAIN_TRACK_RANGE:        5.36 dB
+    REPLAYGAIN_TRACK_PEAK:         1.017567
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/11 - Kiss Me.flac
+
+
+Repeating ripping (0 out of 1 matches for current checksum C224EA43)
+
+Done; (1 out of 1 matches for current checksum C224EA43)
+Track 12 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.9 LUFS
+    Threshold: -22.2 LUFS
+
+  Loudness range:
+    LRA:         9.9 LU
+    Threshold: -32.2 LUFS
+    LRA low:   -17.9 LUFS
+    LRA high:   -8.0 LUFS
+
+  True peak:
+    Peak:        2.5 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:08:46.480
+    Samples:     23213652
+    Frames:      50879
+    Pregap LSN:  none
+    Start LSN:   185382
+    End LSN:     236260 (with offset: 224860)
+
+  EAC CRC32:     3DDB15BC (after 2 rips)
+  Accurip:       disc found in database (max confidence: 32)
+    Accurip v1:  76127DB4 (not found, either a new pressing, or bad rip)
+    Accurip v2:  523AB885 (not found, either a new pressing, or bad rip)
+    Accurip 450: B43190B3 (not found)
+
+  Metadata:
+    mbid:                          abe26875-6d79-40af-b26d-61093b7cad70
+    title:                         Give Me Love / The Parting Glass
+    artist:                        Ed Sheeran
+    track:                         12
+    tracktotal:                    13
+    disc_mcn:                      8256466344222
+    discid:                        BsJtjvMJhip5NpCmagrmVCSftLg-
+    cddb:                          A60BB60C
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          2011-09-09
+    release_id:                    94ad3a58-a1cc-46a3-acf4-9cb6c1d6f032
+    album:                         +
+    barcode:                       5052498646524
+    packaging:                     Jewel Case
+    country:                       XE
+    status:                        Official
+    album_artist:                  Ed Sheeran
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          GBAHS1100209
+    creation_time:                 2025-10-17T23:32:07
+    REPLAYGAIN_TRACK_GAIN:         -6.05 dB
+    R128_TRACK_GAIN:               -270
+    REPLAYGAIN_TRACK_RANGE:        9.85 dB
+    REPLAYGAIN_TRACK_PEAK:         1.329379
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 1425x1425 Motion JPEG
+
+  File(s):
+    + [FLAC]/12 - Give Me Love ∕ The Parting Glass.flac
+
+Track 13 is data:
+  Preemphasis:   none detected
+
+  Properties:
+    Data bytes:  11665920 (11.13 Mib)
+    Frames:      4960
+    Pregap LSN:  224861 (duration: 00:02:32.120)
+    Start LSN:   236261
+    End LSN:     241220
+
+Album Loudness Summary:
+
+  Integrated loudness:
+    I:         -12.3 LUFS
+    Threshold: -22.7 LUFS
+
+  Loudness range:
+    LRA:         8.4 LU
+    Threshold: -32.7 LUFS
+    LRA low:   -17.9 LUFS
+    LRA high:   -9.5 LUFS
+
+  True peak:
+    Peak:        2.5 dBFS
+
+Tracks ripped accurately: 0/13
+
+Paranoia status counts:
+  READ:          36475
+  VERIFY:        4110
+  OVERLAP:       825
+
+Ripping errors: 0
+Ripping finished at 2025-10-17T23:39:43
+Log FUN512: YYNQAFyCidfze4KuZIuLZYeEXjSzdTxC_0nRVCRgjw69Spmbpm.Re8ioPD7EuVQKCoGO1DwfaBKWtmN.9N40rQ

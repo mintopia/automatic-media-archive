@@ -1,12 +1,16 @@
-"""Disc records: every Disc we started to Rip, its Titles, its log, how it ended.
+"""Disc records: one row per Disc AMA Ripped (or tried to), shared by CD and video Rips.
 
-Persisted in SQLite (`discs`, `titles`, `disc_log`) so a failure and its log
-survive a restart, and so a Rip cut short by a restart can be cleaned up.
+Persisted in SQLite (`discs`, `disc_log`, plus video `titles`) so a failure and
+its log survive a restart, and so a Rip cut short by a restart can be cleaned
+up. A record is `ripping` while the Rip runs, then `ripped` or `failed`. A
+failed record keeps its log for the UI until the user dismisses it; its partial
+scratch files are already gone.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+import shutil
+from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -30,18 +34,25 @@ class TitleStatus(StrEnum):
 
 
 class FailureKind(StrEnum):
+    INTERRUPTED = "interrupted"  # the app stopped mid-Rip
+    # video
     LICENCE = "licence"  # MakeMKV refused to work: not the Disc's fault
     MAKEMKV = "makemkv"  # MakeMKV missing, or crashed
     DISC = "disc"  # couldn't read the Disc, or nothing on it to rip
     TITLE = "title"  # a Title couldn't be ripped
-    INTERRUPTED = "interrupted"  # the app stopped mid-Rip
+    # CD
+    NOT_INSTALLED = "not_installed"  # cyanrip missing
+    NO_AUDIO = "no_audio"
+    DRIVE = "drive"  # cyanrip couldn't open the drive
+    RIP_ERROR = "rip_error"
+    UNREADABLE_TRACK = "unreadable_track"
 
 
 @dataclass(frozen=True)
 class Failure:
     kind: FailureKind
-    headline: str
-    advice: str
+    headline: str  # one sentence: what went wrong
+    advice: str  # what the user can do about it
 
 
 def format_duration(seconds: int) -> str:
@@ -76,12 +87,12 @@ class TitleRecord:
 
 @dataclass(frozen=True)
 class LogLine:
-    at: str  # HH:MM:SS
+    at: datetime
     error: bool
     text: str
 
     def __str__(self) -> str:
-        return f"{self.at}  {self.text}"
+        return f"{self.at:%H:%M:%S}  {self.text}"
 
 
 @dataclass(frozen=True)
@@ -92,12 +103,12 @@ class DiscRecord:
     status: DiscStatus
     failure: Failure | None
     scratch_dir: Path
-    skipped_short: int
-    skipped_duplicates: int
     started_at: datetime
     finished_at: datetime | None
     dismissed: bool
-    titles: tuple[TitleRecord, ...]
+    skipped_short: int = 0
+    skipped_duplicates: int = 0
+    titles: tuple[TitleRecord, ...] = ()  # video Discs only
 
     @property
     def name(self) -> str:
@@ -120,26 +131,60 @@ class DiscRecord:
         return f"Not ripped: {' and '.join(parts)}." if parts else None
 
 
+_COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
+         "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates")
+
+
 class DiscStore:
-    def __init__(self, db: Database, now: Callable[[], datetime] = datetime.now) -> None:
+    def __init__(self, db: Database, scratch: Path,
+                 now: Callable[[], datetime] = datetime.now) -> None:
         self._db = db
+        self._scratch = scratch
         self._now = now
 
     def _ts(self) -> str:
         return self._now().isoformat(timespec="seconds")
 
-    def create(self, disc_type: DiscType, label: str, scratch_root: Path) -> DiscRecord:
-        """New Disc in `ripping`; its scratch dir is `scratch_root/<id>`."""
+    def _record(self, row) -> DiscRecord:
+        (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
+         short, dupes) = row
+        titles = self._db.execute(
+            "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
+            "status FROM titles WHERE disc_id = ? ORDER BY number", (id_,)).fetchall()
+        return DiscRecord(
+            id=id_, disc_type=DiscType(dtype), label=label, status=DiscStatus(status),
+            failure=Failure(FailureKind(fkind), fhead or "", fadv or "") if fkind else None,
+            scratch_dir=Path(scratch), started_at=datetime.fromisoformat(started),
+            finished_at=datetime.fromisoformat(finished) if finished else None,
+            dismissed=bool(dismissed), skipped_short=short, skipped_duplicates=dupes,
+            titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8])) for t in titles),
+        )
+
+    def create(self, disc_type: DiscType, label: str, scratch_subdir: str) -> DiscRecord:
+        """Start a record in `ripping`; its scratch folder is `scratch/<subdir>/<id>`."""
         cur = self._db.execute(
             "INSERT INTO discs (disc_type, label, status, scratch_dir, started_at) "
-            "VALUES (?, ?, 'ripping', '', ?)", (str(disc_type), label, self._ts()))
+            "VALUES (?, ?, 'ripping', '', ?)", (disc_type.value, label, self._ts()))
         disc_id = cur.lastrowid
         assert disc_id is not None
-        self._db.execute("UPDATE discs SET scratch_dir = ? WHERE id = ?",
-                         (str(scratch_root / str(disc_id)), disc_id))
+        scratch = self._scratch / scratch_subdir / str(disc_id)
+        self._db.execute("UPDATE discs SET scratch_dir = ? WHERE id = ?", (str(scratch), disc_id))
         disc = self.get(disc_id)
         assert disc is not None
         return disc
+
+    def get(self, disc_id: int) -> DiscRecord | None:
+        row = self._db.execute(f"SELECT {_COLS} FROM discs WHERE id = ?", (disc_id,)).fetchone()
+        return self._record(row) if row else None
+
+    def list(self, status: DiscStatus, include_dismissed: bool = False,
+             types: Collection[DiscType] | None = None) -> list[DiscRecord]:
+        """Records in `status`, newest first; only `types` if given."""
+        rows = self._db.execute(
+            f"SELECT {_COLS} FROM discs WHERE status = ? AND (? OR dismissed = 0) "
+            "ORDER BY id DESC", (status.value, include_dismissed)).fetchall()
+        recs = [self._record(r) for r in rows]
+        return [r for r in recs if types is None or r.disc_type in types]
 
     def set_titles(self, disc_id: int, titles: Iterable[TitleRecord], skipped_short: int,
                    skipped_duplicates: int) -> None:
@@ -157,15 +202,20 @@ class DiscStore:
         self._db.execute("UPDATE titles SET status = ? WHERE disc_id = ? AND number = ?",
                          (str(status), disc_id, number))
 
-    def finish(self, disc_id: int) -> None:
+    def mark_ripped(self, disc_id: int) -> None:
         self._db.execute("UPDATE discs SET status = 'ripped', finished_at = ? WHERE id = ?",
                          (self._ts(), disc_id))
 
-    def fail(self, disc_id: int, failure: Failure) -> None:
+    def mark_failed(self, disc_id: int, failure: Failure) -> None:
+        """Fail the record and delete its partial scratch files (idempotent)."""
+        rec = self.get(disc_id)
+        if rec is None:
+            return
+        shutil.rmtree(rec.scratch_dir, ignore_errors=True)
         self._db.execute(
-            "UPDATE discs SET status = 'failed', failure = ?, failure_headline = ?, "
-            "failure_advice = ?, finished_at = ? WHERE id = ?",
-            (str(failure.kind), failure.headline, failure.advice, self._ts(), disc_id))
+            "UPDATE discs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
+            "failure_advice = ?, finished_at = COALESCE(finished_at, ?) WHERE id = ?",
+            (failure.kind.value, failure.headline, failure.advice, self._ts(), disc_id))
         self._db.execute("UPDATE titles SET status = 'failed' WHERE disc_id = ? "
                          "AND status = 'ripping'", (disc_id,))
 
@@ -178,40 +228,6 @@ class DiscStore:
 
     def log_lines(self, disc_id: int) -> list[LogLine]:
         rows = self._db.execute(
-            "SELECT at, error, text FROM disc_log WHERE disc_id = ? ORDER BY id", (disc_id,))
-        return [LogLine(datetime.fromisoformat(at).strftime("%H:%M:%S"), bool(e), t)
-                for at, e, t in rows.fetchall()]
-
-    def get(self, disc_id: int) -> DiscRecord | None:
-        row = self._db.execute(
-            "SELECT id, disc_type, label, status, failure, failure_headline, failure_advice, "
-            "scratch_dir, skipped_short, skipped_duplicates, started_at, finished_at, dismissed "
-            "FROM discs WHERE id = ?", (disc_id,)).fetchone()
-        if row is None:
-            return None
-        titles = self._db.execute(
-            "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
-            "status FROM titles WHERE disc_id = ? ORDER BY number", (disc_id,)).fetchall()
-        (id_, dtype, label, status, kind, headline, advice, scratch, short, dupes, started,
-         finished, dismissed) = row
-        return DiscRecord(
-            id=id_, disc_type=DiscType(dtype), label=label, status=DiscStatus(status),
-            failure=Failure(FailureKind(kind), headline, advice) if kind else None,
-            scratch_dir=Path(scratch), skipped_short=short, skipped_duplicates=dupes,
-            started_at=datetime.fromisoformat(started),
-            finished_at=datetime.fromisoformat(finished) if finished else None,
-            dismissed=bool(dismissed),
-            titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8])) for t in titles),
-        )
-
-    def _ids(self, where: str) -> list[DiscRecord]:
-        rows = self._db.execute(f"SELECT id FROM discs WHERE {where} ORDER BY id").fetchall()
-        return [d for (i,) in rows if (d := self.get(i))]
-
-    def interrupted(self) -> list[DiscRecord]:
-        return self._ids("status = 'ripping'")
-
-    def unseen_failure(self) -> DiscRecord | None:
-        """The most recent failed Disc nobody has dismissed yet."""
-        failed = self._ids("status = 'failed' AND dismissed = 0")
-        return failed[-1] if failed else None
+            "SELECT at, error, text FROM disc_log WHERE disc_id = ? ORDER BY id",
+            (disc_id,)).fetchall()
+        return [LogLine(datetime.fromisoformat(a), bool(e), t) for a, e, t in rows]

@@ -32,6 +32,16 @@ class DriveConfig(_Section):
     poll_seconds: float = Field(default=3.0, gt=0)
 
 
+class ToolsConfig(_Section):
+    cyanrip: str = ""
+    makemkvcon: Path = Path(r"C:\Program Files (x86)\MakeMKV\makemkvcon64.exe")
+
+
+class CdConfig(_Section):
+    offset: int = 667
+    retries: int = Field(default=10, ge=1)
+
+
 class NasConfig(_Section):
     unc: str
     username: str = ""
@@ -43,10 +53,6 @@ class PathsConfig(_Section):
     scratch: Path
     state_db: Path = Path("ama.sqlite3")
     log_file: Path = Path("logs/ama.log")
-
-
-class ToolsConfig(_Section):
-    makemkvcon: Path = Path(r"C:\Program Files (x86)\MakeMKV\makemkvcon64.exe")
 
 
 class TmdbConfig(_Section):
@@ -80,9 +86,10 @@ class EncodeConfig(_Section):
 class Config(_Section):
     web: WebConfig = WebConfig()
     drive: DriveConfig = DriveConfig()
+    cd: CdConfig = CdConfig()
+    tools: ToolsConfig = ToolsConfig()
     nas: NasConfig
     paths: PathsConfig
-    tools: ToolsConfig = ToolsConfig()
     tmdb: TmdbConfig = TmdbConfig()
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()
