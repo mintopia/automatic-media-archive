@@ -116,8 +116,9 @@ def track_tags(match: Match, number: int, disc_id: str) -> dict[str, list[str]]:
                 "DISCSUBTITLE": match.disc_title}
     tags |= {k: [v] for k, v in optional.items() if v}
     if r.labels:
-        tags["LABEL"] = [name for name, _ in r.labels if name]
-        tags["CATALOGNUMBER"] = [cat for _, cat in r.labels if cat]
+        # MusicBrainz lists label + catalogue number per disc: keep each value once.
+        tags["LABEL"] = list(dict.fromkeys(name for name, _ in r.labels if name))
+        tags["CATALOGNUMBER"] = list(dict.fromkeys(cat for _, cat in r.labels if cat))
     if r.is_compilation:
         tags["COMPILATION"] = ["1"]
     return {k: v for k, v in tags.items() if v}

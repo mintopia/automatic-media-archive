@@ -12,7 +12,9 @@ from urllib.parse import parse_qs
 
 from mutagen.flac import FLAC
 
+from ama import musicbrainz
 from ama.archive import extended_path
+from ama.cdarchive import track_tags
 from ama.discs import DiscStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
@@ -186,3 +188,13 @@ def test_filing_waits_for_the_nas(harness, client):
     assert not (harness.nas_root / "Music").exists()
     harness.share["reachable"] = True
     _wait_for(harness, DiscStatus.FILED)
+
+
+def test_labels_listed_once_per_disc_are_tagged_once():
+    resp = _response(only=SPECIAL)
+    resp["releases"][0]["label-info"] = [
+        {"catalog-number": f"SQEX-1110{n}", "label": {"name": "SQUARE ENIX MUSIC"}}
+        for n in (2, 3)]
+    tags = track_tags(musicbrainz.matches(resp, DISC_1)[0], 1, DISC_1)
+    assert tags["LABEL"] == ["SQUARE ENIX MUSIC"]
+    assert tags["CATALOGNUMBER"] == ["SQEX-11102", "SQEX-11103"]
