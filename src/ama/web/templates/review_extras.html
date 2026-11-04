@@ -4,7 +4,7 @@
 {%- set all_other = rows | selectattr("extra.category", "equalto", "Other") | list | length == rows | length %}
 <main class="extras">
   <form id="leave" method="post" action="/discs/{{ record.id }}/extras/leave"></form>
-  <div class="page-head">
+  <div class="page-head gap">
     <div>
       <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><a href="/review">Review</a></div>
       <h1>Want to sort the Extras for {{ record.title }}?</h1>

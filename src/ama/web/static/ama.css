@@ -227,4 +227,5 @@ main.extras{max-width:1064px}
 .titem:first-child{border-top:0}
 .colhead{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;padding:10px 18px;border-bottom:1px solid var(--rule);color:var(--ink2);font-size:13px;font-weight:600}
 .ctl{display:flex;flex-direction:column;gap:8px}
+.notice.ok{display:grid;color:inherit;font-weight:inherit}
 @media (max-width:720px){.titem{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.colhead{display:none}}
