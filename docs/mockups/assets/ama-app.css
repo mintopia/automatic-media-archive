@@ -158,7 +158,10 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 .mpanel .mg{padding:12px 16px 14px;border-top:1px solid var(--rule)}
 .mpanel .mg:first-child{border-top:0}
 .mpanel .ml{font-size:13px;color:var(--ink2);margin-bottom:8px}
-.mpanel .segs{display:flex}.mpanel .segs a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0}
+.mpanel .segs{display:flex}.mpanel .segs button{flex:1;min-height:44px}
+.segs button{padding:10px 16px;border:0;border-left:1px solid var(--rule);background:none;color:var(--ink2);font:600 14px Archivo;cursor:pointer}
+.segs button:first-child{border-left:0}
+.segs button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
 .mpanel .mi{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-top:1px solid var(--rule);text-decoration:none;font-weight:500}
 .mpanel .mi:hover{background:var(--well)}
 .mpanel .mi[aria-current]{font-weight:700}
@@ -175,10 +178,12 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 
 /* Settings: divider-file tabs, one section per page (docs/mockups/settings-*.html) */
 main.settings{max-width:1100px}
-.settings h1{margin-bottom:32px}
-.files{display:flex;gap:4px;align-items:flex-end;overflow-x:auto;scrollbar-width:none}
+.settings h1{margin-bottom:22px}
+.files{display:flex;gap:4px;align-items:flex-end;padding-top:10px;overflow-x:auto;scrollbar-width:none}
 .files::-webkit-scrollbar{display:none}
-.files .tab{flex:none;height:34px;background:var(--sheet);color:var(--ink2);border:1px solid var(--rule);border-bottom:0}
+/* Hit area reaches 44px above the tab without changing its shape */
+.files .tab::before{content:"";position:absolute;inset:-10px 0 0}
+.files .tab{position:relative;flex:none;height:34px;background:var(--sheet);color:var(--ink2);border:1px solid var(--rule);border-bottom:0}
 .files .tab:hover{color:var(--ink);background:var(--well);text-decoration:none}
 .files .tab[aria-current]{height:38px;background:var(--ink);color:var(--sheet);border-color:var(--ink)}
 .files+.box{border-top-color:var(--ink)}
@@ -214,7 +219,7 @@ main.settings{max-width:1100px}
 .restart{margin-bottom:24px}
 .restart .rbody{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap}
 .restart ul{list-style:none;display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:2px;font-size:14px;color:var(--ink2)}
-/* Encoder choice and per-Disc-Type table */
+/* Encoder choice and per-Disc-Type table (settings-encode.html, settings-general.html) */
 .choices{border:1px solid var(--rule);border-radius:3px;background:var(--well)}
 .choices .radio{padding:12px 14px;align-items:center}
 .choices .radio>input{margin-top:0}
@@ -226,7 +231,7 @@ main.settings{max-width:1100px}
 .pertype td{padding:5px 12px 5px 0;vertical-align:middle}
 .pertype td:first-child{font-weight:600}
 .pertype .input{width:96px}
-/* Libraries */
+/* Libraries (settings-libraries*.html) */
 .libs{width:100%;border-collapse:collapse;font-size:14px}
 .libs th{text-align:left;font-weight:600;color:var(--ink2);padding:10px 12px;border-bottom:1px solid var(--rule)}
 .libs th:first-child,.libs td:first-child{padding-left:24px}
@@ -250,12 +255,13 @@ main.settings{max-width:1100px}
 .libedit .actions{grid-column:1/-1;justify-content:flex-end}
 .libadd{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding:16px 24px;border-top:1px solid var(--rule)}
 @media (max-width:720px){
-  .settings h1{margin-bottom:24px}
-  .files{margin:0 -16px;padding:0 16px;mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+  .settings h1{margin-bottom:10px}
+  .files{margin:0 -16px;padding:14px 16px 0;mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
   .grp-h{padding:20px 16px 2px;flex-direction:column;gap:2px}.grp-h .ts{text-align:left}
   .sf{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 16px}
   .setfoot{padding:14px 16px;flex-wrap:wrap}.setfoot .st{width:100%}.setfoot .btn{flex:1}
   .setnotice{margin:14px 16px 4px}
+  .files .tab::before{inset:-14px 0 0}
   .restart .rbody .btn{width:100%}
   .pertype .input{width:72px}.pertype .select{width:100%}
   .libs thead{display:none}

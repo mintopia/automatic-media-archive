@@ -275,7 +275,7 @@ The spacing rhythm is 4 / 8 / 12 / 16 / 18 / 24 / 28 / 32px.
 The system is flat. There are no drop shadows. Depth is the tab sitting on its sheet, the 3px stage-coloured top edge of the sheet, and the 1px hairline grid between rows and frames. The only box-shadow is `inset 0 0 0 2px ink` on a selected radio row, which is a selection mark rather than elevation.
 
 ### Named Rules
-**The One Rule Weight Rule.** Every border and divider is 1px `rule`. The only exceptions are the 3px stage top edge on bin sheets, the 3px active-nav underline, and the 2px focus ring.
+**The One Rule Weight Rule.** Every border and divider is 1px `rule`. The only exceptions are the 3px stage top edge on bin sheets, the 3px active-nav underline, and the 2px focus ring. A 1px border may change colour to mark state, never weight: `ink` for buttons, overrides, a pending restart, the Paused mark and hover; `review-ink` (border plus 1px outline, like focus) for an invalid input.
 
 ## Shapes
 
@@ -306,8 +306,8 @@ Plain, firm and printed.
 
 ### Navigation
 - **Top bar:** a 60px `sheet` bar with a bottom rule. It holds the uppercase Archivo Narrow brand, nav links (Now, Review, History) in Archivo 500 / `ink-2`, then the scratch meter and the menu button pushed to the right.
-- **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it with a 1px rule border and no top edge: New Discs (Accepting / Paused segmented control), Theme (System / Light / Dark), then Settings and Log out as 48px rows (Log out only when a password is set). On phones the button sits at the right end of the nav row.
-- **Paused mark:** while the drive is paused, an `ink`-outlined 26px "Paused" label with a pause icon sits before the scratch meter on every page. It is hidden on phones, where the menu shows the state.
+- **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it, bordered all round in 1px `rule` with no stage or `ink` top edge: New Discs (Accepting / Paused segmented control), Theme (System / Light / Dark), then Settings and Log out as 48px rows (Log out only when a password is set). On phones the button sits at the right end of the nav row.
+- **Paused mark:** while the drive is paused, an `ink`-outlined 26px "Paused" label (a mark, not a control; the menu changes it) with a pause icon sits before the scratch meter on every page. It is hidden on phones, where the menu shows the state.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`).
 - **Review count:** a tomato badge (700, 12px, 3px corners).
 - **Scratch meter:** a 160px × 8px `well` track with a rule border and an `ink` fill that turns `review-tomato` when full.
@@ -345,7 +345,7 @@ A Job's settings as overrides of the global ones (`docs/mockups/job-settings-*.h
 
 ### Settings Page
 Editing `ama.toml` one section at a time (`docs/mockups/settings-*.html`). Content is capped at 1100px.
-- **Divider file:** the nine sections (General, Tools, CD, Encode, Libraries, NAS, Identification, Notifications, Logs) are divider tabs in a row, 32px below the h1. Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each section is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
+- **Divider file:** the nine sections (General, Tools, CD, Encode, Libraries, NAS, Identification, Notifications, Logs) are divider tabs in a row, 32px below the h1. Each tab's hit area reaches 44px (48px on phones) upward into that gap. Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each section is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
 - **Group:** a 700 / 16px heading with an optional 13px `ink-2` note at the right (for example "Takes effect at once").
 - **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px.
 - **Restart tag:** a 20px rule-bordered label with the redo icon, "Restart", beside the label of every key that applies only after a restart. Once such a key is saved it reads "Waiting for restart" with an `ink` border.
