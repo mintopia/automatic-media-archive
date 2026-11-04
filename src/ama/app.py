@@ -36,12 +36,13 @@ from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
 from ama.scratch import DiskUsageFn, ScratchGate
+from ama.sets import DiscSets
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages,
-                     review_pages, scratch_pages, tv_review_pages)
+                     review_pages, scratch_pages, set_review_pages, tv_review_pages)
 
 
 @dataclass
@@ -65,6 +66,7 @@ class Services:
     scratch: ScratchGate
     tv_archive: TvArchiver
     notifier: Notifier
+    sets: DiscSets
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
@@ -138,6 +140,7 @@ def build_services(
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds),
         notifier=Notifier(discs, bus, channels(cfg, http)),
+        sets=DiscSets(db),
     )
 
 
@@ -161,6 +164,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
     app.include_router(tv_review_pages.router)
+    app.include_router(set_review_pages.router)
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     return app
