@@ -67,6 +67,7 @@ class TmdbConfig(_Section):
 class PlexConfig(_Section):
     url: str = ""
     token: str = _secret()
+    nas_path: str = ""  # where the Plex server sees `nas.unc`; empty = the same path
 
 
 class DiscordConfig(_Section):

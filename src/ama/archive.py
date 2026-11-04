@@ -1,0 +1,86 @@
+"""Filing to the Archive: putting finished files into a Plex library folder on the NAS.
+
+Each file is copied under a temporary name Plex doesn't recognise as media
+(`<name>.ama-partial`), checked against its source, then renamed into place, so
+Plex never sees a partially written file. Filing the same files again is a
+no-op for files already in place, so an interrupted filing is simply re-run.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import os
+import re
+import shutil
+from collections.abc import Callable, Mapping
+from pathlib import Path
+
+PARTIAL = ".ama-partial"
+NAME_LIMIT = 80  # characters per folder/file name, keeps paths under Windows' MAX_PATH
+
+_ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_RESERVED = re.compile(r"^(CON|PRN|AUX|NUL|COM\d|LPT\d)(\..*)?$", re.I)
+
+
+class FilingError(Exception):
+    """A file couldn't be put into the Archive intact."""
+
+
+def safe_name(text: str, limit: int = NAME_LIMIT) -> str:
+    """`text` as a Windows/SMB-safe file or folder name (characters Windows forbids -> `_`)."""
+    name = _ILLEGAL.sub("_", text).strip()
+    name = name[:limit].rstrip(" .") or "_"
+    return f"{name}_" if _RESERVED.match(name) else name
+
+
+def extended_path(path: Path) -> Path:
+    """On Windows, `path` as an extended-length path (`\\\\?\\…`), so the Archive's long
+    artist/album/track names aren't cut off by the 260-character MAX_PATH."""
+    if os.name != "nt":
+        return path
+    p = os.path.abspath(path)
+    if p.startswith("\\\\?\\"):
+        return Path(p)
+    return Path("\\\\?\\UNC\\" + p[2:] if p.startswith("\\\\") else "\\\\?\\" + p)
+
+
+def _digest(path: Path) -> tuple[int, str]:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while chunk := f.read(1 << 20):
+            h.update(chunk)
+    return path.stat().st_size, h.hexdigest()
+
+
+class Archive:
+    """The Archive root (the NAS share). `copy` is replaceable so tests can break a copy."""
+
+    def __init__(self, root: Path, copy: Callable[[Path, Path], object] = shutil.copyfile) -> None:
+        self.root = root
+        self.copy = copy
+
+    def place(self, folder: Path, files: Mapping[str, Path]) -> Path:
+        """Put `files` ({name in folder: source}) into `root/folder`; return that folder.
+
+        Raises FilingError (or OSError) unless every file ends up in place,
+        byte-identical to its source. Sources are left alone.
+        """
+        folder_path = self.root / folder
+        dest = extended_path(folder_path)
+        dest.mkdir(parents=True, exist_ok=True)
+        expected = {name: _digest(src) for name, src in files.items()}
+        for name, src in files.items():
+            final = dest / name
+            if final.exists() and _digest(final) == expected[name]:
+                continue
+            temp = dest / f"{name}{PARTIAL}"
+            self.copy(src, temp)
+            if _digest(temp) != expected[name]:
+                temp.unlink(missing_ok=True)
+                raise FilingError(f"{name} didn't copy intact to {folder_path}")
+            os.replace(temp, final)
+        for name in files:
+            final = dest / name
+            if not final.exists() or _digest(final) != expected[name]:
+                raise FilingError(f"{name} isn't intact in {folder_path}")
+        return folder_path

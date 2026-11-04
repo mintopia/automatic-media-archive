@@ -68,8 +68,14 @@ api_key = ""
 [plex]
 # Plex Media Server URL, used to trigger a partial scan of each filed folder.
 url = "http://nas:32400"
-# Plex token (X-Plex-Token). SECRET.
+# Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
+# filed folders on its own next scan.
 token = ""
+# Where the Plex server sees the NAS share (`nas.unc`), when Plex runs on another
+# machine, e.g. '/volume1/media' for Plex on the NAS itself. Plex's library
+# folders must sit under it (e.g. '/volume1/media/Music'). Empty = Plex sees
+# the share at the same path as AMA.
+nas_path = ""
 
 [discord]
 # Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.

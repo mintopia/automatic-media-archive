@@ -25,24 +25,32 @@ class Database:
         self._conn = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
         self._lock = threading.Lock()
         self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
-        self._migrate(migrations)
+        self._migrate(migrations)  # leaves foreign keys ON
 
     def _migrate(self, migrations: Path) -> None:
+        """Foreign keys are off while migrating, so a migration can rebuild a table
+        (SQLite's documented procedure); `foreign_key_check` must pass before commit."""
         current = self._conn.execute("PRAGMA user_version").fetchone()[0]
-        for f in sorted(migrations.glob("[0-9][0-9][0-9][0-9]_*.sql")):
-            n = int(f.name[:4])
-            if n <= current:
-                continue
-            try:
-                self._conn.executescript(
-                    f"BEGIN;\n{f.read_text(encoding='utf-8')}\n;PRAGMA user_version={n};\nCOMMIT;"
-                )
-            except sqlite3.Error as e:
-                if self._conn.in_transaction:
-                    self._conn.execute("ROLLBACK")
-                raise RuntimeError(f"migration {f.name} failed: {e}") from e
-            current = n
+        self._conn.execute("PRAGMA foreign_keys=OFF")
+        try:
+            for f in sorted(migrations.glob("[0-9][0-9][0-9][0-9]_*.sql")):
+                n = int(f.name[:4])
+                if n <= current:
+                    continue
+                try:
+                    self._conn.executescript(
+                        f"BEGIN;\n{f.read_text(encoding='utf-8')}\n;PRAGMA user_version={n};"
+                    )
+                    if self._conn.execute("PRAGMA foreign_key_check").fetchone():
+                        raise sqlite3.IntegrityError("foreign key check failed")
+                    self._conn.execute("COMMIT")
+                except sqlite3.Error as e:
+                    if self._conn.in_transaction:
+                        self._conn.execute("ROLLBACK")
+                    raise RuntimeError(f"migration {f.name} failed: {e}") from e
+                current = n
+        finally:
+            self._conn.execute("PRAGMA foreign_keys=ON")
 
     def execute(self, sql: str, params: tuple[Any, ...] | dict[str, Any] = ()) -> sqlite3.Cursor:
         with self._lock:

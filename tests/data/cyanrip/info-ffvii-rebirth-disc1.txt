@@ -1,0 +1,661 @@
+Checking D: for cdrom...
+		CDROM sensed: PIONEER  BD-RW  BDR-S11JX 1.53
+
+
+Opening drive...
+MusicBrainz URL:
+https://musicbrainz.org/cdtoc/attach?toc=1+24+356713+150+15053+39759+52098+58830+73155+86410+99646+136119+152557+169895+173464+189544+206059+210177+220633+228724+240050+254726+269143+279776+290595+327129+341948&tracks=24&id=kIBdaUqY_5kMBgOXehaFmL5TSbA-
+Log(s) will be written to:
+    Unknown disc (4988) [FLAC]/Unknown disc (4988).log
+CUE files will be written to:
+    Unknown disc (4988) [FLAC]/Unknown disc (4988).cue
+cyanrip 0.9.3 (063d848)
+System device:  D:
+Device model:   PIONEER  BD-RW  BDR-S11JX 1.53
+Offset:         +0 samples
+Overread:       +0 frames
+Overread mode:  fill with silence in lead-in/lead-out
+Speed:          default (unchangeable)
+C2 errors:      unsupported by drive
+Paranoia level: max
+Frame retries:  10
+HDCD decoding:  disabled
+Album Art:      none
+Outputs:        flac
+Disc tracks:    24
+Tracks to rip:  all
+DiscID:         kIBdaUqY_5kMBgOXehaFmL5TSbA-
+CDDB ID:        57129218
+Disc MCN:       4988601470865
+Album:          Unknown disc (4988)
+AccurateRip:    found
+Total time:     01:19:14.474
+
+Gaps:
+    None signalled
+
+Tracks:
+Track 1 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:18.180
+    Samples:     8762964
+    Frames:      14903
+    Pregap LSN:  none
+    Start LSN:   0
+    End LSN:     14902
+  Accurip:       disc found in database (max confidence: 65)
+
+  Metadata:
+    track:      1
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/01 - Unknown track.flac
+
+Track 2 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:05:29.300
+    Samples:     14527128
+    Frames:      24706
+    Pregap LSN:  none
+    Start LSN:   14903
+    End LSN:     39608
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      2
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/02 - Unknown track.flac
+
+Track 3 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:44.120
+    Samples:     7255332
+    Frames:      12339
+    Pregap LSN:  none
+    Start LSN:   39609
+    End LSN:     51947
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      3
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/03 - Unknown track.flac
+
+Track 4 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:01:29.060
+    Samples:     3958416
+    Frames:      6732
+    Pregap LSN:  none
+    Start LSN:   51948
+    End LSN:     58679
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      4
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/04 - Unknown track.flac
+
+Track 5 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:11.180
+    Samples:     8423100
+    Frames:      14325
+    Pregap LSN:  none
+    Start LSN:   58680
+    End LSN:     73004
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      5
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/05 - Unknown track.flac
+
+Track 6 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:56.120
+    Samples:     7793940
+    Frames:      13255
+    Pregap LSN:  none
+    Start LSN:   73005
+    End LSN:     86259
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      6
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/06 - Unknown track.flac
+
+Track 7 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:56.120
+    Samples:     7782768
+    Frames:      13236
+    Pregap LSN:  none
+    Start LSN:   86260
+    End LSN:     99495
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      7
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/07 - Unknown track.flac
+
+Track 8 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:08:06.480
+    Samples:     21446124
+    Frames:      36473
+    Pregap LSN:  none
+    Start LSN:   99496
+    End LSN:     135968
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      8
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/08 - Unknown track.flac
+
+Track 9 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:39.180
+    Samples:     9665544
+    Frames:      16438
+    Pregap LSN:  none
+    Start LSN:   135969
+    End LSN:     152406
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      9
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/09 - Unknown track.flac
+
+Track 10 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:51.180
+    Samples:     10194744
+    Frames:      17338
+    Pregap LSN:  none
+    Start LSN:   152407
+    End LSN:     169744
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      10
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/10 - Unknown track.flac
+
+Track 11 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:00:47.000
+    Samples:     2098572
+    Frames:      3569
+    Pregap LSN:  none
+    Start LSN:   169745
+    End LSN:     173313
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      11
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/11 - Unknown track.flac
+
+Track 12 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:34.180
+    Samples:     9455040
+    Frames:      16080
+    Pregap LSN:  none
+    Start LSN:   173314
+    End LSN:     189393
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      12
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/12 - Unknown track.flac
+
+Track 13 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:40.180
+    Samples:     9710820
+    Frames:      16515
+    Pregap LSN:  none
+    Start LSN:   189394
+    End LSN:     205908
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      13
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/13 - Unknown track.flac
+
+Track 14 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:00:54.000
+    Samples:     2421384
+    Frames:      4118
+    Pregap LSN:  none
+    Start LSN:   205909
+    End LSN:     210026
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      14
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/14 - Unknown track.flac
+
+Track 15 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:19.120
+    Samples:     6148128
+    Frames:      10456
+    Pregap LSN:  none
+    Start LSN:   210027
+    End LSN:     220482
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      15
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/15 - Unknown track.flac
+
+Track 16 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:01:47.060
+    Samples:     4757508
+    Frames:      8091
+    Pregap LSN:  none
+    Start LSN:   220483
+    End LSN:     228573
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      16
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/16 - Unknown track.flac
+
+Track 17 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:31.120
+    Samples:     6659688
+    Frames:      11326
+    Pregap LSN:  none
+    Start LSN:   228574
+    End LSN:     239899
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      17
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/17 - Unknown track.flac
+
+Track 18 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:15.180
+    Samples:     8629488
+    Frames:      14676
+    Pregap LSN:  none
+    Start LSN:   239900
+    End LSN:     254575
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      18
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/18 - Unknown track.flac
+
+Track 19 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:12.180
+    Samples:     8477196
+    Frames:      14417
+    Pregap LSN:  none
+    Start LSN:   254576
+    End LSN:     268992
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      19
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/19 - Unknown track.flac
+
+Track 20 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:21.120
+    Samples:     6252204
+    Frames:      10633
+    Pregap LSN:  none
+    Start LSN:   268993
+    End LSN:     279625
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      20
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/20 - Unknown track.flac
+
+Track 21 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:02:24.120
+    Samples:     6361572
+    Frames:      10819
+    Pregap LSN:  none
+    Start LSN:   279626
+    End LSN:     290444
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      21
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/21 - Unknown track.flac
+
+Track 22 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:08:07.480
+    Samples:     21481992
+    Frames:      36534
+    Pregap LSN:  none
+    Start LSN:   290445
+    End LSN:     326978
+  Accurip:       disc found in database (max confidence: 64)
+
+  Metadata:
+    track:      22
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/22 - Unknown track.flac
+
+Track 23 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:17.180
+    Samples:     8713572
+    Frames:      14819
+    Pregap LSN:  none
+    Start LSN:   326979
+    End LSN:     341797
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      23
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/23 - Unknown track.flac
+
+Track 24 info:
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:03:16.180
+    Samples:     8681820
+    Frames:      14765
+    Pregap LSN:  none
+    Start LSN:   341798
+    End LSN:     356562
+  Accurip:       disc found in database (max confidence: 63)
+
+  Metadata:
+    track:      24
+    tracktotal: 24
+    disc_mcn:   4988601470865
+    discid:     kIBdaUqY_5kMBgOXehaFmL5TSbA-
+    cddb:       57129218
+    media_type: CD
+    comment:    cyanrip 0.9.3
+    album:      Unknown disc (4988)
+    title:      Unknown track
+
+  File(s):
+    Unknown disc (4988) [FLAC]/24 - Unknown track.flac
+

@@ -10,6 +10,7 @@ owner `bus.publish(topic)` when the state behind it changes.
 from __future__ import annotations
 
 import shutil
+from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +41,7 @@ FRAGMENTS: dict[str, str] = {
     "ripping": "partials/ripping_bin.html",
     "rip-failed": "partials/rip_failed.html",
     "cd-rip": "partials/cd_rip_live.html",
+    "filed": "partials/filed_bin.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
@@ -85,6 +87,8 @@ def view_context(services: Services) -> dict[str, Any]:
         "cd_last_id": cd.last_disc_id,
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
+        "filed": [d for d in cd.discs(DiscStatus.FILED, limit=100)
+                  if d.record.filed_at and d.record.filed_at.date() == date.today()],
         "drive": services.drive.state,
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
