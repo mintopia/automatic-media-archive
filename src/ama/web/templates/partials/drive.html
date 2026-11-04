@@ -40,7 +40,11 @@
   </div>
 </div>
 {%- endif -%}
-{%- if rip_failure and not rip_progress %}
+{%- if scratch_refused and kind == "DriveEmpty" %}
+<div class="notice" role="alert" style="margin-top:16px">
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><div><b>Not enough space for “{{ scratch_refused.name }}”.</b>It was ejected without ripping; scratch is full. <a href="/scratch">See what's using it</a></div>
+</div>
+{%- elif rip_failure and not rip_progress %}
 <div class="notice" role="alert" style="margin-top:16px">
   {%- if rip_failure.failure.kind == "licence" %}
   <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>

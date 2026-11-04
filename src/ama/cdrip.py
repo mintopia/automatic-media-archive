@@ -28,6 +28,7 @@ from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
 from ama.events import EventBus
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, cd_fingerprint
+from ama.scratch import ScratchGate
 from ama.tools import ToolLookup, ToolUnavailable
 
 log = logging.getLogger(__name__)
@@ -197,9 +198,10 @@ class CdRipper:
 
     def __init__(self, cfg: CdConfig, drive: DriveMonitor, discs: DiscStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
-                 repeat: RepeatGuard) -> None:
+                 repeat: RepeatGuard, scratch: ScratchGate) -> None:
         self._cfg = cfg
         self._repeat = repeat
+        self._scratch = scratch
         self._tool = tool
         self._drive = drive
         self._discs = discs
@@ -297,6 +299,9 @@ class CdRipper:
         if not tracks and not known_cd:
             self._publish()
             return  # a data Disc, not an enhanced CD: not ours
+        if tracks and await self._scratch.refuses(DiscType.CD, label):  # #12: ejected unripped
+            self._publish()
+            return
         # Repeat-Disc warning (#16): a CD already in the Archive waits for the user.
         fingerprint = cd_fingerprint(info.disc_id) if tracks else None
         if not await self._repeat.admit(DiscType.CD, fingerprint):
