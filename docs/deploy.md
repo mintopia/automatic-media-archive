@@ -30,6 +30,34 @@ To use your own build instead, set its path under `[tools]` in `ama.toml`; it is
 used as-is. The ffmpeg build uses NVENC, which needs a recent NVIDIA driver
 (this box: 621.01 works).
 
+### AMA's cyanrip build (ADR 0007)
+
+cyanrip's last release (0.9.3.1) has broken AccurateRip lookups on Windows, so
+AMA builds its own from a pinned upstream commit and hosts the zip in this
+repo's Forgejo package registry:
+
+| | |
+|---|---|
+| Upstream commit | `648b1dddd265cfd2bb69483a826eb5a5c7e7079e` (0.9.4-rc3; `-v` → `cyanrip 0.9.4-rc3 (648b1dd)`) |
+| Package | `mintopia` generic package `cyanrip`, version `0.9.4-rc3-g648b1dd` |
+| URL | `https://git.mintopia.net/api/packages/mintopia/generic/cyanrip/0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip` |
+| Zip SHA-256 | `0b936259c0ecdf628e8446f42c778cf920e65de8556ccdaa0486c7b9df929d1d` |
+| `cyanrip.exe` SHA-256 | `851d72c61df34a3a6af5fc44aa1711582ec33bb22e198560bb8d52c3a089a94a` |
+
+To rebuild or move to a new commit (needs no admin rights; about 3 GB and
+an hour under `%LOCALAPPDATA%\ama-build\cyanrip`):
+
+```powershell
+# 1. edit tools\cyanrip\versions.sh: CYANRIP_COMMIT, CYANRIP_VERSION, any library pins
+.\tools\cyanrip\build.ps1 -Fresh -InfoDevice D:   # clean build + tests; then `cyanrip -I` on the CD in D: (never rips)
+.\tools\cyanrip\build.ps1 -PublishOnly            # PUT the zip to the registry (key from ~\.forgejo); prints its sha256
+# 2. update the cyanrip Pin in src\ama\tools.py and the table above; uv run pytest
+```
+
+A published version can't be replaced; a new build gets a new version. If
+MSYS2 has dropped a locked toolchain package, run `build.ps1 -Relock` and
+commit the new `tools\cyanrip\msys2-packages.lock`.
+
 ## First install
 
 1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and git.

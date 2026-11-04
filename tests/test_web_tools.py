@@ -60,7 +60,7 @@ def test_failed_download_names_what_waits_and_the_retry(blocked):
     fetch.release.set()
     eventually(lambda: "getaddrinfo failed" in c.get("/").text)
     page = c.get("/").text
-    assert "Couldn't download cyanrip 0.9.3.1" in page
+    assert f"Couldn't download {PINS[1].label}" in page
     assert "CD Rips wait" in page
 
 
