@@ -26,7 +26,16 @@
         <h2 class="tab" id="editions-h">{% if editions %}Matching editions <span class="c">{{ editions | length }}</span>{% else %}Album details{% endif %}</h2>
         <form class="box" method="post" action="/review/{{ record.id }}/release">
           {%- for e in editions %}
-          <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if loop.first %} checked{% endif %}><div><div class="tt">{{ e.heading }}</div><dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div><span class="stk rev sel">Selected</span></label>
+          <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if loop.first %} checked{% endif %}><div>
+            <div class="edition">{% if e.match.release.has_front is not false %}<img class="cover" src="/review/{{ record.id }}/cover/{{ e.match.release.id }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}<div><div class="tt">{{ e.heading }}</div><dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div></div>
+            <details class="preview"><summary>Track list{% if e.differences %} · <span class="diffnote">{{ e.differences }} title{{ "s" if e.differences != 1 }} differ from the other editions</span>{% endif %}</summary>
+              <table class="tbl cdt"><thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th></tr></thead><tbody>
+              {%- for t in e.tracks %}
+                <tr><td class="n">{{ t.number }}</td><td{% if t.differs %} class="diff"{% endif %}>{{ t.title }}{% if t.artist %}<div class="ts">{{ t.artist }}</div>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td></tr>
+              {%- endfor %}
+              </tbody></table>
+            </details>
+          </div><span class="stk rev sel">Selected</span></label>
           {%- endfor %}
           {%- if not editions %}
           <p class="pad ts">No edition on MusicBrainz has this CD's {{ track_count }} tracks.</p>
