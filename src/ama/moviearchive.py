@@ -35,7 +35,7 @@ from pathlib import Path
 
 import httpx
 
-from ama import encode
+from ama import encode, review
 from ama.archive import Archive, FilingError
 from ama.config import CqConfig
 from ama.db import Database
@@ -412,7 +412,7 @@ class MovieArchiver:
 
     def _publish(self) -> None:
         self._last_publish = self._clock()
-        for topic in (TOPIC, "rip", "filed"):
+        for topic in (TOPIC, "rip", "filed", review.TOPIC):
             self._bus.publish(topic)
 
     def _publish_soon(self) -> None:

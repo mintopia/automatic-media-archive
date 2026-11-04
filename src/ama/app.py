@@ -34,7 +34,7 @@ from ama.proc import Runner, Streamer, run, stream
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
-from ama.web import STATIC_DIR, auth, discs_pages, pages
+from ama.web import STATIC_DIR, auth, discs_pages, pages, review_pages
 
 
 @dataclass
@@ -129,4 +129,5 @@ def create_app(services: Services) -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(discs_pages.router)
+    app.include_router(review_pages.router)
     return app

@@ -11,10 +11,26 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 MIGRATIONS = Path(__file__).parent / "migrations"
+
+
+@dataclass(frozen=True)
+class Result:
+    """A finished statement: its rows, already read."""
+
+    rows: list[Any]
+    lastrowid: int | None
+    rowcount: int
+
+    def fetchone(self) -> Any:
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self) -> list[Any]:
+        return self.rows
 
 
 class Database:
@@ -52,9 +68,12 @@ class Database:
         finally:
             self._conn.execute("PRAGMA foreign_keys=ON")
 
-    def execute(self, sql: str, params: tuple[Any, ...] | dict[str, Any] = ()) -> sqlite3.Cursor:
+    def execute(self, sql: str, params: tuple[Any, ...] | dict[str, Any] = ()) -> Result:
+        # Rows are read inside the lock: stepping a cursor while another thread runs a
+        # statement on the shared connection mixes up their rows.
         with self._lock:
-            return self._conn.execute(sql, params)
+            cur = self._conn.execute(sql, params)
+            return Result(cur.fetchall(), cur.lastrowid, cur.rowcount)
 
     def get_value(self, key: str) -> str | None:
         row = self.execute("SELECT value FROM kv WHERE key = ?", (key,)).fetchone()

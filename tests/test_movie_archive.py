@@ -85,9 +85,10 @@ def test_runtime_mismatch_and_ambiguous_matches_are_left_for_review_not_encoded(
     h = make_harness(_dir(tmp_path / "b"))
     h.web.add_film("Example Movie", 1, "Example Movie", runtime=121)
     h.web.add_film("Example Movie", 2, "Example Movie", runtime=120, year=1987)
-    with _client(h):
+    with _client(h) as c:
         _rip(h)
         assert _wait_for(h, DiscStatus.REVIEW).review_reason == ReviewReason.MULTIPLE_MATCHES
+        assert "Several films match" in html.unescape(c.get("/").text)  # Needs Review bin
     assert h.ffmpeg.calls == []
 
     h = make_harness(_dir(tmp_path / "c"))

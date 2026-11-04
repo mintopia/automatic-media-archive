@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi.templating import Jinja2Templates
 
 from ama.discs import DiscStatus
+from ama.web.review_items import review_items
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
 
@@ -31,7 +32,7 @@ TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
-NAV: list[tuple[str, str]] = [("Now", "/")]
+NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review")]
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
@@ -43,6 +44,7 @@ FRAGMENTS: dict[str, str] = {
     "cd-rip": "partials/cd_rip_live.html",
     "filed": "partials/filed_bin.html",
     "encode": "partials/encoding_bin.html",
+    "review": "partials/review_bin.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
@@ -83,6 +85,7 @@ def view_context(services: Services) -> dict[str, Any]:
     cd = services.cd
     return {
         "nav": NAV,
+        "review": review_items(services),
         "cd": cd.current,
         "cd_reading": cd.reading_toc,
         "cd_last_id": cd.last_disc_id,

@@ -1,0 +1,225 @@
+"""CD Review, end to end: the real app with a fake drive, cyanrip, NAS folder and web.
+
+The FFVII Rebirth OST disc 1 capture has 3 MusicBrainz releases, so it lands in
+Review; the user picks one (or enters the details) and it is filed.
+"""
+
+from __future__ import annotations
+
+import html
+
+from mutagen.flac import FLAC
+
+from ama.archive import extended_path
+from ama.discs import DiscStatus, ReviewReason
+from ama.drive import DiscType
+from tests.conftest import eventually
+from tests.test_cd_archive import ALBUM, COVER, DISC_1, SPECIAL, _album, _insert, _response, _wait_for
+
+STANDARD = "b543589a-95c2-4c29-ba33-f9137ff8eb4c"  # the 7-CD edition
+PSEUDO = "5afc3090-044d-4f34-a188-a273b8cf6e0e"
+
+
+def _page(client, url: str) -> str:
+    r = client.get(url)
+    assert r.status_code == 200, r.text
+    return html.unescape(r.text)
+
+
+def test_the_review_queue_lists_pending_discs_with_why(harness, client):
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+
+    for url in ("/", "/review"):
+        page = _page(client, url)
+        assert 'Needs Review <span class="c">1</span>' in page
+        assert "3 editions match this CD" in page
+        assert f'href="/review/{rec.id}"' in page
+        assert "Choose edition" in page
+    assert '<span class="count" aria-label="1 waiting">1</span>' in _page(client, "/")
+
+
+def test_an_empty_review_queue_says_so(client):
+    assert "Nothing needs you right now" in _page(client, "/review")
+    assert 'class="count"' not in _page(client, "/")
+
+
+def test_the_review_page_shows_what_tells_the_editions_apart(harness, client):
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+
+    page = _page(client, f"/review/{rec.id}")
+    assert f"Which edition of {ALBUM} is this?" in page
+    assert "3 editions match this CD" in page
+    assert "4988601470865" in page and "4988601470872" in page   # barcodes
+    assert "Japan · 2024-04-10" in page
+    assert "8 CDs" in page and "7 CDs" in page
+    assert "Pseudo-Release" in page
+    assert DISC_1[:10] in page                                  # This CD: Disc ID
+    assert f'value="{STANDARD}:1"' in page
+    assert "couldn't be verified" not in page   # all tracks verified: no AccurateRip notice
+
+
+def test_picking_an_edition_files_the_cd(harness, client):
+    harness.web.covers[STANDARD] = COVER
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+
+    r = client.post(f"/review/{rec.id}/release", data={"release": f"{STANDARD}:1"},
+                    follow_redirects=False)
+    assert r.status_code == 303
+
+    filed = _wait_for(harness, DiscStatus.FILED)
+    album = extended_path(harness.nas_root / "Music" / "Various Artists"
+                          / "FINAL FANTASY VII REBIRTH Original Soundtrack")
+    flacs = sorted(p.name for p in album.iterdir() if p.name.endswith(".flac"))
+    assert len(flacs) == 24
+    tags = FLAC(album / flacs[0])
+    assert tags["MUSICBRAINZ_ALBUMID"] == [STANDARD]
+    assert (tags["DISCNUMBER"], tags["DISCTOTAL"]) == (["1"], ["7"])
+    assert (album / "cover.jpg").read_bytes() == COVER
+    assert filed.title == "FINAL FANTASY VII REBIRTH Original Soundtrack — Various Artists"
+    assert "Nothing needs you right now" in _page(client, "/review")
+
+
+def test_picking_an_edition_waits_for_the_nas_like_automatic_filing(harness, client):
+    harness.share["reachable"] = False
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    client.post(f"/review/{rec.id}/release", data={"release": f"{SPECIAL}:1"})
+    eventually(lambda: any("NAS" in ln.text for ln in harness.services.discs.log_lines(rec.id)))
+    assert harness.services.discs.get(rec.id).status == DiscStatus.RIPPED
+    harness.share["reachable"] = True
+    _wait_for(harness, DiscStatus.FILED)
+    assert (_album(harness)).exists()
+
+
+def test_an_edition_that_isnt_offered_is_refused(harness, client):
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    r = client.post(f"/review/{rec.id}/release", data={"release": "nope:1"})
+    assert r.status_code == 400
+    assert harness.services.discs.get(rec.id).status == DiscStatus.REVIEW
+
+
+def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(harness, client):
+    _insert(harness, DISC_1, 3, 404)
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    assert rec.review_reason == ReviewReason.NO_RELEASE
+
+    page = _page(client, f"/review/{rec.id}")
+    assert "This CD has 3 tracks" in page
+    assert "<details class=\"manual\" open>" in page
+
+    r = client.post(f"/review/{rec.id}/manual", data={
+        "album": "Kid A", "artist": "Radiohead", "year": "2000",
+        "tracks": "Everything in Its Right Place\r\nKid A\r\n\r\nThe National Anthem\r\n"},
+        follow_redirects=False)
+    assert r.status_code == 303
+
+    filed = _wait_for(harness, DiscStatus.FILED)
+    album = extended_path(harness.nas_root / "Music" / "Radiohead" / "Kid A")
+    names = sorted(p.name for p in album.iterdir())
+    assert names == ["01 - Everything in Its Right Place.flac", "02 - Kid A.flac",
+                     "03 - The National Anthem.flac", "Kid A.cue", "Kid A.log"]
+    tags = FLAC(album / names[1])
+    assert tags["TITLE"] == ["Kid A"] and tags["ARTIST"] == ["Radiohead"]
+    assert tags["ALBUM"] == ["Kid A"] and tags["DATE"] == ["2000"]
+    assert tags["MUSICBRAINZ_DISCID"] == [DISC_1]
+    assert "MUSICBRAINZ_ALBUMID" not in tags and "MUSICBRAINZ_TRACKID" not in tags
+    assert filed.title == "Kid A — Radiohead"
+    assert not any("coverartarchive" in str(r.url) for r in harness.web.requests)
+
+
+def test_manual_details_must_name_every_track(harness, client):
+    _insert(harness, DISC_1, 3, 404)
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    r = client.post(f"/review/{rec.id}/manual", data={
+        "album": "Kid A", "artist": "", "year": "two thousand", "tracks": "One\nTwo"})
+    assert r.status_code == 400
+    page = html.unescape(r.text)
+    assert "Enter the artist" in page
+    assert "This CD has 3 tracks, but you entered 2 titles" in page
+    assert "Enter the year as four digits" in page
+    assert 'value="Kid A"' in page   # what was typed is kept
+    assert harness.services.discs.get(rec.id).status == DiscStatus.REVIEW
+
+
+def test_manual_entry_is_prefilled_from_an_edition_when_there_is_one(harness, client):
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    page = _page(client, f"/review/{rec.id}")
+    assert "None of these: enter the details myself" in page
+    assert "The Unknown Journey Continues" in page.split('id="tracks"')[1]
+
+
+def _mismatch(harness, response, bad=(4, 9)):
+    harness.web.musicbrainz[DISC_1] = response
+    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
+    harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 25) if n not in bad}
+    harness.drive.insert(DiscType.CD)
+    return _wait_for(harness, DiscStatus.REVIEW)
+
+
+def test_tracks_accuraterip_didnt_verify_are_clearly_shown(harness, client):
+    rec = _mismatch(harness, _response(only=SPECIAL))
+    assert "2 tracks didn't match" in _page(client, "/")
+    page = _page(client, f"/review/{rec.id}")
+    assert "2 tracks couldn't be verified" in page
+    assert "Tracks 4 and 9 don't match the online check (AccurateRip)" in page
+    assert "Accept anyway" in page and "Discard and re-rip" in page
+
+
+def test_accepting_an_unverified_rip_with_one_edition_files_it(harness, client):
+    rec = _mismatch(harness, _response(only=SPECIAL))
+    r = client.post(f"/review/{rec.id}/accept", follow_redirects=False)
+    assert r.status_code == 303
+    _wait_for(harness, DiscStatus.FILED)
+    assert _album(harness).exists()
+    assert any("accepted" in ln.text.lower() for ln in harness.services.discs.log_lines(rec.id))
+
+
+def test_accepting_an_unverified_rip_with_several_editions_then_asks_which(harness, client):
+    rec = _mismatch(harness, _response())
+    client.post(f"/review/{rec.id}/accept")
+    eventually(lambda: harness.services.discs.get(rec.id).review_reason
+               == ReviewReason.MULTIPLE_RELEASES)
+    page = _page(client, f"/review/{rec.id}")
+    assert "couldn't be verified" not in page
+    assert "Which edition of" in page
+
+
+def test_discarding_an_unverified_rip_deletes_it(harness, client):
+    rec = _mismatch(harness, _response(only=SPECIAL))
+    r = client.post(f"/review/{rec.id}/discard", follow_redirects=False)
+    assert r.status_code == 303
+    after = harness.services.discs.get(rec.id)
+    assert after.status == DiscStatus.FAILED and after.dismissed
+    assert not rec.scratch_dir.exists()
+    assert not (harness.nas_root / "Music").exists()
+    page = _page(client, "/")
+    assert "Didn't work" not in page or f"/discs/{rec.id}" not in page
+    assert 'Needs Review <span class="c">0</span>' in page
+
+
+def test_a_cd_not_in_accuraterip_explains_it_cant_be_verified(harness, client):
+    harness.cyanrip.in_accuraterip = False
+    _insert(harness, DISC_1, 24, _response(only=SPECIAL))
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    page = _page(client, f"/review/{rec.id}")
+    assert "This CD isn't in the online check (AccurateRip)" in page
+    assert "Accept anyway" in page
+
+
+def test_a_decision_on_a_disc_no_longer_in_review_is_ignored(harness, client):
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    client.post(f"/review/{rec.id}/release", data={"release": f"{STANDARD}:1"})
+    _wait_for(harness, DiscStatus.FILED)
+    r = client.post(f"/review/{rec.id}/release", data={"release": f"{SPECIAL}:1"},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    assert harness.services.discs.get(rec.id).title.startswith(
+        "FINAL FANTASY VII REBIRTH Original Soundtrack —")
+    assert client.get(f"/review/{rec.id}", follow_redirects=False).status_code == 303

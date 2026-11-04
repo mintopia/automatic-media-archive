@@ -30,7 +30,7 @@ from pathlib import Path
 import httpx
 from mutagen.flac import FLAC
 
-from ama import cyanrip, musicbrainz
+from ama import cdreview, cyanrip, musicbrainz, review
 from ama.archive import Archive, FilingError, safe_name
 from ama.cdrip import CdTracks, Track
 from ama.cyanrip import ArStatus
@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 
 TOPIC = "filed"
 MUSIC = Path("Music")
-MB_FILE = "musicbrainz.json"
+MB_FILE = cdreview.MB_FILE
 
 
 class RetryLater(Exception):
@@ -54,17 +54,22 @@ class RetryLater(Exception):
 
 # ---- deciding ----------------------------------------------------------------
 
-def review_reason(tracks: list[Track], candidates: list[Match]) -> ReviewReason | None:
-    """Why this Rip + these MusicBrainz matches can't be filed automatically (None = file it)."""
-    audio = [t for t in tracks if t.number > 0]  # AccurateRip doesn't cover a hidden track
+def review_reason(tracks: list[Track], candidates: list[Match],
+                  rip_accepted: bool = False) -> ReviewReason | None:
+    """Why this Rip + these MusicBrainz matches can't be filed automatically (None = file it).
+
+    `rip_accepted`: a human accepted the Rip in Review, so AccurateRip no longer matters.
+    """
+    audio = cdreview.audio_tracks(tracks)  # AccurateRip doesn't cover a hidden track
     verdicts = {t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in audio}
-    if ArStatus.MISMATCH in verdicts:
-        return ReviewReason.NOT_ACCURATE
-    if ArStatus.NOT_IN_DB in verdicts:
-        return ReviewReason.NOT_IN_ACCURATERIP
-    if ArStatus.UNAVAILABLE in verdicts:
-        return ReviewReason.ACCURATERIP_UNAVAILABLE
-    fitting = [m for m in candidates if len(m.tracks) == len(audio)]
+    if not rip_accepted:
+        if ArStatus.MISMATCH in verdicts:
+            return ReviewReason.NOT_ACCURATE
+        if ArStatus.NOT_IN_DB in verdicts:
+            return ReviewReason.NOT_IN_ACCURATERIP
+        if ArStatus.UNAVAILABLE in verdicts:
+            return ReviewReason.ACCURATERIP_UNAVAILABLE
+    fitting = cdreview.fitting(tracks, candidates)
     if not fitting:
         return ReviewReason.NO_RELEASE
     if len(fitting) > 1:
@@ -121,6 +126,8 @@ def track_tags(match: Match, number: int, disc_id: str) -> dict[str, list[str]]:
         tags["CATALOGNUMBER"] = list(dict.fromkeys(cat for _, cat in r.labels if cat))
     if r.is_compilation:
         tags["COMPILATION"] = ["1"]
+    # Details entered by hand in Review have no MusicBrainz IDs: leave those tags out.
+    tags = {k: [x for x in v if x] for k, v in tags.items()}
     return {k: v for k, v in tags.items() if v}
 
 
@@ -190,24 +197,41 @@ class CdArchiver:
             self._publish()
 
     def _publish(self) -> None:
-        for topic in ("rip", TOPIC):
+        for topic in ("rip", TOPIC, review.TOPIC):
             self._bus.publish(topic)
 
     # -- one Disc (runs in a worker thread) --
     def identify(self, rec: DiscRecord) -> None:
+        """Identify and file one `ripped` CD, applying the Review decision if there is one."""
         tracks = self._tracks.load(rec.id)
         report = cyanrip.parse_report(
             (rec.scratch_dir / "rip.log").read_text(encoding="utf-8", errors="replace"))
         disc_id = report.disc_id or ""
-        try:
-            response = self._mb.lookup(disc_id) if disc_id else None
-        except httpx.HTTPError as e:
-            raise RetryLater(f"Couldn't reach MusicBrainz ({e})") from e
-        if response is not None:
-            (rec.scratch_dir / MB_FILE).write_text(json.dumps(response, ensure_ascii=False),
-                                                   encoding="utf-8")
+        decision = cdreview.load_decision(rec.scratch_dir)
+        if isinstance(decision, cdreview.ManualDetails):
+            self.file(rec, cdreview.manual_match(decision), disc_id)
+            return
+        # After Review, choose from what Review showed; otherwise ask MusicBrainz.
+        response = cdreview.saved_response(rec.scratch_dir) if decision else None
+        if response is None:
+            try:
+                response = self._mb.lookup(disc_id) if disc_id else None
+            except httpx.HTTPError as e:
+                raise RetryLater(f"Couldn't reach MusicBrainz ({e})") from e
+            if response is not None:
+                (rec.scratch_dir / MB_FILE).write_text(json.dumps(response, ensure_ascii=False),
+                                                       encoding="utf-8")
         candidates = musicbrainz.matches(response, disc_id) if response else []
-        reason = review_reason(tracks, candidates)
+        if isinstance(decision, cdreview.PickRelease):
+            picked = [m for m in cdreview.fitting(tracks, candidates)
+                      if (m.release.id, m.disc_number)
+                      == (decision.release_id, decision.disc_number)]
+            if picked:
+                self.file(rec, picked[0], disc_id)
+                return
+            self._discs.log(rec.id, "The edition picked in Review isn't in the MusicBrainz "
+                                    "answer any more", error=True)
+        reason = review_reason(tracks, candidates, rip_accepted=decision is not None)
         if reason is not None:
             self._discs.mark_review(rec.id, reason)
             self._discs.log(rec.id, f"Needs Review: {reason.value.replace('_', ' ')}")
@@ -240,16 +264,20 @@ class CdArchiver:
                                  encoding="utf-8")
             files[f"{stem}.cue"] = filed_cue
         files[f"{stem}.log"] = scratch / "rip.log"
-        try:
-            art = self._mb.cover_art(match.release)
-        except httpx.HTTPError as e:
-            raise RetryLater(f"Couldn't fetch the cover art ({e})") from e
+        if not match.release.id:
+            art = None
+            self._discs.log(rec.id, "Details entered by hand: no cover art")
+        else:
+            try:
+                art = self._mb.cover_art(match.release)
+            except httpx.HTTPError as e:
+                raise RetryLater(f"Couldn't fetch the cover art ({e})") from e
+            if art is None:
+                self._discs.log(rec.id, "No cover art on the Cover Art Archive")
         if art is not None:
             cover = scratch / f"cover.{art[1]}"
             cover.write_bytes(art[0])
             files[cover.name] = cover
-        else:
-            self._discs.log(rec.id, "No cover art on the Cover Art Archive")
         try:
             folder = self._archive.place(album_folder(match), files)
         except (OSError, FilingError) as e:
