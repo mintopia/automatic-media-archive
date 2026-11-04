@@ -213,6 +213,17 @@ def test_accepting_an_unverified_rip_with_one_edition_files_it(harness, client):
     _wait_for(harness, DiscStatus.FILED)
     assert _album(harness).exists()
     assert any("accepted" in ln.text.lower() for ln in harness.services.discs.log_lines(rec.id))
+    history = _page(client, "/history")
+    assert "accepted with 2 tracks not matching" in history and "verified" not in history
+
+
+def test_history_says_when_a_filed_cd_was_not_in_accuraterip(harness, client):
+    harness.cyanrip.in_accuraterip = False
+    _insert(harness, DISC_1, 24, _response(only=SPECIAL))
+    rec = _wait_for(harness, DiscStatus.REVIEW)
+    client.post(f"/review/{rec.id}/accept")
+    _wait_for(harness, DiscStatus.FILED)
+    assert "24 tracks · not in AccurateRip" in _page(client, "/history")
 
 
 def test_accepting_an_unverified_rip_with_several_editions_then_asks_which(harness, client):

@@ -119,6 +119,18 @@ class CdDisc:
     def total_seconds(self) -> float:
         return sum(t.seconds for t in self.tracks)
 
+    @property
+    def accuraterip(self) -> str:
+        """The Rip's AccurateRip outcome in a few words, for History."""
+        statuses = [t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in self.tracks]
+        if statuses and all(s == ArStatus.ACCURATE for s in statuses):
+            return "verified"
+        if bad := statuses.count(ArStatus.MISMATCH):
+            return f"accepted with {bad} track{'s' if bad != 1 else ''} not matching"
+        if ArStatus.NOT_IN_DB in statuses:
+            return "not in AccurateRip"
+        return "AccurateRip unavailable"
+
 
 class CdTracks:
     """The `cd_tracks` table."""

@@ -6,7 +6,7 @@
   <div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div><div class="ts">
     {%- if d.movie is defined %}Movies{% if d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}{% if d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ d.extras }} Extra{{ "s" if d.extras != 1 }}</a>{% endif %}
     {%- elif d.episodes is defined %}{% set n = d.episodes | selectattr("episode") | list | length %}{% if n %}TV · {{ n }} Episode{{ "s" if n != 1 }}{% else %}Movies · {{ d.episodes | length }} Extra{{ "s" if d.episodes | length != 1 }}{% endif %}
-    {%- else %}Music · {{ d.tracks | length }} tracks · verified{% endif %}
+    {%- else %}Music · {{ d.tracks | length }} tracks · {{ d.accuraterip }}{% endif %}
     {%- if dated and d.record.filed_at %} · <span class="nw">{{ d.record.filed_at.strftime("%d %b %Y") }}</span>{% endif %}</div></div>
   <span class="stk fil">Filed</span>
 </div>
