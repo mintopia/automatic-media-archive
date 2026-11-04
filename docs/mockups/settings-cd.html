@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CD · Settings · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main class="settings">
+  <h1>Settings</h1>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-tools.html">Tools</a><a class="tab" href="settings-cd.html" aria-current="page">CD</a><a class="tab" href="settings-encode.html">Encode</a><a class="tab" href="settings-libraries.html">Libraries</a><a class="tab" href="settings-nas.html">NAS</a><a class="tab" href="settings-identification.html">Identification</a><a class="tab" href="settings-notifications.html">Notifications</a><a class="tab" href="settings-logs.html">Logs</a></nav>
+  <form class="box setbox" aria-label="CD settings" novalidate>
+      <div class="grp-h"><h2>CD Rips</h2><span class="ts">Used from the next CD Rip</span></div>
+      <div class="sf"><div><div class="lb"><label for="cd-offset">Read offset</label></div><div class="hn" id="cd-offset-h">Your drive's AccurateRip offset (EAC convention). +667 is the value for the PIONEER BDR-S11JX; confirm it once with <code>cyanrip -f</code>.</div></div><div class="ctl"><div class="unit"><input class="input" id="cd-offset" type="number" name="cd-offset" value="667" aria-describedby="cd-offset-h" spellcheck="false"><span>samples</span></div></div></div>
+      <div class="sf"><div><div class="lb"><label for="cd-retries">Re-reads</label></div><div class="hn" id="cd-retries-h">How many times a frame is read again before it counts as an error.</div></div><div class="ctl"><div class="unit"><input class="input" id="cd-retries" type="number" name="cd-retries" value="10" aria-describedby="cd-retries-h" spellcheck="false"><span>per frame</span></div></div></div>
+      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save CD</button></div>
+  </form>
+  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+</body>
+</html>

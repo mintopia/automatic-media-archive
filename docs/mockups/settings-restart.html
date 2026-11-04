@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>General · Settings · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main class="settings">
+  <h1>Settings</h1>
+  <div class="notice restart" role="status">
+    <svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>
+    <div class="rbody"><div><b>Restart AMA to use 2 saved changes</b><ul><li>Port (General)</li><li>Drive letter (General)</li></ul></div><button class="btn pri" type="button">Restart now</button></div>
+  </div>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html" aria-current="page">General</a><a class="tab" href="settings-tools.html">Tools</a><a class="tab" href="settings-cd.html">CD</a><a class="tab" href="settings-encode.html">Encode</a><a class="tab" href="settings-libraries.html">Libraries</a><a class="tab" href="settings-nas.html">NAS</a><a class="tab" href="settings-identification.html">Identification</a><a class="tab" href="settings-notifications.html">Notifications</a><a class="tab" href="settings-logs.html">Logs</a></nav>
+  <form class="box setbox" aria-label="General settings" novalidate>
+      <div class="grp-h"><h2>Web UI</h2></div>
+      <div class="sf"><div><div class="lb"><label for="web-host">Address</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="web-host-h">0.0.0.0 lets every device on the LAN reach AMA. 127.0.0.1 limits it to this PC.</div></div><div class="ctl"><input class="input" id="web-host" type="text" name="web-host" value="0.0.0.0" aria-describedby="web-host-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="web-port">Port</label><span class="rs pending"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Waiting for restart</span></div></div><div class="ctl"><input class="input" id="web-port" type="number" name="web-port" value="8081" aria-describedby="web-port-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><span>Password</span><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn">Without a password, anyone on the LAN can use AMA. Once saved it's never shown again.</div></div><div class="ctl"><div class="secret"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace password">Replace</button><button class="btn quiet" type="button" aria-label="Remove password">Remove</button></div></div></div>
+      <div class="grp-h"><h2>Drive</h2></div>
+      <div class="sf"><div><div class="lb"><span>New Discs</span></div><div class="hn">Paused ignores inserted Discs; a Rip already running finishes. Takes effect at once and isn't part of <code>ama.toml</code>.</div></div><div class="ctl"><div class="segs" role="group" aria-label="New Discs"><a href="#" aria-current="true">Accepting</a><a href="settings-menu.html">Paused</a></div></div></div>
+      <div class="sf"><div><div class="lb"><label for="drive-letter">Drive letter</label><span class="rs pending"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Waiting for restart</span></div><div class="hn" id="drive-letter-h">Empty uses the first optical drive Windows reports.</div></div><div class="ctl"><input class="input" id="drive-letter" type="text" name="drive-letter" value="E:" placeholder="Automatic (D:)" aria-describedby="drive-letter-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="drive-poll">Check for a Disc every</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div></div><div class="ctl"><div class="unit"><input class="input" id="drive-poll" type="number" name="drive-poll" value="3" aria-describedby="drive-poll-h" spellcheck="false"><span>seconds</span></div></div></div>
+      <div class="grp-h"><h2>Storage</h2></div>
+      <div class="sf"><div><div class="lb"><label for="paths-scratch">Scratch folder</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="paths-scratch-h">Rips wait here for Identification, Review and Encode. Needs at least 256 GB free.</div></div><div class="ctl"><input class="input" id="paths-scratch" type="text" name="paths-scratch" value="D:\ama-scratch" aria-describedby="paths-scratch-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><span>Space needed before a Rip</span></div><div class="hn">With less free, an inserted Disc is ejected unripped and Now shows what's holding scratch.</div></div><div class="ctl"><table class="pertype"><thead><tr><th scope="col">Disc Type</th><th scope="col">Free space</th></tr></thead><tbody><tr><td>CD</td><td><div class="unit"><input class="input" type="number" value="1" aria-label="CD free space"><span>GB</span></div></td></tr><tr><td>DVD</td><td><div class="unit"><input class="input" type="number" value="10" aria-label="DVD free space"><span>GB</span></div></td></tr><tr><td>Blu-ray</td><td><div class="unit"><input class="input" type="number" value="50" aria-label="Blu-ray free space"><span>GB</span></div></td></tr><tr><td>UHD Blu-ray</td><td><div class="unit"><input class="input" type="number" value="100" aria-label="UHD Blu-ray free space"><span>GB</span></div></td></tr></tbody></table></div></div>
+      <div class="sf"><div><div class="lb"><label for="paths-db">Database</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="paths-db-h">Relative paths are next to <code>ama.toml</code>.</div></div><div class="ctl"><input class="input" id="paths-db" type="text" name="paths-db" value="ama.sqlite3" aria-describedby="paths-db-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="paths-log">Log file</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div></div><div class="ctl"><input class="input" id="paths-log" type="text" name="paths-log" value="logs\ama.log" aria-describedby="paths-log-h" spellcheck="false"></div></div>
+      <div class="setfoot"><span class="st"><span class="ok" role="status"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Saved at 21:14</span></span><button class="btn pri" type="submit" disabled>Save General</button></div>
+  </form>
+  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logs · Settings · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main class="settings">
+  <h1>Settings</h1>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-tools.html">Tools</a><a class="tab" href="settings-cd.html">CD</a><a class="tab" href="settings-encode.html">Encode</a><a class="tab" href="settings-libraries.html">Libraries</a><a class="tab" href="settings-nas.html">NAS</a><a class="tab" href="settings-identification.html">Identification</a><a class="tab" href="settings-notifications.html">Notifications</a><a class="tab" href="settings-logs.html" aria-current="page">Logs</a></nav>
+  <form class="box setbox" aria-label="Logs settings" novalidate>
+      <div class="grp-h"><h2>Step output</h2><span class="ts">Takes effect at once</span></div>
+      <div class="sf"><div><div class="lb"><label for="logs-keep">Keep step output for</label></div><div class="hn" id="logs-keep-h">0 keeps it forever. Older output is removed at startup and once a day; Jobs, History and each run's summary are always kept.</div></div><div class="ctl"><div class="unit"><input class="input" id="logs-keep" type="number" name="logs-keep" value="0" aria-describedby="logs-keep-h" spellcheck="false"><span>days</span></div></div></div>
+      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save Logs</button></div>
+  </form>
+  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+</body>
+</html>

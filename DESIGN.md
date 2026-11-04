@@ -305,7 +305,9 @@ Plain, firm and printed.
 - **Radio row:** a 22px control column. The selected row (`.on`) gets a `well` fill and a 2px inset `ink` ring. The accent colour is `ink`.
 
 ### Navigation
-- **Top bar:** a 60px `sheet` bar with a bottom rule. It holds the uppercase Archivo Narrow brand, nav links in Archivo 500 / `ink-2`, and the scratch meter pushed to the right.
+- **Top bar:** a 60px `sheet` bar with a bottom rule. It holds the uppercase Archivo Narrow brand, nav links (Now, Review, History) in Archivo 500 / `ink-2`, then the scratch meter and the menu button pushed to the right.
+- **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it with a 1px rule border and no top edge: New Discs (Accepting / Paused segmented control), Theme (System / Light / Dark), then Settings and Log out as 48px rows (Log out only when a password is set). On phones the button sits at the right end of the nav row.
+- **Paused mark:** while the drive is paused, an `ink`-outlined 26px "Paused" label with a pause icon sits before the scratch meter on every page. It is hidden on phones, where the menu shows the state.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`).
 - **Review count:** a tomato badge (700, 12px, 3px corners).
 - **Scratch meter:** a 160px × 8px `well` track with a rule border and an `ink` fill that turns `review-tomato` when full.
@@ -340,6 +342,19 @@ A Job's settings as overrides of the global ones (`docs/mockups/job-settings-*.h
 - **Saving:** each control saves on change, and a `filed-ink` check reading "Saved" appears by the group heading (`role="status"`, inserted on save so it is announced).
 - **Locked:** a lock icon and "Locked at Ripping start", "Locked at Encoding start" or "Locked when Filed", with the stored values as a definition list in `ink-2` and no controls. An override stays named: "Changed for this Job · default <value>".
 - **Rejected edit:** an attention notice at the top of the panel says the group locked first and the change wasn't saved.
+
+### Settings Page
+Editing `ama.toml` one section at a time (`docs/mockups/settings-*.html`). Content is capped at 1100px.
+- **Divider file:** the nine sections (General, Tools, CD, Encode, Libraries, NAS, Identification, Notifications, Logs) are divider tabs in a row, 32px below the h1. Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each section is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
+- **Group:** a 700 / 16px heading with an optional 13px `ink-2` note at the right (for example "Takes effect at once").
+- **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px.
+- **Restart tag:** a 20px rule-bordered label with the redo icon, "Restart", beside the label of every key that applies only after a restart. Once such a key is saved it reads "Waiting for restart" with an `ink` border.
+- **Restart banner:** an attention notice between the h1 and the tabs listing the saved keys waiting for a restart (key and section), with a primary "Restart now" button.
+- **Secret:** a saved secret is never rendered. It shows a `filed-ink` check and "Set" with quiet Replace and Remove buttons; an unset one is an empty password input reading "Not set".
+- **Save bar:** each section ends with a footer: status on the left ("No unsaved changes", "Unsaved changes" in `ink` 600, or a `filed-ink` "Saved at 21:14" status), then "Undo changes" and the primary "Save <section>", disabled when clean.
+- **Rejected save:** an attention notice at the top of the sheet says the section wasn't saved and `ama.toml` is unchanged; each bad input gets a `review-ink` border and outline, and an alert-icon message under it naming the fix.
+- **Choice list:** radio rows in a `well` box for the encoder, audio and subtitles. An encoder that fails its test encode is disabled with "Not available on this PC"; a configured one that stops working stays selected with a `review-ink` note, and an attention notice offers "Test encoders again".
+- **Libraries:** a table (name, kind, folder, Plex library, Default mark, Edit / Remove). Remove is disabled on a kind's default. Edit opens an inline `well` form under its row with its own Save Library. On phones each Library stacks into one row with full-width Edit and Remove buttons.
 
 ### Log
 A rip log on the always-dark `log-ground`, in 13px / 1.6 monospace, with whitespace preserved, a maximum height of 320px and scrolling. Error lines are the warm `#F08A70`.

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tools · Settings · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main class="settings">
+  <h1>Settings</h1>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-tools.html" aria-current="page">Tools</a><a class="tab" href="settings-cd.html">CD</a><a class="tab" href="settings-encode.html">Encode</a><a class="tab" href="settings-libraries.html">Libraries</a><a class="tab" href="settings-nas.html">NAS</a><a class="tab" href="settings-identification.html">Identification</a><a class="tab" href="settings-notifications.html">Notifications</a><a class="tab" href="settings-logs.html">Logs</a></nav>
+  <form class="box setbox" aria-label="Tools settings" novalidate>
+      <div class="grp-h"><h2>Programs</h2><span class="ts">Checked at startup</span></div>
+      <div class="sf"><div><div class="lb"><label for="tools-ffmpeg">ffmpeg</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="tools-ffmpeg-h">Encodes video. Give a full path to use your own copy instead, as-is.</div></div><div class="ctl"><span class="tstat"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Working · 7.1, AMA's copy</span><input class="input" id="tools-ffmpeg" type="text" name="tools-ffmpeg" placeholder="Use AMA's copy" aria-describedby="tools-ffmpeg-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="tools-ffprobe">ffprobe</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="tools-ffprobe-h">Reads Title details. </div></div><div class="ctl"><span class="tstat"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Working · 7.1, AMA's copy</span><input class="input" id="tools-ffprobe" type="text" name="tools-ffprobe" placeholder="Use AMA's copy" aria-describedby="tools-ffprobe-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="tools-cyanrip">cyanrip</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="tools-cyanrip-h">Rips CDs. </div></div><div class="ctl"><span class="tstat"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Working · 0.9.3, AMA's copy</span><input class="input" id="tools-cyanrip" type="text" name="tools-cyanrip" placeholder="Use AMA's copy" aria-describedby="tools-cyanrip-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><label for="tools-makemkvcon">MakeMKV</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="tools-makemkvcon-h">Rips DVDs and Blu-rays. It's yours to install and register; AMA never does either. </div></div><div class="ctl"><span class="tstat"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Working · 1.17.8, registered</span><input class="input" id="tools-makemkvcon" type="text" name="tools-makemkvcon" placeholder="Look in Program Files" aria-describedby="tools-makemkvcon-h" spellcheck="false"></div></div>
+      <div class="grp-h"><h2>Where AMA keeps its copies</h2></div>
+      <div class="sf"><div><div class="lb"><label for="tools-dir">Tools folder</label><span class="rs" title="Saved now, used after AMA restarts"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#redo"/></svg>Restart</span></div><div class="hn" id="tools-dir-h">AMA downloads its pinned, hash-checked ffmpeg and cyanrip here. The first start needs internet and about 0.5 GB.</div></div><div class="ctl"><input class="input" id="tools-dir" type="text" name="tools-dir" placeholder="%LOCALAPPDATA%\ama\tools" aria-describedby="tools-dir-h" spellcheck="false"></div></div>
+      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save Tools</button></div>
+  </form>
+  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+</body>
+</html>
