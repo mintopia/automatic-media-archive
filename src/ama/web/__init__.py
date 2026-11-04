@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
 
+from ama.discs import DiscStatus
+from ama.video_rip import VIDEO_DISC_TYPES
 from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
 
 if TYPE_CHECKING:
@@ -35,7 +37,34 @@ FRAGMENTS: dict[str, str] = {
     "nas": "partials/nas.html",
     "tools": "partials/tools.html",
     "rip": "partials/rip.html",
+    "ripping": "partials/ripping_bin.html",
+    "rip-failed": "partials/rip_failed.html",
+    "cd-rip": "partials/cd_rip_live.html",
 }
+# A fragment re-renders when the bus topic of the same name is published, or the
+# topic named here (several fragments can follow one topic).
+FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip"}
+
+
+def fragments_for(topic: str) -> list[str]:
+    return [name for name in FRAGMENTS if FRAGMENT_TOPICS.get(name, name) == topic]
+
+
+def _minutes(seconds: float) -> str:
+    m = round(seconds / 60)
+    return f"{m // 60} h {m % 60} m" if m >= 60 else f"{max(m, 1)} min"
+
+
+def _mmss(seconds: float) -> str:
+    s = round(seconds)
+    return f"{s // 60}:{s % 60:02d}"
+
+
+def _left(seconds: int) -> str:
+    return "under a minute left" if seconds < 60 else f"{_minutes(seconds)} left"
+
+
+TEMPLATES.env.filters.update(minutes=_minutes, mmss=_mmss, left=_left)
 
 GB = 1000**3
 
@@ -48,8 +77,14 @@ def view_context(services: Services) -> dict[str, Any]:
                    "pct": round(100 * du.used / du.total, 1) if du.total else 0}
     except OSError:
         scratch = None
+    cd = services.cd
     return {
         "nav": NAV,
+        "cd": cd.current,
+        "cd_reading": cd.reading_toc,
+        "cd_last_id": cd.last_disc_id,
+        "ripped": cd.discs(DiscStatus.RIPPED),
+        "failed": cd.discs(DiscStatus.FAILED),
         "drive": services.drive.state,
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
@@ -57,7 +92,8 @@ def view_context(services: Services) -> dict[str, Any]:
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_disc": services.video_rip.disc,
         "rip_progress": services.video_rip.progress,
-        "rip_failure": services.discs.unseen_failure(),
+        "rip_failure": next(iter(services.discs.list(DiscStatus.FAILED, types=VIDEO_DISC_TYPES)),
+                            None),
         **_tools_context(services),
     }
 

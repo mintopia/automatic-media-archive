@@ -1,0 +1,11 @@
+{#- Now page: Didn't work, when a Rip failed and hasn't been dismissed. -#}
+{%- if failed %}
+<section class="bin ink">
+  <div class="tab">Didn't work <span class="c">{{ failed | length }}</span></div>
+  <div class="box">
+  {%- for f in failed %}
+    <div class="row compact"><div class="dtype">{{ f.record.disc_type }}</div><div><div class="tt">{{ f.record.label or "Unknown CD" }}{% if f.tracks %} · {{ f.tracks | length }} tracks{% endif %}</div><div class="ts">{{ f.record.failure.headline }}</div></div><a class="stk fail" href="/discs/{{ f.record.id }}">Failed</a></div>
+  {%- endfor %}
+  </div>
+</section>
+{%- endif %}

@@ -24,7 +24,7 @@ from ama.config import (
 from ama.events import EventBus
 from ama.proc import ProcResult
 from ama.tools import Tools
-from tests.fakes import FakeDrive, FakeFetch, FakeMakemkv, FakeRunner
+from tests.fakes import FakeCyanrip, FakeDrive, FakeFetch, FakeMakemkv, FakeRunner, FakeTools
 
 UNC = r"\\nas\media"
 MAKEMKV_OK = ('MSG:1005,0,1,"MakeMKV v2.0.0 win(x64-release) started","%1 started",'
@@ -51,11 +51,12 @@ class Harness:
     share: dict  # {"reachable": bool}
     runner: FakeRunner
     makemkv: FakeMakemkv  # the makemkvcon that Video Rips run
+    cyanrip: FakeCyanrip
     makemkv_check: dict  # {"key", "output"}: what the MakeMKV preflight sees next
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
-                 fetch: FakeFetch | None = None) -> Harness:
+                 fetch: FakeFetch | None = None, pins: tuple | None = None) -> Harness:
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
     MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
     cfg = make_config(tmp_path, password)
@@ -64,6 +65,7 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
                                                 "The network path was not found."))
     makemkv = FakeMakemkv(drive)
+    cyanrip = FakeCyanrip(drive)
     makemkv_check = {"key": "T-test", "output": MAKEMKV_OK}
     exe = tmp_path / "MakeMKV" / "makemkvcon64.exe"
     exe.parent.mkdir(exist_ok=True)
@@ -74,14 +76,16 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
         return Tools(ToolsConfig(dir=str(tmp_path / "tools"), **fakes), bus,
                      runner=FakeRunner(lambda a: ProcResult(0, makemkv_check["output"])),
                      fetch=fetch or FakeFetch({}), read_key=lambda: makemkv_check["key"],
-                     makemkv_candidates=[exe], retry_seconds=0.05)
+                     makemkv_candidates=[exe], retry_seconds=0.05,
+                     **({} if pins is None else {"pins": pins}))
 
     services = build_services(cfg, probe=drive, runner=runner,
-                              nas_exists=lambda p: share["reachable"], line_runner=makemkv,
+                              nas_exists=lambda p: share["reachable"],
+                              streamer=FakeTools(makemkv, cyanrip),
                               make_tools=make_tools)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
-    return Harness(services, drive, share, runner, makemkv, makemkv_check)
+    return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

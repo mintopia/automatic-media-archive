@@ -1,0 +1,49 @@
+# source: https://github.com/cyanreg/cyanrip/pull/113
+cyanrip -d /dev/rdisk4 -s 6 -N
+Checking /dev/rdisk4 for cdrom...
+
+Opening drive...
+Release ID unavailable, cannot search Cover Art DB!
+Unable to get AccuRIP DB data: missing entry!
+cyanrip 0.9.3 (7f74e52)
+System device:  /dev/rdisk4
+Offset:         +6 samples
+Overread:       +1 frame
+Overread mode:  fill with silence in lead-in/lead-out
+Speed:          default (changeable)
+C2 errors:      unsupported by drive
+Paranoia level: max
+Frame retries:  10
+HDCD decoding:  disabled
+Album Art:      none
+Outputs:        flac
+Disc tracks:    13
+Tracks to rip:  all
+DiscID:         En1ATXvRKHKQhaES95fcMHQegtU-
+CDDB ID:        A80AA00D
+Album:          Unknown disc (EN1A)
+AccurateRip:    not found
+Total time:     00:45:20.093
+
+Gaps:
+    None signalled
+
+Tracks:
+
+Drive media changed, stopping!
+Album Loudness Summary:
+
+  Integrated loudness:
+    I:         -70.0 LUFS
+    Threshold:   0.0 LUFS
+
+  Loudness range:
+    LRA:         0.0 LU
+    Threshold:   0.0 LUFS
+    LRA low:     0.0 LUFS
+    LRA high:    0.0 LUFS
+
+  True peak:
+    Peak:        0.0 dBFS
+
+zsh: segmentation fault  ./src/cyanrip -d /dev/rdisk4 -s 6 -N

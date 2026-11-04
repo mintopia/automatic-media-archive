@@ -34,6 +34,13 @@ cyanrip = ""
 # Empty = look in C:\Program Files (x86)\MakeMKV and C:\Program Files\MakeMKV.
 makemkvcon = ""
 
+[cd]
+# Drive read offset in samples (EAC convention). +667 is the AccurateRip value
+# for the PIONEER BDR-S11JX; confirm once with `cyanrip -f`.
+offset = 667
+# How many times cyanrip re-reads a frame before counting it as an error.
+retries = 10
+
 [nas]
 # UNC path of the NAS share that holds the Plex library (Music/, Movies/, TV/).
 # Connected with `net use` at startup; retried while it fails.

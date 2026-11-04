@@ -2,6 +2,7 @@
 
 import html
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -130,3 +131,42 @@ def test_video_rip_is_refused_until_makemkv_passes_its_checks(tmp_path):
         h.drive.insert(DiscType.BD, "MATRIX_BD")
         eventually(lambda: h.drive.ejected == 2)
         assert h.makemkv.calls
+
+
+def test_cd_waits_for_cyanrip_then_rips_and_video_is_not_blocked(tmp_path):
+    import hashlib
+
+    from ama.drive import DiscType
+    from ama.tools import Member, Pin
+
+    exe = b"pretend cyanrip"
+    sha = hashlib.sha256(exe).hexdigest()
+    pin = Pin("cyanrip", "1", "https://example/cyanrip.exe", sha, (Member("cyanrip", None, sha),))
+
+    class OfflineUntilReleased(FakeFetch):
+        online = False
+
+        def __call__(self, url, dest, progress):
+            if not self.online:
+                self.calls.append(url)
+                raise OSError("offline")
+            super().__call__(url, dest, progress)
+
+    fetch = OfflineUntilReleased({pin.url: exe})
+    h = make_harness(tmp_path, fetch=fetch, pins=(pin,))
+    with TestClient(create_app(h.services)) as c:
+        eventually(lambda: "Couldn't download cyanrip" in html.unescape(c.get("/").text))
+        h.drive.insert(DiscType.CD, "Audio CD")
+        time.sleep(0.3)  # many CD Rip polls
+        assert h.cyanrip.calls == [] and h.drive.ejected == 0  # waiting, not failed
+        assert "CD Rips wait" in html.unescape(c.get("/").text)
+
+        h.drive.eject()
+        h.makemkv.release()
+        h.drive.insert(DiscType.BD, "MATRIX_BD")  # makemkvcon is ready: video isn't blocked
+        eventually(lambda: h.makemkv.calls)
+        eventually(lambda: h.drive.ejected == 2)
+
+        h.drive.insert(DiscType.CD, "Audio CD")
+        fetch.online = True  # the retry fetches cyanrip, and the waiting CD rips
+        eventually(lambda: h.cyanrip.calls)

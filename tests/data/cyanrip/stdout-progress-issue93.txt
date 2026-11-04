@@ -1,0 +1,183 @@
+# source: https://github.com/cyanreg/cyanrip/issues/93#issuecomment-2185151060
+Checking /dev/cdrom for cdrom...
+                CDROM sensed: HL-DT-ST DVDRW  GX40N     RQ00 SCSI CD-ROM
+
+
+Opening drive...
+Unrecognised disc element: 'offset-list'
+Unrecognised artist attribute: 'type-id'
+Unrecognised release element: 'release-event-list'
+Unrecognised release element: 'cover-art-archive'
+Unrecognised disc element: 'offset-list'
+Unrecognised disc element: 'offset-list'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Unrecognised track attribute: 'id'
+Unrecognised artist attribute: 'type-id'
+Unrecognised recording element: 'first-release-date'
+Found MusicBrainz release: Collection - The Rankin Family
+Downloading front cover art...
+Downloading back cover art...
+cyanrip 0.9.3 (c23f1c4)
+System device:  /dev/cdrom
+Device model:   HL-DT-ST DVDRW  GX40N     RQ00 SCSI CD-ROM
+Offset:         +6 samples
+Overread:       +1 frame
+Overread mode:  fill with silence in lead-in/lead-out
+Speed:          default (unchangeable)
+C2 errors:      supported by drive
+Paranoia level: max
+Frame retries:  10
+HDCD decoding:  disabled
+Album Art:      Front (From: Cover Art DB), Back (From: Cover Art DB)
+Outputs:        vorbis
+Disc number:    1
+Total discs:    1
+Disc tracks:    13
+Tracks to rip:  13
+DiscID:         2haeuk8zmHRYYYTpjjMNKo9ZTP0-
+Release ID:     38179e8c-4389-4413-81b5-46d575c9d939
+CDDB ID:        D30CA80D
+Disc MCN:       0000000000000
+Album:          Collection
+Album artist:   The Rankin Family
+AccurateRip:    found
+Total time:     01:13:48.438
+
+Gaps:
+    89143 frame unmarked gap between lead-in and track 1, marking as a pregap
+    89143 frame pregap in track 1, unmerged
+
+Cover art destination(s):
+    Collection [OGG]/Front.jpg
+    Collection [OGG]/Back.jpg
+
+Tracks:
+Ripping and encoding track 13, progress - 100.00%, ETA - 0s   
+Flushing encoders...
+Track 13 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -10.6 LUFS
+    Threshold: -21.7 LUFS
+
+  Loudness range:
+    LRA:        19.3 LU
+    Threshold: -31.7 LUFS
+    LRA low:   -27.2 LUFS
+    LRA high:   -8.0 LUFS
+
+  True peak:
+    Peak:        0.3 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    00:07:50.420
+    Samples:     20727000
+    Frames:      35250
+    Pregap LSN:  none
+    Start LSN:   296865
+    End LSN:     332114
+    Appended:    1 frames of silence
+
+  EAC CRC32:     8E29E003
+  Accurip:       disc found in database (max confidence: 30)
+    Accurip v1:  22601358 (accurately ripped, confidence 10)
+    Accurip v2:  2C296456 (accurately ripped, confidence 30)
+
+  Metadata:
+    mbid:                          2d1d97ea-20a7-4c2e-b3c7-735c17aadbdc
+    title:                         Mull River Shuffle (live)
+    artist:                        The Rankin Family
+    track:                         13
+    tracktotal:                    13
+    disc_mcn:                      0000000000000
+    discid:                        2haeuk8zmHRYYYTpjjMNKo9ZTP0-
+    cddb:                          D30CA80D
+    media_type:                    CD
+    comment:                       cyanrip 0.9.3
+    date:                          1996
+    release_id:                    38179e8c-4389-4413-81b5-46d575c9d939
+    album:                         Collection
+    barcode:                       724385296901
+    packaging:                     Jewel Case
+    country:                       CA
+    status:                        Official
+    album_artist:                  The Rankin Family
+    totaldiscs:                    1
+    disc:                          1
+    format:                        CD
+    isrc:                          CAE159600003
+    creation_time:                 2024-06-23T10:44:02
+    REPLAYGAIN_TRACK_GAIN:         -7.41 dB
+    R128_TRACK_GAIN:               -618
+    REPLAYGAIN_TRACK_RANGE:        19.29 dB
+    REPLAYGAIN_TRACK_PEAK:         1.040793
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  Embedded cover art:
+    Front: 500x507 Motion JPEG
+
+  File(s):
+    Collection [OGG]/13 - Mull River Shuffle (live).ogg
+
+Album Loudness Summary:
+
+  Integrated loudness:
+    I:         -10.6 LUFS
+    Threshold: -21.7 LUFS
+
+  Loudness range:
+    LRA:        19.3 LU
+    Threshold: -31.7 LUFS
+    LRA low:   -27.2 LUFS
+    LRA high:   -8.0 LUFS
+
+  True peak:
+    Peak:        0.3 dBFS
+
+Tracks ripped accurately: 1/13
+
+Paranoia status counts:
+  READ:          2832
+  VERIFY:        204
+  OVERLAP:       51
+
+Ripping errors: 0
+Ripping finished at 2024-06-23T10:47:46

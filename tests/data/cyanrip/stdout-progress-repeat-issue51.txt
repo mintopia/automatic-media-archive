@@ -1,0 +1,14 @@
+# source: https://github.com/cyanreg/cyanrip/issues/51#issuecomment-1620824718
+Ripping track 1, progress - 100.00%, ETA - 38m   
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 100.00%, ETA - 37m
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 100.00%, ETA - 37m
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 100.00%, ETA - 36m
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 100.00%, ETA - 35m
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 100.00%, ETA - 34m
+Repeating ripping (0 out of 1 matches for current checksum)
+Ripping and encoding track 1, progress - 26.83%, ETA - 35m 

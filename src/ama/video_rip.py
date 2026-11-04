@@ -20,6 +20,7 @@ from pathlib import Path
 from ama import makemkv
 from ama.discs import (
     DiscRecord,
+    DiscStatus,
     DiscStore,
     Failure,
     FailureKind,
@@ -29,7 +30,7 @@ from ama.discs import (
 from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
-from ama.proc import LineRunner
+from ama.proc import Streamer
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -86,15 +87,14 @@ class _Fail(Exception):
 class VideoRipper:
     TOPIC = "rip"
 
-    def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus, scratch: Path,
-                 makemkvcon: Callable[[], Path], line_runner: LineRunner,
+    def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
+                 makemkvcon: Callable[[], Path], streamer: Streamer,
                  clock: Callable[[], float] = time.monotonic) -> None:
         self._drive = drive
         self._store = store
         self._bus = bus
-        self._root = scratch / "video"
         self._exe = makemkvcon
-        self._run_lines = line_runner
+        self._run_lines = streamer
         self._clock = clock
         self.disc: DiscRecord | None = None  # the Disc being ripped, else the last one this run
         self.progress: RipProgress | None = None  # set only while ripping
@@ -121,17 +121,20 @@ class VideoRipper:
 
     async def recover(self) -> None:
         """A Rip cut short by a restart: fail it, delete its files, eject its Disc."""
-        stale = self._store.interrupted()
+        stale = self._store.list(DiscStatus.RIPPING, include_dismissed=True,
+                                 types=VIDEO_DISC_TYPES)
         for d in stale:
-            shutil.rmtree(d.scratch_dir, ignore_errors=True)
+            self._store.mark_failed(d.id, INTERRUPTED_FAILURE)
             self._store.log(d.id, "The app stopped during the Rip; partial files removed",
                             error=True)
-            self._store.fail(d.id, INTERRUPTED_FAILURE)
         if not stale:
             return
         await self._drive.poll_once()
         if self._is_video(self._drive.state):
-            await self._drive.eject()
+            try:
+                await self._drive.eject()
+            except OSError:
+                log.exception("eject failed")
         self._publish()
 
     @staticmethod
@@ -153,7 +156,7 @@ class VideoRipper:
     async def rip(self, inserted: DiscPresent) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
-        disc = self._store.create(inserted.disc_type, inserted.label, self._root)
+        disc = self._store.create(inserted.disc_type, inserted.label, "video")
         shutil.rmtree(disc.scratch_dir, ignore_errors=True)
         disc.scratch_dir.mkdir(parents=True, exist_ok=True)
         self.disc, self.progress = disc, RipProgress()
@@ -172,14 +175,16 @@ class VideoRipper:
         if failure:
             self._store.log(disc.id, failure.headline, error=True)
             self._store.log(disc.id, "Removing partial files from scratch")
-            shutil.rmtree(disc.scratch_dir, ignore_errors=True)
-            self._store.fail(disc.id, failure)
+            self._store.mark_failed(disc.id, failure)
         else:
             self._store.log(disc.id, "Rip complete")
-            self._store.finish(disc.id)
-        ejected = await self._drive.eject()
-        self._store.log(disc.id, "Disc ejected" if ejected else "Couldn't eject the Disc",
-                        error=not ejected)
+            self._store.mark_ripped(disc.id)
+        try:
+            await self._drive.eject()
+            self._store.log(disc.id, "Disc ejected")
+        except OSError as e:
+            log.warning("eject failed: %s", e)
+            self._store.log(disc.id, f"Couldn't eject the Disc: {e}", error=True)
         self.disc, self.progress = self._store.get(disc.id), None
         self._publish()
 
