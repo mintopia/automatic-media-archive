@@ -68,6 +68,10 @@ class DriveMissing:
 DriveState = DriveEmpty | DiscPresent | UnrecognisedDisc | DriveMissing
 
 
+def has_disc(state: DriveState) -> bool:
+    return isinstance(state, DiscPresent | UnrecognisedDisc)
+
+
 def classify_root(root: Path) -> DiscType | None:
     """Work out the Disc Type from the filesystem Windows exposes for a Disc."""
     try:
@@ -205,6 +209,10 @@ class DriveMonitor:
         self._bus = bus
         self._interval = interval
         self.state: DriveState = DriveEmpty()
+        # Counts Discs going in (no Disc -> a Disc). Rippers handle each insertion once
+        # by this number, not by sampling `state`: a Disc swapped between two of their
+        # looks is still a new Disc, even with the same label.
+        self.insertion = 0
 
     async def poll_once(self) -> None:
         try:
@@ -214,6 +222,8 @@ class DriveMonitor:
             state = DriveMissing(f"Couldn't read the drive: {e}")
         if state != self.state:
             log.info("drive: %s", state)
+            if has_disc(state) and not has_disc(self.state):
+                self.insertion += 1
             self.state = state
             self._bus.publish(self.TOPIC)
 

@@ -212,7 +212,7 @@ class CdRipper:
         self.current: CdRip | None = None
         self.reading_toc = False
         self.last_disc_id: int | None = None
-        self._handled = False  # this insertion has been dealt with; wait for the drive to empty
+        self._handled: int | None = None  # the `DriveMonitor.insertion` already dealt with
 
     # -- queries for the UI --
     def disc(self, disc_id: int) -> CdDisc | None:
@@ -245,16 +245,13 @@ class CdRipper:
         state = self._drive.state
         candidate = (isinstance(state, DiscPresent) and state.disc_type == DiscType.CD) \
             or isinstance(state, UnrecognisedDisc)
-        if not candidate:
-            self._handled = False
-            return
-        if self._handled:
+        if not candidate or self._handled == self._drive.insertion:
             return
         try:
             self._tool("cyanrip")
         except ToolUnavailable:
             return  # wait in the drive until cyanrip is in; the Now page says why
-        self._handled = True
+        self._handled = self._drive.insertion
         try:
             await self.rip(state.label, known_cd=isinstance(state, DiscPresent))
         except Exception:

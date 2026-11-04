@@ -117,14 +117,15 @@ class RepeatGuard:
         previous = self.known(fingerprint) if fingerprint else None
         if previous is None:
             return True
-        inserted = self._drive.state
+        inserted = self._drive.state, self._drive.insertion
         self._choice = None
         self.pending = RepeatDisc(disc_type, previous, self._folder(previous))
         log.info("Repeat Disc: matches Disc %s (%s)", previous.id, self.pending.name)
         self._publish()
         try:
             with self._bus.subscribe() as q:
-                while self._choice is None and self._drive.state == inserted:
+                while self._choice is None and \
+                        (self._drive.state, self._drive.insertion) == inserted:
                     await q.get()
         finally:
             self.pending = None
