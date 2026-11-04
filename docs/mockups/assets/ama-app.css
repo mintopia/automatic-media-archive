@@ -159,7 +159,7 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 .mpanel .mg:first-child{border-top:0}
 .mpanel .ml{font-size:13px;color:var(--ink2);margin-bottom:8px}
 .mpanel .segs{display:flex}.mpanel .segs button{flex:1;min-height:44px}
-.segs button{padding:10px 16px;border:0;border-left:1px solid var(--rule);background:none;color:var(--ink2);font:600 14px Archivo;cursor:pointer}
+.segs button{min-height:44px;padding:0 16px;border:0;border-left:1px solid var(--rule);background:none;color:var(--ink2);font:600 14px Archivo;cursor:pointer}
 .segs button:first-child{border-left:0}
 .segs button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
 .mpanel .mi{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-top:1px solid var(--rule);text-decoration:none;font-weight:500}
@@ -197,7 +197,7 @@ main.settings{max-width:1100px}
 .sf .hn{margin-top:4px;max-width:56ch;color:var(--ink2);font-size:13px;text-wrap:pretty}
 .sf .hn code{font:12px ui-monospace,Consolas,monospace}
 .sf .ctl{display:flex;flex-direction:column;gap:8px;min-width:0}
-.sf .ctl .segs,.libedit .segs{align-self:flex-start}
+.sf .ctl .segs{align-self:flex-start}
 .unit{display:flex;align-items:center;gap:10px}.unit .input{width:120px}.unit span{color:var(--ink2);font-size:14px}
 .rs{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border:1px solid var(--rule);border-radius:3px;font:600 11px/1 Archivo;letter-spacing:.02em;color:var(--ink2);white-space:nowrap}
 .rs .i{width:12px;height:12px}
@@ -223,6 +223,9 @@ main.settings{max-width:1100px}
 .choices{border:1px solid var(--rule);border-radius:3px;background:var(--well)}
 .choices .radio{padding:12px 14px;align-items:center}
 .choices .radio>input{margin-top:0}
+.choices .radio>input{appearance:none;flex:none;border:1px solid var(--ink3);border-radius:50%;background:var(--sheet);cursor:pointer}
+.choices .radio>input:checked{border-color:var(--ink);box-shadow:inset 0 0 0 4px var(--sheet);background:var(--ink)}
+.choices .radio>input:disabled{border-color:var(--rule);cursor:not-allowed}
 .choices .radio .ts{display:block}
 .choices .radio.na{cursor:not-allowed;color:var(--ink3)}.choices .radio.na .ts{color:var(--ink3)}
 .choices .radio.broken .ts{color:var(--rev-ink);font-weight:600}
@@ -231,32 +234,32 @@ main.settings{max-width:1100px}
 .pertype td{padding:5px 12px 5px 0;vertical-align:middle}
 .pertype td:first-child{font-weight:600}
 .pertype .input{width:96px}
-/* Libraries (settings-libraries*.html) */
-.libs{width:100%;border-collapse:collapse;font-size:14px}
-.libs th{text-align:left;font-weight:600;color:var(--ink2);padding:10px 12px;border-bottom:1px solid var(--rule)}
-.libs th:first-child,.libs td:first-child{padding-left:24px}
-.libs th:last-child,.libs td:last-child{padding-right:24px;text-align:right}
-.libs td{padding:10px 12px;border-top:1px solid var(--rule);vertical-align:middle}
-.libs tbody tr:first-child td{border-top:0}
-.libs .nm{font-weight:600}
-.libs .path{color:var(--ink2);overflow-wrap:anywhere;font-size:13px}
-.libs .def{display:inline-flex;align-items:center;gap:6px;font-weight:600}
-.libs .def .i{width:15px;height:15px}
-.libs .act{display:inline-flex;gap:8px}
-.libs tr.editing td{background:var(--well);font-weight:600}
-.libs td.edit-cell{padding:0;text-align:left;background:var(--well)}
-.libedit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;padding:4px 24px 20px}
+/* Libraries, grouped by kind (settings-libraries*.html) */
+.libs{border-top:1px solid var(--rule)}
+.librow{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1.3fr) minmax(0,1fr) 310px;gap:4px 20px;align-items:center;padding:12px 24px;border-top:1px solid var(--rule);font-size:14px}
+.libs>.librow:first-child{border-top:0}
+.librow .nm{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.librow .k{display:block;font-size:12px;color:var(--ink2)}
+.librow .path{overflow-wrap:anywhere}
+.librow .act{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.librow.open,.libpanel{background:var(--well)}
+.lockd{display:inline-flex;align-items:center;gap:6px;margin-right:6px;font-size:13px;color:var(--ink2)}
+.lockd .i{width:14px;height:14px}
+.libpanel .newh{display:block;padding:16px 24px 0;font-size:15px}
+.libpanel.new{border-top:1px solid var(--rule)}
+.libedit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;padding:8px 24px 20px}
 .libedit .field{min-width:0}
 .libedit .input,.libedit .select{background:var(--sheet)}
-.libedit .segs a{background:var(--sheet)}.libedit .segs a[aria-current]{background:var(--ink)}
 .libedit .full{grid-column:1/-1}
-.libedit .chk{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;font-size:14px}
-.libedit .chk input{width:18px;height:18px;accent-color:var(--ink)}
 .libedit .actions{grid-column:1/-1;justify-content:flex-end}
-.libadd{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding:16px 24px;border-top:1px solid var(--rule)}
+.libedit .hint a{color:var(--ink);text-underline-offset:2px}
+.libconfirm{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding:6px 24px 18px;font-size:14px}
+.libconfirm b{display:block;font-size:15px;margin-bottom:2px}
+.libconfirm span{color:var(--ink2);max-width:62ch;display:block}
+.libadd{padding:12px 24px 4px}
 @media (max-width:720px){
   .settings h1{margin-bottom:10px}
-  .files{margin:0 -16px;padding:14px 16px 0;mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+  .files{margin:0 -16px;padding:14px 16px 0;mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 40px),transparent)}
   .grp-h{padding:20px 16px 2px;flex-direction:column;gap:2px}.grp-h .ts{text-align:left}
   .sf{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 16px}
   .setfoot{padding:14px 16px;flex-wrap:wrap}.setfoot .st{width:100%}.setfoot .btn{flex:1}
@@ -264,19 +267,11 @@ main.settings{max-width:1100px}
   .files .tab::before{inset:-14px 0 0}
   .restart .rbody .btn{width:100%}
   .pertype .input{width:72px}.pertype .select{width:100%}
-  .libs thead{display:none}
-  .libs,.libs tbody,.libs td{display:block}
-  .libs tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:14px 16px;border-top:1px solid var(--rule)}
-  .libs tbody tr:first-child{border-top:0}
-  .libs td,.libs td:first-child,.libs td:last-child{padding:0;border:0;text-align:left}
-  .libs .c-kind,.libs .c-path,.libs .c-plex{grid-column:1;font-size:13px;color:var(--ink2)}
-  .libs .c-def{grid-column:2;grid-row:1}
-  .libs .c-act{grid-column:1/-1;margin-top:10px}
-  .libs .act{display:flex}.libs .act .btn{flex:1}
-  .libs tr.editing,.libs tr.edit-row{background:var(--well)}
-  .libs tr.editing td{background:none}
-  .libs tr.edit-row{padding:0;border-top:0}
-  .libs td.edit-cell{grid-column:1/-1}
-  .libedit{grid-template-columns:minmax(0,1fr);padding:4px 16px 16px}
-  .libadd{padding:14px 16px}.libadd .btn{width:100%}
+  .librow{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 16px}
+  .librow .act{justify-content:stretch}.librow .act .btn{flex:1}
+  .lockd{width:100%;margin:0}
+  .libpanel .newh{padding:14px 16px 0}
+  .libedit{grid-template-columns:minmax(0,1fr);padding:8px 16px 16px}
+  .libadd{padding:12px 16px 4px}.libadd .btn{width:100%}
+  .libconfirm{padding:4px 16px 16px}.libconfirm .actions{width:100%}.libconfirm .actions .btn{flex:1}
 }
