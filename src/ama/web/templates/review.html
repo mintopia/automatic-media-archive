@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Review{% endblock %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <h1>Review</h1>
+      <p class="sub">Discs that need a decision before they're filed, oldest first.</p>
+    </div>
+  </div>
+  <div sse-swap="review">{% include "partials/review_bin.html" %}</div>
+</main>
+{% endblock %}

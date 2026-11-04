@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Review CD{% endblock %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
+      <h1>{{ heading }}</h1>
+      <p class="sub">{{ sub }}</p>
+    </div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      {%- if notice %}
+      <div class="notice" role="status">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+        <div><b>{{ notice[0] }}</b>{{ notice[1] }}
+          <div class="actions" style="margin-top:14px">
+            <form method="post" action="/review/{{ record.id }}/accept" class="actions"><button class="btn" type="submit">Accept anyway</button></form>
+            <form method="post" action="/review/{{ record.id }}/discard" class="actions"><button class="btn danger" type="submit">Discard and re-rip</button></form>
+          </div>
+        </div>
+      </div>
+      {%- endif %}
+      <section class="bin rev" id="editions" aria-labelledby="editions-h">
+        <h2 class="tab" id="editions-h">{% if editions %}Matching editions <span class="c">{{ editions | length }}</span>{% else %}Album details{% endif %}</h2>
+        <form class="box" method="post" action="/review/{{ record.id }}/release">
+          {%- for e in editions %}
+          <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if loop.first %} checked{% endif %}><div><div class="tt">{{ e.heading }}</div><dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div><span class="stk rev sel">Selected</span></label>
+          {%- endfor %}
+          {%- if not editions %}
+          <p class="pad ts">No edition on MusicBrainz has this CD's {{ track_count }} tracks.</p>
+          {%- endif %}
+          <details class="manual"{% if manual_open %} open{% endif %}>
+            <summary>{{ "None of these: enter the details myself" if editions else "Enter the details" }}</summary>
+            <div class="pad stack" style="gap:18px">
+              {%- if errors %}
+              <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+              {%- endif %}
+              <div class="field"><label for="album">Album</label><input class="input" id="album" name="album" value="{{ form.album }}"></div>
+              <div class="field"><label for="artist">Artist</label><input class="input" id="artist" name="artist" value="{{ form.artist }}"></div>
+              <div class="field" style="max-width:160px"><label for="year">Year</label><input class="input" id="year" name="year" inputmode="numeric" placeholder="e.g. 1997" value="{{ form.year }}"></div>
+              <div class="field"><label for="tracks">Track titles</label><span class="hint">One per line, in order. This CD has {{ track_count }} tracks.</span><textarea class="input" id="tracks" name="tracks" rows="6">{{ form.tracks }}</textarea></div>
+              <div class="actions"><button class="btn{% if not editions %} pri{% endif %}" type="submit" formaction="/review/{{ record.id }}/manual">File with these details</button></div>
+            </div>
+          </details>
+          {%- if editions %}
+          <div class="pad actions" style="border-top:1px solid var(--rule)"><button class="btn pri" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>File this edition</button></div>
+          {%- endif %}
+        </form>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="cd-h">
+        <h2 class="tab" id="cd-h">This CD</h2>
+        <div class="box"><div class="pad">
+          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if disc_id %}<dt>Disc ID</dt><dd style="overflow-wrap:anywhere" title="{{ disc_id }}">{{ disc_id[:10] }}…</dd>{% endif %}</dl>
+          <p class="ts" style="margin-top:12px"><a href="/discs/{{ record.id }}">Rip details and log</a></p>
+        </div></div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

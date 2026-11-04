@@ -49,6 +49,7 @@ class TitleStatus(StrEnum):
 
 class FailureKind(StrEnum):
     INTERRUPTED = "interrupted"  # the app stopped mid-Rip
+    DISCARDED = "discarded"  # the user threw the Rip away in Review
     # video
     LICENCE = "licence"  # MakeMKV refused to work: not the Disc's fault
     MAKEMKV = "makemkv"  # MakeMKV missing, or crashed
@@ -244,6 +245,12 @@ class DiscStore:
     def mark_review(self, disc_id: int, reason: ReviewReason) -> None:
         self._db.execute("UPDATE discs SET status = 'review', review_reason = ? WHERE id = ?",
                          (reason.value, disc_id))
+
+    def requeue(self, disc_id: int) -> bool:
+        """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
+        cur = self._db.execute("UPDATE discs SET status = 'ripped', review_reason = NULL "
+                               "WHERE id = ? AND status = 'review'", (disc_id,))
+        return cur.rowcount == 1
 
     def mark_filed(self, disc_id: int, title: str, archive_dir: Path) -> None:
         """The Disc is verified in the Archive: record that, then delete its scratch.
