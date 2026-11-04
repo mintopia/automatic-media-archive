@@ -127,6 +127,30 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
     assert "The Office (2001) · 3 Episodes" in _page(client, "/")  # Filed today
 
 
+def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harness, client):
+    _the_office(harness)
+    harness.ffmpeg.hold = True
+    rec = _in_review(harness, _tv_disc(harness))
+    client.post(f"/review/{rec.id}/episodes", data={
+        "series": str(OFFICE), "season": "1",
+        "t1": "S01E01", "t2": "S01E02", "t3": "S01E03", "t4": "discard", "t5": "discard"})
+    eventually(harness.ffmpeg.encoding.is_set)
+    eventually(lambda: "40%" in html.unescape(client.get("/").text))
+    now = html.unescape(client.get("/").text)
+    assert "The Office - s01e01 - Downsize" in now and "The Office - s01e02 - Work Experience" in now
+
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # a film rips and waits its turn
+    eventually(lambda: harness.services.movie_archive.movies.get(rec.id + 1) is not None)
+    assert len(harness.ffmpeg.encodes()) == 1
+
+    harness.ffmpeg.release()
+    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=10)
+    assert len(harness.ffmpeg.encodes()) == 4
+    assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # Filed today
+
+
 def test_a_mapping_is_checked_and_ignored_once_the_disc_has_left_review(harness, client):
     _the_office(harness)
     rec = _in_review(harness, _tv_disc(harness))

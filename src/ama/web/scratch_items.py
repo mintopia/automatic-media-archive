@@ -57,7 +57,13 @@ def scratch_items(services: Services) -> list[ScratchItem]:
     movies = services.movie_archive.movies
     for rec in sorted(discs.list(DiscStatus.RIPPED, include_dismissed=True), key=lambda r: r.id):
         movie = movies.get(rec.id)
-        if movie is None:
+        tv = services.tv_archive.titles.for_disc(rec.id)
+        if tv:
+            sticker = ("enc", "Encoding") if job is not None and job.disc.id == rec.id \
+                else ("enc", "Waiting")
+            waiting.append(_item(rec, tv[0].series.title, "TV · encoding and filing Episodes",
+                                 sticker))
+        elif movie is None:
             waiting.append(_item(rec, rec.name, "Being identified"))
         elif job is not None and job.disc.id == rec.id:
             waiting.insert(0, _item(rec, movie.film.name,

@@ -263,6 +263,12 @@ class TvArchiver:
         recs = self._discs.list(DiscStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
         return [FiledTv(r, rows) for r in recs if (rows := self.titles.for_disc(r.id))]
 
+    def queue_view(self) -> dict:
+        """For the Encoding bin: kept Titles not yet filed, and their Discs' Types."""
+        rows = [r for r in self.titles.queue() if r.status != TvStatus.FILED]
+        types = {r.disc_id: rec.disc_type for r in rows if (rec := self._discs.get(r.disc_id))}
+        return {"tv_encoding": rows, "tv_disc_types": types}
+
     def _publish(self) -> None:
         for topic in (TOPIC, "rip", "filed", review.TOPIC):
             self._bus.publish(topic)
