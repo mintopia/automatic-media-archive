@@ -30,6 +30,7 @@ from ama.proc import ProcResult
 from ama.tools import Tools
 from tests.fakes import (
     FakeCyanrip,
+    FakeDisk,
     FakeDrive,
     FakeFetch,
     FakeFfmpeg,
@@ -71,6 +72,7 @@ class Harness:
     web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex, TMDB
     nas_root: Path
     ffmpeg: FakeFfmpeg  # ffprobe + the Encode
+    disk: FakeDisk  # the scratch volume's size and use
 
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
@@ -99,18 +101,19 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                      **({} if pins is None else {"pins": pins}))
 
     ffmpeg = FakeFfmpeg()
+    disk = FakeDisk()
     services = build_services(cfg, probe=drive, runner=runner,
                               nas_exists=lambda p: share["reachable"],
                               streamer=FakeTools(makemkv, cyanrip, ffmpeg),
                               make_tools=make_tools,
                               http=httpx.Client(transport=web.transport()),
-                              disc_root=lambda: drive.root)
+                              disc_root=lambda: drive.root, disk_usage=disk)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
     services.cd_archive.retry_seconds = 0.05
     services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
     return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check, web,
-                   Path(cfg.nas.unc), ffmpeg)
+                   Path(cfg.nas.unc), ffmpeg, disk)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 3.0) -> None:

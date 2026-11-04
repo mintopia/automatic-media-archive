@@ -11,6 +11,7 @@ import httpx
 
 from ama.drive import DiscPresent, DiscType, DriveEmpty, DriveState, UnrecognisedDisc
 from ama.proc import ProcResult
+from ama.scratch import DiskUsage
 
 
 class FakeDrive:
@@ -449,6 +450,17 @@ class FakeTools:
         fake = (self.makemkv if "makemkv" in name else
                 self.ffmpeg if "ffmpeg" in name or "ffprobe" in name else self.cyanrip)
         return fake(args, on_line, cwd)
+
+
+class FakeDisk:
+    """`shutil.disk_usage` for the scratch volume: 256 GB, empty unless a test fills it."""
+
+    def __init__(self, total: int = 256 * 1000**3, used: int = 0) -> None:
+        self.total = total
+        self.used = used
+
+    def __call__(self, path: Path) -> DiskUsage:
+        return DiskUsage(self.total, self.used, self.total - self.used)
 
 
 class FakeRunner:

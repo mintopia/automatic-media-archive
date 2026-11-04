@@ -61,6 +61,15 @@ state_db = "ama.sqlite3"
 # Log file (rotated). The app also logs to the console when it has one.
 log_file = 'logs\ama.log'
 
+[scratch]
+# Free scratch space (GB) each Disc Type needs before its Rip starts. With less
+# free, an inserted Disc is ejected unripped and the UI shows what is holding
+# scratch (finishing a Review, or an Encode being filed, frees space).
+cd = 1
+dvd = 10
+bd = 50
+uhd = 100
+
 [tmdb]
 # TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
 api_key = ""

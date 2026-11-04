@@ -60,6 +60,15 @@ class PathsConfig(_Section):
     log_file: Path = Path("logs/ama.log")
 
 
+class ScratchConfig(_Section):
+    """Free scratch (GB) a Disc of each Type needs before its Rip starts; less = refused."""
+
+    cd: int = Field(default=1, ge=0)
+    dvd: int = Field(default=10, ge=0)
+    bd: int = Field(default=50, ge=0)
+    uhd: int = Field(default=100, ge=0)
+
+
 class TmdbConfig(_Section):
     api_key: str = _secret()
 
@@ -96,6 +105,7 @@ class Config(_Section):
     tools: ToolsConfig = ToolsConfig()
     nas: NasConfig
     paths: PathsConfig
+    scratch: ScratchConfig = ScratchConfig()
     tmdb: TmdbConfig = TmdbConfig()
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()

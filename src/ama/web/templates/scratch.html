@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{% if scratch_refused %}Not enough space{% else %}Scratch{% endif %}{% endblock %}
+{% block main %}
+<main>
+  <div sse-swap="scratch,scratch-rip,scratch-encode">{% include "partials/scratch.html" %}</div>
+</main>
+{% endblock %}
