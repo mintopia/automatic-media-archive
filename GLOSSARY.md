@@ -10,7 +10,7 @@ _Avoid_: Media, volume
 
 **Job**:
 One Disc's single pass through the pipeline, from insertion to Filed or Failed. It carries the Phase, the Identification and the settings locked so far; inserting the same Disc again starts a new Job.
-_Avoid_: Run, task, rip (as a noun for the whole pass)
+_Avoid_: Run (that's its log record), task, rip (as a noun for the whole pass)
 
 **Disc Type**:
 The format class of a Disc (CD, DVD, BD, UHD) that determines how it is ripped and encoded.
@@ -57,6 +57,14 @@ _Avoid_: Approval, triage
 **Phase**:
 The single user-facing stage a Job is in: Ripping, Review, Encoding, Filed or Failed. Every status shown in the UI is one of these; finer internal states display as the Phase they belong to.
 _Avoid_: Status, stage, step
+
+**Run**:
+One entry in Logs: a Job's record of its Steps, or an app event (startup, NAS connect or drop, tool download) with Steps of its own. A Job has exactly one Run; "Run" names the log record, never the Job itself.
+_Avoid_: Build, execution
+
+**Step**:
+One tool run or action inside a Run, with its own output and result: Rip, Identification, one Encode per Title, and File for a Job. Steps are detail inside a Phase, never a Phase.
+_Avoid_: Task, stage
 
 **Paused**:
 AMA ignores newly inserted Discs; a Rip already under way finishes and every other Phase carries on.

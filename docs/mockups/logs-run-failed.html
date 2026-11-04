@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unknown CD · Logs · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main>
+  <div class="crumb"><a href="logs.html">Logs</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>Unknown CD</span></div>
+  <div class="run-head">
+    <div>
+      <h1>Unknown CD · 12 tracks</h1>
+      <p class="sub">CD Job · today 14:31 to 14:52 · stopped after 21 min</p>
+    </div>
+    <div class="acts"><a class="stk fail" href="disc-failed.html">Failed</a><a class="btn quiet" href="disc-failed.html">Job page</a></div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      <div class="notice" role="status">
+        <svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg>
+        <div><b>The Rip failed: track 7 couldn't be read cleanly, even after 10 re-reads.</b>The Disc was ejected and nothing was filed. The <a href="disc-failed.html">Job page</a> says what to try next.</div>
+      </div>
+      <section class="bin ink" aria-labelledby="steps-h">
+        <h2 class="tab" id="steps-h">Steps <span class="c">3</span></h2>
+        <div class="box">
+          <details class="step" open>
+            <summary><span class="st failed"><svg class="i" role="img" aria-label="Failed"><use href="assets/icons.svg#alert"/></svg></span><div><div class="nm">Rip</div><div class="ts">cyanrip 0.9.3 · stopped at track 7 of 12</div></div><span class="dur">21 min</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+            <div class="step-meta"><span class="mark failed"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg>Failed, exit code 1</span><span>14:31:02 to 14:52:12</span><span class="errs">2 error lines</span><span class="acts"><a class="btn quiet" href="#err1"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#arrow-down"/></svg>First error</a><a class="btn quiet" href="#"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#download"/></svg>Download log</a></span></div>
+            <div class="logwrap">
+<div class="log" tabindex="0" aria-label="Rip output"><span class="time">14:31:02</span>  cyanrip 0.9.3 (AMA build from 3f2a91c)
+<span class="time">14:31:02</span>  Drive: HL-DT-ST BD-RE WH16NS60 · read offset +667 samples
+<span class="time">14:31:04</span>  Disc ID: 7.4mYzVZ0aRqgS0uBo7fcKcQa1Y-
+<span class="time">14:31:04</span>  Tracks: 12 · length 52:18 · no pre-emphasis · no hidden track
+<span class="time">14:31:05</span>  AccurateRip: Disc not found in the database
+<span class="time">14:31:05</span>  Secure mode: up to 10 re-reads before an error
+<span class="time">14:31:06</span>  Track 1 done · CRC32 3A9F1C02
+<span class="time">14:31:58</span>  Track 2 done · CRC32 0C61A4E9
+<span class="time">14:32:41</span>  Track 3 done · CRC32 E2B07F15
+<span class="time">14:33:02</span>  Track 4 done · CRC32 5D19C3A0
+<span class="time">14:33:20</span>  Track 5 done · CRC32 88E4012B
+<span class="time">14:33:40</span>  Track 6 done · CRC32 91D04E77
+<span class="time">14:33:41</span>  Track 7 started
+<span class="time">14:36:12</span>  Read error at sector 141 377, retrying
+<span class="time">14:38:55</span>  Read error at sector 141 380, retrying
+<span class="errline" id="err1"><span class="e"><span class="time">14:41:18</span>  Read error at sector 141 382: gave up after 10 re-reads</span></span>
+<span class="errline"><span class="e"><span class="time">14:52:09</span>  Track 7 failed: too many read errors</span></span>
+<span class="time">14:52:10</span>  Removed partial files from scratch (6 tracks, 214 MB)
+<span class="time">14:52:12</span>  Disc ejected</div>
+            </div>
+          </details>
+          <div class="step"><div class="sum"><span class="st notrun"><svg class="i" role="img" aria-label="Didn't run"><use href="assets/icons.svg#minus"/></svg></span><div><div class="nm">Identification</div><div class="ts">Didn't run because the Rip failed</div></div><span class="dur">Didn't run</span><span></span></div></div>
+          <div class="step"><div class="sum"><span class="st notrun"><svg class="i" role="img" aria-label="Didn't run"><use href="assets/icons.svg#minus"/></svg></span><div><div class="nm">File</div><div class="ts">Didn't run because the Rip failed</div></div><span class="dur">Didn't run</span><span></span></div></div>
+        </div>
+      </section>
+    </div>
+    <aside class="aside run-aside" aria-label="About this run">
+      <div class="grp">
+        <h2>This run</h2>
+        <dl class="facts">
+          <dt>Job</dt><dd><a href="disc-failed.html">Unknown CD · 12 tracks</a></dd>
+          <dt>Disc</dt><dd>CD · 7.4mYzVZ0aRqgS0uBo7fcKcQa1Y-</dd>
+          <dt>Phase</dt><dd>Failed</dd>
+          <dt>Ran</dt><dd>Today, 14:31 to 14:52</dd>
+          <dt>Steps</dt><dd>1 failed, 2 didn't run</dd>
+          <dt>Output</dt><dd>Kept until 18 Nov · <a href="settings-logs.html">Change</a></dd>
+        </dl>
+      </div>
+      <div class="grp">
+        <h2>Settings used</h2>
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#lock"/></svg>Rip locked at 14:31</p>
+        <dl class="facts">
+          <dt>Drive read offset</dt><dd>+667 samples</dd>
+          <dt>Re-reads before an error</dt><dd>10</dd>
+          <dt>Files to</dt><dd>Music</dd>
+        </dl>
+      </div>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

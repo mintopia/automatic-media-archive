@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logs · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main>
+  <h1>Logs</h1>
+  <p class="sub">What each Job and the app itself did, newest first. Open a run to see each step's output.</p>
+  <div class="filters">
+    <nav class="segs" aria-label="Show"><a href="logs.html" aria-current="page">All</a><a href="logs.html?kind=jobs">Jobs</a><a href="logs.html?kind=app">App</a></nav>
+    <button class="toggle" type="button" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg>Problems only</button>
+    <span class="keep-note">Output older than 14 days is removed · <a href="settings-logs.html">Change</a></span>
+  </div>
+
+  <div class="runs">
+    <section class="bin ink" aria-labelledby="d-today">
+      <h2 class="tab" id="d-today">Today <span class="c">8</span></h2>
+      <div class="box">
+        <a class="row runrow" href="logs-run-running.html"><div class="dtype">UHD</div><div><div class="tt">Blade Runner 2049</div><div class="ts">Ripping Title 3 of 7 · started 18:40 · 26 min so far</div><div class="strip" aria-hidden="true"><i class="rip"></i><i></i><i></i></div></div><span class="stk rip">Ripping</span></a>
+        <a class="row runrow" href="logs-run-running.html"><div class="dtype">BD</div><div><div class="tt">Arrival (2016)</div><div class="ts">Encoding Title 1 of 2 · started 17:20 · 1 h 46 min so far</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="enc"></i><i></i><i></i></div></div><span class="stk enc">Encoding</span></a>
+        <a class="row runrow" href="logs-run-running.html"><div class="dtype">DVD</div><div><div class="tt">Spirited Away (2001)</div><div class="ts">Next in line to Encode · started 16:05 · ripped in 24 min</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i></i><i></i></div></div><span class="stk enc">Waiting</span></a>
+        <a class="row runrow" href="logs-run-app.html"><div class="dtype app"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#drive"/></svg>NAS</div><div><div class="tt">Lost the NAS, then reconnected</div><div class="ts">\\nas\media · away for 3 min · 15:12</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i></div></div><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Done</span></a>
+        <a class="row runrow" href="logs-run-failed.html"><div class="dtype">CD</div><div><div class="tt">Unknown CD · 12 tracks</div><div class="ts">Rip failed at track 7 · 14:31 to 14:52 · <span class="errs">2 error lines</span></div><div class="strip" aria-hidden="true"><i class="failed"></i><i class="notrun"></i><i class="notrun"></i></div></div><span class="stk fail">Failed</span></a>
+        <a class="row runrow" href="logs-run-finished.html"><div class="dtype">CD</div><div><div class="tt">Kid A — Radiohead</div><div class="ts">3 steps · started 13:02 · took 14 min</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i></div></div><span class="stk fil">Filed</span></a>
+        <a class="row runrow" href="logs-run-finished.html"><div class="dtype">BD</div><div><div class="tt">Dune (2021)</div><div class="ts">5 steps · started 10:15 · took 2 h 8 min</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i></div></div><span class="stk fil">Filed</span></a>
+        <a class="row runrow" href="logs-run-app.html"><div class="dtype app"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#power"/></svg>App</div><div><div class="tt">AMA started</div><div class="ts">Tools ready, NAS connected · 09:58 · took 1 min 12 s</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i></div></div><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Done</span></a>
+      </div>
+    </section>
+
+    <section class="bin ink" aria-labelledby="d-yday">
+      <h2 class="tab" id="d-yday">Yesterday <span class="c">3</span></h2>
+      <div class="box">
+        <a class="row runrow" href="logs-run-finished.html"><div class="dtype">DVD</div><div><div class="tt">The Office (UK) Series 1 — Disc 2</div><div class="ts">Waiting for you in Review · started 21:40 · ripped in 31 min</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i></i><i></i></div></div><span class="stk rev">Needs Review</span></a>
+        <a class="row runrow" href="logs-run-app.html"><div class="dtype app"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#layers"/></svg>Tools</div><div><div class="tt">Couldn't download cyanrip 0.9.3</div><div class="ts">git.mintopia.net didn't answer · 19:02 · <span class="errs">1 error line</span></div><div class="strip" aria-hidden="true"><i class="failed"></i></div></div><span class="mark failed"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg>Failed</span></a>
+        <a class="row runrow" href="logs-run-finished.html"><div class="dtype">CD</div><div><div class="tt">Blue Lines — Massive Attack</div><div class="ts">3 steps · started 18:22 · took 12 min</div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i></div></div><span class="stk fil">Filed</span></a>
+      </div>
+    </section>
+
+    <section class="bin ink" aria-labelledby="d-old">
+      <h2 class="tab" id="d-old">Tue 20 Oct <span class="c">1</span></h2>
+      <div class="box">
+        <a class="row runrow" href="logs-run-finished.html"><div class="dtype">CD</div><div><div class="tt">OK Computer — Radiohead</div><div class="ts">3 steps · started 20:14 · took 13 min · <span class="pruned">output removed after 14 days</span></div><div class="strip" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i></div></div><span class="stk fil">Filed</span></a>
+      </div>
+    </section>
+
+    <div class="older"><a class="btn quiet" href="logs.html?before=2026-10-20">Older runs</a></div>
+  </div>
+</main>
+</body>
+</html>

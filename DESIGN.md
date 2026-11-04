@@ -23,6 +23,9 @@ colors:
   drive-cell: "#24262A"
   log-ground: "#17181A"
   log-text: "#D9DBDF"
+  log-dim: "#8E929A"
+  log-error: "#F08A70"
+  log-error-band: "#3A1E17"
   notice: "#FBEDE9"
   notice-line: "#E6B3A6"
   focus: "#2C4FA3"
@@ -227,7 +230,7 @@ A cool neutral sheet-and-ink base with four saturated stage colours, plus a sepa
 - **Rule** (`rule`): the one hairline. Dark: `#34363B`.
 - **Thumb / Thumb Ink** (`thumb`, `thumb-ink`): disc-type cells and frame placeholders. Dark: `#2C2E33`, `#B9BCC2`.
 - **Drive Cell** (`drive-cell`): the dark left cell of the drive panel. It stays dark in both themes.
-- **Log Ground / Log Text** (`log-ground`, `log-text`): the rip log. It stays dark in both themes, and error lines are `#F08A70`.
+- **Log Ground / Log Text** (`log-ground`, `log-text`): the rip log. Like the log itself, the `log-*` tokens stay dark in both themes, so they have no dark-mode values (an exception to the Both-Themes Rule). Error lines are `log-error` (`#F08A70`); in step output they also get a `log-error-band` (`#3A1E17`) background, times are `log-dim` (`#8E929A`), and the scrollbar thumb is `#3A3C42`.
 - **Notice / Notice Line** (`notice`, `notice-line`): a warm tint for notices that need attention. Dark: `#2A1B17`, `#6B3426`.
 
 ### Named Rules
@@ -306,7 +309,7 @@ Plain, firm and printed.
 
 ### Navigation
 - **Top bar:** a 60px `sheet` bar with a bottom rule. It holds the uppercase Archivo Narrow brand, nav links (Now, Review, History) in Archivo 500 / `ink-2`, then the scratch meter and the menu button pushed to the right.
-- **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it, bordered all round in 1px `rule` with no stage or `ink` top edge: New Discs (Accepting / Paused segmented control), Theme (System / Light / Dark), then Settings and Log out as 48px rows (Log out only when a password is set). On phones the button sits at the right end of the nav row.
+- **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it, bordered all round in 1px `rule` with no stage or `ink` top edge: New Discs (Accepting / Paused segmented control), Theme (System / Light / Dark), then Settings, Logs and Log out as 48px rows (Log out only when a password is set). On phones the button sits at the right end of the nav row.
 - **Paused mark:** while the drive is paused, an `ink`-outlined 26px "Paused" label (a mark, not a control; the menu changes it) with a pause icon sits before the scratch meter on every page. It is hidden on phones, where the menu shows the state.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`).
 - **Review count:** a tomato badge (700, 12px, 3px corners).
@@ -357,8 +360,19 @@ Editing `ama.toml` one section at a time (`docs/mockups/settings-*.html`). Conte
 - **Speed:** one generic scale on every encoder (Faster, bigger / Balanced / Slower, smaller / Slowest, smallest), always in that order; the per-Job panel marks the global value "(default)". An encoder that fails its test encode is disabled with "Not available on this PC"; a configured one that stops working stays selected with a `review-ink` note, and an attention notice offers "Test encoders again".
 - **Libraries:** grouped by kind (Films, TV, Music), each group headed by its name with "Default: <Library>" at the right, the default listed first and an "Add <kind> Library" button at its foot. A row shows the name, then Folder and Plex library as small `ink-2` labels over their values, then a fixed-width actions column so columns align. The default row shows a lock and "Default, can't be removed" with Edit; others get Edit, Make default and Remove. Edit and Add open an inline `well` form (Name, Plex library, Folder) under the row or at the group's foot; the Plex library list holds only Plex libraries of the group's type, and when Plex can't be reached it is disabled with a hint that saving still works. Remove opens an inline confirmation under the row (`role="alertdialog"`, focus moves to it, Cancel returns focus to Remove) naming the default that unfiled Jobs fall back to. On phones a row stacks and its buttons share the width.
 
+### Logs
+Every run's steps and their output, laid out like a CI run log (`docs/mockups/logs*.html`, `now-output.html`). Reached from the top-bar menu.
+- **Run list:** an h1, then filters: an All / Jobs / App segmented control (44px segments) and a "Problems only" toggle (rule-bordered, `failed-oxide` alert icon; filled `ink` when pressed), with the output-keeping note and a Change link at the right. Runs sit in `ink` bins, one per day (Today, Yesterday, then dates), newest first, with "Older runs" at the foot.
+- **Run row:** the whole row links to the run and fills `well` on hover. A Job row is a normal row: disc-type cell, title, a meta line (current step or step count, start time, duration, error lines in `failed-oxide`), the step strip, and the Job's one sticker. An app-event row (startup, NAS, tool downloads) gets a disc-type cell holding an icon and its kind (App, NAS, Tools), and a Done (`filed-ink` check) or Failed (`failed-oxide` alert) mark instead of a sticker, since stickers belong to Jobs.
+- **Step strip:** one 24 × 6px segment per step, 3px apart: done `ink-3`, running in its Phase colour (cobalt for the Rip, mustard for an Encode, `ink` otherwise), failed `failed-oxide`, waiting an empty `well` box, not run dashed. It is `aria-hidden`; the meta line says the same in words.
+- **Run page:** a breadcrumb back to Logs, the h1 and a meta line, with the sticker (or the app mark) and a quiet "Job page" button at the right. The split layout holds an `ink` Steps bin on the left and, in the aside, "This run" as a definition list (Job, Disc, Phase, times, steps, how long output is kept) and "Settings used": the Job's locked groups with their lock line. A failed run puts an attention notice above the Steps bin.
+- **Step:** a `<details>` row: a 20px state icon (`filed-ink` check, a turning loader in the Phase's `-ink` colour, `failed-oxide` alert, `ink-3` circle for waiting, `ink-3` dash for "Didn't run"; each `role="img"` with its state as the label), the step name in 600 / 16px with its subject in `ink-2` ("Encode · Main Feature, Title 1"), the tool and a short result in 13px `ink-2`, the duration at the right and a chevron that turns when open. A running step adds a 6px Phase-colour bar, percentage and time left. The header carries the tool and a short result; the exit code is in the open step's meta strip, and the Job and Phase are in the aside. Waiting and not-run steps are plain rows, not disclosures, since they have no output. A step whose output was pruned keeps its header and opens to "Output removed after N days" in place of the log; its run row says the same. On phones the duration drops under the tool line.
+- **Step output:** a hairline-ruled meta strip (state and exit code, start and end times, line count, and buttons for "First error" and "Download log") over the dark log, up to 440px tall (360px on phones). Each line starts with its time in `log-dim`. Error lines are `log-error` on a `log-error-band` band that bleeds to the log's edges, and the failed step opens by default. Each step has an id, so other pages can link straight to it. Command-line arguments are never shown.
+- **Live output:** a running step's meta strip starts with a Phase-colour dot (`ink` for app runs) and "Following live output" (`role="status"`). The log follows the tail while scrolled to the bottom. Scrolling up stops following, the status reads "Scrolled up, not following", and a "Jump to latest" button appears at the log's bottom right.
+- **Inline output on Now:** a collapsed toggle on the rip card and on each running Encoding row. On the rip card it is a hairline-topped foot line (tool and step in `ink-2`, "Show output" / "Hide output", "Open in Logs" at the right), under the per-Job settings line when both show. On an Encoding row it sits under the row, indented to the title. Open, it shows the last ~20 lines in a compact log (12px, up to 288px on the card and 200px in the row), scrolled to the newest line and updating live. "Open in Logs" goes to that step on its run page. A waiting Encoding row has no output, so no toggle.
+
 ### Log
-A rip log on the always-dark `log-ground`, in 13px / 1.6 monospace, with whitespace preserved, a maximum height of 320px and scrolling. Error lines are the warm `#F08A70`.
+A rip log on the always-dark `log-ground`, in 13px / 1.6 monospace, with whitespace preserved, a maximum height of 320px and scrolling. Error lines are `log-error`. Step output in Logs uses the same block, taller and with times (see Logs above).
 
 ### Icons
 Stroke icons from a single SVG sprite (Lucide geometry, ISC; the eject icon is authored), 18px, stroke 2, round caps and joins, coloured with `currentColor`.

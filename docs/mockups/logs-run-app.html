@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMA started · Logs · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+</header>
+<main>
+  <div class="crumb"><a href="logs.html">Logs</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>AMA started</span></div>
+  <div class="run-head">
+    <div>
+      <h1>AMA started</h1>
+      <p class="sub">App event · today 09:58 · took 1 min 12 s</p>
+    </div>
+    <div class="acts"><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Done</span></div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      <section class="bin ink" aria-labelledby="steps-h">
+        <h2 class="tab" id="steps-h">Steps <span class="c">6</span></h2>
+        <div class="box">
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Read settings</div><div class="ts">ama.toml · no problems found</div></div><span class="dur">0.1 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Connect to the NAS</div><div class="ts">\\nas\media as Z:</div></div><span class="dur">2 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Check MakeMKV</div><div class="ts">Your copy · 1.17.8, registered</div></div><span class="dur">3 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Get ffmpeg</div><div class="ts">AMA's copy · 7.1 already there, checksum matches</div></div><span class="dur">1 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Get cyanrip</div><div class="ts">AMA's copy · 0.9.3 downloaded, 4.1 MB</div></div><span class="dur">9 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+          </details>
+          <details class="step" open>
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Test encoders</div><div class="ts">3 of 4 work on this PC</div></div><span class="dur">57 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+            <div class="step-meta"><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Finished</span><span>09:58:14 to 09:59:11</span><span>9 lines</span><span class="acts"><a class="btn quiet" href="#"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#download"/></svg>Download log</a></span></div>
+            <div class="logwrap">
+<div class="log" tabindex="0" aria-label="Test encoders output"><span class="time">09:58:14</span>  Test encode: 5 s of a 1080p test pattern with each encoder
+<span class="time">09:58:16</span>  hevc_nvenc  works · 412 fps · HEVC (NVIDIA)
+<span class="time">09:58:18</span>  av1_nvenc   works · 388 fps · AV1 (NVIDIA)
+<span class="time">09:58:19</span>  hevc_qsv    not available · HEVC (Intel Quick Sync)
+<span class="time">09:58:19</span>    <span class="time">[hevc_qsv @ 0000019f] Error creating a MFX session: -9</span>
+<span class="time">09:59:10</span>  libx265     works ·  21 fps · HEVC (software)
+<span class="time">09:59:11</span>  Configured encoder: HEVC (NVIDIA) · works
+<span class="time">09:59:11</span>  Settings will offer: HEVC (NVIDIA), AV1 (NVIDIA), HEVC (software)
+<span class="time">09:59:11</span>  Done</div>
+            </div>
+          </details>
+        </div>
+      </section>
+    </div>
+    <aside class="aside run-aside" aria-label="About this run">
+      <div class="grp">
+        <h2>This run</h2>
+        <dl class="facts">
+          <dt>Kind</dt><dd>App event: startup</dd>
+          <dt>Ran</dt><dd>Today, 09:58 to 09:59</dd>
+          <dt>Steps</dt><dd>6 of 6 done</dd>
+          <dt>Output</dt><dd>Kept until 18 Nov · <a href="settings-logs.html">Change</a></dd>
+        </dl>
+        <p class="ts" style="margin-top:14px">Tool versions and paths are in <a href="settings-tools.html">Settings › Tools</a>.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+</body>
+</html>
