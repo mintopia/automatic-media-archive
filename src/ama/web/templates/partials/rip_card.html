@@ -1,23 +1,31 @@
 {#- The drive card for a video Disc being ripped (or just ripped).
-    Needs `disc` (DiscRecord), `progress` (RipProgress or None), `on_page` (h1 vs link). -#}
+    Needs `disc` (DiscRecord), `progress` (RipProgress or None), `on_page` (h1 vs link).
+    `rip_likely` (a media.Screen guessed from the label, only for show) fills in the film and poster while it rips. -#}
 {%- set n = disc.titles | length -%}
+{%- set g = rip_likely if progress else none -%}
+{%- set name = g.name if g else disc.name -%}
+{%- set source = ("Disc " ~ disc.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
 <div class="drive">
+  {%- if g and g.poster %}
+  <div class="cell art"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ disc.disc_type.long_name }}</span></div>
+  {%- else %}
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ disc.disc_type.long_name }}</span></div>
+  {%- endif %}
   <div class="body">
     {%- if on_page %}
-    <h1 class="title">{{ disc.name }}</h1>
+    <h1 class="title">{{ name }}</h1>
     {%- else %}
-    <div class="title"><a href="/disc">{{ disc.name }}</a></div>
+    <div class="title"><a href="/disc">{{ name }}</a></div>
     {%- endif %}
     {%- if progress %}
-    {%- if rip_likely %}
-    <div class="guess">Likely <b>{{ rip_likely.name }}</b> on TMDB, from the Disc label · checked again after the Rip</div>
+    {%- if g %}
+    <div class="guess"><b>Likely</b> on TMDB, from the Disc label · checked again after the Rip</div>
     {%- endif %}
     {%- if progress.title_number %}
-    <div class="meta">{% if on_page %}Disc name from the drive{% else %}In the drive{% endif %} · {{ n }} Titles to rip · <span class="nw">{{ disc.total_size }}</span></div>
+    <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ disc.total_size }}</span></div>
     <div class="status"><span class="stk rip">Ripping</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
     {%- else %}
-    <div class="meta">{% if on_page %}Disc name from the drive{% else %}In the drive{% endif %}</div>
+    <div class="meta">{{ source }}</div>
     <div class="status"><span class="stk rip">Ripping</span><span class="ts">Reading the Disc</span></div>
     {%- endif %}
     <div class="prog">

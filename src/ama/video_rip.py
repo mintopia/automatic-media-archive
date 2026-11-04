@@ -33,7 +33,8 @@ from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
-from ama.tmdb import Candidate, DiscHints, bd_meta_title, save_hints
+from ama.media import Screen
+from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -110,9 +111,9 @@ class VideoRipper:
                  scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
-                 guess: Callable[[str], Candidate | None] | None = None) -> None:
+                 guess: Callable[[str], Screen | None] | None = None) -> None:
         self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
-        self.likely: Candidate | None = None  # while ripping; only for show
+        self.likely: Screen | None = None  # a guessed film while ripping; only for show
         self._drive = drive
         self._scratch = scratch
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title

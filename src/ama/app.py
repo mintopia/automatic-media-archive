@@ -29,7 +29,7 @@ from ama.db import Database
 from ama.discs import DiscStore
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
-from ama.media import MediaStore
+from ama.media import MediaStore, film_guess
 from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
@@ -138,7 +138,8 @@ def build_services(
                     scratch=scratch, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
-                              disc_root=disc_root, guess=tmdb.guess),
+                              disc_root=disc_root,
+                              guess=lambda label: film_guess(tmdb, covers, label)),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
