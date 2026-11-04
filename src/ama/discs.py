@@ -208,6 +208,11 @@ class DiscStore:
         row = self._db.execute(f"SELECT {_COLS} FROM discs WHERE id = ?", (disc_id,)).fetchone()
         return self._record(row) if row else None
 
+    def statuses(self) -> dict[int, DiscStatus]:
+        """Every Disc's current status, by id (cheap: no Titles, no records)."""
+        rows = self._db.execute("SELECT id, status FROM discs").fetchall()
+        return {id_: DiscStatus(status) for id_, status in rows}
+
     def list(self, status: DiscStatus, include_dismissed: bool = False,
              types: Collection[DiscType] | None = None) -> list[DiscRecord]:
         """Records in `status`, newest first; only `types` if given."""
