@@ -1,0 +1,22 @@
+{
+  "epic": {
+    "title": "Disc detection & ripping",
+    "description": "Detect inserted media and rip it to a staging area.",
+    "due_on": "2026-12-15"
+  },
+  "tickets": [
+    {
+      "id": "detect",
+      "title": "Detect disc insertion and identify media type (CD/DVD/Blu-ray)",
+      "body": "Watch the drive and classify inserted media.",
+      "ready": "agent"
+    },
+    {
+      "id": "rip",
+      "title": "Rip detected disc to staging directory",
+      "body": ["Use the media type from detection.", "Write output to a configurable staging path."],
+      "blocked_by": ["detect"],
+      "ready": "agent"
+    }
+  ]
+}
