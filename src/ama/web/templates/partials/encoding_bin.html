@@ -5,7 +5,7 @@
   <div class="tab">Encoding <span class="c">{{ encoding | length }}</span></div>
   <div class="box">
   {%- for m in encoding %}
-    {%- set job = encode_job if encode_job and encode_job.movie.disc_id == m.disc_id else None %}
+    {%- set job = encode_job if encode_job and encode_job.disc.id == m.disc_id else None %}
     {%- if job %}
     <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="/discs/{{ m.disc_id }}">{{ m.film.name }}</a></div><div class="bar thin enc" aria-label="{{ job.progress.pct }}%"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>
     {%- else %}

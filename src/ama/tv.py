@@ -19,12 +19,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
 from pathlib import PurePosixPath
 
 from ama.archive import safe_name
 from ama.discs import TitleRecord, TitleStatus
-from ama.tmdb import DiscHints, clean_term
+from ama.tmdb import DiscHints, Episode, Series, clean_term
 
 TV = PurePosixPath("TV")
 EPISODE_MIN_S = 15 * 60
@@ -32,39 +31,9 @@ SIMILAR = 0.8          # an episode is at least this fraction of the longest one
 PLAY_ALL_SLACK_S = 90  # or 3%: a Play-all's length vs. the Titles it joins
 
 
-@dataclass(frozen=True)
-class Series:
-    """A TV series on TMDB."""
-
-    id: int
-    name: str
-    year: int | None          # of its first air date
-    original_language: str = ""  # ISO 639-1
-    seasons: tuple[int, ...] = ()  # season numbers TMDB has (0 = specials)
-
-    @property
-    def title(self) -> str:
-        """How it is shown and filed: "The Office (2001)"."""
-        return f"{self.name} ({self.year})" if self.year else self.name
-
-    @property
-    def folder(self) -> PurePosixPath:
-        return TV / f"{safe_name(self.title)} {{tmdb-{self.id}}}"
-
-    def to_json(self) -> dict:
-        return asdict(self)
-
-
-@dataclass(frozen=True)
-class Episode:
-    season: int   # 0 = specials
-    number: int
-    name: str
-    runtime_min: int = 0  # 0 = TMDB doesn't know
-
-    @property
-    def code(self) -> str:
-        return f"S{self.season:02d}E{self.number:02d}"
+def series_folder(series: Series) -> PurePosixPath:
+    """`TV/Show (Year) {tmdb-ID}`."""
+    return TV / f"{safe_name(series.title)} {{tmdb-{series.id}}}"
 
 
 def season_folder(season: int) -> str:
@@ -76,12 +45,12 @@ def episode_path(series: Series, ep: Episode) -> PurePosixPath:
     stem = f"{safe_name(series.name)} - s{ep.season:02d}e{ep.number:02d}"
     if ep.name:
         stem += f" - {safe_name(ep.name)}"
-    return series.folder / season_folder(ep.season) / f"{stem}.mkv"
+    return series_folder(series) / season_folder(ep.season) / f"{stem}.mkv"
 
 
 def extra_path(series: Series, disc_label: str, title_number: int) -> PurePosixPath:
     """A Title kept as an Extra of the show: `Other/<Disc label> - Title N.mkv`."""
-    return series.folder / "Other" / f"{safe_name(disc_label or 'Disc')} - Title {title_number}.mkv"
+    return series_folder(series) / "Other" / f"{safe_name(disc_label or 'Disc')} - Title {title_number}.mkv"
 
 
 _SEASON_OR_DISC = re.compile(

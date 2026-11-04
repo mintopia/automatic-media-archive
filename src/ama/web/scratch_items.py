@@ -59,7 +59,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
         movie = movies.get(rec.id)
         if movie is None:
             waiting.append(_item(rec, rec.name, "Being identified"))
-        elif job is not None and job.movie.disc_id == rec.id:
+        elif job is not None and job.disc.id == rec.id:
             waiting.insert(0, _item(rec, movie.film.name,
                                     f"Encoding · {job.progress.pct}%", ("enc", "Encoding")))
         elif movie.status == EncodeStatus.FAILED:
@@ -90,6 +90,6 @@ def _rip_pct(services: Services, rec: DiscRecord) -> int:
 def scratch_context(services: Services) -> dict:
     items = scratch_items(services)
     job = services.movie_archive.current
-    freeing = next((i for i in items if job and i.record.id == job.movie.disc_id), None)
+    freeing = next((i for i in items if job and i.record.id == job.disc.id), None)
     return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items),
             "encode_freeing": (freeing.gb, job.progress.eta_s) if freeing and job else None}
