@@ -9,6 +9,7 @@ starts every background monitor as an asyncio task and cancels them on exit.
 from __future__ import annotations
 import asyncio
 import os
+import shutil
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -33,11 +34,12 @@ from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
+from ama.scratch import DiskUsageFn, ScratchGate
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.video_rip import VideoRipper
-from ama.web import STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages, \
-    review_pages
+from ama.web import (STATIC_DIR, auth, discs_pages, movie_review_pages, pages, repeat_pages,
+                     review_pages, scratch_pages)
 
 
 @dataclass
@@ -58,6 +60,7 @@ class Services:
     tmdb: Tmdb
     thumbnails: Thumbnailer
     repeat: RepeatGuard
+    scratch: ScratchGate
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
@@ -76,6 +79,7 @@ def build_services(
     make_tools: Callable[[EventBus], Tools] | None = None,
     http: httpx.Client | None = None,
     disc_root: Callable[[], Path | None] | None = None,
+    disk_usage: DiskUsageFn = shutil.disk_usage,  # type: ignore[assignment]
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
@@ -85,6 +89,7 @@ def build_services(
     drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                          interval=cfg.drive.poll_seconds)
     discs = DiscStore(db, cfg.paths.scratch)
+    scratch = ScratchGate(cfg.scratch, cfg.paths.scratch, drive, bus, disk_usage)
     http = http or httpx.Client(timeout=30)
     http.headers["User-Agent"] = USER_AGENT
     nas = NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists)
@@ -107,9 +112,11 @@ def build_services(
         tools=tools,
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
-                    tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat),
+                    tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
+                    scratch=scratch),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
-                              streamer=streamer, repeat=repeat, disc_root=disc_root),
+                              streamer=streamer, repeat=repeat, scratch=scratch,
+                              disc_root=disc_root),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
@@ -121,6 +128,7 @@ def build_services(
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
+        scratch=scratch,
     )
 
 
@@ -144,4 +152,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
     app.include_router(repeat_pages.router)
+    app.include_router(scratch_pages.router)
     return app

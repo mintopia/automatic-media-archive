@@ -9,7 +9,6 @@ owner `bus.publish(topic)` when the state behind it changes.
 
 from __future__ import annotations
 
-import shutil
 from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -18,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from ama.discs import DiscStatus
 from ama.web.review_items import review_items
+from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
 
@@ -45,10 +45,15 @@ FRAGMENTS: dict[str, str] = {
     "filed": "partials/filed_bin.html",
     "encode": "partials/encoding_bin.html",
     "review": "partials/review_bin.html",
+    # The scratch page body (#12): one partial, live on each topic that changes what it shows.
+    "scratch": "partials/scratch.html",
+    "scratch-rip": "partials/scratch.html",
+    "scratch-encode": "partials/scratch.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
-FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip"}
+FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
+                                   "scratch-rip": "rip", "scratch-encode": "encode"}
 
 
 def fragments_for(topic: str) -> list[str]:
@@ -71,17 +76,10 @@ def _left(seconds: int) -> str:
 
 TEMPLATES.env.filters.update(minutes=_minutes, mmss=_mmss, left=_left)
 
-GB = 1000**3
-
 
 def view_context(services: Services) -> dict[str, Any]:
     """Everything templates (pages and fragments) may read. Keep it plain data."""
-    try:
-        du = shutil.disk_usage(services.config.paths.scratch)
-        scratch = {"used_gb": round(du.used / GB), "total_gb": round(du.total / GB),
-                   "pct": round(100 * du.used / du.total, 1) if du.total else 0}
-    except OSError:
-        scratch = None
+    scratch = services.scratch.usage()
     cd = services.cd
     return {
         "nav": NAV,
@@ -101,6 +99,8 @@ def view_context(services: Services) -> dict[str, Any]:
         "nas": services.nas.status,
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
+        "scratch_refused": services.scratch.refused,
+        "scratch_view": lambda: scratch_context(services),  # walks scratch: call only if shown
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_disc": services.video_rip.disc,
         "rip_progress": services.video_rip.progress,

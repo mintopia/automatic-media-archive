@@ -32,6 +32,7 @@ from ama.events import EventBus
 from ama.makemkv import Msg, Progress, RobotLine
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
+from ama.scratch import ScratchGate
 from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
@@ -97,9 +98,11 @@ class VideoRipper:
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
+                 scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None) -> None:
         self._drive = drive
+        self._scratch = scratch
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
         self._store = store
         self._bus = bus
@@ -160,6 +163,8 @@ class VideoRipper:
             return
         self._handled = state
         assert isinstance(state, DiscPresent)
+        if await self._scratch.refuses(state.disc_type, state.label):  # #12: ejected unripped
+            return
         # Repeat-Disc warning (#16): a Disc already in the Archive waits for the user.
         fingerprint = await asyncio.to_thread(video_fingerprint, self._disc_root(),
                                               state.disc_type)

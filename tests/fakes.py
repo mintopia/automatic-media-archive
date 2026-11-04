@@ -11,6 +11,7 @@ import httpx
 
 from ama.drive import DiscPresent, DiscType, DriveEmpty, DriveState, UnrecognisedDisc
 from ama.proc import ProcResult
+from ama.scratch import DiskUsage
 
 
 class FakeDrive:
@@ -408,7 +409,7 @@ class FakeFfmpeg:
 
     def __init__(self) -> None:
         self.calls: list[list[str]] = []
-        self.thumbnails: list[list[str]] = []  # still-frame grabs (`-frames:v 1`), not Encodes
+        self.thumbnails: list[list[str]] = []  # Review stills (`-frames:v` to a .jpg), not Encodes
         self.thumbnail_exit_code = 0
         self.streams: list[dict] = [
             probe_stream(0, "video", "h264", height=1080),
@@ -454,7 +455,7 @@ class FakeFfmpeg:
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
                  cwd: Path | None = None) -> int:
         args = list(args)
-        if "-frames:v" in args:
+        if "-frames:v" in args and args[-1].endswith(".jpg"):  # a Review still, not analysis
             self.thumbnails.append(args)
             if not self.thumbnail_exit_code:
                 Path(args[-1]).write_bytes(b"\xff\xd8 fake jpeg")
@@ -511,6 +512,17 @@ class FakeTools:
         fake = (self.makemkv if "makemkv" in name else
                 self.ffmpeg if "ffmpeg" in name or "ffprobe" in name else self.cyanrip)
         return fake(args, on_line, cwd)
+
+
+class FakeDisk:
+    """`shutil.disk_usage` for the scratch volume: 256 GB, empty unless a test fills it."""
+
+    def __init__(self, total: int = 256 * 1000**3, used: int = 0) -> None:
+        self.total = total
+        self.used = used
+
+    def __call__(self, path: Path) -> DiskUsage:
+        return DiskUsage(self.total, self.used, self.total - self.used)
 
 
 class FakeRunner:
