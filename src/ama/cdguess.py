@@ -37,7 +37,7 @@ def likely(tracks: list[Track], candidates: Sequence[Match],
 
 @dataclass(frozen=True)
 class Guess:
-    """The likely release, as the live rip card and Disc page show it."""
+    """The likely release, as the live rip card and Job page show it."""
 
     match: Match
     releases: int            # how many releases fit the Rip ("1 of 3 releases")

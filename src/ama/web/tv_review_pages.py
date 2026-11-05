@@ -18,7 +18,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
 from ama import sets, tvreview
-from ama.discs import DiscRecord, DiscStatus
+from ama.jobs import JobRecord, JobStatus
 from ama.moviereview import ripped_titles
 from ama.sets import SetKind, SetKey
 from ama.tmdb import Episode, Series, TmdbError, load_hints
@@ -44,11 +44,11 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def _video_in_review(services, disc_id: int) -> DiscRecord | None:
-    rec = services.discs.get(disc_id)
+def _video_in_review(services, job_id: int) -> JobRecord | None:
+    rec = services.jobs.get(job_id)
     if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
-        raise HTTPException(404, "No such video Disc")
-    return rec if rec.status == DiscStatus.REVIEW else None
+        raise HTTPException(404, "No such video Job")
+    return rec if rec.status == JobStatus.REVIEW else None
 
 
 def _int(value: str | None) -> int | None:
@@ -59,7 +59,7 @@ def _default_season(series: Series) -> int:
     return min((s for s in series.seasons if s > 0), default=0 if series.seasons else 1)
 
 
-def _after_earlier_discs(services, rec: DiscRecord, series: Series | None, season: int | None,
+def _after_earlier_discs(services, rec: JobRecord, series: Series | None, season: int | None,
                          episodes: list[Episode]) -> list[Episode]:
     """The season's Episodes after the last one other Discs of the series took: a
     later Disc of a set carries on. Attached as Disc N, only Discs numbered below N count."""
@@ -71,12 +71,12 @@ def _after_earlier_discs(services, rec: DiscRecord, series: Series | None, seaso
         filed = services.sets.find(ans.key)
         earlier = {d for d, n in filed.members if n < ans.number} if filed else set()
     taken = [t.episode.number for t in services.tv_archive.titles.in_season(series.id, season)
-             if t.episode and t.disc_id != rec.id and (earlier is None or t.disc_id in earlier)]
+             if t.episode and t.job_id != rec.id and (earlier is None or t.job_id in earlier)]
     last = max(taken, default=0)
     return [e for e in episodes if e.number > last]
 
 
-def page(request: Request, services, rec: DiscRecord, errors: list[str] | None = None,
+def page(request: Request, services, rec: JobRecord, errors: list[str] | None = None,
          status_code: int = 200, series_id: int | None = None, season: int | None = None,
          chosen: dict[int, str] | None = None) -> Response:
     params = request.query_params
@@ -132,24 +132,24 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
     return TEMPLATES.TemplateResponse(request, "review_tv.html", ctx, status_code=status_code)
 
 
-@router.post("/review/{disc_id}/kind")
-def kind(request: Request, disc_id: int, kind: Annotated[str, Form()] = "") -> Response:
+@router.post("/review/{job_id}/kind")
+def kind(request: Request, job_id: int, kind: Annotated[str, Form()] = "") -> Response:
     """Mark a Disc in Review as TV (`kind=tv`) or a film (`kind=film`)."""
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     if kind not in ("tv", "film"):
         raise HTTPException(400, "kind is tv or film")
     tvreview.mark(rec, kind == "tv")
-    services.discs.log(rec.id, f"Review: marked as {'TV' if kind == 'tv' else 'a film'}")
+    services.jobs.log(rec.id, f"Review: marked as {'TV' if kind == 'tv' else 'a film'}")
     return RedirectResponse(f"/review/{rec.id}", status_code=303)
 
 
-@router.post("/review/{disc_id}/episodes")
-async def episodes(request: Request, disc_id: int) -> Response:
+@router.post("/review/{job_id}/episodes")
+async def episodes(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     form = await request.form()
@@ -170,13 +170,13 @@ async def episodes(request: Request, disc_id: int) -> Response:
         return page(request, services, rec, errors, 400, series_id, season, choices)
     services.tv_archive.titles.enqueue(rec.id, series, planned(series, rec, kept))
     n = sum(1 for k in kept if k.episode)
-    if services.discs.requeue(rec.id):
-        services.discs.log(rec.id, f"Review: {series.title} (TMDB {series.id}); "
+    if services.jobs.requeue(rec.id):
+        services.jobs.log(rec.id, f"Review: {series.title} (TMDB {series.id}); "
                                    + "; ".join(f"Title {k.title.number} = "
                                                f"{k.episode.code if k.episode else 'Extra'}"
                                                for k in kept)
                                    + f"; {len(titles) - len(kept)} discarded")
-        services.discs.log(rec.id, f"Queued {n} Episode{'s' if n != 1 else ''} for Encode")
+        services.jobs.log(rec.id, f"Queued {n} Episode{'s' if n != 1 else ''} for Encode")
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return after_decision(request, rec.id, f"Done: {series.title} · {plural(n, 'Episode')}",

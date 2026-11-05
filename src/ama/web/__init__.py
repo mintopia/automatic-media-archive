@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
 
-from ama.cdrip import CdDisc
-from ama.discs import DiscStatus
+from ama.cdrip import CdJob
+from ama.jobs import JobStatus
 from ama.extras import ExtraStatus
 from ama.media import Album
 from ama.moviearchive import FiledMovie
@@ -38,7 +38,7 @@ TEMPLATES = Jinja2Templates(directory=HERE / "templates")
 # `{% if state | kind == "DiscPresent" %}`: branch on which variant a state union holds.
 TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
-# `{% set p = disc.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span>`: status as a Phase.
+# `{% set p = job.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span>`: status as a Phase.
 TEMPLATES.env.filters["phase"] = phase_of
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
@@ -112,16 +112,16 @@ def view_context(services: Services) -> dict[str, Any]:
         "current_rip": current_rip(services),
         "cd": cd.current,
         "cd_reading": cd.reading_toc,
-        "cd_last_id": cd.last_disc_id,
-        "ripped": cd.discs(DiscStatus.RIPPED),
-        "failed": cd.discs(DiscStatus.FAILED),
-        # video Discs ripped and not yet identified (still in the Ripping Phase)
-        "ripped_video": [d for d in services.discs.list(DiscStatus.RIPPED, types=VIDEO_DISC_TYPES)
+        "cd_last_id": cd.last_job_id,
+        "ripped": cd.jobs(JobStatus.RIPPED),
+        "failed": cd.jobs(JobStatus.FAILED),
+        # video Jobs ripped and not yet identified (still in the Ripping Phase)
+        "ripped_video": [d for d in services.jobs.list(JobStatus.RIPPED, types=VIDEO_DISC_TYPES)
                          if services.movie_archive.movies.get(d.id) is None
                          and not services.tv_archive.titles.has(d.id)],
         "waiting_for": services.problems.why,  # Job id -> Waiting (why it can't move on) | None
         "problems": services.problems.banners(),
-        "filed": [d for d in filed_discs(services)
+        "filed": [d for d in filed_jobs(services)
                   if d.record.filed_at and d.record.filed_at.date() == date.today()],
         "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
         "contents_of": lambda d: contents_of(services, d),
@@ -135,18 +135,18 @@ def view_context(services: Services) -> dict[str, Any]:
         "scratch_refused": services.scratch.refused,
         "scratch_view": lambda: scratch_context(services),  # walks scratch: call only if shown
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
-        "rip_disc": services.video_rip.disc,
+        "rip_job": services.video_rip.job,
         "rip_progress": services.video_rip.progress,
         "rip_likely": services.video_rip.likely,  # a film guessed from the label, only for show
-        "rip_failure": next(iter(services.discs.list(DiscStatus.FAILED, types=VIDEO_DISC_TYPES)),
+        "rip_failure": next(iter(services.jobs.list(JobStatus.FAILED, types=VIDEO_DISC_TYPES)),
                             None),
         **_tools_context(services),
     }
 
 
-def filed_discs(services: Services, limit: int = 100) -> list:
-    """Filed Discs, newest first, as CdDiscs, FiledMovies and FiledTv (History)."""
-    return sorted([*services.cd.discs(DiscStatus.FILED, limit=limit),
+def filed_jobs(services: Services, limit: int = 100) -> list:
+    """Filed Discs, newest first, as CdJobs, FiledMovies and FiledTv (History)."""
+    return sorted([*services.cd.jobs(JobStatus.FILED, limit=limit),
                    *services.movie_archive.filed(limit), *services.tv_archive.filed(limit)],
                   key=lambda d: (d.record.filed_at or d.record.started_at, d.record.id),
                   reverse=True)[:limit]
@@ -154,7 +154,7 @@ def filed_discs(services: Services, limit: int = 100) -> list:
 
 def contents_of(services: Services, d: Any) -> list[str]:
     """What a filed Disc holds, by name, for its History row: tracks, Episodes or Extras."""
-    if isinstance(d, CdDisc):
+    if isinstance(d, CdJob):
         album = services.media.get(d.record.id)
         return [f"{t.number}. {album.track_title(t.number) or f'Track {t.number}'}"
                 for t in d.tracks if t.number] if isinstance(album, Album) else []

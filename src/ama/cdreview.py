@@ -75,12 +75,12 @@ def saved_response(scratch: Path) -> dict[str, Any] | None:
         return None
 
 
-def disc_id(scratch: Path) -> str:
+def mb_disc_id(scratch: Path) -> str:
     try:
         text = (scratch / "rip.log").read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
-    return cyanrip.parse_report(text).disc_id or ""
+    return cyanrip.parse_report(text).mb_disc_id or ""
 
 
 def audio_tracks(tracks: list[Track]) -> list[Track]:
@@ -97,7 +97,7 @@ def fitting(tracks: list[Track], candidates: list[Match]) -> list[Match]:
 def candidates(scratch: Path, tracks: list[Track]) -> list[Match]:
     """The editions offered in Review: saved MusicBrainz matches that fit the Rip."""
     response = saved_response(scratch)
-    return fitting(tracks, musicbrainz.matches(response, disc_id(scratch))) if response else []
+    return fitting(tracks, musicbrainz.matches(response, mb_disc_id(scratch))) if response else []
 
 
 def unverified(tracks: list[Track], status: ArStatus) -> list[int]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import PurePosixPath
 
-from ama.discs import TitleRecord, TitleStatus
+from ama.jobs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints
 from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, \
     might_be_tv, play_alls, series_terms

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from html import unescape
 
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 from tests.fakes import DATA
@@ -36,12 +36,12 @@ def _response() -> dict:
 def _file_ffvii(harness):
     harness.web.musicbrainz[DISC_1] = _response()
     harness.web.covers[SPECIAL] = COVER
-    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.mb_disc_id = DISC_1
     harness.cyanrip.tracks = [(n, 120.0 + n) for n in range(1, 25)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 25)}
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED))
-    return harness.services.discs.list(DiscStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
+    return harness.services.jobs.list(JobStatus.FILED)[0]
 
 
 def test_a_filed_cds_page_shows_what_it_is_without_scratch_or_the_web(harness, client):
@@ -50,7 +50,7 @@ def test_a_filed_cds_page_shows_what_it_is_without_scratch_or_the_web(harness, c
     harness.web.musicbrainz.clear()   # offline from here: the page uses what filing kept
     harness.web.covers.clear()
 
-    page = unescape(client.get(f"/discs/{rec.id}").text)
+    page = unescape(client.get(f"/jobs/{rec.id}").text)
     assert ALBUM in page and "Various Artists" in page
     assert "2024" in page and "SQUARE ENIX MUSIC" in page and "SQEX-11101~8" in page
     assert "Disc 1 of 8" in page and "Audio CD" in page
@@ -74,7 +74,7 @@ def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(
     page = unescape(client.get("/history").text)
     assert "<title>History · Automatic Media Archive</title>" in page
     assert '<a href="/history" aria-current="page">History</a>' in page   # in the nav
-    row = page[page.index(f'href="/discs/{rec.id}"') - 400:]
+    row = page[page.index(f'href="/jobs/{rec.id}"') - 400:]
     assert cover in row[:800] and ALBUM in row[:800]
 
     assert "24 tracks · verified" in row
@@ -92,12 +92,12 @@ def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(
 
 
 def test_the_section_is_called_history_on_every_disc_page_never_ripped_or_filed(harness, client):
-    harness.cyanrip.disc_id = DISC_1   # MusicBrainz offline: it stays ripped, waiting
+    harness.cyanrip.mb_disc_id = DISC_1   # MusicBrainz offline: it stays ripped, waiting
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.services.discs.list(DiscStatus.RIPPED))
-    rec = harness.services.discs.list(DiscStatus.RIPPED)[0]
-    page = unescape(client.get(f"/discs/{rec.id}").text)
+    eventually(lambda: harness.services.jobs.list(JobStatus.RIPPED))
+    rec = harness.services.jobs.list(JobStatus.RIPPED)[0]
+    page = unescape(client.get(f"/jobs/{rec.id}").text)
     crumb = page[page.index('class="crumb"'):]
     crumb = crumb[:crumb.index("</div>")]
     assert '<a href="/history">History</a>' in crumb and "Ripped" not in crumb
@@ -118,11 +118,11 @@ def test_a_filed_films_page_shows_its_poster_overview_and_tmdb_link(harness, cli
     harness.web.tmdb_images["/ex1234.jpg"] = POSTER
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED))
-    rec = harness.services.discs.list(DiscStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
+    rec = harness.services.jobs.list(JobStatus.FILED)[0]
     harness.web.tmdb_offline = True   # the page uses what filing kept
 
-    page = unescape(client.get(f"/discs/{rec.id}").text)
+    page = unescape(client.get(f"/jobs/{rec.id}").text)
     assert "Example Movie" in page and "2016" in page and "Examples are made." in page
     assert 'href="https://www.themoviedb.org/movie/1234"' in page
     assert str(rec.archive_dir) in page and "Blu-ray" in page
@@ -135,9 +135,9 @@ def test_a_film_is_filed_even_when_tmdb_cant_give_its_poster(harness, client):
                          poster_path="/missing.jpg")
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED))
-    rec = harness.services.discs.list(DiscStatus.FILED)[0]
-    page = unescape(client.get(f"/discs/{rec.id}").text)
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
+    rec = harness.services.jobs.list(JobStatus.FILED)[0]
+    page = unescape(client.get(f"/jobs/{rec.id}").text)
     assert 'href="https://www.themoviedb.org/movie/1234"' in page
     assert "/covers/" not in page
 
@@ -152,9 +152,9 @@ def test_a_filed_tv_discs_page_shows_the_series_poster_overview_and_tmdb_link(ha
     client.post(f"/review/{rec.id}/episodes", data={
         "series": str(OFFICE), "season": "1", "t1": "S01E01", "t2": "S01E02", "t3": "S01E03",
         "t4": "discard", "t5": "discard"})
-    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED, timeout=10)
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED, timeout=10)
 
-    page = unescape(client.get(f"/discs/{rec.id}").text)
+    page = unescape(client.get(f"/jobs/{rec.id}").text)
     assert "The Office" in page and "A mockumentary about an office." in page
     assert "3 Episodes" in page
     history = unescape(client.get("/history").text)
@@ -168,7 +168,7 @@ def test_a_filed_tv_discs_page_shows_the_series_poster_overview_and_tmdb_link(ha
 
 def _forget_media(harness, rec) -> None:
     """As if `rec` was filed before History kept what each Disc is (migration 0012)."""
-    harness.services.db.execute("DELETE FROM media_info WHERE disc_id = ?", (rec.id,))
+    harness.services.db.execute("DELETE FROM media_info WHERE job_id = ?", (rec.id,))
     for f in harness.services.covers.folder.glob("*"):
         f.unlink()
 
@@ -183,17 +183,17 @@ def test_discs_filed_before_history_kept_their_details_get_them_at_startup(harne
     harness.web.tmdb_images["/ex1234.jpg"] = POSTER
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2)
-    film = next(r for r in harness.services.discs.list(DiscStatus.FILED) if r.id != cd.id)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2)
+    film = next(r for r in harness.services.jobs.list(JobStatus.FILED) if r.id != cd.id)
     for rec in (cd, film):
         _forget_media(harness, rec)
     assert "The Unknown Journey Continues" not in unescape(client.get("/history").text)
 
     asyncio.run(harness.services.backfill.run())
-    page = unescape(client.get(f"/discs/{cd.id}").text)
+    page = unescape(client.get(f"/jobs/{cd.id}").text)
     assert "The Unknown Journey Continues" in page and f"/covers/release-{SPECIAL}.jpg" in page
     assert client.get(f"/covers/release-{SPECIAL}.jpg").content == COVER
-    assert "/covers/tmdb-movie-1234.jpg" in unescape(client.get(f"/discs/{film.id}").text)
+    assert "/covers/tmdb-movie-1234.jpg" in unescape(client.get(f"/jobs/{film.id}").text)
 
     lookups = len(harness.web.requests)
     asyncio.run(harness.services.backfill.run())  # nothing left to fill in: no requests

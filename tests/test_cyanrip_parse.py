@@ -39,7 +39,7 @@ def test_progress_lines_in_real_stdout_are_recognised():
 def test_accurate_log_gives_every_track_verified_with_best_confidence():
     r = parse_report(capture("log-accurate-issue93.txt"))
     assert r.disc_tracks == 18
-    assert r.disc_id == "iV4zYu5_g1huHgbfxS6qgxQBL_A-"
+    assert r.mb_disc_id == "iV4zYu5_g1huHgbfxS6qgxQBL_A-"
     assert r.accuraterip == "found"
     assert r.ripping_errors == 0
     tracks = r.audio_tracks

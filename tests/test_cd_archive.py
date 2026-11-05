@@ -15,7 +15,7 @@ from mutagen.flac import FLAC
 from ama import musicbrainz
 from ama.archive import extended_path
 from ama.cdarchive import track_tags
-from ama.discs import DiscStatus, ReviewReason
+from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
 from tests.fakes import DATA
@@ -35,17 +35,17 @@ def _response(only: str | None = None) -> dict:
     return resp
 
 
-def _insert(harness, disc_id: str, tracks: int, response) -> None:
-    harness.web.musicbrainz[disc_id] = response
-    harness.cyanrip.disc_id = disc_id
+def _insert(harness, mb_disc_id: str, tracks: int, response) -> None:
+    harness.web.musicbrainz[mb_disc_id] = response
+    harness.cyanrip.mb_disc_id = mb_disc_id
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, tracks + 1)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, tracks + 1)}
     harness.drive.insert(DiscType.CD)
 
 
-def _wait_for(harness, status: DiscStatus, count: int = 1):
-    eventually(lambda: len(harness.services.discs.list(status)) == count)
-    return harness.services.discs.list(status)[0]
+def _wait_for(harness, status: JobStatus, count: int = 1):
+    eventually(lambda: len(harness.services.jobs.list(status)) == count)
+    return harness.services.jobs.list(status)[0]
 
 
 def _album(harness):
@@ -57,7 +57,7 @@ def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(ha
     harness.web.covers[SPECIAL] = COVER
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
 
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     eventually(lambda: not rec.scratch_dir.exists())  # deleted right after filing is verified
     album = _album(harness)
     names = sorted(p.name for p in album.iterdir())
@@ -98,7 +98,7 @@ def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(ha
 
 def test_musicbrainz_is_asked_politely_for_the_disc(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     mb = next(r for r in harness.web.requests if r.url.host == "musicbrainz.org")
     assert mb.url.path == f"/ws/2/discid/{DISC_1}"
     assert "recordings" in mb.url.params["inc"] and mb.url.params["fmt"] == "json"
@@ -109,7 +109,7 @@ def test_musicbrainz_is_asked_politely_for_the_disc(harness, client):
 
 def test_plex_partially_scans_the_filed_folder(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     eventually(lambda: any(r.url.path.endswith("/refresh") for r in harness.web.plex_requests))
     scan = next(r for r in harness.web.plex_requests if r.url.path.endswith("/refresh"))
     assert scan.url.path == "/library/sections/3/refresh"   # the Music library
@@ -121,9 +121,9 @@ def test_plex_partially_scans_the_filed_folder(harness, client):
 
 def test_discs_of_a_multi_disc_release_file_into_one_album_folder(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     _insert(harness, DISC_2, 23, _response(only=SPECIAL))
-    _wait_for(harness, DiscStatus.FILED, count=2)
+    _wait_for(harness, JobStatus.FILED, count=2)
 
     names = [p.name for p in _album(harness).iterdir()]
     disc1 = [n for n in names if n.endswith(".flac") and n.startswith("1")]
@@ -138,7 +138,7 @@ def test_discs_of_a_multi_disc_release_file_into_one_album_folder(harness, clien
 def test_several_matching_releases_are_left_for_review(harness, client):
     _insert(harness, DISC_1, 24, _response())  # 3 releases match
 
-    rec = _wait_for(harness, DiscStatus.REVIEW)
+    rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.MULTIPLE_RELEASES
     assert not (harness.nas_root / "Music").exists()
     assert sorted(p.name for p in rec.scratch_dir.glob("*.flac"))[0] == "01.flac"
@@ -148,18 +148,18 @@ def test_several_matching_releases_are_left_for_review(harness, client):
 
 def test_a_disc_musicbrainz_doesnt_know_is_left_for_review(harness, client):
     _insert(harness, DISC_1, 24, 404)
-    rec = _wait_for(harness, DiscStatus.REVIEW)
+    rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.NO_RELEASE
     assert rec.scratch_dir.exists()
 
 
 def test_a_rip_accuraterip_didnt_verify_is_left_for_review(harness, client):
     harness.web.musicbrainz[DISC_1] = _response(only=SPECIAL)
-    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.mb_disc_id = DISC_1
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 24)}  # track 24 mismatched
     harness.drive.insert(DiscType.CD)
-    rec = _wait_for(harness, DiscStatus.REVIEW)
+    rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.NOT_ACCURATE
     assert not (harness.nas_root / "Music").exists()
 
@@ -167,27 +167,27 @@ def test_a_rip_accuraterip_didnt_verify_is_left_for_review(harness, client):
 def test_a_cd_not_in_accuraterip_is_left_for_review(harness, client):
     harness.cyanrip.in_accuraterip = False
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    rec = _wait_for(harness, DiscStatus.REVIEW)
+    rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.NOT_IN_ACCURATERIP
 
 
 def test_identification_waits_for_musicbrainz_to_be_reachable(harness, client):
     _insert(harness, DISC_1, 24, None)  # offline
-    rec = _wait_for(harness, DiscStatus.RIPPED)
+    rec = _wait_for(harness, JobStatus.RIPPED)
     eventually(lambda: any("MusicBrainz" in ln.text for ln in
-                           harness.services.discs.log_lines(rec.id)))
+                           harness.services.jobs.log_lines(rec.id)))
     harness.web.musicbrainz[DISC_1] = _response(only=SPECIAL)
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
 
 
 def test_filing_waits_for_the_nas(harness, client):
     harness.share["reachable"] = False
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    rec = _wait_for(harness, DiscStatus.RIPPED)
-    eventually(lambda: any("NAS" in ln.text for ln in harness.services.discs.log_lines(rec.id)))
+    rec = _wait_for(harness, JobStatus.RIPPED)
+    eventually(lambda: any("NAS" in ln.text for ln in harness.services.jobs.log_lines(rec.id)))
     assert not (harness.nas_root / "Music").exists()
     harness.share["reachable"] = True
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
 
 
 def test_labels_listed_once_per_disc_are_tagged_once():

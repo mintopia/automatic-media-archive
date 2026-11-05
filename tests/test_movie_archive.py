@@ -16,7 +16,7 @@ import pytest
 
 from ama.archive import extended_path
 from ama.config import Config
-from ama.discs import DiscStatus, ReviewReason
+from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from ama.moviearchive import EncodeStatus
 from tests.conftest import eventually, make_harness
@@ -31,9 +31,9 @@ def _rip(harness, label="EXAMPLE_MOVIE", disc_type=DiscType.BD) -> None:
     eventually(lambda: harness.drive.ejected >= 1)
 
 
-def _wait_for(harness, status: DiscStatus):
-    eventually(lambda: harness.services.discs.list(status), timeout=5)
-    return harness.services.discs.list(status)[0]
+def _wait_for(harness, status: JobStatus):
+    eventually(lambda: harness.services.jobs.list(status), timeout=5)
+    return harness.services.jobs.list(status)[0]
 
 
 def _filed(harness, version="1080p"):
@@ -50,7 +50,7 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness)
 
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     assert rec.title == "Example Movie (2016)"
     assert _filed(harness).read_bytes() == b"HEVC Example_Movie_t00.mkv"  # the Main Feature
     eventually(lambda: not rec.scratch_dir.exists())  # the lossless Rip is gone (ADR-0002)
@@ -62,7 +62,7 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     assert parse_qs(scan[0].url.query.decode())["path"] == [f"/volume1/media/Movies/{FOLDER}"]
     encode = harness.ffmpeg.encodes()[0]
     assert encode[encode.index("-cq") + 1] == "22"  # BD's CQ from config
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "Identified as Example Movie (2016)" in log and "Encode finished" in log
     page = html.unescape(client.get("/").text)
     assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # History, on Now
@@ -86,7 +86,7 @@ def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_librar
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness)
 
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     assert extended_path(nas / "Films HD" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
     assert not (nas / "Movies").exists()
     eventually(lambda: any("/refresh" in r.url.path for r in harness.web.plex_requests))
@@ -103,14 +103,14 @@ def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_
     harness.drive.root = root
     harness.web.add_film("Arrival", 329865, "Arrival", runtime=118)
     _rip(harness, label="ARRIVAL_BD")
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     assert rec.title == "Arrival (2016)"
     searches = [r.url.params["query"] for r in harness.web.tmdb_requests
                 if r.url.path == "/3/search/movie"]
     # The guess shown while ripping uses only the label; Identification asks title first.
     assert "ARRIVAL" in searches
     assert [q for q in searches if q != "ARRIVAL"][0] == "Arrival"
-    assert "tmdb-key" not in "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "tmdb-key" not in "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
 
 
 def test_runtime_mismatch_and_ambiguous_matches_are_left_for_review_not_encoded(tmp_path):
@@ -118,7 +118,7 @@ def test_runtime_mismatch_and_ambiguous_matches_are_left_for_review_not_encoded(
     h.web.add_film("Example Movie", 1, "Example Movie", runtime=95)
     with _client(h):
         _rip(h)
-        rec = _wait_for(h, DiscStatus.REVIEW)
+        rec = _wait_for(h, JobStatus.REVIEW)
         assert rec.review_reason == ReviewReason.RUNTIME_MISMATCH
         saved = json.loads((rec.scratch_dir / "tmdb.json").read_text(encoding="utf-8"))
         assert [c["id"] for c in saved["candidates"]] == [1]  # kept for Review
@@ -130,14 +130,14 @@ def test_runtime_mismatch_and_ambiguous_matches_are_left_for_review_not_encoded(
     h.web.add_film("Example Movie", 2, "Example Movie", runtime=120, year=1987)
     with _client(h) as c:
         _rip(h)
-        assert _wait_for(h, DiscStatus.REVIEW).review_reason == ReviewReason.MULTIPLE_MATCHES
+        assert _wait_for(h, JobStatus.REVIEW).review_reason == ReviewReason.MULTIPLE_MATCHES
         assert "Several films match" in html.unescape(c.get("/").text)  # Needs Review bin
     assert h.ffmpeg.calls == []
 
     h = make_harness(_dir(tmp_path / "c"))
     with _client(h):
         _rip(h)
-        assert _wait_for(h, DiscStatus.REVIEW).review_reason == ReviewReason.NO_MATCH
+        assert _wait_for(h, JobStatus.REVIEW).review_reason == ReviewReason.NO_MATCH
 
 
 def _client(h):
@@ -163,7 +163,7 @@ def test_a_non_english_film_keeps_its_original_language_track(harness, client):
         probe_stream(4, "subtitle", "hdmv_pgs_subtitle", "eng"),
     ]
     _rip(harness)
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     args = harness.ffmpeg.encodes()[0]
     maps = [args[i + 1] for i, a in enumerate(args) if a == "-map"]
     assert maps == ["0:0", "0:1", "0:2", "0:4"]
@@ -192,7 +192,7 @@ def test_encodes_run_one_at_a_time_first_in_first_out_with_live_progress(client,
     assert "Next in line" in html.unescape(client.get("/").text)
 
     harness.ffmpeg.release()
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=5)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=5)
     encoded = [c[c.index("-i") + 1] for c in harness.ffmpeg.encodes()]
     # Each Disc's Main Feature and Extra, the first Disc's first.
     assert ["/1/" in p.replace("\\", "/") for p in encoded] == [True, True, False, False]
@@ -219,17 +219,17 @@ def test_a_failed_encode_keeps_the_rip_and_is_retried_after_a_restart(tmp_path):
         _rip(h)
         eventually(lambda: (m := h.services.movie_archive.movies.get(1)) is not None
                    and m.status == EncodeStatus.FAILED)
-        rec = h.services.discs.get(1)
-        assert rec.status == DiscStatus.RIPPED
+        rec = h.services.jobs.get(1)
+        assert rec.status == JobStatus.RIPPED
         assert (rec.scratch_dir / "Example_Movie_t00.mkv").exists()
-        log = "\n".join(map(str, h.services.discs.log_lines(1)))
+        log = "\n".join(map(str, h.services.jobs.log_lines(1)))
         assert "OpenEncodeSessionEx failed" in log and "The Encode didn't work" in log
 
     # Restart with ffmpeg fixed: the Encode is tried again and filed.
     h2 = make_harness(tmp_path)
     h2.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with _client(h2):
-        _wait_for(h2, DiscStatus.FILED)
+        _wait_for(h2, JobStatus.FILED)
 
 
 def test_an_encode_waits_for_the_nas_then_files(tmp_path):
@@ -239,9 +239,9 @@ def test_an_encode_waits_for_the_nas_then_files(tmp_path):
         _rip(h)
         eventually(lambda: (m := h.services.movie_archive.movies.get(1)) is not None
                    and m.status == EncodeStatus.ENCODED)
-        assert h.services.discs.get(1).status == DiscStatus.RIPPED
+        assert h.services.jobs.get(1).status == JobStatus.RIPPED
         h.share["reachable"] = True
-        _wait_for(h, DiscStatus.FILED)
+        _wait_for(h, JobStatus.FILED)
     # filed from the finished Encodes (Main Feature + Extra), not re-encoded
     assert len(h.ffmpeg.encodes()) == 2
 
@@ -269,13 +269,13 @@ def test_a_dvd_is_encoded_progressive_and_cropped(client, harness, sample, vf, s
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness, disc_type=DiscType.DVD)
 
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     runs = harness.ffmpeg.samples()
     # 10 for the Main Feature, 10 for its Extra
     assert len(runs) == 20 and all(r[r.index("-vf") + 1].startswith("idet,") for r in runs)
     encode = harness.ffmpeg.encodes()[0]
     assert encode[encode.index("-vf") + 1] == vf
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert f"Picture: {said}" in log
 
 
@@ -288,7 +288,7 @@ def test_a_letterboxed_bd_is_cropped_without_scan_detection(client, harness):
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness)
 
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     assert all("idet" not in r[r.index("-vf") + 1] for r in harness.ffmpeg.samples())
     encode = harness.ffmpeg.encodes()[0]
     assert encode[encode.index("-vf") + 1] == "crop=1920:800:0:140"
@@ -297,7 +297,7 @@ def test_a_letterboxed_bd_is_cropped_without_scan_detection(client, harness):
 def test_a_film_with_no_bars_and_nothing_to_fix_gets_no_video_filter(client, harness):
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness)
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     assert "-vf" not in harness.ffmpeg.encodes()[0]
 
 
@@ -307,7 +307,7 @@ def test_a_uhd_is_encoded_keeping_its_hdr10_metadata_checked_and_filed_as_the_4k
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness, disc_type=DiscType.UHD)
 
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     assert _filed(harness, "4K").exists()
     args = harness.ffmpeg.encodes()[0]
     line = " ".join(args)
@@ -317,7 +317,7 @@ def test_a_uhd_is_encoded_keeping_its_hdr10_metadata_checked_and_filed_as_the_4k
             "-color_range tv") in line
     probed = [c[-1] for c in harness.ffmpeg.calls if "-show_frames" in c]
     assert any(p.endswith("encode.tmp.mkv") for p in probed)  # the finished Encode was checked
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "HDR10 metadata kept: 0.005-1000 nits" in log and "MaxCLL 1000, MaxFALL 400" in log
 
 
@@ -329,12 +329,12 @@ def test_an_encode_that_loses_the_hdr10_metadata_fails_and_keeps_the_rip(harness
 
     movies = harness.services.movie_archive.movies
     eventually(lambda: (m := movies.get(1)) is not None and m.status == EncodeStatus.FAILED)
-    rec = harness.services.discs.get(1)
-    assert rec.status == DiscStatus.RIPPED
+    rec = harness.services.jobs.get(1)
+    assert rec.status == JobStatus.RIPPED
     assert (rec.scratch_dir / "Example_Movie_t00.mkv").exists()
     assert not (rec.scratch_dir / "encode.tmp.mkv").exists()
     assert not (rec.scratch_dir / "encode.mkv").exists()
-    log = "\n".join(map(str, harness.services.discs.log_lines(1)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(1)))
     assert "the mastering display metadata is missing" in log
     assert "MaxCLL is missing, not 1000" in log
 
@@ -342,11 +342,11 @@ def test_an_encode_that_loses_the_hdr10_metadata_fails_and_keeps_the_rip(harness
 def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(client, harness):
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness)
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 1, timeout=5)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 1, timeout=5)
 
     _uhd_source(harness)
     harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=5)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=5)
 
     folder = extended_path(harness.nas_root / "Movies" / FOLDER)
     assert sorted(p.name for p in folder.iterdir()) == [
@@ -354,7 +354,7 @@ def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(cl
     # Both Discs' Extras are kept, each named after its Disc.
     assert sorted(p.name for p in (folder / "Other").iterdir()) == [
         "EXAMPLE_MOVIE - Title 2.mkv", "EXAMPLE_MOVIE_UHD - Title 2.mkv"]
-    filed = harness.services.discs.list(DiscStatus.FILED)
+    filed = harness.services.jobs.list(JobStatus.FILED)
     assert filed[0].archive_dir == filed[1].archive_dir
 
 
@@ -363,9 +363,9 @@ def test_a_4k_main_feature_is_encoded_as_uhd_even_if_the_disc_looked_like_a_blu_
     _uhd_source(harness)
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     _rip(harness, disc_type=DiscType.BD)
-    rec = _wait_for(harness, DiscStatus.FILED)
+    rec = _wait_for(harness, JobStatus.FILED)
     assert _filed(harness, "4K").exists()
     args = harness.ffmpeg.encodes()[0]
     assert args[args.index("-cq") + 1] == "24"
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "its Main Feature is 4K, so it is encoded as a UHD" in log

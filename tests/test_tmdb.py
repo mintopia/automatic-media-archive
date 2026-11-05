@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ama.discs import ReviewReason
+from ama.jobs import ReviewReason
 from ama.tmdb import Candidate, DiscHints, bd_meta_title, decide, movie_folder, search_terms
 
 

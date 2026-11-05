@@ -1,10 +1,13 @@
-"""Disc records: one row per Disc AMA Ripped (or tried to), shared by CD and video Rips.
+"""Jobs: one row per Disc inserted and Ripped (or tried), shared by CD and video Rips.
 
-Persisted in SQLite (`discs`, `disc_log`, plus video `titles`) so a failure and
+A Job is one Disc's single pass through the pipeline (GLOSSARY.md); inserting the same
+Disc again starts a new Job.
+
+Persisted in SQLite (`jobs`, `job_log`, plus video `titles`) so a failure and
 its log survive a restart, and so a Rip cut short by a restart can be cleaned
 up. A record is `ripping` while the Rip runs, then `ripped` or `failed`. A
 failed record keeps its log for the UI until the user dismisses it; its partial
-scratch files are already gone. A `ripped` Disc is then Identified: it goes to
+scratch files are already gone. A `ripped` Job is then Identified: it goes to
 `review` (a human must confirm the Identification) or is `filed` into the
 Archive, which deletes its scratch.
 """
@@ -26,7 +29,7 @@ from ama.drive import DiscType
 log = logging.getLogger(__name__)
 
 
-class DiscStatus(StrEnum):
+class JobStatus(StrEnum):
     RIPPING = "ripping"
     RIPPED = "ripped"  # waiting for Identification / filing
     REVIEW = "review"  # Identification needs a human (see ReviewReason)
@@ -124,11 +127,11 @@ class LogLine:
 
 
 @dataclass(frozen=True)
-class DiscRecord:
+class JobRecord:
     id: int
     disc_type: DiscType
     label: str
-    status: DiscStatus
+    status: JobStatus
     failure: Failure | None
     scratch_dir: Path
     started_at: datetime
@@ -168,11 +171,11 @@ _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_
          "review_reason, title, archive_dir, filed_at")
 
 
-def _rip_name(rec: DiscRecord) -> str:
-    return f"{rec.disc_type.long_name} “{rec.label}” (Disc {rec.id})"
+def _rip_name(rec: JobRecord) -> str:
+    return f"{rec.disc_type.long_name} “{rec.label}” (Job {rec.id})"
 
 
-class DiscStore:
+class JobStore:
     def __init__(self, db: Database, scratch: Path,
                  now: Callable[[], datetime] = datetime.now) -> None:
         self._db = db
@@ -182,15 +185,15 @@ class DiscStore:
     def _ts(self) -> str:
         return self._now().isoformat(timespec="seconds")
 
-    def _record(self, row) -> DiscRecord:
+    def _record(self, row) -> JobRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
          short, dupes, reason, title, archive_dir, filed_at) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
-            "status, source, name FROM titles WHERE disc_id = ? ORDER BY number",
+            "status, source, name FROM titles WHERE job_id = ? ORDER BY number",
             (id_,)).fetchall()
-        return DiscRecord(
-            id=id_, disc_type=DiscType(dtype), label=label, status=DiscStatus(status),
+        return JobRecord(
+            id=id_, disc_type=DiscType(dtype), label=label, status=JobStatus(status),
             failure=Failure(FailureKind(fkind), fhead or "", fadv or "") if fkind else None,
             scratch_dir=Path(scratch), started_at=datetime.fromisoformat(started),
             finished_at=datetime.fromisoformat(finished) if finished else None,
@@ -202,111 +205,111 @@ class DiscStore:
             filed_at=datetime.fromisoformat(filed_at) if filed_at else None,
         )
 
-    def create(self, disc_type: DiscType, label: str, scratch_subdir: str) -> DiscRecord:
+    def create(self, disc_type: DiscType, label: str, scratch_subdir: str) -> JobRecord:
         """Start a record in `ripping`; its scratch folder is `scratch/<subdir>/<id>`."""
         cur = self._db.execute(
-            "INSERT INTO discs (disc_type, label, status, scratch_dir, started_at) "
+            "INSERT INTO jobs (disc_type, label, status, scratch_dir, started_at) "
             "VALUES (?, ?, 'ripping', '', ?)", (disc_type.value, label, self._ts()))
-        disc_id = cur.lastrowid
-        assert disc_id is not None
-        scratch = self._scratch / scratch_subdir / str(disc_id)
-        self._db.execute("UPDATE discs SET scratch_dir = ? WHERE id = ?", (str(scratch), disc_id))
-        disc = self.get(disc_id)
-        assert disc is not None
-        log.info("Rip started: %s", _rip_name(disc))
-        return disc
+        job_id = cur.lastrowid
+        assert job_id is not None
+        scratch = self._scratch / scratch_subdir / str(job_id)
+        self._db.execute("UPDATE jobs SET scratch_dir = ? WHERE id = ?", (str(scratch), job_id))
+        job = self.get(job_id)
+        assert job is not None
+        log.info("Rip started: %s", _rip_name(job))
+        return job
 
-    def get(self, disc_id: int) -> DiscRecord | None:
-        row = self._db.execute(f"SELECT {_COLS} FROM discs WHERE id = ?", (disc_id,)).fetchone()
+    def get(self, job_id: int) -> JobRecord | None:
+        row = self._db.execute(f"SELECT {_COLS} FROM jobs WHERE id = ?", (job_id,)).fetchone()
         return self._record(row) if row else None
 
-    def statuses(self) -> dict[int, DiscStatus]:
-        """Every Disc's current status, by id (cheap: no Titles, no records)."""
-        rows = self._db.execute("SELECT id, status FROM discs").fetchall()
-        return {id_: DiscStatus(status) for id_, status in rows}
+    def statuses(self) -> dict[int, JobStatus]:
+        """Every Job's current status, by id (cheap: no Titles, no records)."""
+        rows = self._db.execute("SELECT id, status FROM jobs").fetchall()
+        return {id_: JobStatus(status) for id_, status in rows}
 
-    def list(self, status: DiscStatus, include_dismissed: bool = False,
-             types: Collection[DiscType] | None = None) -> list[DiscRecord]:
+    def list(self, status: JobStatus, include_dismissed: bool = False,
+             types: Collection[DiscType] | None = None) -> list[JobRecord]:
         """Records in `status`, newest first; only `types` if given."""
         rows = self._db.execute(
-            f"SELECT {_COLS} FROM discs WHERE status = ? AND (? OR dismissed = 0) "
+            f"SELECT {_COLS} FROM jobs WHERE status = ? AND (? OR dismissed = 0) "
             "ORDER BY id DESC", (status.value, include_dismissed)).fetchall()
         recs = [self._record(r) for r in rows]
         return [r for r in recs if types is None or r.disc_type in types]
 
-    def set_titles(self, disc_id: int, titles: Iterable[TitleRecord], skipped_short: int,
+    def set_titles(self, job_id: int, titles: Iterable[TitleRecord], skipped_short: int,
                    skipped_duplicates: int) -> None:
-        self._db.execute("DELETE FROM titles WHERE disc_id = ?", (disc_id,))
+        self._db.execute("DELETE FROM titles WHERE job_id = ?", (job_id,))
         for t in titles:
             self._db.execute(
-                "INSERT INTO titles (disc_id, number, makemkv_id, duration_s, size_bytes, audio, "
+                "INSERT INTO titles (job_id, number, makemkv_id, duration_s, size_bytes, audio, "
                 "subtitles, segments, file, status, source, name) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (disc_id, t.number, t.makemkv_id, t.duration_s, t.size_bytes, t.audio,
+                (job_id, t.number, t.makemkv_id, t.duration_s, t.size_bytes, t.audio,
                  t.subtitles, t.segments, t.file, str(t.status), t.source, t.name))
-        self._db.execute("UPDATE discs SET skipped_short = ?, skipped_duplicates = ? WHERE id = ?",
-                         (skipped_short, skipped_duplicates, disc_id))
+        self._db.execute("UPDATE jobs SET skipped_short = ?, skipped_duplicates = ? WHERE id = ?",
+                         (skipped_short, skipped_duplicates, job_id))
 
-    def set_title_status(self, disc_id: int, number: int, status: TitleStatus) -> None:
-        self._db.execute("UPDATE titles SET status = ? WHERE disc_id = ? AND number = ?",
-                         (str(status), disc_id, number))
+    def set_title_status(self, job_id: int, number: int, status: TitleStatus) -> None:
+        self._db.execute("UPDATE titles SET status = ? WHERE job_id = ? AND number = ?",
+                         (str(status), job_id, number))
 
-    def mark_ripped(self, disc_id: int) -> None:
-        self._db.execute("UPDATE discs SET status = 'ripped', finished_at = ? WHERE id = ?",
-                         (self._ts(), disc_id))
-        if rec := self.get(disc_id):
+    def mark_ripped(self, job_id: int) -> None:
+        self._db.execute("UPDATE jobs SET status = 'ripped', finished_at = ? WHERE id = ?",
+                         (self._ts(), job_id))
+        if rec := self.get(job_id):
             log.info("Rip finished: %s: ripped", _rip_name(rec))
 
-    def mark_failed(self, disc_id: int, failure: Failure) -> None:
+    def mark_failed(self, job_id: int, failure: Failure) -> None:
         """Fail the record and delete its partial scratch files (idempotent)."""
-        rec = self.get(disc_id)
+        rec = self.get(job_id)
         if rec is None:
             return
-        if rec.status == DiscStatus.RIPPING:
+        if rec.status == JobStatus.RIPPING:
             log.info("Rip finished: %s: failed (%s)", _rip_name(rec), failure.headline)
         shutil.rmtree(rec.scratch_dir, ignore_errors=True)
         self._db.execute(
-            "UPDATE discs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
+            "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
             "failure_advice = ?, finished_at = COALESCE(finished_at, ?) WHERE id = ?",
-            (failure.kind.value, failure.headline, failure.advice, self._ts(), disc_id))
-        self._db.execute("UPDATE titles SET status = 'failed' WHERE disc_id = ? "
-                         "AND status = 'ripping'", (disc_id,))
+            (failure.kind.value, failure.headline, failure.advice, self._ts(), job_id))
+        self._db.execute("UPDATE titles SET status = 'failed' WHERE job_id = ? "
+                         "AND status = 'ripping'", (job_id,))
 
-    def mark_review(self, disc_id: int, reason: ReviewReason) -> None:
-        self._db.execute("UPDATE discs SET status = 'review', review_reason = ? WHERE id = ?",
-                         (reason.value, disc_id))
+    def mark_review(self, job_id: int, reason: ReviewReason) -> None:
+        self._db.execute("UPDATE jobs SET status = 'review', review_reason = ? WHERE id = ?",
+                         (reason.value, job_id))
 
-    def requeue(self, disc_id: int) -> bool:
+    def requeue(self, job_id: int) -> bool:
         """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
-        cur = self._db.execute("UPDATE discs SET status = 'ripped', review_reason = NULL "
-                               "WHERE id = ? AND status = 'review'", (disc_id,))
+        cur = self._db.execute("UPDATE jobs SET status = 'ripped', review_reason = NULL "
+                               "WHERE id = ? AND status = 'review'", (job_id,))
         return cur.rowcount == 1
 
-    def mark_filed(self, disc_id: int, title: str, archive_dir: Path) -> None:
+    def mark_filed(self, job_id: int, title: str, archive_dir: Path) -> None:
         """Record the Disc as filed, then delete its scratch (`clean_filed_scratch` finishes a
         cut-off delete)."""
         self._db.execute(
-            "UPDATE discs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
+            "UPDATE jobs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
             "filed_at = COALESCE(filed_at, ?) WHERE id = ?",
-            (title, str(archive_dir), self._ts(), disc_id))
-        rec = self.get(disc_id)
+            (title, str(archive_dir), self._ts(), job_id))
+        rec = self.get(job_id)
         if rec is not None:
             shutil.rmtree(rec.scratch_dir, ignore_errors=True)
 
     def clean_filed_scratch(self) -> None:
-        for rec in self.list(DiscStatus.FILED, include_dismissed=True):
+        for rec in self.list(JobStatus.FILED, include_dismissed=True):
             if rec.scratch_dir.exists():
                 shutil.rmtree(rec.scratch_dir, ignore_errors=True)
 
-    def dismiss(self, disc_id: int) -> None:
-        self._db.execute("UPDATE discs SET dismissed = 1 WHERE id = ?", (disc_id,))
+    def dismiss(self, job_id: int) -> None:
+        self._db.execute("UPDATE jobs SET dismissed = 1 WHERE id = ?", (job_id,))
 
-    def log(self, disc_id: int, text: str, error: bool = False) -> None:
-        self._db.execute("INSERT INTO disc_log (disc_id, at, error, text) VALUES (?, ?, ?, ?)",
-                         (disc_id, self._ts(), int(error), text))
+    def log(self, job_id: int, text: str, error: bool = False) -> None:
+        self._db.execute("INSERT INTO job_log (job_id, at, error, text) VALUES (?, ?, ?, ?)",
+                         (job_id, self._ts(), int(error), text))
 
-    def log_lines(self, disc_id: int) -> builtins.list[LogLine]:  # `list` here is the method above
+    def log_lines(self, job_id: int) -> builtins.list[LogLine]:  # `list` here is the method above
         rows = self._db.execute(
-            "SELECT at, error, text FROM disc_log WHERE disc_id = ? ORDER BY id",
-            (disc_id,)).fetchall()
+            "SELECT at, error, text FROM job_log WHERE job_id = ? ORDER BY id",
+            (job_id,)).fetchall()
         return [LogLine(datetime.fromisoformat(a), bool(e), t) for a, e, t in rows]

@@ -78,7 +78,7 @@ class Plex:
         return [d.get("title", "") for d in found if d.get("type") == PLEX_TYPE[kind]]
 
     def scan(self, folder: Path) -> str:
-        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError,
+        """Start a partial scan of `folder`; a sentence for the Job log. Raises httpx.HTTPError,
         and shows a banner until a scan works again."""
         try:
             said = self._scan(folder)

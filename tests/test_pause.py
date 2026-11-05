@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually, make_harness
 
@@ -21,7 +21,7 @@ def _settle() -> None:
 
 
 def _jobs(harness) -> int:
-    return len(harness.services.discs.statuses())
+    return len(harness.services.jobs.statuses())
 
 
 def _pause(client) -> None:
@@ -51,7 +51,7 @@ def test_a_rip_under_way_finishes_when_paused(client, harness):
     _pause(client)
     harness.makemkv.release()
     eventually(lambda: harness.drive.ejected == 1)
-    assert harness.services.discs.get(1).status != DiscStatus.FAILED
+    assert harness.services.jobs.get(1).status != JobStatus.FAILED
     assert len(harness.makemkv.ripped_ids) == 2  # both Titles, not cut short
 
 
@@ -61,10 +61,10 @@ def test_filing_carries_on_while_paused(tmp_path):
     harness = make_harness(tmp_path, nas_reachable=False)
     with TestClient(create_app(harness.services)) as client:
         _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-        _wait_for(harness, DiscStatus.RIPPED)
+        _wait_for(harness, JobStatus.RIPPED)
         _pause(client)
         harness.share["reachable"] = True
-        _wait_for(harness, DiscStatus.FILED)
+        _wait_for(harness, JobStatus.FILED)
 
 
 def test_paused_survives_a_restart(tmp_path):

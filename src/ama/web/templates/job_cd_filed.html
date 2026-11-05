@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{#- A filed CD in History: what it was filed as (`album`, media.Album, kept at filing), its tracks with AccurateRip results, where it went, and its sources. `view`: a CdDisc. -#}
+{#- A filed CD in History: what it was filed as (`album`, media.Album, kept at filing), its tracks with AccurateRip results, where it went, and its sources. `view`: a CdJob. -#}
 {% block title %}{{ album.title }} · History{% endblock %}
 {% block main %}
 {%- set rec = view.record %}
@@ -46,7 +46,7 @@
             {%- if album.date or album.country %}<dt>Released</dt><dd>{{ album.date }}{% if album.date and album.country %} · {% endif %}{{ album.country }}</dd>{% endif %}
             {%- for name, cat in album.labels %}<dt>{{ "Label" if loop.first else "" }}</dt><dd>{{ name }}{% if name and cat %} · {% endif %}{{ cat }}</dd>{% endfor %}
             {%- if album.barcode %}<dt>Barcode</dt><dd>{{ album.barcode }}</dd>{% endif %}
-            {%- if album.disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ album.disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}
+            {%- if album.mb_disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ album.mb_disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}
             {%- if view.hidden_track %}<dt>Hidden track</dt><dd>{{ view.hidden_track.seconds | mmss }} before track 1, kept as track 0</dd>{% endif %}
             {%- if view.preemphasis %}<dt>Pre-emphasis</dt><dd>Yes; the files are marked</dd>{% endif %}
             <dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ rec.archive_dir }}</dd>
@@ -63,7 +63,7 @@
       {%- else %}
       <p class="ts">Details entered by hand in Review, so there are no MusicBrainz links.</p>
       {%- endif %}
-      <p class="ts"><a href="/discs/{{ rec.id }}/log">Rip log</a></p>
+      <p class="ts"><a href="/jobs/{{ rec.id }}/log">Rip log</a></p>
     </div>
   </div>
 </main>

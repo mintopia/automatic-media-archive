@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 
 from ama import cdreview, tvreview
 from ama.cyanrip import ArStatus
-from ama.discs import DiscRecord, DiscStatus, Failure, FailureKind, ReviewReason
+from ama.jobs import JobRecord, JobStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
 from ama.musicbrainz import Match
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -42,15 +42,15 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def _in_review(services, disc_id: int) -> DiscRecord | None:
-    rec = services.discs.get(disc_id)
+def _in_review(services, job_id: int) -> JobRecord | None:
+    rec = services.jobs.get(job_id)
     if rec is None:
-        raise HTTPException(404, "No such Disc")
-    return rec if rec.status == DiscStatus.REVIEW else None
+        raise HTTPException(404, "No such Job")
+    return rec if rec.status == JobStatus.REVIEW else None
 
 
-def _decided(request: Request, services, rec: DiscRecord, name: str) -> Response:
-    if services.discs.requeue(rec.id):
+def _decided(request: Request, services, rec: JobRecord, name: str) -> Response:
+    if services.jobs.requeue(rec.id):
         _publish(services)
     return after_decision(request, rec.id, f"Done: {name}",
                           "It's filed to Music next, then it shows in History.")
@@ -69,12 +69,12 @@ def queue(request: Request) -> Response:
     return TEMPLATES.TemplateResponse(request, "review.html", ctx)
 
 
-@router.get("/review/{disc_id}", response_class=HTMLResponse)
-def review_page(request: Request, disc_id: int) -> Response:
+@router.get("/review/{job_id}", response_class=HTMLResponse)
+def review_page(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _in_review(services, disc_id)
+    rec = _in_review(services, job_id)
     if rec is None:
-        return RedirectResponse(f"/discs/{disc_id}", status_code=303)
+        return RedirectResponse(f"/jobs/{job_id}", status_code=303)
     if rec.disc_type == DiscType.CD:
         return _cd_page(request, services, rec)
     if rec.disc_type in VIDEO_DISC_TYPES and set_review_pages.pending(services, rec):
@@ -181,9 +181,9 @@ def _when(at: datetime | None) -> str:
     return f"Today, {at:%H:%M}" if at.date() == date.today() else f"{at:%d %b %Y, %H:%M}"
 
 
-def _cd_page(request: Request, services, rec: DiscRecord, form: dict[str, str] | None = None,
+def _cd_page(request: Request, services, rec: JobRecord, form: dict[str, str] | None = None,
              errors: list[str] | None = None, status_code: int = 200) -> Response:
-    tracks = services.cd.disc(rec.id).tracks
+    tracks = services.cd.job(rec.id).tracks
     matches = cdreview.candidates(rec.scratch_dir, tracks)
     titles_differ = len({m.release.title for m in matches}) > 1
     seconds = {t.number: t.seconds for t in tracks}
@@ -206,7 +206,7 @@ def _cd_page(request: Request, services, rec: DiscRecord, form: dict[str, str] |
         heading = "What is this CD?"
         sub = ("The music database (MusicBrainz) doesn't know this CD. Enter its details "
                "and it's filed like any other.")
-    disc_id = cdreview.disc_id(rec.scratch_dir)
+    mb_disc_id = cdreview.mb_disc_id(rec.scratch_dir)
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "heading": heading, "sub": sub,
         "done": done_note(request),
@@ -214,27 +214,27 @@ def _cd_page(request: Request, services, rec: DiscRecord, form: dict[str, str] |
         "form": form, "errors": errors or [], "manual_open": not editions or bool(errors),
         "track_count": len(cdreview.audio_tracks(tracks)),
         "length": _length(sum(t.seconds for t in tracks)),
-        "disc_id": disc_id, "ripped_at": _when(rec.finished_at),
+        "mb_disc_id": mb_disc_id, "ripped_at": _when(rec.finished_at),
     }
     return TEMPLATES.TemplateResponse(request, "review_cd.html", ctx, status_code=status_code)
 
 
-def _cd_in_review(services, disc_id: int) -> DiscRecord | None:
-    rec = _in_review(services, disc_id)
+def _cd_in_review(services, job_id: int) -> JobRecord | None:
+    rec = _in_review(services, job_id)
     if rec is not None and rec.disc_type != DiscType.CD:
         raise HTTPException(404, "Not a CD")
     return rec
 
 
-@router.get("/review/{disc_id}/cover/{release_id}")
-def edition_cover(request: Request, disc_id: int, release_id: str) -> Response:
+@router.get("/review/{job_id}/cover/{release_id}")
+def edition_cover(request: Request, job_id: int, release_id: str) -> Response:
     """An offered edition's cached front cover (only editions the saved MusicBrainz answer offers).
     """
     services = request.app.state.services
-    rec = services.discs.get(disc_id)
+    rec = services.jobs.get(job_id)
     if rec is None or rec.disc_type != DiscType.CD:
-        raise HTTPException(404, "No such Disc")
-    tracks = services.cd.disc(rec.id).tracks
+        raise HTTPException(404, "No such Job")
+    tracks = services.cd.job(rec.id).tracks
     match = next((m for m in cdreview.candidates(rec.scratch_dir, tracks)
                   if m.release.id == release_id), None)
     if match is None or match.release.has_front is False:
@@ -249,71 +249,71 @@ def edition_cover(request: Request, disc_id: int, release_id: str) -> Response:
     return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
 
 
-@router.post("/review/{disc_id}/release")
-def pick_release(request: Request, disc_id: int,
+@router.post("/review/{job_id}/release")
+def pick_release(request: Request, job_id: int,
                  release: Annotated[str, Form()] = "") -> Response:
     services = _services(request)
-    rec = _cd_in_review(services, disc_id)
+    rec = _cd_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
-    tracks = services.cd.disc(rec.id).tracks
+    tracks = services.cd.job(rec.id).tracks
     picked = next((m for m in cdreview.candidates(rec.scratch_dir, tracks)
                    if f"{m.release.id}:{m.disc_number}" == release), None)
     if picked is None:
         raise HTTPException(400, "That edition isn't one of the matches for this CD")
     cdreview.save_decision(rec.scratch_dir,
                            cdreview.PickRelease(picked.release.id, picked.disc_number))
-    services.discs.log(rec.id, f"Review: picked {picked.release.title} by "
+    services.jobs.log(rec.id, f"Review: picked {picked.release.title} by "
                                f"{picked.release.artist} (MusicBrainz release "
                                f"{picked.release.id}, disc {picked.disc_number})")
     return _decided(request, services, rec,
                     f"{picked.release.title} — {picked.release.artist}")
 
 
-@router.post("/review/{disc_id}/manual", response_class=HTMLResponse)
-def manual(request: Request, disc_id: int, album: Annotated[str, Form()] = "",
+@router.post("/review/{job_id}/manual", response_class=HTMLResponse)
+def manual(request: Request, job_id: int, album: Annotated[str, Form()] = "",
            artist: Annotated[str, Form()] = "", year: Annotated[str, Form()] = "",
            tracks: Annotated[str, Form()] = "") -> Response:
     services = _services(request)
-    rec = _cd_in_review(services, disc_id)
+    rec = _cd_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
-    count = len(cdreview.audio_tracks(services.cd.disc(rec.id).tracks))
+    count = len(cdreview.audio_tracks(services.cd.job(rec.id).tracks))
     details = cdreview.parse_manual(album, artist, year, tracks, count)
     if isinstance(details, list):
         form = {"album": album, "artist": artist, "year": year, "tracks": tracks}
         return _cd_page(request, services, rec, form, details, status_code=400)
     cdreview.save_decision(rec.scratch_dir, details)
-    services.discs.log(rec.id, f"Review: details entered by hand: {details.album} by "
+    services.jobs.log(rec.id, f"Review: details entered by hand: {details.album} by "
                                f"{details.artist}")
     return _decided(request, services, rec, f"{details.album} — {details.artist}")
 
 
-@router.post("/review/{disc_id}/accept")
-def accept(request: Request, disc_id: int) -> Response:
+@router.post("/review/{job_id}/accept")
+def accept(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _cd_in_review(services, disc_id)
+    rec = _cd_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     cdreview.save_decision(rec.scratch_dir, cdreview.AcceptRip())
-    services.discs.log(rec.id, "Review: Rip accepted although AccurateRip didn't verify "
+    services.jobs.log(rec.id, "Review: Rip accepted although AccurateRip didn't verify "
                                "every track")
-    if services.discs.requeue(rec.id):
+    if services.jobs.requeue(rec.id):
         _publish(services)
     return after_decision(request, rec.id, f"Kept the Rip of {cd_title(services, rec)}",
                           "It carries on to be named and filed to Music.")
 
 
-@router.post("/review/{disc_id}/discard")
-def discard(request: Request, disc_id: int) -> Response:
+@router.post("/review/{job_id}/discard")
+def discard(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _cd_in_review(services, disc_id)
+    rec = _cd_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     name = cd_title(services, rec)
-    services.discs.log(rec.id, "Review: Rip discarded; scratch deleted")
-    services.discs.mark_failed(rec.id, DISCARDED)
-    services.discs.dismiss(rec.id)
+    services.jobs.log(rec.id, "Review: Rip discarded; scratch deleted")
+    services.jobs.mark_failed(rec.id, DISCARDED)
+    services.jobs.dismiss(rec.id)
     _publish(services)
     return after_decision(request, rec.id, f"Discarded the Rip of {name}",
                           "Nothing was filed. Clean the CD and insert it again to rip it "

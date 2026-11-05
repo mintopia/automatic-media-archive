@@ -146,7 +146,7 @@ def test_video_rip_is_refused_until_makemkv_passes_its_checks(tmp_path):
         assert h.makemkv.calls == []  # makemkvcon never ran
         now = html.unescape(c.get("/").text)
         assert "MakeMKV isn't registered." in now and "MATRIX_BD" in now
-        page = html.unescape(c.get("/discs/1").text)
+        page = html.unescape(c.get("/jobs/1").text)
         assert "MakeMKV isn't registered." in page and 'href="/makemkv"' in page
         assert "This isn't a problem with the Disc" in page
 

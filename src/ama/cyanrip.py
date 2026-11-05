@@ -57,7 +57,7 @@ class TrackReport:
 @dataclass
 class Report:
     disc_tracks: int | None = None
-    disc_id: str | None = None
+    mb_disc_id: str | None = None
     mcn: str | None = None           # "Disc MCN:" (the barcode, when the CD carries one)
     device_model: str | None = None
     accuraterip: str | None = None   # header: found | not found | error | mismatch | disabled
@@ -93,7 +93,7 @@ _TRACK_START = re.compile(
 )
 _HEADER = {
     "Disc tracks:": "disc_tracks",
-    "DiscID:": "disc_id",
+    "DiscID:": "mb_disc_id",
     "Disc MCN:": "mcn",
     "Device model:": "device_model",
     "AccurateRip:": "accuraterip",

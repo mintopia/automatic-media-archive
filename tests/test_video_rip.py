@@ -24,7 +24,7 @@ def test_all_long_titles_are_ripped_to_scratch_and_the_disc_ejects(client, harne
     # Title 2 repeats Title 0's segments; Title 3 is 12 s long.
     assert ripped_files(harness) == ["1/Example_Movie_t00.mkv", "1/Example_Movie_t01.mkv"]
     assert harness.makemkv.ripped_ids == [0, 1]
-    page = page_text(client, "/discs/1")
+    page = page_text(client, "/jobs/1")
     assert "EXAMPLE_MOVIE" in page and "Ripped" in page
     assert "2:01:33" in page and "0:02:31" in page
     assert "33.5 GB" in page
@@ -68,10 +68,10 @@ def test_licence_error_is_a_hard_stop_shown_as_a_makemkv_problem(client, harness
     eventually(lambda: harness.drive.ejected == 1)
     assert len(harness.makemkv.calls) == 1  # nothing else is attempted
     eventually(lambda: "licence key isn't valid" in page_text(client, "/"))
-    page = page_text(client, "/discs/1")
+    page = page_text(client, "/jobs/1")
     assert "licence key isn't valid" in page and "MATRIX_BD" in page
     assert "This isn't a problem with the Disc" in page
-    assert "too old" in client.get("/discs/1/log").text
+    assert "too old" in client.get("/jobs/1/log").text
     assert ripped_files(harness) == []
 
 
@@ -80,9 +80,9 @@ def test_a_uhd_rips_in_libredrive_mode(client, harness):
     harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
     eventually(lambda: harness.drive.ejected == 1)
     assert ripped_files(harness) == ["1/Example_Movie_t00.mkv", "1/Example_Movie_t01.mkv"]
-    log = client.get("/discs/1/log").text
+    log = client.get("/jobs/1/log").text
     assert "Using LibreDrive mode" in log
-    assert "Ripped" in page_text(client, "/discs/1")
+    assert "Ripped" in page_text(client, "/jobs/1")
 
 
 def test_a_uhd_the_drive_wont_open_without_libredrive_is_scanned_once_more(client, harness):
@@ -91,7 +91,7 @@ def test_a_uhd_the_drive_wont_open_without_libredrive_is_scanned_once_more(clien
     harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
     eventually(lambda: harness.drive.ejected == 1)
     assert ripped_files(harness) == ["1/Example_Movie_t00.mkv", "1/Example_Movie_t01.mkv"]
-    log = client.get("/discs/1/log").text
+    log = client.get("/jobs/1/log").text
     assert "LibreDrive compatible drive is required" in log
     assert "Reading the Disc once more" in log
 
@@ -102,7 +102,7 @@ def test_a_uhd_that_needs_libredrive_fails_with_advice_and_ejects(client, harnes
     eventually(lambda: harness.drive.ejected == 1)
     assert not any("mkv" in c for c in harness.makemkv.calls)  # nothing ripped
     assert ripped_files(harness) == []
-    page = page_text(client, "/discs/1")
+    page = page_text(client, "/jobs/1")
     assert "can't decrypt this UHD Blu-ray" in page
     assert "LibreDrive" in page and "Open MakeMKV" in page
 
@@ -115,16 +115,16 @@ def test_failed_rip_ejects_deletes_partial_files_and_keeps_the_log(client, harne
     eventually(lambda: "Couldn't rip" in page_text(client, "/"))
     assert ripped_files(harness) == []
     assert not (Path(harness.services.config.paths.scratch) / "video" / "1").exists()
-    page = page_text(client, "/discs/1")
+    page = page_text(client, "/jobs/1")
     assert "Failed" in page and "Title 2 couldn't be ripped" in page
     assert "Error 'Scsi error - MEDIUM ERROR' occurred while reading" in page  # the log
-    assert "Scsi error" in client.get("/discs/1/log").text
+    assert "Scsi error" in client.get("/jobs/1/log").text
 
     # No auto-retry: reinserting is up to the person, and dismissing clears the notice.
     calls = len(harness.makemkv.calls)
     time.sleep(0.2)  # many drive polls
     assert len(harness.makemkv.calls) == calls
-    client.post("/discs/1/dismiss")
+    client.post("/jobs/1/dismiss")
     assert "Couldn't rip" not in page_text(client, "/")
 
 
@@ -145,7 +145,7 @@ def test_a_rip_interrupted_by_a_restart_is_failed_not_retried(tmp_path):
     h2.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
     with TestClient(create_app(h2.services)) as client:
         eventually(lambda: h2.drive.ejected == 1)
-        page = page_text(client, "/discs/1")
+        page = page_text(client, "/jobs/1")
         assert "Failed" in page and "stopped during the Rip" in page
         assert not partial.exists()
         assert h2.makemkv.calls == []
@@ -153,12 +153,12 @@ def test_a_rip_interrupted_by_a_restart_is_failed_not_retried(tmp_path):
 
 def test_a_disc_identified_before_the_tray_opens_still_shows_as_ripped(client, harness,
                                                                        monkeypatch):
-    from ama.discs import DiscStatus
+    from ama.jobs import JobStatus
 
     eject = harness.drive.eject
 
     def slow_eject() -> None:  # the tray takes longer than Identification
-        eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW))
+        eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW))
         eject()
 
     monkeypatch.setattr(harness.drive, "eject", slow_eject)
@@ -200,6 +200,6 @@ def test_a_video_rip_starting_and_finishing_is_logged(client, harness, caplog):
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
     eventually(lambda: harness.drive.ejected == 1)
     infos = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
-    assert "Rip started: Blu-ray “EXAMPLE_MOVIE” (Disc 1)" in infos
-    eventually(lambda: "Rip finished: Blu-ray “EXAMPLE_MOVIE” (Disc 1): ripped" in [
+    assert "Rip started: Blu-ray “EXAMPLE_MOVIE” (Job 1)" in infos
+    eventually(lambda: "Rip finished: Blu-ray “EXAMPLE_MOVIE” (Job 1): ripped" in [
         r.getMessage() for r in caplog.records if r.levelname == "INFO"])

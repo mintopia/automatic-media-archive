@@ -1,18 +1,18 @@
 {#- A filed video Disc's card in History: the film or series it was filed as (`screen`, media.Screen, kept at filing) and its Disc. -#}
 <div class="drive">
   {%- if screen.poster %}
-  <div class="cell art poster"><img src="/covers/{{ screen.poster }}" alt="Poster for {{ screen.name }}"><span>{{ disc.disc_type.long_name }}</span></div>
+  <div class="cell art poster"><img src="/covers/{{ screen.poster }}" alt="Poster for {{ screen.name }}"><span>{{ job.disc_type.long_name }}</span></div>
   {%- else %}
-  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ disc.disc_type.long_name }}</span></div>
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ job.disc_type.long_name }}</span></div>
   {%- endif %}
   <div class="body">
     <h1 class="title">{{ screen.title }}</h1>
-    <div class="meta">{{ "TV" if screen.tv else "Film" }}{% if screen.year %} · {{ screen.year }}{% endif %}{% if " · " in disc.title %} · {{ disc.title.split(" · ", 1)[1] }}{% endif %}</div>
+    <div class="meta">{{ "TV" if screen.tv else "Film" }}{% if screen.year %} · {{ screen.year }}{% endif %}{% if " · " in job.title %} · {{ job.title.split(" · ", 1)[1] }}{% endif %}</div>
     {%- if screen.overview %}<p class="overview">{{ screen.overview }}</p>{% endif %}
-    <div class="status"><span class="stk fil">Filed</span><span class="ts">{% if disc.filed_at %}filed {{ disc.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
+    <div class="status"><span class="stk fil">Filed</span><span class="ts">{% if job.filed_at %}filed {{ job.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
     <dl class="facts" style="margin-top:8px">
-      <dt>Disc Type</dt><dd>{{ disc.disc_type.long_name }}</dd>
-      <dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ disc.archive_dir }}</dd>
+      <dt>Disc Type</dt><dd>{{ job.disc_type.long_name }}</dd>
+      <dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ job.archive_dir }}</dd>
       <dt>Source</dt><dd class="links">{% for label, href in screen.links %}<a href="{{ href }}" rel="noreferrer" target="_blank">{{ label }}</a>{% endfor %}</dd>
     </dl>
   </div>

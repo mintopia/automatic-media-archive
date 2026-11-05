@@ -26,7 +26,7 @@ from pathlib import PurePosixPath
 
 from ama import extras
 from ama.db import Database
-from ama.discs import DiscRecord, TitleRecord
+from ama.jobs import JobRecord, TitleRecord
 from ama.tmdb import Candidate, Series, load_hints, movie_folder
 from ama.tv import season_folder, series_folder
 
@@ -68,7 +68,7 @@ class SetKey:
 class DiscSet:
     key: SetKey
     show: Series  # the series; for a film set, the film (id, title, year, language)
-    members: tuple[tuple[int, int], ...]  # (disc id, Disc number), by number
+    members: tuple[tuple[int, int], ...]  # (Job id, Disc number), by number
 
     @property
     def name(self) -> str:
@@ -102,11 +102,11 @@ class DiscSet:
             return f"Discs {ns[0]}–{ns[-1]} filed"
         return f"Discs {', '.join(map(str, ns))} filed"
 
-    def number_of(self, disc_id: int) -> int | None:
-        return next((n for d, n in self.members if d == disc_id), None)
+    def number_of(self, job_id: int) -> int | None:
+        return next((n for d, n in self.members if d == job_id), None)
 
 
-def extras_disc_paths(film_set: DiscSet, rec: DiscRecord, titles: Iterable[TitleRecord]
+def extras_disc_paths(film_set: DiscSet, rec: JobRecord, titles: Iterable[TitleRecord]
                 ) -> dict[int, PurePosixPath]:
     """Where an Extras Disc's Titles are filed: `<film folder>/Other/<name>.mkv`, named the
     way a film's Extras are."""
@@ -144,7 +144,7 @@ class Answer:
     number: int = 0
 
 
-def answer(rec: DiscRecord) -> Answer | None:
+def answer(rec: JobRecord) -> Answer | None:
     """The saved answer to "Is this Disc part of a set?", None if not asked yet."""
     try:
         data = json.loads((rec.scratch_dir / ANSWER_FILE).read_text(encoding="utf-8"))
@@ -154,7 +154,7 @@ def answer(rec: DiscRecord) -> Answer | None:
         return None
 
 
-def save_answer(rec: DiscRecord, ans: Answer) -> None:
+def save_answer(rec: JobRecord, ans: Answer) -> None:
     tmp = rec.scratch_dir / f"{ANSWER_FILE}.tmp"
     tmp.write_text(json.dumps({"set": str(ans.key) if ans.key else None, "disc": ans.number}),
                    encoding="utf-8")
@@ -165,53 +165,53 @@ class DiscSets:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def attach(self, disc_id: int, key: SetKey, number: int) -> None:
+    def attach(self, job_id: int, key: SetKey, number: int) -> None:
         """Record the Disc as Disc `number` of the set (idempotent; replaces an earlier one)."""
         self._db.execute(
-            "INSERT INTO disc_sets (disc_id, library, tmdb_id, season, disc_number) "
-            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (disc_id) DO UPDATE SET "
+            "INSERT INTO disc_sets (job_id, library, tmdb_id, season, disc_number) "
+            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (job_id) DO UPDATE SET "
             "library = excluded.library, tmdb_id = excluded.tmdb_id, "
             "season = excluded.season, disc_number = excluded.disc_number",
-            (disc_id, key.kind.value, key.tmdb_id, key.season, number))
+            (job_id, key.kind.value, key.tmdb_id, key.season, number))
 
-    def detach(self, disc_id: int) -> None:
-        self._db.execute("DELETE FROM disc_sets WHERE disc_id = ?", (disc_id,))
+    def detach(self, job_id: int) -> None:
+        self._db.execute("DELETE FROM disc_sets WHERE job_id = ?", (job_id,))
 
     def filed(self, kind: SetKind) -> list[DiscSet]:
         """Every set with a filed Disc, most recently filed first."""
-        recorded = {(lib, tmdb_id, season, disc_id): number
-                    for lib, tmdb_id, season, disc_id, number in self._db.execute(
-                        "SELECT library, tmdb_id, season, disc_id, disc_number FROM disc_sets"
+        recorded = {(lib, tmdb_id, season, job_id): number
+                    for lib, tmdb_id, season, job_id, number in self._db.execute(
+                        "SELECT library, tmdb_id, season, job_id, disc_number FROM disc_sets"
                     ).fetchall()}
         if kind == SetKind.TV:
             rows = self._db.execute(
                 "SELECT DISTINCT t.tmdb_id, t.series, t.year, t.original_language, t.season, "
-                "t.disc_id, d.filed_at FROM tv_titles t JOIN discs d ON d.id = t.disc_id "
+                "t.job_id, d.filed_at FROM tv_titles t JOIN jobs d ON d.id = t.job_id "
                 "WHERE d.status = 'filed' AND t.season > 0 AND t.path LIKE 'TV/%'").fetchall()
             found = [(SetKey(SetKind.TV, r[0], r[4]), Series(r[0], r[1], r[2], r[3]), r[5], r[6])
                      for r in rows]
         else:
             rows = self._db.execute(
-                "SELECT m.tmdb_id, m.title, m.year, m.original_language, m.disc_id, d.filed_at "
-                "FROM movies m JOIN discs d ON d.id = m.disc_id WHERE d.status = 'filed'"
+                "SELECT m.tmdb_id, m.title, m.year, m.original_language, m.job_id, d.filed_at "
+                "FROM movies m JOIN jobs d ON d.id = m.job_id WHERE d.status = 'filed'"
             ).fetchall()
             found = [(SetKey(SetKind.MOVIE, r[0]), Series(r[0], r[1], r[2], r[3]), r[4], r[5])
                      for r in rows]
             # Extras Discs: attached to a film, filed as its Extras
             shows = {k: s for k, s, _, _ in found}
-            for lib, tmdb_id, _, disc_id in recorded:
+            for lib, tmdb_id, _, job_id in recorded:
                 key = SetKey(SetKind.MOVIE, tmdb_id)
                 if lib == SetKind.MOVIE.value and key in shows:
-                    row = self._db.execute("SELECT filed_at FROM discs WHERE id = ? AND "
-                                           "status = 'filed'", (disc_id,)).fetchone()
+                    row = self._db.execute("SELECT filed_at FROM jobs WHERE id = ? AND "
+                                           "status = 'filed'", (job_id,)).fetchone()
                     if row:
-                        found.append((key, shows[key], disc_id, row[0]))
+                        found.append((key, shows[key], job_id, row[0]))
         by_key: dict[SetKey, tuple[Series, dict[int, str]]] = {}
-        for key, show, disc_id, filed_at in found:
-            by_key.setdefault(key, (show, {}))[1][disc_id] = filed_at or ""
+        for key, show, job_id, filed_at in found:
+            by_key.setdefault(key, (show, {}))[1][job_id] = filed_at or ""
         sets = []
-        for key, (show, discs) in by_key.items():
-            order = sorted(discs, key=lambda d: (discs[d], d))
+        for key, (show, jobs) in by_key.items():
+            order = sorted(jobs, key=lambda d: (jobs[d], d))
             numbers = {d: n for d in order
                        if (n := recorded.get((key.kind.value, key.tmdb_id, key.season, d)))}
             free = (n for n in range(1, 10_000) if n not in numbers.values())
@@ -219,7 +219,7 @@ class DiscSets:
                 if d not in numbers:
                     numbers[d] = next(free)
             members = tuple(sorted(numbers.items(), key=lambda m: (m[1], m[0])))
-            sets.append((max(discs.values()), DiscSet(key, show, members)))
+            sets.append((max(jobs.values()), DiscSet(key, show, members)))
         return [s for _, s in sorted(sets, key=lambda x: x[0], reverse=True)]
 
     def find(self, key: SetKey) -> DiscSet | None:

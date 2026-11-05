@@ -15,7 +15,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore
+from ama.jobs import JobRecord, JobStatus, JobStore
 from ama.drive import DiscType, DriveMonitor
 from ama.events import EventBus, Topic
 
@@ -25,8 +25,8 @@ log = logging.getLogger(__name__)
 _STRUCTURE = {DiscType.DVD: "VIDEO_TS", DiscType.BD: "BDMV", DiscType.UHD: "BDMV"}
 
 
-def cd_fingerprint(disc_id: str | None) -> str | None:
-    return f"{DiscType.CD}:{disc_id}" if disc_id else None
+def cd_fingerprint(mb_disc_id: str | None) -> str | None:
+    return f"{DiscType.CD}:{mb_disc_id}" if mb_disc_id else None
 
 
 def video_fingerprint(root: Path | None, disc_type: DiscType) -> str | None:
@@ -60,7 +60,7 @@ class Choice(StrEnum):
     AGAIN = "again"  # archive it again
 
 
-KNOWN = (DiscStatus.FILED, DiscStatus.REVIEW, DiscStatus.RIPPED)  # filed, or on the way
+KNOWN = (JobStatus.FILED, JobStatus.REVIEW, JobStatus.RIPPED)  # filed, or on the way
 _OTHER_FORMAT = {DiscType.BD: "UHD Blu-ray", DiscType.UHD: "Blu-ray", DiscType.DVD: "Blu-ray"}
 
 
@@ -69,7 +69,7 @@ class RepeatDisc:
     """A Disc in the drive that matches a known one, waiting for the user's choice."""
 
     disc_type: DiscType
-    previous: DiscRecord  # the known Disc it matches
+    previous: JobRecord  # the known Disc it matches
     folder: str           # where that was filed, relative to the Archive root ("" if not yet)
 
     @property
@@ -78,12 +78,12 @@ class RepeatDisc:
 
     @property
     def filed(self) -> bool:
-        return self.previous.status == DiscStatus.FILED
+        return self.previous.status == JobStatus.FILED
 
     @property
     def waiting(self) -> str:
         """Where the known Disc is on its way to the Archive ("" once filed)."""
-        if self.previous.status == DiscStatus.REVIEW:
+        if self.previous.status == JobStatus.REVIEW:
             return "Already ripped, waiting for Review"
         return "" if self.filed else "Already ripped, waiting to be filed"
 
@@ -96,29 +96,29 @@ class RepeatDisc:
 
 
 class RepeatGuard:
-    def __init__(self, db: Database, discs: DiscStore, drive: DriveMonitor, bus: EventBus,
+    def __init__(self, db: Database, jobs: JobStore, drive: DriveMonitor, bus: EventBus,
                  archive_root: Path) -> None:
         self._db = db
-        self._discs = discs
+        self._jobs = jobs
         self._drive = drive
         self._bus = bus
         self._archive_root = archive_root
         self.pending: RepeatDisc | None = None
         self._choice: Choice | None = None
 
-    def remember(self, disc_id: int, fingerprint: str | None) -> None:
+    def remember(self, job_id: int, fingerprint: str | None) -> None:
         if fingerprint:
-            self._db.execute("INSERT OR REPLACE INTO disc_fingerprints (disc_id, fingerprint) "
-                             "VALUES (?, ?)", (disc_id, fingerprint))
+            self._db.execute("INSERT OR REPLACE INTO disc_fingerprints (job_id, fingerprint) "
+                             "VALUES (?, ?)", (job_id, fingerprint))
 
-    def known(self, fingerprint: str) -> DiscRecord | None:
+    def known(self, fingerprint: str) -> JobRecord | None:
         """The latest Disc with this fingerprint that is filed or on its way there."""
         row = self._db.execute(
-            "SELECT d.id FROM disc_fingerprints f JOIN discs d ON d.id = f.disc_id "
+            "SELECT d.id FROM disc_fingerprints f JOIN jobs d ON d.id = f.job_id "
             "WHERE f.fingerprint = ? AND d.status IN (?, ?, ?) "
             "ORDER BY d.id DESC LIMIT 1",
             (fingerprint, *KNOWN)).fetchone()
-        return self._discs.get(row[0]) if row else None
+        return self._jobs.get(row[0]) if row else None
 
     async def admit(self, disc_type: DiscType, fingerprint: str | None) -> bool:
         """True = rip this Disc. A known Disc waits here for the user's choice."""
@@ -128,7 +128,7 @@ class RepeatGuard:
         inserted = self._drive.state, self._drive.insertion
         self._choice = None
         self.pending = RepeatDisc(disc_type, previous, self._folder(previous))
-        log.info("Repeat Disc: matches Disc %s (%s)", previous.id, self.pending.name)
+        log.info("Repeat Disc: matches Job %s (%s)", previous.id, self.pending.name)
         self._publish()
         try:
             with self._bus.subscribe() as q:
@@ -152,7 +152,7 @@ class RepeatGuard:
             self._choice = choice
             self._publish()
 
-    def _folder(self, rec: DiscRecord) -> str:
+    def _folder(self, rec: JobRecord) -> str:
         if rec.archive_dir is None:
             return ""
         try:

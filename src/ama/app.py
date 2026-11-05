@@ -27,7 +27,7 @@ from ama.cdrip import CdRipper, CdTracks
 from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
 from ama.db import Database
-from ama.discs import DiscStore
+from ama.jobs import JobStore
 from ama.encoder import Encoder
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
@@ -50,7 +50,7 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
+from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      settings_libraries, settings_pages, tv_review_pages)
@@ -63,7 +63,7 @@ class Services:
     bus: EventBus
     drive: DriveMonitor
     nas: NasMonitor
-    discs: DiscStore
+    jobs: JobStore
     cd: CdRipper
     video_rip: VideoRipper
     tools: Tools
@@ -127,7 +127,7 @@ def build_services(
     tool = tool or tools.path
     drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                          interval=cfg.drive.poll_seconds)
-    discs = DiscStore(db, cfg.paths.scratch)
+    jobs = JobStore(db, cfg.paths.scratch)
     scratch = ScratchGate(cfg.scratch, cfg.paths.scratch, drive, bus, disk_usage)
     http = http or httpx.Client(timeout=30)
     http.headers["User-Agent"] = USER_AGENT
@@ -139,11 +139,11 @@ def build_services(
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive, problems)
-    repeat = RepeatGuard(db, discs, drive, bus, archive.root)
+    repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
     tv_titles = TvTitles(db)
-    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
-    movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
+    encoder = Encoder(jobs, bus, cfg.encode.cq, tool, streamer)
+    movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
@@ -159,33 +159,33 @@ def build_services(
         drive=drive,
         nas=nas,
         tools=tools,
-        discs=discs,
-        cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
+        jobs=jobs,
+        cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
                     scratch=scratch, pause=pause, guesser=Guesser(mb, covers)),
-        video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
+        video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               pause=pause, disc_root=disc_root,
                               guess=lambda label: film_guess(tmdb, covers, label)),
         archive=archive,
         musicbrainz=mb,
-        cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
+        cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds, covers=covers, media=media,
                               problems=problems),
         movie_archive=movie_archive,
         tmdb=tmdb,
-        thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
+        thumbnails=Thumbnailer(jobs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
-        tv_archive=TvArchiver(discs, tv_titles, encoder, nas, archive, plex, bus,
+        tv_archive=TvArchiver(jobs, tv_titles, encoder, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
                               covers=covers, problems=problems),
-        notifier=Notifier(discs, bus, channels(cfg, http), problems),
+        notifier=Notifier(jobs, bus, channels(cfg, http), problems),
         sets=DiscSets(db),
         covers=covers,
         media=media,
-        backfill=Backfill(db, discs, media, mb, covers, tmdb, movie_archive.movies,
+        backfill=Backfill(db, jobs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
         pause=pause,
         plex=plex,
@@ -212,7 +212,7 @@ def create_app(services: Services) -> FastAPI:
     auth.install(app, services)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
-    app.include_router(discs_pages.router)
+    app.include_router(jobs_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
     app.include_router(extras_pages.router)

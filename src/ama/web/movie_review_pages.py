@@ -17,7 +17,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ama import decoys, moviereview
-from ama.discs import DiscRecord, DiscStatus, TitleRecord
+from ama.jobs import JobRecord, JobStatus, TitleRecord
 from ama.extras import extra_titles
 from ama.moviearchive import main_feature
 from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_duration, \
@@ -57,14 +57,14 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def _video_in_review(services, disc_id: int) -> DiscRecord | None:
-    rec = services.discs.get(disc_id)
+def _video_in_review(services, job_id: int) -> JobRecord | None:
+    rec = services.jobs.get(job_id)
     if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
-        raise HTTPException(404, "No such video Disc")
-    return rec if rec.status == DiscStatus.REVIEW else None
+        raise HTTPException(404, "No such video Job")
+    return rec if rec.status == JobStatus.REVIEW else None
 
 
-def _title_choice(services, rec: DiscRecord, t: TitleRecord, main: TitleRecord | None,
+def _title_choice(services, rec: JobRecord, t: TitleRecord, main: TitleRecord | None,
                   found: decoys.Decoys | None = None) -> TitleChoice:
     frames = []
     for pct in POSITIONS:
@@ -111,14 +111,14 @@ def _film_choice(film: Candidate, duration_s: int) -> FilmChoice:
     return FilmChoice(film, " · ".join(parts), fits(film, duration_s))
 
 
-def _find_film(services, rec: DiscRecord, film_id: int) -> Candidate:
+def _find_film(services, rec: JobRecord, film_id: int) -> Candidate:
     """The chosen film: from the saved search if it's there, else asked of TMDB."""
     saved = next((c for c in moviereview.saved_search(rec.scratch_dir).candidates
                   if c.id == film_id), None)
     return saved or services.tmdb.movie(film_id)
 
 
-def page(request: Request, services, rec: DiscRecord, errors: list[str] | None = None,
+def page(request: Request, services, rec: JobRecord, errors: list[str] | None = None,
          status_code: int = 200) -> Response:
     titles = ripped_titles(rec)
     found = decoys.detect(titles)
@@ -151,7 +151,7 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
     return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
 
 
-def _summary(film: Candidate | None, title: TitleRecord | None, rec: DiscRecord) -> dict:
+def _summary(film: Candidate | None, title: TitleRecord | None, rec: JobRecord) -> dict:
     n = len(extra_titles(rec.titles, title.number)) if title else 0
     return {"film": film.name if film else "",
             "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
@@ -159,12 +159,12 @@ def _summary(film: Candidate | None, title: TitleRecord | None, rec: DiscRecord)
             "folder": movie_folder(film).as_posix() if film else ""}
 
 
-@router.get("/review/{disc_id}/titles/{number}/frames", response_class=HTMLResponse)
-def frames(request: Request, disc_id: int, number: int) -> Response:
+@router.get("/review/{job_id}/titles/{number}/frames", response_class=HTMLResponse)
+def frames(request: Request, job_id: int, number: int) -> Response:
     services = _services(request)
-    rec = services.discs.get(disc_id)
+    rec = services.jobs.get(job_id)
     if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
-        raise HTTPException(404, "No such video Disc")
+        raise HTTPException(404, "No such video Job")
     t = next((t for t in ripped_titles(rec) if t.number == number), None)
     if t is None:
         raise HTTPException(404, "No such Title")
@@ -173,9 +173,9 @@ def frames(request: Request, disc_id: int, number: int) -> Response:
                                       {"record": rec, "t": choice})
 
 
-@router.get("/review/{disc_id}/titles/{number}/frames/{pct}.jpg")
-def frame(request: Request, disc_id: int, number: int, pct: int) -> Response:
-    rec = _services(request).discs.get(disc_id)
+@router.get("/review/{job_id}/titles/{number}/frames/{pct}.jpg")
+def frame(request: Request, job_id: int, number: int, pct: int) -> Response:
+    rec = _services(request).jobs.get(job_id)
     if rec is None or pct not in POSITIONS:
         raise HTTPException(404, "No such picture")
     path = thumb_path(rec.scratch_dir, number, pct)
@@ -184,11 +184,11 @@ def frame(request: Request, disc_id: int, number: int, pct: int) -> Response:
     return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
 
 
-@router.get("/review/{disc_id}/decision", response_class=HTMLResponse)
-def decision(request: Request, disc_id: int, film: int = 0, title: int = 0) -> Response:
+@router.get("/review/{job_id}/decision", response_class=HTMLResponse)
+def decision(request: Request, job_id: int, film: int = 0, title: int = 0) -> Response:
     """The "When you confirm" facts for the film and Title currently picked."""
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
         return HTMLResponse("")
     t = next((t for t in ripped_titles(rec) if t.number == title), None)
@@ -200,11 +200,11 @@ def decision(request: Request, disc_id: int, film: int = 0, title: int = 0) -> R
                                       {"summary": _summary(candidate, t, rec)})
 
 
-@router.post("/review/{disc_id}/film", response_class=HTMLResponse)
-def confirm(request: Request, disc_id: int, film: Annotated[int, Form()] = 0,
+@router.post("/review/{job_id}/film", response_class=HTMLResponse)
+def confirm(request: Request, job_id: int, film: Annotated[int, Form()] = 0,
             title: Annotated[int, Form()] = 0) -> Response:
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     t = next((t for t in ripped_titles(rec) if t.number == title), None)
@@ -218,11 +218,11 @@ def confirm(request: Request, disc_id: int, film: Annotated[int, Form()] = 0,
         return page(request, services, rec, [f"Couldn't look the film up: {e}. Try again."],
                     status_code=503)
     services.movie_archive.movies.enqueue(rec.id, candidate, t.number)
-    if services.discs.requeue(rec.id):
-        services.discs.log(rec.id, f"Review: identified as {candidate.name} (TMDB "
+    if services.jobs.requeue(rec.id):
+        services.jobs.log(rec.id, f"Review: identified as {candidate.name} (TMDB "
                                    f"{candidate.id}); Main Feature is Title {t.number} "
                                    f"({t.duration})")
-        services.discs.log(rec.id, "Queued for Encode")
+        services.jobs.log(rec.id, "Queued for Encode")
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return after_decision(request, rec.id, f"Done: {candidate.name}",

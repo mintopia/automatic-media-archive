@@ -21,7 +21,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
 from ama import sets, tvreview
-from ama.discs import DiscRecord, DiscStatus
+from ama.jobs import JobRecord, JobStatus
 from ama.moviereview import ripped_titles
 from ama.sets import Answer, DiscSet, SetKind, SetKey
 from ama.tmdb import load_hints, search_terms
@@ -38,11 +38,11 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def kind_of(rec: DiscRecord) -> SetKind:
+def kind_of(rec: JobRecord) -> SetKind:
     return SetKind.TV if tvreview.wants_tv(rec) else SetKind.MOVIE
 
 
-def offered(services, rec: DiscRecord, everything: bool = False) -> list[DiscSet]:
+def offered(services, rec: JobRecord, everything: bool = False) -> list[DiscSet]:
     """Filed sets the Disc could belong to: those named like it (then, with `everything`,
     the rest)."""
     kind = kind_of(rec)
@@ -53,12 +53,12 @@ def offered(services, rec: DiscRecord, everything: bool = False) -> list[DiscSet
     return named + [s for s in filed if s not in named] if everything else named
 
 
-def pending(services, rec: DiscRecord) -> bool:
+def pending(services, rec: JobRecord) -> bool:
     """Ask the question first: not answered yet, and a set is named like the Disc."""
     return sets.answer(rec) is None and bool(offered(services, rec))
 
 
-def page(request: Request, services, rec: DiscRecord, everything: bool = False,
+def page(request: Request, services, rec: JobRecord, everything: bool = False,
          errors: list[str] | None = None, status_code: int = 200,
          form: dict[str, str] | None = None) -> Response:
     offer = offered(services, rec, everything)
@@ -79,33 +79,33 @@ def page(request: Request, services, rec: DiscRecord, everything: bool = False,
     return TEMPLATES.TemplateResponse(request, "review_set.html", ctx, status_code=status_code)
 
 
-def _video_in_review(services, disc_id: int) -> DiscRecord | None:
-    rec = services.discs.get(disc_id)
+def _video_in_review(services, job_id: int) -> JobRecord | None:
+    rec = services.jobs.get(job_id)
     if rec is None or rec.disc_type not in VIDEO_DISC_TYPES:
-        raise HTTPException(404, "No such video Disc")
-    return rec if rec.status == DiscStatus.REVIEW else None
+        raise HTTPException(404, "No such video Job")
+    return rec if rec.status == JobStatus.REVIEW else None
 
 
-@router.get("/review/{disc_id}/set")
-def ask(request: Request, disc_id: int) -> Response:
+@router.get("/review/{job_id}/set")
+def ask(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
-        return RedirectResponse(f"/discs/{disc_id}", status_code=303)
+        return RedirectResponse(f"/jobs/{job_id}", status_code=303)
     return page(request, services, rec, everything=True)
 
 
-@router.post("/review/{disc_id}/set")
-def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
+@router.post("/review/{job_id}/set")
+def answer(request: Request, job_id: int, part: Annotated[str, Form()] = "",
            set_: Annotated[str, Form(alias="set")] = "", disc: Annotated[str, Form()] = "") -> Response:
     services = _services(request)
-    rec = _video_in_review(services, disc_id)
+    rec = _video_in_review(services, job_id)
     if rec is None:
         return RedirectResponse("/review", status_code=303)
     if part == "no":
         sets.save_answer(rec, Answer(None))
         services.sets.detach(rec.id)
-        services.discs.log(rec.id, "Review: not part of a set")
+        services.jobs.log(rec.id, "Review: not part of a set")
         return RedirectResponse(f"/review/{rec.id}", status_code=303)
     if part != "yes":
         raise HTTPException(400, "part is yes or no")
@@ -126,7 +126,7 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
     assert chosen is not None
     sets.save_answer(rec, Answer(chosen.key, number))
     services.sets.attach(rec.id, chosen.key, number)
-    services.discs.log(rec.id, f"Review: Disc {number} of the set {chosen.name}")
+    services.jobs.log(rec.id, f"Review: Disc {number} of the set {chosen.name}")
     if chosen.key.kind == SetKind.TV:
         return RedirectResponse(f"/review/{rec.id}", status_code=303)
     _file_as_extras_disc(services, rec, chosen)
@@ -135,14 +135,14 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
                           "Extras.")
 
 
-def _file_as_extras_disc(services, rec: DiscRecord, film_set: DiscSet) -> None:
+def _file_as_extras_disc(services, rec: JobRecord, film_set: DiscSet) -> None:
     """Queue every ripped Title as an Extra of the film and hand the Disc back."""
     titles = ripped_titles(rec)
     paths = sets.extras_disc_paths(film_set, rec, titles)
     services.tv_archive.titles.enqueue(rec.id, film_set.show,
                                        [(t.number, None, paths[t.number]) for t in titles])
-    if services.discs.requeue(rec.id):
-        services.discs.log(rec.id, f"Queued {len(titles)} Title{'s' if len(titles) != 1 else ''}"
+    if services.jobs.requeue(rec.id):
+        services.jobs.log(rec.id, f"Queued {len(titles)} Title{'s' if len(titles) != 1 else ''}"
                                    f" for Encode as Extras of {film_set.name}")
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)

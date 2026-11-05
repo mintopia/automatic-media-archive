@@ -5,14 +5,14 @@ from __future__ import annotations
 import time
 
 from ama.cdrip import NOT_INSTALLED
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 
 
-def _only_disc(harness, status: DiscStatus):
-    eventually(lambda: len(harness.services.discs.list(status)) == 1)
-    return harness.services.discs.list(status)[0]
+def _only_disc(harness, status: JobStatus):
+    eventually(lambda: len(harness.services.jobs.list(status)) == 1)
+    return harness.services.jobs.list(status)[0]
 
 
 def _rip_calls(harness) -> list[list[str]]:
@@ -23,13 +23,13 @@ def test_inserted_cd_is_ripped_to_scratch_verified_and_ejected(harness, client):
     harness.cyanrip.ar_confidence = {1: 12, 2: 11, 3: 7}
     harness.drive.insert(DiscType.CD)
 
-    rec = _only_disc(harness, DiscStatus.RIPPED)
+    rec = _only_disc(harness, JobStatus.RIPPED)
     files = sorted(p.name for p in rec.scratch_dir.iterdir())
     assert files == ["01.flac", "02.flac", "03.flac", "rip.cue", "rip.log"]
     assert rec.scratch_dir.parent == harness.services.config.paths.scratch / "cd"
     assert harness.drive.ejected == 1
 
-    page = client.get(f"/discs/{rec.id}").text
+    page = client.get(f"/jobs/{rec.id}").text
     assert "matches 12 other rips" in page
     assert "matches 7 other rips" in page
     assert "3 of 3 tracks verified" in page
@@ -38,7 +38,7 @@ def test_inserted_cd_is_ripped_to_scratch_verified_and_ejected(harness, client):
 
 def test_rip_is_secure_and_keeps_pre_emphasis_and_hidden_track(harness, client):
     harness.drive.insert(DiscType.CD)
-    _only_disc(harness, DiscStatus.RIPPED)
+    _only_disc(harness, JobStatus.RIPPED)
     rip = _rip_calls(harness)[0]
     assert rip[rip.index("-P") + 1] == "3"            # cdparanoia full checking
     assert "-W" in rip                                 # never de-emphasise
@@ -51,8 +51,8 @@ def test_rip_is_secure_and_keeps_pre_emphasis_and_hidden_track(harness, client):
 def test_tracks_not_matching_accuraterip_are_shown_unverified(harness, client):
     harness.cyanrip.ar_confidence = {1: 12}
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.RIPPED)
-    page = client.get(f"/discs/{rec.id}").text
+    rec = _only_disc(harness, JobStatus.RIPPED)
+    page = client.get(f"/jobs/{rec.id}").text
     assert page.count("Doesn't match other rips") == 2
     assert "1 of 3 tracks verified" in page
 
@@ -60,8 +60,8 @@ def test_tracks_not_matching_accuraterip_are_shown_unverified(harness, client):
 def test_cd_missing_from_accuraterip(harness, client):
     harness.cyanrip.in_accuraterip = False
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.RIPPED)
-    assert client.get(f"/discs/{rec.id}").text.count("no other rips to compare") == 3
+    rec = _only_disc(harness, JobStatus.RIPPED)
+    assert client.get(f"/jobs/{rec.id}").text.count("no other rips to compare") == 3
 
 
 def test_progress_is_live_per_track(harness, client):
@@ -72,7 +72,7 @@ def test_progress_is_live_per_track(harness, client):
     eventually(lambda: harness.services.cd.current is not None
                and harness.services.cd.current.tracks[1].percent == 50.0)
     cd = harness.services.cd.current
-    page = client.get(f"/discs/{cd.disc_id}").text
+    page = client.get(f"/jobs/{cd.job_id}").text
     assert "Track 2 of 3" in page
     assert "Ripping 50%" in page
     assert "matches 12 other rips" in page  # track 1 already done
@@ -82,7 +82,7 @@ def test_progress_is_live_per_track(harness, client):
     assert round(cd.percent) == 42
     assert "Track 2 of 3 · 41%" in client.get("/").text
     harness.cyanrip.release()
-    _only_disc(harness, DiscStatus.RIPPED)
+    _only_disc(harness, JobStatus.RIPPED)
 
 
 def test_progress_is_pushed_live_over_sse(live_server, harness):
@@ -110,9 +110,9 @@ def test_hidden_track_and_pre_emphasis_are_reported(harness, client):
     harness.cyanrip.tracks = [(0, 38.0), (1, 284.0), (2, 100.0)]
     harness.cyanrip.preemphasis = {1, 2}
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.RIPPED)
+    rec = _only_disc(harness, JobStatus.RIPPED)
     assert (rec.scratch_dir / "00.flac").exists()
-    page = client.get(f"/discs/{rec.id}").text
+    page = client.get(f"/jobs/{rec.id}").text
     assert "Hidden track before track 1" in page
     assert "0:38 of audio before track 1" in page
     assert "mastered with pre-emphasis" in page
@@ -122,7 +122,7 @@ def test_enhanced_cd_shown_as_unrecognised_is_ripped_without_its_data_track(harn
     harness.cyanrip.enhanced_cd = True
     harness.cyanrip.data_track = 4
     harness.drive.insert_unrecognised("ENHANCED")
-    rec = _only_disc(harness, DiscStatus.RIPPED)
+    rec = _only_disc(harness, JobStatus.RIPPED)
     cue = (rec.scratch_dir / "rip.cue").read_text(encoding="utf-8")
     assert "BINARY" not in cue and "TRACK 04" not in cue
     assert "TRACK 03 AUDIO" in cue
@@ -133,66 +133,66 @@ def test_data_disc_is_left_alone(harness, client):
     harness.drive.insert_unrecognised("BACKUP_2019")
     eventually(lambda: len(harness.cyanrip.calls) == 1)
     assert _rip_calls(harness) == []
-    assert harness.services.discs.list(DiscStatus.FAILED) == []
+    assert harness.services.jobs.list(JobStatus.FAILED) == []
     assert harness.drive.ejected == 0
 
 
 def test_unreadable_track_fails_ejects_deletes_partial_files_and_shows_log(harness, client):
     harness.cyanrip.read_errors_in = 2
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.FAILED)
+    rec = _only_disc(harness, JobStatus.FAILED)
     assert rec.failure.headline == "Track 2 couldn't be read cleanly, even after 10 tries."
     assert not rec.scratch_dir.exists()
     assert harness.drive.ejected == 1
 
-    page = client.get(f"/discs/{rec.id}").text
+    page = client.get(f"/jobs/{rec.id}").text
     assert "Couldn't read this CD" in page
     assert "Unknown CD · 3 tracks" in page
     assert "Ripping errors: 3" in page                      # cyanrip's own log
     assert '<span class="e">' in page                         # errors highlighted
     assert "Disc ejected" in page
     now = client.get("/").text
-    assert "Didn't work" in now and f'href="/discs/{rec.id}"' in now
+    assert "Didn't work" in now and f'href="/jobs/{rec.id}"' in now
 
 
 def test_failed_rip_is_not_retried(harness, client):
     harness.cyanrip.read_errors_in = 1
     harness.drive.stuck = True  # the Disc stays in after the failure
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.FAILED)
+    rec = _only_disc(harness, JobStatus.FAILED)
     time.sleep(0.3)  # many drive polls
     assert len(_rip_calls(harness)) == 1
-    assert "eject the Disc: The tray is stuck" in client.get(f"/discs/{rec.id}").text
+    assert "eject the Disc: The tray is stuck" in client.get(f"/jobs/{rec.id}").text
 
 
 def test_dismissing_a_failure_clears_it_from_now(harness, client):
     harness.cyanrip.no_disc = True
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.FAILED)
+    rec = _only_disc(harness, JobStatus.FAILED)
     assert rec.failure.kind == "drive"
-    r = client.post(f"/discs/{rec.id}/dismiss", follow_redirects=False)
+    r = client.post(f"/jobs/{rec.id}/dismiss", follow_redirects=False)
     assert r.status_code == 303
     assert "Didn't work" not in client.get("/").text
-    assert "Couldn't rip this CD" in client.get(f"/discs/{rec.id}").text  # still viewable
+    assert "Couldn't rip this CD" in client.get(f"/jobs/{rec.id}").text  # still viewable
 
 
 def test_missing_cyanrip_is_a_failure_with_a_fix(harness, client):
     harness.cyanrip.installed = False
     harness.drive.insert(DiscType.CD)
-    rec = _only_disc(harness, DiscStatus.FAILED)
+    rec = _only_disc(harness, JobStatus.FAILED)
     assert rec.failure == NOT_INSTALLED
     assert harness.drive.ejected == 1
 
 
 def test_rip_cut_off_by_a_restart_is_failed_and_cleaned_up(harness):
-    discs = harness.services.discs
-    rec = discs.create(DiscType.CD, "", "cd")
+    jobs = harness.services.jobs
+    rec = jobs.create(DiscType.CD, "", "cd")
     rec.scratch_dir.mkdir(parents=True)
     (rec.scratch_dir / "01.flac").write_bytes(b"partial")
     harness.services.cd.recover()
     harness.services.cd.recover()  # idempotent
-    failed = discs.get(rec.id)
-    assert failed.status == DiscStatus.FAILED
+    failed = jobs.get(rec.id)
+    assert failed.status == JobStatus.FAILED
     assert failed.failure.kind == "interrupted"
     assert not rec.scratch_dir.exists()
 
@@ -227,14 +227,14 @@ def test_a_cd_swapped_in_between_two_looks_is_still_ripped(harness):
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()
         await harness.services.cd.check_once()  # rips, ejects: the drive reads empty
-        harness.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD (same: a repeat)
+        harness.cyanrip.mb_disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD (same: a repeat)
         harness.drive.insert(DiscType.CD, "SAME")
         await harness.services.drive.poll_once()  # the ripper never saw it empty
         await harness.services.cd.check_once()
 
     asyncio.run(go())
     assert len(_rip_calls(harness)) == 2
-    assert len(harness.services.discs.list(DiscStatus.RIPPED)) == 2
+    assert len(harness.services.jobs.list(JobStatus.RIPPED)) == 2
 
 
 def _info(caplog) -> list[str]:
@@ -244,7 +244,7 @@ def _info(caplog) -> list[str]:
 def test_a_rip_starting_and_finishing_is_logged(harness, client, caplog):
     caplog.set_level("INFO")
     harness.drive.insert(DiscType.CD, "OK_COMPUTER")
-    rec = _only_disc(harness, DiscStatus.RIPPED)
-    assert f"Rip started: Audio CD “OK_COMPUTER” (Disc {rec.id})" in _info(caplog)
-    eventually(lambda: f"Rip finished: Audio CD “OK_COMPUTER” (Disc {rec.id}): ripped"
+    rec = _only_disc(harness, JobStatus.RIPPED)
+    assert f"Rip started: Audio CD “OK_COMPUTER” (Job {rec.id})" in _info(caplog)
+    eventually(lambda: f"Rip finished: Audio CD “OK_COMPUTER” (Job {rec.id}): ripped"
                in _info(caplog))
