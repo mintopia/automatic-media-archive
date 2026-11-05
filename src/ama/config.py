@@ -253,6 +253,18 @@ def library_for(libraries: Sequence[Library], kind: Kind, picked: str | None = N
             or next(lib for lib in ofkind if lib.default))
 
 
+def secret_values(model: BaseModel) -> list[str]:
+    """Every secret set in `model` (fields declared with `repr=False`), for masking output."""
+    found: list[str] = []
+    for name, field in type(model).model_fields.items():
+        value = getattr(model, name)
+        if isinstance(value, BaseModel):
+            found += secret_values(value)
+        elif not field.repr and isinstance(value, str) and value:
+            found.append(value)
+    return found
+
+
 class ConfigError(Exception):
     pass
 

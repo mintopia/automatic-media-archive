@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from ama.app import Services
 
 COOKIE = "ama_session"
+CONTROL_HEADER = "X-AMA-Control"  # the supervisor's tray (ama.tray)
 OPEN_PATHS = ("/login", "/static/", "/boot")
 
 
@@ -43,7 +44,13 @@ def auth_required(services: Services) -> bool:
     return bool(services.config.web.password)
 
 
-def install(app: FastAPI, services: Services) -> None:
+def is_control(request: Request, control_token: str) -> bool:
+    """The request comes from the supervisor's tray (`ama.tray`)."""
+    return hmac.compare_digest(request.headers.get(CONTROL_HEADER, "").encode(),
+                               control_token.encode())
+
+
+def install(app: FastAPI, services: Services, control_token: str = "") -> None:
     if not auth_required(services):
         return
     token = session_token(services)
@@ -53,7 +60,7 @@ def install(app: FastAPI, services: Services) -> None:
         path = request.url.path
         if path.startswith(OPEN_PATHS) or hmac.compare_digest(
             request.cookies.get(COOKIE, ""), token
-        ):
+        ) or (control_token and is_control(request, control_token)):
             return await call_next(request)
         if path == "/events":
             return PlainTextResponse("Sign in first", status_code=401)

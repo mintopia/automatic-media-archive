@@ -45,7 +45,7 @@ TEMPLATES.env.filters["phase"] = phase_of
 NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]
 # Top-bar menu links (label, href, icons.svg id), shown between Theme and Log out.
 # Settings and Logs live here, not in NAV; a page is current on its href and below it.
-MENU: list[tuple[str, str, str]] = [("Settings", "/settings", "settings")]
+MENU: list[tuple[str, str, str]] = [("Settings", "/settings", "settings"), ("Logs", "/logs", "log")]
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
@@ -61,6 +61,8 @@ FRAGMENTS: dict[str, str] = {
     "review-count": "partials/review_count.html",
     "drive-status": "partials/drive_status.html",
     "problems": "partials/problems.html",  # app-wide banners (problems.py)
+    # Nothing to show: run pages fetch their live output on its SSE event (`sse:logs`).
+    "logs": "partials/logs_tick.html",
     # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
@@ -184,5 +186,11 @@ def _tools_context(services: Services) -> dict[str, Any]:
             "retry_seconds": tools.retry_seconds}
 
 
+# Fragments that are only a signal (their event triggers a fetch): rendered with no state.
+BARE_FRAGMENTS = {"logs"}
+
+
 def render_fragment(topic: str, services: Services) -> str:
+    if topic in BARE_FRAGMENTS:  # skip building the whole view context, many times a second
+        return TEMPLATES.get_template(FRAGMENTS[topic]).render()
     return TEMPLATES.get_template(FRAGMENTS[topic]).render(view_context(services))

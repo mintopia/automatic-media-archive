@@ -213,6 +213,7 @@ class MovieArchiver:
             self._publish()
 
     def identify(self, rec: JobRecord) -> None:
+        self._jobs.begin_step(rec.id, "identify", "Identification", fresh=False)
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
@@ -374,6 +375,7 @@ class MovieArchiver:
 
     def file(self, rec: JobRecord, movie: Movie) -> None:
         """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
+        self._jobs.begin_step(rec.id, "file", "File")
         filing.require_nas(self._nas)
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"

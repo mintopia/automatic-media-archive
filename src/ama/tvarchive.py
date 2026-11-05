@@ -230,6 +230,7 @@ class TvArchiver:
             await asyncio.to_thread(self._finish, rec, rows)
 
     def _file_one(self, rec: JobRecord, row: TvTitle) -> None:
+        self._jobs.begin_step(rec.id, "file", "File", fresh=False)
         filing.require_nas(self._nas)
         src = encoded_path(rec, row.title_number)
         with filing.to_nas():
