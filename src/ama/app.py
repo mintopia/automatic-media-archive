@@ -166,7 +166,7 @@ def build_services(
     http.headers["User-Agent"] = USER_AGENT
     nas = NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists)
     cd_tracks = CdTracks(db)
-    archive = Archive(Path(cfg.nas.unc), cfg.libraries)
+    archive = Archive(cfg.libraries)
     mb = MusicBrainz(http)
     covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     media = MediaStore(db)
@@ -174,7 +174,7 @@ def build_services(
     film_guesses = FilmGuesses(db, tmdb, covers)
     cd_picks = CdPicks(db)
     plex = Plex(cfg.plex, http, archive, problems)
-    repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
+    repeat = RepeatGuard(db, jobs, drive, bus, archive.shown)
     pause = Pause(db, bus)
     tv_titles = TvTitles(db)
     job_settings = JobSettings(db, jobs, lambda: services.config, _kind_of(tv_titles))

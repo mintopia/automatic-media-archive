@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -97,12 +98,12 @@ class RepeatDisc:
 
 class RepeatGuard:
     def __init__(self, db: Database, jobs: JobStore, drive: DriveMonitor, bus: EventBus,
-                 archive_root: Path) -> None:
+                 shown: Callable[[Path], str]) -> None:
         self._db = db
         self._jobs = jobs
         self._drive = drive
         self._bus = bus
-        self._archive_root = archive_root
+        self._shown = shown  # `Archive.shown`
         self.pending: RepeatDisc | None = None
         self._choice: Choice | None = None
 
@@ -153,12 +154,7 @@ class RepeatGuard:
             self._publish()
 
     def _folder(self, rec: JobRecord) -> str:
-        if rec.archive_dir is None:
-            return ""
-        try:
-            return rec.archive_dir.relative_to(self._archive_root).as_posix()
-        except ValueError:
-            return str(rec.archive_dir)
+        return "" if rec.archive_dir is None else self._shown(rec.archive_dir)
 
     def _publish(self) -> None:
         self._bus.publish(Topic.DRIVE)  # the drive card

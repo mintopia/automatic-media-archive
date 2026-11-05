@@ -21,6 +21,7 @@ import uvicorn
 
 from ama.app import build_services, create_app
 from ama.config import ConfigError, load_config
+from ama.settings import upgrade
 from ama.supervisor import RESTART_EXIT_CODE, run
 from ama.tray import CONTROL_ENV
 
@@ -72,6 +73,7 @@ def main(argv: list[str] | None = None) -> None:
 
 def serve(config: Path) -> None:
     try:
+        upgrade(config)
         cfg = load_config(config)
     except ConfigError as e:
         if sys.stderr is not None:

@@ -1,7 +1,8 @@
 """Asking Plex Media Server to partially scan a folder just filed into the Archive.
 
-Plex may run elsewhere (often on the NAS), so the folder is translated into the
-server's own path (`plex.nas_path` replaces the Archive root). The scan goes to
+Plex may run elsewhere (often on a NAS), so the folder is translated into the
+server's own path: "Plex sees Libraries at" (`plex.libraries_path`) plus the folder
+from its Library folder's name down. The scan goes to
 the Plex library of the Library the folder is in (`Library.plex`, by name), or,
 when that Library names none, to the Plex library whose folder contains it. The
 token goes in a header, never the URL.
@@ -39,12 +40,13 @@ class Plex:
         return bool(self.cfg.url and self.cfg.token)
 
     def server_path(self, folder: Path) -> str:
-        """`folder` (under the Archive root) as the Plex server sees it."""
-        root = self._archive.root
-        base = self.cfg.nas_path or str(root)
+        """`folder` (in a Library) as the Plex server sees it."""
+        base = self.cfg.libraries_path
+        rel = self._archive.within(folder)
+        if not base or rel is None:
+            return str(folder)
         sep = "/" if "/" in base else "\\"
-        parts = folder.relative_to(root).parts
-        return sep.join([base.rstrip("/\\"), *parts])
+        return sep.join([base.rstrip("/\\"), *rel.parts])
 
     def _get(self, path: str, timeout: float | None = None, **params: str) -> httpx.Response:
         headers = {"X-Plex-Token": self.cfg.token, "Accept": "application/json"}

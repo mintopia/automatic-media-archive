@@ -27,9 +27,10 @@ from ama.config import (
     ToolsConfig,
     WebConfig,
 )
-from ama.config import load_config
+from ama.config import Library, LibraryKind, load_config
 from ama.events import EventBus
 from ama.proc import ProcResult
+from ama.settings import upgrade
 from ama.tools import Tools
 from tests.fakes import (
     FakeCyanrip,
@@ -56,7 +57,10 @@ def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str
         drive=DriveConfig(poll_seconds=0.01),
         # The "NAS share" is a local folder; reachability is faked by `nas_exists`.
         nas=NasConfig(unc=str(tmp_path / "nas"), retry_seconds=0.05),
-        plex=PlexConfig(url="http://plex:32400", token="plex-token", nas_path="/volume1/media"),
+        plex=PlexConfig(url="http://plex:32400", token="plex-token",
+                        libraries_path="/volume1/media"),
+        libraries=tuple(Library(name=k.folder, kind=k, path=str(tmp_path / "nas" / k.folder),
+                                default=True) for k in LibraryKind),
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
         encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=24)),
@@ -133,6 +137,8 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
     MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead.
     `config_file` (from `write_config`) runs from a real ama.toml, as Settings edits it."""
+    if config_file:
+        upgrade(config_file)
     cfg = load_config(config_file) if config_file else make_config(
         tmp_path, password, discord, ntfy_topic, tmdb_key)
     drive = FakeDrive()
