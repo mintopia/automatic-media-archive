@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from ama.discs import DiscRecord, DiscStatus
 from ama.moviearchive import EncodeStatus
+from ama.phase import Phase
 from ama.scratch import GB
 from ama.web.review_items import review_items
 
@@ -29,7 +30,7 @@ class ScratchItem:
     title: str
     state: str           # e.g. "Needs Review · choose edition"
     gb: int              # whole GB, rounded up
-    sticker: tuple[str, str] | None = None  # (class, text), e.g. ("enc", "Encoding")
+    sticker: Phase | None = None  # its status chip
     href: str = ""       # its Review, when it waits for one
 
 
@@ -50,7 +51,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
     ripping, waiting = [], []
     for rec in sorted(discs.list(DiscStatus.RIPPING, include_dismissed=True), key=lambda r: r.id):
         ripping.append(_item(rec, rec.name, f"Ripping · {_rip_pct(services, rec)}%",
-                             sticker=("rip", "Ripping")))
+                             sticker=Phase.RIPPING))
     review = [_item(i.record, i.title, f"Needs Review · {i.action.lower()}", href=i.href)
               for i in review_items(services)]
     job = services.movie_archive.encoder.current
@@ -60,23 +61,23 @@ def scratch_items(services: Services) -> list[ScratchItem]:
         tv = services.tv_archive.titles.for_disc(rec.id)
         if tv:
             waiting.append(_item(rec, tv[0].series.title, "TV · encoding and filing Episodes",
-                                 ("enc", "Encoding")))
+                                 Phase.ENCODING))
         elif movie is None:
             waiting.append(_item(rec, rec.name, "Being identified"))
         elif job is not None and job.disc.id == rec.id:
             waiting.insert(0, _item(rec, movie.film.name,
-                                    f"Encoding · {job.progress.pct}%", ("enc", "Encoding")))
+                                    f"Encoding · {job.progress.pct}%", Phase.ENCODING))
         elif movie.status == EncodeStatus.FAILED:
             waiting.append(_item(rec, movie.film.name, "The Encode didn't work",
-                                 ("fail", "Failed")))
+                                 Phase.FAILED))
         elif movie.status == EncodeStatus.ENCODED:
             waiting.append(_item(rec, movie.film.name, "Encoded · filing to the NAS"))
         else:
-            waiting.append(_item(rec, movie.film.name, "Waiting to encode", ("enc", "Encoding")))
+            waiting.append(_item(rec, movie.film.name, "Waiting to encode", Phase.ENCODING))
     return [*ripping, *review, *waiting]
 
 
-def _item(rec: DiscRecord, title: str, state: str, sticker: tuple[str, str] | None = None,
+def _item(rec: DiscRecord, title: str, state: str, sticker: Phase | None = None,
           href: str = "") -> ScratchItem:
     gb = math.ceil(dir_bytes(rec.scratch_dir) / GB) if rec.scratch_dir.exists() else 0
     return ScratchItem(rec, title, state, gb, sticker, href)

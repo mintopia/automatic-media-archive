@@ -39,7 +39,7 @@
       {%- for i in s.scratch_items %}
         <div class="row"><div class="dtype">{{ i.record.disc_type }}</div><div><div class="tt">{{ i.title }}</div><div class="ts">{{ i.state }} · <b>{{ i.gb }} GB</b></div></div>
           {%- if i.href %}<a class="btn" href="{{ i.href }}">Review</a>
-          {%- elif i.sticker %}<span class="stk {{ i.sticker[0] }}" style="justify-self:start">{{ i.sticker[1] }}</span>
+          {%- elif i.sticker %}<span class="stk {{ i.sticker.css }}" style="justify-self:start">{{ i.sticker }}</span>
           {%- else %}<span></span>{% endif %}</div>
       {%- endfor %}
       {%- if not s.scratch_items %}

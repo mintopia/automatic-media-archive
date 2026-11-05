@@ -21,14 +21,17 @@
   <a class="scratch" href="/scratch" title="Local scratch space"{% if current == "/scratch" %} aria-current="page"{% endif %}><span class="lbl">Scratch</span><span class="meter{% if scratch.full %} full{% endif %}" role="meter" aria-valuenow="{{ scratch.used_gb }}" aria-valuemin="0" aria-valuemax="{{ scratch.total_gb }}" aria-label="Scratch used"><i style="width:{{ scratch.pct }}%"></i></span><b>{{ scratch.used_gb }} / {{ scratch.total_gb }} GB</b></a>
   {%- endif %}
   <details class="menu">
-    <summary class="mbtn" aria-label="Menu"><svg class="i" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></summary>
+    <summary class="mbtn" aria-label="Menu"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#menu"/></svg></summary>
     <div class="mpanel">
       <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme">
         <button type="button" data-theme-set="system" aria-pressed="true">System</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button><button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
       </div></div>
-      <a class="mi" href="/settings"{% if current == "/settings" %} aria-current="page"{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>Settings</a>
+      {%- set here = current | default("") %}
+      {%- for label, href, icon in menu %}
+      <a class="mi" href="{{ href }}"{% if here == href or here.startswith(href ~ "/") %} aria-current="page"{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#{{ icon }}"/></svg>{{ label }}</a>
+      {%- endfor %}
       {%- if can_log_out %}
-      <form method="post" action="/logout"><button class="mi" type="submit"><svg class="i" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button></form>
+      <form method="post" action="/logout"><button class="mi" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>Log out</button></form>
       {%- endif %}
     </div>
   </details>
