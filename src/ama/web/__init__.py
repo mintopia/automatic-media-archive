@@ -39,6 +39,9 @@ TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
 NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]
+# Top-bar menu links (label, href, icons.svg id), shown between Theme and Log out.
+# Settings and Logs live here, not in NAV; a page is current on its href and below it.
+MENU: list[tuple[str, str, str]] = []
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
@@ -92,6 +95,7 @@ def view_context(services: Services) -> dict[str, Any]:
     cd = services.cd
     return {
         "nav": NAV,
+        "menu": MENU,
         "can_log_out": auth.auth_required(services),
         "review": review_items(services),
         "cd": cd.current,
