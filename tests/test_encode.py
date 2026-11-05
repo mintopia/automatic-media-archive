@@ -180,10 +180,10 @@ def test_the_encode_uses_temporal_aq_and_middle_b_frame_references():
 
 
 def test_an_hdr10_encode_is_tagged_with_the_sources_colour_description():
-    from ama.hdr import Colour
+    from ama.hdr import Colour, HdrInfo
     sel = select_streams(parse_probe(ENGLISH_FILM), original_language="en")
     args = ffmpeg_args(Path("ffmpeg"), Path("in.mkv"), Path("out.mkv"), sel, cq=24, title="X",
-                       colour=Colour("bt2020", "smpte2084", "bt2020nc", "tv"))
+                       hdr=HdrInfo(Colour("bt2020", "smpte2084", "bt2020nc", "tv")))
     line = " ".join(args)
     assert ("-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
             "-color_range tv") in line

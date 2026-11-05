@@ -494,6 +494,8 @@ class FakeFfmpeg:
         self.hold = False
         self.encoding = threading.Event()  # set while an Encode is running
         self.sample_output: list[str] = []  # what each picture-analysis run prints (#10)
+        self.probes: list[list[str]] = []  # encoder test encodes (#28), not in `.calls`
+        self.broken_encoders: set[str] = set()  # encoders whose test encode fails
         self._go = threading.Event()
 
     def release(self) -> None:
@@ -524,6 +526,13 @@ class FakeFfmpeg:
             if not self.thumbnail_exit_code:
                 Path(args[-1]).write_bytes(b"\xff\xd8 fake jpeg")
             return self.thumbnail_exit_code
+        if "lavfi" in args:  # an encoder's test encode (encoder_probe.py)
+            self.probes.append(args)
+            encoder = args[args.index("-c:v") + 1]
+            if encoder in self.broken_encoders:
+                on_line(f"[{encoder} @ 0000020] No capable devices found")
+                return 1
+            return 0
         self.calls.append(args)
         if "ffprobe" in Path(args[0]).name.lower() and "-show_frames" in args:
             frame = self._frames.get(args[-1], self.frame)
