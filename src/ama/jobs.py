@@ -39,7 +39,7 @@ class JobStatus(StrEnum):
 
 
 class ReviewReason(StrEnum):
-    """Why a Disc's Identification couldn't be accepted automatically."""
+    """Why a Job's Identification couldn't be accepted automatically."""
 
     MULTIPLE_RELEASES = "multiple_releases"  # MusicBrainz knows several releases with this CD
     NO_RELEASE = "no_release"                # MusicBrainz doesn't know this CD

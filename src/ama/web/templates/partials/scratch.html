@@ -49,7 +49,7 @@
     </section>
   </div>
   <div class="aside stack">
-    <section class="bin rev" aria-labelledby="sr-h"><h2 class="tab" id="sr-h">Needs Review <span class="c">{{ review | length }}</span></h2><div class="box"><p class="pad ts">{% if review %}Each finished Review lets its Disc encode and file, freeing its space.{% else %}Nothing needs you right now.{% endif %}</p></div></section>
+    <section class="bin rev" aria-labelledby="sr-h"><h2 class="tab" id="sr-h">Needs Review <span class="c">{{ review | length }}</span></h2><div class="box"><p class="pad ts">{% if review %}Each finished Review lets its Job encode and file, freeing its space.{% else %}Nothing needs you right now.{% endif %}</p></div></section>
     <section class="bin enc" aria-labelledby="se-h"><h2 class="tab" id="se-h">Encoding <span class="c">{{ encoding | length }}</span></h2><div class="box"><p class="pad ts">
       {%- if s.encode_freeing %}Space frees up as each Encode is filed: about {{ s.encode_freeing[0] }} GB{% if s.encode_freeing[1] is not none %} in {{ s.encode_freeing[1] | minutes }}{% endif %}.
       {%- elif encoding %}Space frees up as each Encode is filed.

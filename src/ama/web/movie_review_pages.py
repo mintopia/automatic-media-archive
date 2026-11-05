@@ -226,7 +226,7 @@ def confirm(request: Request, job_id: int, film: Annotated[int, Form()] = 0,
         return RedirectResponse("/review", status_code=303)
     t = next((t for t in ripped_titles(rec) if t.number == title), None)
     if t is None:
-        raise HTTPException(400, "That Title isn't one of this Disc's ripped Titles")
+        raise HTTPException(400, "That Title isn't one of this Job's ripped Titles")
     if not film:
         raise HTTPException(400, "Pick a film")
     try:

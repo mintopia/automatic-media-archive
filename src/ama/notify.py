@@ -3,10 +3,10 @@
 Three events, read off Job status changes (`JobStore.statuses()`) whenever
 anything is published on the bus, so no pipeline stage has to call this:
 
-- Disc done: a Disc's Rip finished and it was ejected (left `ripping` for
+- Rip done: a Job's Rip finished and its Disc was ejected (left `ripping` for
   `ripped`/`review`/`filed`), so the next Disc can go in.
-- Review needed: a Disc entered `review`.
-- Disc failed: a Disc became `failed` (not when the user discarded it in Review).
+- Review needed: a Job entered `review`.
+- Job failed: a Job became `failed` (not when the user discarded it in Review).
 
 A channel is on when its config value is set (`discord.webhook_url`,
 `ntfy.topic`), else silently absent. Sending happens on a worker thread from
@@ -75,7 +75,7 @@ def _subject(rec: JobRecord) -> str:
 def notification(event: Event, rec: JobRecord) -> Notification:
     match event:
         case Event.RIP_DONE:
-            return Notification(event, "Disc done · insert the next one",
+            return Notification(event, "Rip done · insert the next one",
                                 f"{_subject(rec)} is ripped and ejected. Insert the next Disc.")
         case Event.REVIEW_NEEDED:
             return Notification(event, "Review needed",
@@ -83,7 +83,7 @@ def notification(event: Event, rec: JobRecord) -> Notification:
         case Event.JOB_FAILED:
             why = " ".join(p for p in (rec.failure.headline, rec.failure.advice) if p) \
                 if rec.failure else ""
-            return Notification(event, "Disc failed", f"{_subject(rec)} failed. {why}".strip())
+            return Notification(event, "Job failed", f"{_subject(rec)} failed. {why}".strip())
 
 
 class Channel(Protocol):

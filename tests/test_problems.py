@@ -196,7 +196,7 @@ def test_a_failing_notification_shows_a_banner_until_one_gets_through(harness):
     problems = Problems(EventBus(), now=lambda: NOW)
     ch = Channel()
     notifier = Notifier(harness.services.jobs, EventBus(), [ch], problems)
-    note = Notification(next(iter(Event)), "Disc done", "Insert the next one")
+    note = Notification(next(iter(Event)), "Rip done", "Insert the next one")
     notifier.send([note])
     [banner] = problems.banners()
     assert banner.problem == Problem.NOTIFY and banner.detail == "Discord: OSError"

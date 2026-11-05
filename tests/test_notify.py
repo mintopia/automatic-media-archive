@@ -16,7 +16,7 @@ from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
 
 WEBHOOK = "https://discord.com/api/webhooks/123/secret-token"
-DONE = "Disc done · insert the next one"
+DONE = "Rip done · insert the next one"
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def test_a_failed_disc_notifies_both_channels_with_what_went_wrong(notified):
     _sent(notified, 1)
 
     rec = notified.services.jobs.list(JobStatus.FAILED)[0]
-    assert _titles(notified) == (["Disc failed"], ["Disc failed"])
+    assert _titles(notified) == (["Job failed"], ["Job failed"])
     assert rec.failure and rec.failure.headline in _ntfy(notified)[0]["message"]
     assert rec.failure.headline in _discord(notified)[0]["embeds"][0]["description"]
 

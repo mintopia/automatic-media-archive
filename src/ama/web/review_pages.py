@@ -1,8 +1,8 @@
-"""Review routes: the queue, and each Disc's Review page and decisions.
+"""Review routes: the queue, and each Job's Review page and decisions.
 
 Each Disc Type has its own page and decision routes (CD here). A decision is
-saved, the Disc goes back to `ripped` and its worker files it; a decision on a
-Disc that is no longer in Review is ignored (double submit, second tab).
+saved, the Job goes back to `ripped` and its worker files it; a decision on a
+Job that is no longer in Review is ignored (double submit, second tab).
 """
 
 from __future__ import annotations

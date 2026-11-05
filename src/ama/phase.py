@@ -1,6 +1,6 @@
-"""The Phase: the single user-facing stage a Disc is in (GLOSSARY.md).
+"""The Phase: the single user-facing stage a Job is in (GLOSSARY.md).
 
-Every status the UI shows is a `Phase`; finer internal states (a Disc's
+Every status the UI shows is a `Phase`; finer internal states (a Job's
 `JobStatus`, an Encode's status) display as the Phase they belong to.
 """
 
