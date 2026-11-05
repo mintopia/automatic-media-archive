@@ -67,6 +67,30 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # History, on Now
 
 
+def test_saved_encode_settings_apply_to_the_next_encode(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    from tests.conftest import write_config
+    harness = make_harness(tmp_path, config_file=write_config(tmp_path))
+    harness.services.settings.save({
+        "encode.encoder": "libx265", "encode.speed": "faster", "encode.audio": "all",
+        "encode.subtitles": "none", "encode.cq.bd": "19", "encode.max_resolution.bd": "720p"})
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with TestClient(create_app(harness.services)):
+        _rip(harness)
+        rec = _wait_for(harness, DiscStatus.FILED)
+    args = harness.ffmpeg.encodes()[0]
+    assert args[args.index("-c:v") + 1] == "libx265"
+    assert args[args.index("-preset") + 1] == "fast"
+    assert args[args.index("-crf") + 1] == "19"
+    assert "w='min(iw,1280)':h='min(ih,720)'" in args[args.index("-vf") + 1]
+    maps = [args[i + 1] for i, a in enumerate(args) if a == "-map"]
+    assert maps == ["0:0", "0:1", "0:2", "0:3"]  # every audio track, no subtitles
+    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    assert "HEVC (software) 10-bit, quality 19" in log
+
+
 def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_path):
     root = tmp_path / "disc"
     (root / "BDMV" / "META" / "DL").mkdir(parents=True)

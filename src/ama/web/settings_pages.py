@@ -11,16 +11,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, get_origin
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ama.config import ConfigError
+from ama.tools import ToolUnavailable
 from ama.settings import SettingsRejected, field_info, is_secret, raw_at, value_at
 from ama.web import TEMPLATES, view_context
-from ama.web.settings_sections import (BY_SLUG, SECTIONS, TABS, Field, Group, PerType, Section,
-                                       Status, first_of, label_of)
+from ama.web.settings_sections import (BY_SLUG, SECTIONS, TABS, Choice, Field, Group, Option,
+                                       PerType, Section, Status, first_of, label_of)
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -33,7 +34,7 @@ class FieldView:
     key: str
     id: str
     label: str  # as the error summary names it ("Quality and size, DVD")
-    kind: str  # "text" | "number" | "secret"
+    kind: str  # "text" | "number" | "secret" | "choice"
     step: str
     value: str  # never a saved secret
     is_set: bool = False  # secrets: whether the file holds one
@@ -43,10 +44,16 @@ class FieldView:
 
 @dataclass
 class RowView:
-    row: Field | PerType
+    row: Field | PerType | Choice
     fields: list[FieldView]
     placeholder: str = ""
     status: Status | None = None
+    options: tuple[Option, ...] = ()  # a Choice's
+    selects: list[tuple[FieldView, tuple[Option, ...]]] = field(default_factory=list)  # PerType
+
+    @property
+    def choice(self) -> bool:
+        return isinstance(self.row, Choice)
 
     @property
     def pertype(self) -> bool:
@@ -62,13 +69,15 @@ class RowView:
 
     @property
     def errors(self) -> list[FieldView]:
-        return [f for f in self.fields if f.error]
+        return [f for f in [*self.fields, *(s for s, _ in self.selects)] if f.error]
 
     @property
-    def cells(self) -> list[tuple[str, FieldView]]:
-        """A per-Disc-Type table's rows: (Disc Type name, its field)."""
+    def cells(self) -> list[tuple[str, FieldView, tuple[FieldView, tuple[Option, ...]] | None]]:
+        """A per-Disc-Type table's rows: (Disc Type name, its field, its select if any)."""
         assert isinstance(self.row, PerType)
-        return [(name, f) for (name, _), f in zip(self.row.rows, self.fields, strict=True)]
+        selects: list = self.selects or [None] * len(self.fields)
+        return [(name, f, s) for (name, _), f, s in
+                zip(self.row.rows, self.fields, selects, strict=True)]
 
 
 @dataclass
@@ -77,6 +86,7 @@ class GroupView:
     rows: list[RowView]
     status: Status | None = None
     open: bool = False  # an Advanced disclosure starts open when it holds an error
+    summary: str = ""  # an untagged disclosure's line of saved values
 
 
 @dataclass
@@ -95,6 +105,8 @@ def _kind(key: str) -> tuple[str, str]:
     if is_secret(key):
         return "secret", ""
     ann = field_info(key).annotation
+    if get_origin(ann) is Literal:
+        return "choice", ""
     if ann is int:
         return "number", "1"
     if ann is float:
@@ -133,8 +145,12 @@ def _page(services: Services, section: Section, posted: dict[str, str] | None = 
     for g in section.groups:
         rows = []
         for r in g.rows:
+            options: tuple[Option, ...] = ()
+            selects = []
             if isinstance(r, PerType):
                 fields = [field_view(k, f"{r.label}, {name}") for name, k in r.rows]
+                selects = [(field_view(k, f"{r.select_column}, {name}"), opts)
+                           for (name, _), (k, opts) in zip(r.rows, r.selects, strict=False)]
             else:
                 fields = [field_view(r.key, r.label)]
             placeholder = ""
@@ -142,8 +158,12 @@ def _page(services: Services, section: Section, posted: dict[str, str] | None = 
             if isinstance(r, Field):
                 placeholder = r.placeholder(services) if callable(r.placeholder) else r.placeholder
                 status = r.status(services) if r.status else None
-            rows.append(RowView(r, fields, placeholder, status))
-        gv = GroupView(g, rows, g.status(services) if g.status else None)
+            if isinstance(r, Choice):
+                saved = _shown(value_at(cfg, r.key))
+                options = r.options(services, saved) if callable(r.options) else r.options
+            rows.append(RowView(r, fields, placeholder, status, options, selects))
+        gv = GroupView(g, rows, g.status(services) if g.status else None,
+                       summary=g.summary(cfg) if g.summary else "")
         gv.open = any(rv.errors for rv in rows)
         view.groups.append(gv)
         view.errors += [f for rv in rows for f in rv.errors]
@@ -184,6 +204,23 @@ def _render(request: Request, ctx: dict, status: int = 200) -> Response:
     return TEMPLATES.TemplateResponse(request, "settings.html", ctx, status_code=status)
 
 
+def _check(services: Services, section: Section, changes: dict[str, str]) -> None:
+    """Choices the config model allows but this PC doesn't (an encoder that failed its
+    test encode). Raises SettingsRejected; the file is untouched."""
+    settings = services.settings
+    assert settings is not None and settings.file is not None
+    _, saved = settings.file.values()
+    errors = {}
+    for g in section.groups:
+        for r in g.rows:
+            if isinstance(r, Choice) and r.check and r.key in changes:
+                why = r.check(services, changes[r.key], _shown(value_at(saved, r.key)))
+                if why:
+                    errors[r.key] = why
+    if errors:
+        raise SettingsRejected(errors, [])
+
+
 @router.get("/settings")
 def settings_home() -> Response:
     return RedirectResponse(f"/settings/{SECTIONS[0].slug}", status_code=303)
@@ -202,6 +239,17 @@ def settings_page(request: Request, slug: str, saved: str = "") -> Response:
     except ConfigError as e:
         return _render(request, _context(request, services, section, problem=str(e)))
     return _render(request, _context(request, services, section, page=page, saved=saved))
+
+
+@router.post("/settings/archive/encode/test-encoders")
+async def test_encoders(request: Request) -> Response:
+    """"Test encoders again": test every encoder now, then show the results."""
+    services: Services = request.app.state.services
+    try:
+        await services.encoders.probe_all()
+    except ToolUnavailable:
+        pass  # ffmpeg isn't ready; the background test runs once it is
+    return RedirectResponse("/settings/archive/encode", status_code=303)
 
 
 @router.post("/settings/{slug:path}", response_class=HTMLResponse)
@@ -224,6 +272,7 @@ async def settings_save(request: Request, slug: str) -> Response:
         elif isinstance(typed, str):
             changes[key] = typed.strip()
     try:
+        _check(services, section, changes)
         settings.save(changes)
     except SettingsRejected as e:
         posted = {k: v for k, v in changes.items() if not is_secret(k)}

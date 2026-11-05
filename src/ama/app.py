@@ -29,6 +29,7 @@ from ama.config import Config
 from ama.db import Database
 from ama.discs import DiscStore
 from ama.encoder import Encoder
+from ama.encoder_probe import EncoderProbe
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.media import MediaStore, film_guess
@@ -81,13 +82,16 @@ class Services:
     backfill: Backfill
     plex: Plex
     http: httpx.Client
+    encoders: EncoderProbe  # which encoders pass a test encode (ADR 0010)
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
         """Hand the settings.LIVE_TABLES values in `cfg` to the code that reads them."""
+        if cfg.encode != self.config.encode:
+            self.encoders.request()  # test the encoders again on save (ADR 0010)
         self.config = cfg
         self.cd.cfg = cfg.cd
-        self.movie_archive.encoder.cq = cfg.encode.cq
+        self.movie_archive.encoder.cfg = cfg.encode
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
         self.notifier.channels = channels(cfg, self.http)
@@ -97,7 +101,8 @@ class Services:
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
-                self.backfill.run, *([self.settings.run] if self.settings else [])]
+                self.backfill.run, self.encoders.run,
+                *([self.settings.run] if self.settings else [])]
 
 
 def build_services(
@@ -134,7 +139,7 @@ def build_services(
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
-    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
+    encoder = Encoder(discs, bus, cfg.encode, tool, streamer)
     movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
@@ -180,6 +185,7 @@ def build_services(
                           tv_titles),
         plex=plex,
         http=http,
+        encoders=EncoderProbe(bus, tool, streamer, lambda: services.config.encode),
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
     return services

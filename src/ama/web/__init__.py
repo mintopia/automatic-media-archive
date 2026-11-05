@@ -118,6 +118,7 @@ def view_context(services: Services) -> dict[str, Any]:
         "drive": services.drive.state,
         "repeat": services.repeat.pending,  # an archived Disc waiting for the user
         "nas": services.nas.status,
+        "encoder_problem": services.encoders.problem(),  # the configured encoder failed its test
         "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
         "scratch_refused": services.scratch.refused,
