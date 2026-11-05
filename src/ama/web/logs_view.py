@@ -206,7 +206,8 @@ def _run_view(services: Services, run: RunRecord, now: datetime) -> RunView:
         fixed = services.runs.later_fix(run)
     started = f"{run.started_at:%H:%M}"
     meta = " · ".join(p for p in (run.detail, started,
-                                  f"took {took(run.took)}" if run.took else "running") if p)
+                                  f"took {took(run.took)}" if run.finished_at else "running")
+                     if p)
     return RunView(run, run.title, steps, errors=errors, meta=meta, notice=notice,
                    fixed_by=fixed)
 

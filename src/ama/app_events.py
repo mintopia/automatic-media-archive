@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -240,14 +241,22 @@ class AppEvents:
                 self._runs.line(w.run_step, now.line, error=problem)
             if now.seen == Seen.OK:
                 self._runs.end(w.run_step, result=now.result)
-                self._runs.finish_run(w.run, failed=False, title=w.item.fixed(w.was_ok))
+                detail = now.result
+                started = self._runs.get_run(w.run)
+                if w.item.kind == RunKind.NAS and started is not None:
+                    away = max(1, round((datetime.now() - started.started_at).total_seconds()
+                                        / 60))
+                    detail = f"{now.result} · away for {away} min"
+                self._runs.finish_run(w.run, failed=False, title=w.item.fixed(w.was_ok),
+                                      detail=detail)
                 w.run = w.run_step = None
                 w.was_ok = True
             elif problem:
                 self._runs.set_result(w.run_step, now.result)
             return
         if now.seen in (Seen.PROBLEM, Seen.BUSY):
-            w.run = self._runs.start_run(w.item.kind, w.item.trouble(w.was_ok), item=w.item.key)
+            w.run = self._runs.start_run(w.item.kind, w.item.trouble(w.was_ok), item=w.item.key,
+                                         detail=now.result)
             if w.item.kind == RunKind.NAS and w.was_ok:
                 hold = self._runs.begin(w.run, "hold", "Hold filing")
                 self._runs.line(hold, "Filing waits until the NAS is back; Rips carry on to "
@@ -259,7 +268,8 @@ class AppEvents:
                 self._runs.set_result(w.run_step, now.result)
         elif now.seen == Seen.OK and w.last is not None and w.last.seen == Seen.PROBLEM:
             # Fine again with no Run open (it failed at startup): say so in a Run of its own.
-            run = self._runs.start_run(w.item.kind, w.item.fixed(False), item=w.item.key)
+            run = self._runs.start_run(w.item.kind, w.item.fixed(False), item=w.item.key,
+                                       detail=now.result)
             step = self._runs.begin(run, w.item.key, w.item.later_step or w.item.step)
             self._runs.line(step, now.line)
             self._runs.end(step, result=now.result)

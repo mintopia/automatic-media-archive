@@ -371,6 +371,8 @@ class VideoRipper:
             raise _Fail(LICENCE_FAILURE)
         if code != 0 and args[-1] != "disc:9999":  # a drive listing's exit code means nothing
             self._store.log(job.id, f"makemkvcon exited with code {code}", error=True)
+        if args[-1] != "disc:9999":
+            self._store.step_exit(job.id, code)
         return code, records
 
     # -- publishing (the UI re-renders from .job / .progress) -------------

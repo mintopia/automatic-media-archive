@@ -25,6 +25,11 @@
         <div><b>{{ v.notice[0] }}</b>{{ v.notice[1] }}{% if job %} Nothing was filed.{% endif %}
           {%- if v.fixed_by %} Fixed since: see <a href="/logs/runs/{{ v.fixed_by.id }}">{{ v.fixed_by.title }}</a>.{% endif %}</div>
       </div>
+      {%- elif run.kind == "nas" and v.steps and v.steps[0].key == "hold" %}
+      <div class="notice ok" role="status">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+        <div><b>Nothing was lost.</b>Rips kept going to scratch; filing waited until the NAS was back{% if v.state == "running" %}, and still does{% endif %}.</div>
+      </div>
       {%- endif %}
       <section class="bin ink" aria-labelledby="steps-h">
         <h2 class="tab" id="steps-h">Steps <span class="c">{{ v.steps | length }}</span></h2>

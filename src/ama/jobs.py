@@ -340,6 +340,11 @@ class JobStore:
         if self.runs:
             self.runs.job_note(job_id, text, error)
 
+    def step_exit(self, job_id: int, exit_code: int | None) -> None:
+        """The running Step's tool exited (the Step itself may have more to do)."""
+        if self.runs and exit_code is not None:
+            self.runs.job_exit(job_id, exit_code)
+
     def end_step(self, job_id: int, failed: bool = False, exit_code: int | None = None,
                  result: str | None = None) -> None:
         if self.runs:

@@ -24,6 +24,8 @@ from ama.db import Database
 from ama.events import EventBus, Topic
 
 PUBLISH_EVERY_SECONDS = 0.5
+FLUSH_LINES = 200     # output lines are stored in batches: this many,
+FLUSH_SECONDS = 1.0   # or this long after the last batch (whichever comes first)
 STOPPED = "AMA stopped before this finished"
 
 
@@ -112,6 +114,9 @@ class Runs:
         # "ffmpeg" -> "ffmpeg 9.0.2": set by build_services from the tools' versions.
         self.tool_label: Callable[[str], str] = lambda name: name
         self._lock = threading.Lock()
+        self._flush_lock = threading.Lock()  # keeps flushed lines in order
+        self._unsaved: list[tuple[int, str, int, str]] = []  # lines not yet in step_lines
+        self._saved_at = time.monotonic()
         self._ring: dict[int, collections.deque[OutputLine]] = {}
         self._count: dict[int, int] = {}
         self._open: dict[int, int] = {}  # Job id -> its running Step
@@ -120,7 +125,7 @@ class Runs:
         self._last_publish = 0.0
 
     def _ts(self) -> str:
-        return self._now().isoformat(timespec="seconds")
+        return self._now().isoformat(timespec="milliseconds")  # a Step can take 0.1 s
 
     # --- Runs ---
 
@@ -204,6 +209,7 @@ class Runs:
             (run_id, key, run_id, name, subject, tool, ts, int(fresh)))
         step_id = self._db.execute("SELECT id FROM steps WHERE run_id = ? AND key = ?",
                                    (run_id, key)).fetchone()[0]
+        self.flush()
         if fresh:
             self._db.execute("DELETE FROM step_lines WHERE step_id = ?", (step_id,))
         kept = [] if fresh else self.output(step_id)
@@ -219,8 +225,12 @@ class Runs:
             if secret:
                 text = text.replace(secret, "•••")
         at = self._now().replace(microsecond=0)
-        self._db.execute("INSERT INTO step_lines (step_id, at, error, text) VALUES (?, ?, ?, ?)",
-                         (step_id, at.isoformat(), int(error), text))
+        with self._lock:
+            self._unsaved.append((step_id, at.isoformat(), int(error), text))
+            due = len(self._unsaved) >= FLUSH_LINES \
+                or time.monotonic() - self._saved_at >= FLUSH_SECONDS
+        if due:
+            self.flush()
         with self._lock:
             ring = self._ring.get(step_id)
             if ring is not None:
@@ -228,8 +238,21 @@ class Runs:
                 ring.append(OutputLine(self._count[step_id], at, error, text))
         self._changed()
 
+    def flush(self) -> None:
+        """Store the lines not yet stored (one statement: a write per line is slow)."""
+        with self._flush_lock:
+            with self._lock:
+                rows, self._unsaved = self._unsaved, []
+                self._saved_at = time.monotonic()
+            if rows:
+                self._db.execute(
+                    "INSERT INTO step_lines (step_id, at, error, text) VALUES "
+                    + ",".join("(?, ?, ?, ?)" for _ in rows),
+                    tuple(v for row in rows for v in row))
+
     def end(self, step_id: int, failed: bool = False, exit_code: int | None = None,
             result: str | None = None) -> None:
+        self.flush()
         self._db.execute(
             "UPDATE steps SET state = ?, exit_code = COALESCE(?, exit_code), "
             "result = COALESCE(?, result), finished_at = ? WHERE id = ? AND state = 'running'",
@@ -244,11 +267,13 @@ class Runs:
         self._changed()
 
     def steps(self, run_id: int) -> list[StepRecord]:
+        self.flush()
         rows = self._db.execute(f"SELECT {_STEP_COLS} FROM steps s WHERE s.run_id = ? "
                                 "ORDER BY s.position", (run_id,)).fetchall()
         return [self._step(r) for r in rows]
 
     def get_step(self, step_id: int) -> StepRecord | None:
+        self.flush()
         row = self._db.execute(f"SELECT {_STEP_COLS} FROM steps s WHERE s.id = ?",
                                (step_id,)).fetchone()
         return self._step(row) if row else None
@@ -262,6 +287,7 @@ class Runs:
 
     def output(self, step_id: int) -> list[OutputLine]:
         """All of the Step's stored output."""
+        self.flush()
         rows = self._db.execute("SELECT at, error, text FROM step_lines WHERE step_id = ? "
                                 "ORDER BY id", (step_id,)).fetchall()
         return [OutputLine(n, datetime.fromisoformat(a), bool(e), t)
@@ -309,6 +335,12 @@ class Runs:
         if step is not None:
             self.line(step, text, error)
 
+    def job_exit(self, job_id: int, exit_code: int) -> None:
+        """Record the running Step's tool exit code without ending the Step."""
+        step = self.job_step(job_id)
+        if step is not None:
+            self._db.execute("UPDATE steps SET exit_code = ? WHERE id = ?", (exit_code, step))
+
     def job_step(self, job_id: int) -> int | None:
         with self._lock:
             return self._open.get(job_id)
@@ -348,11 +380,18 @@ class Runs:
     async def run(self) -> None:
         """Background task: remembers the loop, so lines from worker threads can publish."""
         self._loop = asyncio.get_running_loop()
-        await asyncio.Event().wait()
+        try:
+            while True:  # a quiet Step's last lines get stored too
+                await asyncio.sleep(FLUSH_SECONDS)
+                await asyncio.to_thread(self.flush)
+        finally:
+            self.flush()
 
     def _changed(self) -> None:
         """Publish `logs` soon: from any thread, at most every PUBLISH_EVERY_SECONDS, and
         always once after the last change."""
+        if self._pending:  # a publish is already on its way (a stale read only costs a call)
+            return
         try:
             loop = asyncio.get_running_loop()
             self._loop = loop
