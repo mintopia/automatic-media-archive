@@ -57,7 +57,7 @@ class FilmGuess:
 
 
 class FilmGuesses:
-    """The `film_guesses` table (migration 0014) and the TMDB searches that fill it."""
+    """The `film_guesses` table (migration 0015) and the TMDB searches that fill it."""
 
     def __init__(self, db: Database, tmdb: Tmdb, covers: Covers) -> None:
         self._db = db

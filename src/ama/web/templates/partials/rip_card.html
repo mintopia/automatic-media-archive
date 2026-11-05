@@ -21,9 +21,11 @@
     {%- endif %}
     {%- if progress %}
     {%- if g %}
-    <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · checked again after the Rip{% if guess_search %}{% include "partials/guess_change.html" %}{% endif %}</div>
+    <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · checked again after the Rip</div>
+    {%- if guess_search %}{% include "partials/guess_change.html" %}{% endif %}
     {%- elif guess_search and not guessing %}
-    <div class="guess"><b>Pick a title</b>, the Disc label doesn't say which film this is{% include "partials/guess_change.html" %}</div>
+    <div class="guess"><b>Pick a title</b>, the Disc label doesn't say which film this is</div>
+    {%- include "partials/guess_change.html" %}
     {%- endif %}
     {%- if progress.title_number %}
     <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ job.total_size }}</span></div>

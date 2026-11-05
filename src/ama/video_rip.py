@@ -35,8 +35,7 @@ from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
 from ama.film_guess import FilmGuesses
-from ama.tmdb import Candidate
-from ama.tmdb import DiscHints, bd_meta_title, save_hints
+from ama.tmdb import Candidate, DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
@@ -204,6 +203,7 @@ class VideoRipper:
         self.job, self.progress = job, RipProgress()
         self._films, self._longest_s, self._settling = [], None, asyncio.Lock()
         self._store.log(job.id, f"Ripping {inserted.disc_type.long_name} “{job.name}”")
+        self.guessing = self._guesses is not None  # no "Pick a title" before TMDB answers
         self._publish()
         guessing = asyncio.create_task(self._guess(job)) if self._guesses else None
         try:
@@ -238,7 +238,6 @@ class VideoRipper:
     async def _guess(self, job: JobRecord) -> None:
         """The Best guess from the volume label (film_guess.py)."""
         assert self._guesses is not None
-        self.guessing = True
         try:
             self._films = await asyncio.to_thread(self._guesses.candidates, job.label)
             await self._settle(job.id)

@@ -1,7 +1,7 @@
 {#- The rip card's "Change": search TMDB and pick the film (POST /jobs/{id}/guess). Needs `job`, `g`, `on_page`.
     hx-preserve keeps it open, with its results, while the card re-renders live. -#}
 <details class="change" id="guess-change-{{ job.id }}" hx-preserve>
-  <summary class="btn sm">{{ "Change" if g else "Search" }}</summary>
+  <summary>{{ "Change the film" if g else "Search for the film" }}</summary>
   <form class="search" role="search" action="/jobs/{{ job.id }}/guess/search" hx-get="/jobs/{{ job.id }}/guess/search" hx-target="#guess-results-{{ job.id }}" hx-push-url="false">
     <label class="sr" for="guess-q-{{ job.id }}">Search films</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
     <input class="input" id="guess-q-{{ job.id }}" name="q" type="search" value="{{ g.film.title if g else '' }}" placeholder="Film title" enterkeyhint="search" required>
