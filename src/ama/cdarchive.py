@@ -54,10 +54,17 @@ MB_FILE = cdreview.MB_FILE
 
 # ---- deciding ----------------------------------------------------------------
 
+def picked_match(tracks: list[Track], candidates: list[Match], pick: CdPick) -> Match | None:
+    """The release the user picked, if it fits the Rip as an automatic match must (one of the
+    Disc ID's releases, so its track lengths are the Disc's, with as many tracks as ripped)."""
+    return next((m for m in cdreview.fitting(tracks, candidates)
+                 if (m.release.id, m.disc_number) == (pick.release_id, pick.disc_number)), None)
+
+
 def review_reason(tracks: list[Track], candidates: list[Match],
-                  rip_accepted: bool = False) -> ReviewReason | None:
+                  rip_accepted: bool = False, pick: CdPick | None = None) -> ReviewReason | None:
     """Why this Rip and these matches can't be filed automatically (None = file it); an accepted
-    Rip skips AccurateRip."""
+    Rip skips AccurateRip. A pick that fits is filed even when other releases fit too."""
     audio = cdreview.audio_tracks(tracks)  # AccurateRip doesn't cover a hidden track
     verdicts = {t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in audio}
     if not rip_accepted:
@@ -67,6 +74,8 @@ def review_reason(tracks: list[Track], candidates: list[Match],
             return ReviewReason.NOT_IN_ACCURATERIP
         if ArStatus.UNAVAILABLE in verdicts:
             return ReviewReason.ACCURATERIP_UNAVAILABLE
+    if pick is not None:
+        return None if picked_match(tracks, candidates, pick) else ReviewReason.PICK_NOT_FITTING
     fitting = cdreview.fitting(tracks, candidates)
     if not fitting:
         return ReviewReason.NO_RELEASE
@@ -233,15 +242,20 @@ class CdArchiver:
                 return
             self._jobs.log(rec.id, "The edition picked in Review isn't in the MusicBrainz "
                                     "answer any more", error=True)
-        reason = review_reason(tracks, candidates, rip_accepted=decision is not None)
+        # The release picked while it ripped, unless Review has picked one since.
+        pick = None if isinstance(decision, cdreview.PickRelease) else self._picked(rec.id)
+        reason = review_reason(tracks, candidates, rip_accepted=decision is not None, pick=pick)
         if reason is not None:
             self._jobs.mark_review(rec.id, reason)
             self._jobs.log(rec.id, f"Needs Review: {reason.value.replace('_', ' ')}")
             return
-        match = candidates[0]
+        match = (picked_match(tracks, candidates, pick) if pick is not None
+                 else cdreview.fitting(tracks, candidates)[0])
+        assert match is not None  # review_reason checked it
+        mine = "your pick, " if pick is not None else ""
         self._jobs.log(rec.id, f"Identified as {match.release.title} by {match.release.artist}, "
                                 f"disc {match.disc_number} of {match.release.disc_total} "
-                                f"(MusicBrainz release {match.release.id})")
+                                f"({mine}MusicBrainz release {match.release.id})")
         self.file(rec, match, mb_disc_id)
 
     def file(self, rec: JobRecord, match: Match, mb_disc_id: str) -> None:

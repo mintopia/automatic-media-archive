@@ -14,7 +14,7 @@ from html import unescape
 from ama.drive import DiscType
 from ama.jobs import JobStatus, ReviewReason, TitleRecord, TitleStatus
 from tests.conftest import eventually
-from tests.test_cd_guess import SPECIAL, STANDARD, _response, _rip_held, eventually_status
+from tests.test_cd_guess import DISC_1, SPECIAL, STANDARD, _response, _rip_held, eventually_status
 from tests.test_tv_review import LABEL, TITLES as TV_TITLES
 
 
@@ -84,3 +84,59 @@ def test_a_tv_job_goes_to_review_even_with_a_picked_film_that_fits(client, harne
     rec = eventually_status(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.EPISODES
     assert harness.services.movie_archive.movies.get(rec.id) is None
+
+
+def _pick_release(harness, client, release: str) -> int:
+    eventually(lambda: "Likely" in client.get("/").text)
+    job = harness.services.cd.current.job_id
+    r = client.post(f"/jobs/{job}/release", data={"release": f"{release}:1"},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    return job
+
+
+def test_a_picked_cd_release_that_fits_the_rip_is_filed_without_review(client, harness):
+    # Three releases carry this Disc ID: without the pick it would go to Review.
+    _rip_held(harness, _response())
+    job = _pick_release(harness, client, STANDARD)
+    harness.cyanrip.release()
+
+    eventually_status(harness, JobStatus.FILED)
+    log = _log(harness, job)
+    assert f"(your pick, MusicBrainz release {STANDARD})" in log
+    assert "Needs Review" not in log
+    assert harness.services.media.get(job).release_id == STANDARD
+
+
+def test_a_picked_cd_release_still_goes_to_review_when_accuraterip_fails(client, harness):
+    _rip_held(harness, _response())
+    del harness.cyanrip.ar_confidence[24]  # the last track doesn't match AccurateRip
+    job = _pick_release(harness, client, STANDARD)
+    harness.cyanrip.release()
+
+    rec = eventually_status(harness, JobStatus.REVIEW)
+    assert rec.review_reason == ReviewReason.NOT_ACCURATE  # ADR 0004
+    review = client.get(f"/review/{job}").text
+    assert re.search(rf'value="{STANDARD}:1"[^>]*checked', review)  # the pick, pre-filled
+    assert not re.search(rf'value="{SPECIAL}:1"[^>]*checked', review)
+
+    client.post(f"/review/{job}/accept")  # keep these tracks: the pick then files
+    eventually_status(harness, JobStatus.FILED)
+    assert harness.services.media.get(job).release_id == STANDARD
+
+
+def test_a_picked_cd_release_that_no_longer_fits_goes_to_review_with_the_reason(
+        client, harness):
+    _rip_held(harness, _response())
+    job = _pick_release(harness, client, STANDARD)
+    gone = _response()  # MusicBrainz no longer lists the picked release for this Disc
+    gone["releases"] = [r for r in gone["releases"] if r["id"] != STANDARD]
+    harness.web.musicbrainz[DISC_1] = gone
+    harness.cyanrip.release()
+
+    rec = eventually_status(harness, JobStatus.REVIEW)
+    assert rec.review_reason == ReviewReason.PICK_NOT_FITTING
+    assert "The edition you picked doesn't fit this CD" in page_text(client, "/review")
+    review = page_text(client, f"/review/{job}")
+    assert "The edition you picked doesn't fit this CD" in review
+    assert "FINAL FANTASY VII REBIRTH Original Soundtrack — Various Artists" in review

@@ -65,6 +65,7 @@ def test_the_cover_follows_the_picked_release(harness, client):
 def test_the_pick_stays_on_the_job_after_the_rip_and_review_offers_it(harness, client):
     harness.web.covers[STANDARD] = STANDARD_COVER
     _rip_held(harness, _response())
+    del harness.cyanrip.ar_confidence[24]  # a pick that fits skips Review; this Rip doesn't
     job = _job_id(harness, client)
     client.post(f"/jobs/{job}/release", data={"release": f"{STANDARD}:1"})
     harness.cyanrip.release()
