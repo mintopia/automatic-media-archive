@@ -4,11 +4,15 @@ Phase start with the values it was locked with stored on the Job."""
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
+from ama.app import create_app
+from ama.archive import extended_path
 from ama.config import Config, Kind
 from ama.drive import DiscType
 from ama.job_settings import Group, Locked
-from tests.conftest import make_harness
+from ama.jobs import JobStatus
+from tests.conftest import eventually, make_harness
 
 
 @pytest.fixture
@@ -114,3 +118,59 @@ def test_a_cd_job_locks_its_rip_settings_at_once(h):
     assert (rip.offset, rip.retries) == (667, 10)
     with pytest.raises(Locked):
         settings.set(job.id, "cd.retries", "4")
+
+
+# -- through the pipeline ------------------------------------------------------
+
+FOLDER = "Example Movie (2016) {tmdb-1234}"
+
+
+def _family_films(h) -> None:
+    nas = h.nas_root
+    cfg = h.services.config
+    h.services.apply_live(Config.model_validate(cfg.model_dump() | {"libraries": [
+        {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "default": True},
+        {"name": "Family Films", "kind": "films", "path": str(nas / "Family")},
+        {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
+        {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]}))
+
+
+def test_a_film_job_encodes_and_files_with_the_settings_changed_while_it_ripped(tmp_path):
+    h = make_harness(tmp_path)
+    _family_films(h)
+    h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    settings = h.services.job_settings
+    with TestClient(create_app(h.services)):
+        h.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+        eventually(lambda: h.services.jobs.list(JobStatus.RIPPING))
+        job = h.services.jobs.list(JobStatus.RIPPING)[0]
+        settings.set(job.id, "encode.quality", "19")
+        settings.set(job.id, "library", "Family Films")
+        h.ffmpeg.hold = True
+        h.makemkv.release()
+        eventually(h.ffmpeg.encoding.is_set)
+        _edit_encode(h, speed="faster")  # after the Encode began: not this Job's
+        with pytest.raises(Locked):
+            settings.set(job.id, "encode.quality", "18")
+        h.ffmpeg.release()
+        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
+    encodes = h.ffmpeg.encodes()
+    assert len(encodes) == 2  # the Main Feature and its Extra
+    for args in encodes:
+        assert args[args.index("-cq") + 1] == "19"
+        assert args[args.index("-preset") + 1] == "p7"  # "slower", as when it locked
+    assert extended_path(h.nas_root / "Family" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
+    stored = settings.group(job, Group.LIBRARY)
+    assert stored.locked and stored.values[0].value == "Family Films"
+
+
+def test_a_cd_rips_with_the_rip_settings_it_locked(tmp_path):
+    h = make_harness(tmp_path)
+    with TestClient(create_app(h.services)):
+        h.drive.insert(DiscType.CD)
+        eventually(lambda: h.services.jobs.list(JobStatus.RIPPED))
+    job = h.services.jobs.list(JobStatus.RIPPED)[0]
+    rip = h.services.job_settings.group(job, Group.RIP)
+    assert rip.locked
+    assert [(v.setting.label, v.text) for v in rip.values] == [
+        ("Drive read offset", "+667 samples"), ("Re-reads before an error", "10")]

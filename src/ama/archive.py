@@ -72,6 +72,11 @@ def _digest(path: Path) -> tuple[int, str]:
 _KIND_OF = {k.folder: k for k in Kind}
 
 
+def kind_of_path(rel: Path) -> Kind | None:
+    """The kind an archiver's logical path (`Movies/…`, `TV/…`, `Music/…`) files as."""
+    return _KIND_OF.get(rel.parts[0]) if rel.parts else None
+
+
 class Archive:
     """The Archive root (the NAS share) and its Libraries. `copy` is replaceable so tests can
     break a copy.
@@ -89,7 +94,7 @@ class Archive:
     def folder(self, rel: Path, library: str | None = None) -> Path:
         """Where `rel` (`Movies/…`, `TV/…`, `Music/…`) is: in the Library the Job picked, else
         its kind's default."""
-        kind = _KIND_OF.get(rel.parts[0]) if rel.parts else None
+        kind = kind_of_path(rel)
         if kind is None or not self.libraries:
             return self.root / rel
         return Path(library_for(self.libraries, kind, library).path, *rel.parts[1:])

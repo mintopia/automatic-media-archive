@@ -246,8 +246,11 @@ class CdRipper:
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
                  repeat: RepeatGuard, scratch: ScratchGate, pause: Pause, picks: CdPicks,
                  guesser: Guesser | None = None,
-                 hold: Callable[[], bool] = lambda: False) -> None:
+                 hold: Callable[[], bool] = lambda: False,
+                 rip_settings: Callable[[JobRecord], CdConfig] | None = None) -> None:
         self._pause = pause
+        # A Job's Rip settings, locked as its Rip starts (job_settings); else `cfg`.
+        self._rip_settings = rip_settings or (lambda rec: self.cfg)
         self.picks = picks
         self.cfg = cfg
         self._hold = hold  # start no new Rip (a restart is waiting)
@@ -411,6 +414,7 @@ class CdRipper:
     async def _rip(self, rec: JobRecord, exe: Path, device: str, tracks: list[Track]) -> None:
 
         # 2. Rip.
+        cfg = self._rip_settings(rec)
         rec.scratch_dir.mkdir(parents=True, exist_ok=True)
         loop = asyncio.get_running_loop()
         rip_lines: list[str] = []
@@ -452,8 +456,8 @@ class CdRipper:
         cwd = rec.scratch_dir.parent
         try:
             code = await self._run_tool(
-                cyanrip.rip_command(exe, device, self.cfg.offset, rec.scratch_dir.name,
-                                    self.cfg.retries), on_line, cwd)
+                cyanrip.rip_command(exe, device, cfg.offset, rec.scratch_dir.name,
+                                    cfg.retries), on_line, cwd)
         except FileNotFoundError:
             code = None
 
@@ -482,7 +486,7 @@ class CdRipper:
             else:
                 bad = min(errors_in) if errors_in else \
                     next((t.number for t in live.tracks if not t.ripped), None)
-                failure = _unreadable(bad, self.cfg.retries) \
+                failure = _unreadable(bad, cfg.retries) \
                     if bad is not None and (errors_in or report.ripping_errors) else GENERIC
             await self._fail(rec, failure)
         self.current = None

@@ -157,12 +157,14 @@ def build_services(
     tv_titles = TvTitles(db)
     job_settings = JobSettings(db, jobs, lambda: services.config, _kind_of(tv_titles))
     restart = Restarter(lambda: busy(services), bus)
-    encoder = Encoder(jobs, bus, cfg.encode, tool, streamer, hold=restart.holding)
+    encoder = Encoder(jobs, bus, cfg.encode, tool, streamer, hold=restart.holding,
+                      job_config=job_settings.encode_config)
     movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
-                                  media=media, covers=covers, problems=problems)
+                                  media=media, covers=covers, problems=problems,
+                                  library=job_settings.library)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -178,7 +180,8 @@ def build_services(
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
                     scratch=scratch, pause=pause, picks=CdPicks(db),
-                    guesser=Guesser(mb, covers), hold=restart.holding),
+                    guesser=Guesser(mb, covers), hold=restart.holding,
+                    rip_settings=job_settings.rip_config),
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               pause=pause, disc_root=disc_root,
@@ -187,7 +190,7 @@ def build_services(
         musicbrainz=mb,
         cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds, covers=covers, media=media,
-                              problems=problems),
+                              problems=problems, library=job_settings.library),
         movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(jobs, tool, streamer, interval=cfg.drive.poll_seconds),
@@ -196,7 +199,8 @@ def build_services(
         tv_archive=TvArchiver(jobs, tv_titles, encoder, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
-                              covers=covers, problems=problems),
+                              covers=covers, problems=problems,
+                              library=job_settings.library),
         notifier=Notifier(jobs, bus, channels(cfg, http), problems),
         sets=DiscSets(db),
         covers=covers,

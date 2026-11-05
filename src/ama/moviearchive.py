@@ -34,6 +34,7 @@ from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
 from ama.covers import Covers
 from ama.db import Database
+from ama.config import Kind
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
@@ -150,7 +151,11 @@ class MovieArchiver:
                  clock: Callable[[], float] = time.monotonic,
                  claimed: Callable[[int], bool] = lambda job_id: False, *,
                  extras: Extras, media: MediaStore, covers: Covers,
-                 problems: Problems | None = None) -> None:
+                 problems: Problems | None = None,
+                 library: Callable[[JobRecord, Kind], str | None] = lambda rec, kind: None
+                 ) -> None:
+        # The Library a Job files to; asking locks its pick (job_settings). None = default.
+        self._library = library
         self._media = media
         self._covers = covers
         self._jobs = jobs
@@ -367,9 +372,10 @@ class MovieArchiver:
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
         rel = movie_folder(movie.film)
+        library = self._library(rec, Kind.FILMS)
         with filing.to_nas():
-            folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED})
-            extras = self._file_extras(rec, rel)
+            folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
+            extras = self._file_extras(rec, rel, library)
         film = movie.film
         self._media.save(rec.id, screen(self._tmdb, self._covers, False, film.id, film.title,
                                         film.year, lambda text: self._jobs.log(rec.id, text)))
@@ -380,10 +386,10 @@ class MovieArchiver:
                                     f"{Category.OTHER.value}")
         filing.scan(self._plex, self._jobs, rec.id, folder)
 
-    def _file_extras(self, rec: JobRecord, rel: Path) -> int:
+    def _file_extras(self, rec: JobRecord, rel: Path, library: str | None) -> int:
         """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are filed.
         Each name is saved before copying so a retry reuses it."""
-        film = self._archive.folder(rel)
+        film = self._archive.folder(rel, library)
         taken = {e.file.casefold() for e in self.extras.of(rec.id) if e.file}
         for e in self.extras.of(rec.id):
             if e.status == ExtraStatus.ENCODED and not e.file:
@@ -395,7 +401,8 @@ class MovieArchiver:
         for e in self.extras.of(rec.id):
             if e.status == ExtraStatus.ENCODED:
                 sub = Path(e.file)
-                self._archive.place(rel / sub.parent, {sub.name: rec.scratch_dir / e.encoded})
+                self._archive.place(rel / sub.parent, {sub.name: rec.scratch_dir / e.encoded},
+                                    library)
                 self.extras.set_status(rec.id, e.title_number, ExtraStatus.FILED)
         return sum(e.status == ExtraStatus.FILED for e in self.extras.of(rec.id))
 

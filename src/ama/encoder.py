@@ -94,8 +94,11 @@ class _Aborted(Exception):
 class Encoder:
     def __init__(self, jobs: JobStore, bus: EventBus, cfg: EncodeConfig, tool: ToolLookup,
                  streamer: Streamer, clock: Callable[[], float] = time.monotonic,
-                 hold: Callable[[], bool] = lambda: False) -> None:
+                 hold: Callable[[], bool] = lambda: False,
+                 job_config: Callable[[JobRecord], EncodeConfig] | None = None) -> None:
         self._hold = hold  # start no new Encode (a restart is waiting)
+        # A Job's Encode settings, locked as its first Encode starts (job_settings); else cfg.
+        self._job_config = job_config or (lambda rec: self.cfg)
         self._jobs = jobs
         self._bus = bus
         self.cfg = cfg  # live: `Services.apply_live` replaces it
@@ -134,7 +137,7 @@ class Encoder:
                             extra: bool) -> int | None:
         then = (f"The Extra “{name}” is left out; the film is filed without it" if extra
                 else "The Rip is kept; the Encode will be tried again when the app restarts")
-        cfg = self.cfg  # fixed for this Encode once it starts (ADR 0010)
+        cfg = self._job_config(rec)  # fixed for this Job once its Encode starts (#30)
         src = rec.scratch_dir / title.file
         tmp = done.with_name(f"{done.stem}.tmp.mkv")
         self._abort = False
