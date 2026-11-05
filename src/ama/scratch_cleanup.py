@@ -3,7 +3,9 @@
 A failed Encode keeps its Job's Rip on Scratch for a retry. Once the Job last changed
 status more than `scratch.retention_days` ago (0 = never), cleanup takes it: the Job
 fails for good (`FailureKind.SCRATCH_CLEANED`), keeping its record, and its Scratch is
-removed. It runs at startup, hourly, when a Job finishes and when the setting is saved.
+removed. While free space on Scratch is below `scratch.floor_gb` (0 = off), cleanup also
+takes kept Scratch of any age, oldest first, until it's back above the floor. It runs at
+startup, hourly, when a Job finishes and when the setting is saved.
 
 Taking the Jobs (`claim`) is quick database work on the event loop, done first thing at
 startup so a failed Encode it takes is never queued again; removing the files (`remove`)
@@ -24,7 +26,7 @@ from pathlib import Path
 
 from ama.jobs import Failure, FailureKind, JobRecord, JobStore, format_gb
 from ama.runs import RunKind, Runs
-from ama.scratch import dir_bytes
+from ama.scratch import GB, dir_bytes
 
 log = logging.getLogger(__name__)
 
@@ -39,44 +41,72 @@ class Removal:
     rule: str
 
 
-def _failure(days: int) -> Failure:
+@dataclass(frozen=True)
+class Cleanup:
+    """What one cleanup takes; `short_of_floor_gb` is the floor free space is still below
+    once all of it is gone."""
+
+    removals: list[Removal]
+    short_of_floor_gb: int | None = None
+
+
+def _failure(kept: str) -> Failure:
     return Failure(FailureKind.SCRATCH_CLEANED,
                    "The Encode didn't work, and its Rip was removed from scratch.",
-                   f"It was kept {days} days for a retry. Put the Disc back in to rip it "
-                   "again.")
+                   f"It was kept {kept} for a retry. Put the Disc back in to rip it again.")
 
 
 class ScratchCleaner:
     HOUR = 3600.0
 
     def __init__(self, jobs: JobStore, runs: Runs, retention_days: Callable[[], int],
+                 floor_gb: Callable[[], int] = lambda: 0,
+                 free: Callable[[], int | None] = lambda: None,
                  now: Callable[[], datetime] = datetime.now, interval: float = HOUR,
                  size: Callable[[Path], int] = dir_bytes) -> None:
         self._jobs = jobs
         self._runs = runs
         self._retention_days = retention_days  # read each time: a saved change applies
+        self._floor_gb = floor_gb
+        self._free = free  # free bytes on Scratch; None when it can't be read
         self._now = now
         self._size = size
         self.interval = interval
         self._wake = asyncio.Event()
         self._loop: asyncio.AbstractEventLoop | None = None
 
-    def claim(self) -> list[Removal]:
+    def claim(self) -> Cleanup:
         """Take every Job whose Scratch is due for removal: those a cut-off cleanup left,
-        then those past the retention age, oldest first."""
+        then those past the retention age, then, while free space is below the floor, the
+        rest, oldest first."""
         out = [Removal(job, CUT_OFF) for job in self._jobs.scratch_left()]
         days = self._retention_days()
-        if days <= 0:
-            return out
-        rule = f"older than {days} days"
-        for job in self._jobs.kept_scratch(self._now() - timedelta(days=days)):
-            if self._jobs.mark_scratch_cleaned(job.id, _failure(days)):
+        if days > 0:
+            rule = f"older than {days} days"
+            for job in self._jobs.kept_scratch(self._now() - timedelta(days=days)):
+                if self._jobs.mark_scratch_cleaned(job.id, _failure(f"{days} days")):
+                    out.append(Removal(job, rule))
+        floor_gb = self._floor_gb()
+        free = self._free() if floor_gb > 0 else None
+        if free is None:
+            return Cleanup(out)
+        free += sum(self._size(r.job.scratch_dir) for r in out)
+        rule = f"scratch below the {floor_gb} GB floor"
+        for job in self._jobs.kept_scratch(datetime.max):
+            if free >= floor_gb * GB:
+                break
+            if self._jobs.mark_scratch_cleaned(job.id, _failure("until scratch ran low")):
                 out.append(Removal(job, rule))
-        return out
+                free += self._size(job.scratch_dir)
+        return Cleanup(out, floor_gb if free < floor_gb * GB else None)
 
-    def remove(self, removals: list[Removal]) -> None:
+    def remove(self, cleanup: Cleanup) -> None:
         """Remove the claimed Scratch, as one Run in Logs."""
+        removals = cleanup.removals
         if not removals:
+            if cleanup.short_of_floor_gb is not None:
+                log.warning("scratch: below the %d GB floor, nothing to remove",
+                            cleanup.short_of_floor_gb)
             return
         run = self._runs.start_run(RunKind.SCRATCH, "Cleaned up scratch", item="scratch")
         total = 0
@@ -91,8 +121,11 @@ class ScratchCleaner:
             self._runs.end(step, failed=job.scratch_dir.exists(),
                            result=f"{format_gb(size)} · {r.rule}")
         n = len(removals)
-        self._runs.finish_run(run, failed=False,
-                              detail=f"{n} Job{'s' if n != 1 else ''} · {format_gb(total)} freed")
+        detail = f"{n} Job{'s' if n != 1 else ''} · {format_gb(total)} freed"
+        if cleanup.short_of_floor_gb is not None:
+            detail += (f" · still below the {cleanup.short_of_floor_gb} GB floor, "
+                       "nothing else to remove")
+        self._runs.finish_run(run, failed=False, detail=detail)
 
     def clean(self) -> None:
         self.remove(self.claim())
@@ -113,8 +146,8 @@ class ScratchCleaner:
         while True:
             self._wake.clear()
             try:
-                removals = self.claim()
-                await asyncio.to_thread(self.remove, removals)
+                cleanup = self.claim()
+                await asyncio.to_thread(self.remove, cleanup)
             except Exception:  # noqa: BLE001 - never kill the loop; try again next time
                 log.exception("scratch: cleanup went wrong")
             try:
