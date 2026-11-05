@@ -98,3 +98,16 @@ def test_the_top_bar_shows_paused_and_the_menu_says_which(client):
 
     _resume(client)
     assert 'class="paused"' not in client.get("/").text
+
+
+def test_settings_general_says_whether_new_discs_are_taken(tmp_path):
+    from tests.conftest import write_config
+
+    h = make_harness(tmp_path, config_file=write_config(tmp_path))
+    with TestClient(create_app(h.services)) as client:
+        page = html.unescape(client.get("/settings/general").text)
+        assert "New Discs" in page and "Right now" in page
+        assert "<b>Accepting</b>" in page and "Change in the menu" in page
+        _pause(client)
+        page = html.unescape(client.get("/settings/general").text)
+        assert "<b>Paused</b>" in page and "until you resume" in page
