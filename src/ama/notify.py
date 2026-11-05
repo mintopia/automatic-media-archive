@@ -218,6 +218,8 @@ class Notifier:
             if event == Event.JOB_FAILED and rec.failure \
                     and rec.failure.kind in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
                 continue  # the user's own decision in Review, or housekeeping
+            if rec.all_skipped:
+                continue  # the user's own decision during the Rip: nothing to go back for
             if event == Event.JOB_FILED and _empty(rec):
                 continue
             notes.append(notification(event, rec))

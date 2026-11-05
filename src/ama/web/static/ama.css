@@ -180,6 +180,9 @@ main:has(>.solo),main:has(.solo){max-width:844px}
 .contents{display:contents}
 .tbl .num{text-align:right;color:var(--ink2);white-space:nowrap}
 .tbl .st{width:200px}
+.tbl .pick{width:1%;padding-right:0}
+.tbl .pick input{width:18px;height:18px;margin:0;accent-color:var(--rip);cursor:pointer}
+.tbl .pick input:disabled{cursor:default}
 .cdt .n{width:48px;color:var(--ink2)}
 .cdt .len{width:80px;color:var(--ink2)}
 .cdt .st{width:260px}

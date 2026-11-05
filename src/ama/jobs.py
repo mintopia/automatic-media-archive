@@ -62,6 +62,7 @@ class TitleStatus(StrEnum):
     RIPPING = "ripping"
     RIPPED = "ripped"
     FAILED = "failed"
+    SKIPPED = "skipped"  # unticked by the user before its turn: never ripped (GLOSSARY)
 
 
 class FailureKind(StrEnum):
@@ -157,12 +158,48 @@ class JobRecord:
         return self.label or self.disc_type.long_name
 
     @property
+    def to_rip(self) -> tuple[TitleRecord, ...]:
+        """The Titles ripped or to be ripped: all but those Skipped."""
+        return tuple(t for t in self.titles if t.status != TitleStatus.SKIPPED)
+
+    @property
+    def skipped_by_you(self) -> tuple[TitleRecord, ...]:
+        return tuple(t for t in self.titles if t.status == TitleStatus.SKIPPED)
+
+    @property
+    def all_skipped(self) -> bool:
+        """Every Title was Skipped: the Job is Filed with nothing in it."""
+        return bool(self.titles) and not self.to_rip
+
+    @property
     def total_size(self) -> str:
-        return format_gb(sum(t.size_bytes for t in self.titles))
+        return format_gb(sum(t.size_bytes for t in self.to_rip))
+
+    @property
+    def skipped_note(self) -> str | None:
+        """'Skipped by you: Title 2. It wasn't ripped, so it can't be kept.' for Review."""
+        skipped = self.skipped_by_you
+        if not skipped:
+            return None
+        it = "It wasn't ripped, so it" if len(skipped) == 1 else "They weren't ripped, so they"
+        return f"Skipped by you: {_numbers(skipped)}. {it} can't be kept."
 
     @property
     def skipped_summary(self) -> str | None:
         """'Not ripped: ...' sentence for the Title list, or None if nothing was skipped."""
+        parts = []
+        if self.all_skipped:
+            n = len(self.titles)
+            lead = f"All {n} Titles skipped by you." if n != 1 else "Its one Title skipped by you."
+            rest = self._left_out()
+            return f"{lead} Also not ripped: {' and '.join(rest)}." if rest else lead
+        if self.skipped_by_you:
+            parts.append(f"{_numbers(self.skipped_by_you)} skipped by you")
+        parts += self._left_out()
+        return f"Not ripped: {' and '.join(parts)}." if parts else None
+
+    def _left_out(self) -> list[str]:
+        """The Titles the Rip left out on its own: too short, or duplicates."""
         parts = []
         if self.skipped_short:
             n = self.skipped_short
@@ -171,7 +208,15 @@ class JobRecord:
         if self.skipped_duplicates:
             n = self.skipped_duplicates
             parts.append(f"{n} exact duplicate{'s' if n != 1 else ''} of other Titles")
-        return f"Not ripped: {' and '.join(parts)}." if parts else None
+        return parts
+
+
+def _numbers(titles: tuple[TitleRecord, ...]) -> str:
+    """'Title 2', 'Titles 2 and 4', 'Titles 2, 3 and 4'."""
+    ns = [str(t.number) for t in titles]
+    if len(ns) == 1:
+        return f"Title {ns[0]}"
+    return f"Titles {', '.join(ns[:-1])} and {ns[-1]}"
 
 
 _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
@@ -272,6 +317,14 @@ class JobStore:
                  t.subtitles, t.segments, t.file, str(t.status), t.source, t.name))
         self._db.execute("UPDATE jobs SET skipped_short = ?, skipped_duplicates = ? WHERE id = ?",
                          (skipped_short, skipped_duplicates, job_id))
+
+    def move_title(self, job_id: int, number: int, before: TitleStatus,
+                   after: TitleStatus) -> bool:
+        """The Title goes from `before` to `after`; False (unchanged) if it wasn't `before`."""
+        cur = self._db.execute(
+            "UPDATE titles SET status = ? WHERE job_id = ? AND number = ? AND status = ?",
+            (str(after), job_id, number, str(before)))
+        return cur.rowcount == 1
 
     def set_title_status(self, job_id: int, number: int, status: TitleStatus) -> None:
         self._db.execute("UPDATE titles SET status = ? WHERE job_id = ? AND number = ?",
@@ -375,6 +428,20 @@ class JobStore:
         rows = self._db.execute(f"SELECT {_COLS} FROM jobs WHERE scratch_cleaned_at IS NOT NULL "
                                 "ORDER BY changed_at, id").fetchall()
         return [rec for r in rows if (rec := self._record(r)).scratch_dir.exists()]
+
+    def mark_filed_empty(self, job_id: int) -> None:
+        """Every Title was Skipped: Filed with nothing in it, its scratch deleted."""
+        self._db.execute(
+            "UPDATE jobs SET status = 'filed', review_reason = NULL, "
+            "finished_at = COALESCE(finished_at, ?), filed_at = COALESCE(filed_at, ?) "
+            "WHERE id = ?", (self._ts(), self._ts(), job_id))
+        rec = self.get(job_id)
+        if rec is None:
+            return
+        shutil.rmtree(rec.scratch_dir, ignore_errors=True)
+        log.info("Rip finished: %s: every Title skipped", _rip_name(rec))
+        if self.runs:
+            self.runs.job_end(job_id, result=rec.skipped_summary, finish=True)
 
     def clean_filed_scratch(self) -> None:
         for rec in self.list(JobStatus.FILED, include_dismissed=True):

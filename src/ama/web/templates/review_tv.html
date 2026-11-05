@@ -68,6 +68,9 @@
         </div>
       </div>
       {%- endfor %}
+      {%- if record.skipped_note %}
+      <p class="skipped">{{ record.skipped_note }}</p>
+      {%- endif %}
     </div></section>
   </form>
   <div class="tv-foot">
