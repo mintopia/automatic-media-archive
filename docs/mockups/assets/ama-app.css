@@ -340,6 +340,9 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .log .time{color:#8E929A;user-select:none}
 .log .errline{display:inline-block;min-width:calc(100% + 2 * var(--pad-x));margin:0 calc(-1 * var(--pad-x));padding:0 var(--pad-x);background:#3A1E17}
 .log::-webkit-scrollbar-thumb{background:#3A3C42;border-color:#17181A}
+.gone{display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;align-items:start;padding:14px 18px;background:var(--well);color:var(--ink2);font-size:14px}
+.gone .i{width:18px;height:18px;margin-top:1px;color:var(--ink3)}
+.gone p{margin:0}.gone b{color:var(--ink);font-weight:600}
 .jump{position:absolute;right:16px;bottom:16px}
 .jump[hidden]{display:none}
 .run-aside h2{font-size:16px;margin-bottom:12px}
