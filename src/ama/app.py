@@ -109,7 +109,8 @@ class Services:
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.problems.run, self.runs.run, self.app_events.run, self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
+        return [self.problems.run, self.runs.run, self.app_events.run, self.drive.run,
+                self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
@@ -215,6 +216,7 @@ def build_services(
         app_events=AppEvents(runs, bus, nas, tools, config_path),
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
+    services.encoders.log = services.app_events  # each encoder test is a Step in Logs
     return services
 
 

@@ -143,9 +143,18 @@ def test_startup_is_a_run_with_a_step_for_settings_the_nas_and_each_tool(client,
     assert run.kind == RunKind.APP and run.failed is False
     names = [s.name for s in harness.services.runs.steps(run.id)]
     assert names == ["Read settings", "Connect to the NAS", "Check MakeMKV", "Get ffmpeg",
-                     "Get cyanrip"]
+                     "Get cyanrip", "Test encoders"]
     page = _text(client.get(f"/logs/runs/{run.id}").text)
     assert "App event: startup" in page and "Connected to" in page
+    assert "hevc_nvenc works" in page and "Configured encoder: HEVC (NVIDIA)" in page
+
+
+def test_testing_the_encoders_again_is_a_run_of_its_own(client, harness):
+    eventually(lambda: any(r.title == "AMA started" and r.finished_at
+                           for r in harness.services.runs.list_runs()))
+    harness.services.encoders.request()
+    eventually(lambda: any(r.title == "Tested the encoders" and r.finished_at
+                           for r in harness.services.runs.list_runs()))
 
 
 def test_a_nas_drop_and_reconnect_is_a_run_of_its_own(client, harness):

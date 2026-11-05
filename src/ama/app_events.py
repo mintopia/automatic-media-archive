@@ -130,14 +130,22 @@ class _Watch:
 
 class AppEvents:
     def __init__(self, runs: Runs, bus: EventBus, nas: NasMonitor, tools: Tools,
-                 config_path: Path | None = None) -> None:
+                 config_path: Path | None = None, test_encoders: bool = True) -> None:
         self._runs = runs
+        # (no ffmpeg pin means no ffmpeg to wait for: tests only)
+        self.test_encoders = test_encoders and any(p.key == "ffmpeg" for p in tools.pins)
+        self._startup_tests: int | None = None  # the startup test, while it runs
+        self._tests_failed = False
         self._bus = bus
         self._config_path = config_path
         self.items = [nas_item(nas), makemkv_item(tools),
                       *(pin_item(tools, p) for p in tools.pins)]
         self._watches: list[_Watch] = []
         self.startup: int | None = None  # the "AMA started" Run, while it's open
+        # The encoder test (encoder_probe, which writes it through begin/line/end below):
+        # its startup Step until the first test takes it, and later tests' own Runs.
+        self._encoders_step: int | None = None
+        self._test_runs: dict[int, int] = {}  # Step -> its own Run (tests after startup)
 
     def start(self) -> None:
         """Open the "AMA started" Run: settings read, then a Step per Item."""
@@ -151,6 +159,50 @@ class AppEvents:
             w = _Watch(item)
             w.startup_step = self._runs.begin(self.startup, item.key, item.step)
             self._watches.append(w)
+        if self.test_encoders:
+            self._encoders_step = self._runs.begin(self.startup, "encoders", "Test encoders",
+                                                   tool="ffmpeg")
+
+    # --- the encoder test (encoder_probe.ProbeLog) ---
+
+    def begin(self) -> int:
+        """A test run starts: the startup Step if it's still waiting, else a Run of its own."""
+        if self._encoders_step is not None and self.startup is not None:
+            step, self._encoders_step = self._encoders_step, None
+            self._startup_tests = step
+            return step
+        run = self._runs.start_run(RunKind.TOOLS, "Tested the encoders", item="encoders")
+        step = self._runs.begin(run, "encoders", "Test encoders", tool="ffmpeg")
+        self._test_runs[step] = run
+        return step
+
+    def line(self, step: int, text: str, error: bool = False) -> None:
+        self._runs.line(step, text, error)
+
+    def end(self, step: int, failed: bool, result: str) -> None:
+        self._runs.end(step, failed=failed, result=result)
+        run = self._test_runs.pop(step, None)
+        if run is not None:
+            self._runs.finish_run(run, failed=failed)
+        elif step == self._startup_tests:
+            self._startup_tests = None
+            self._tests_failed = failed
+            self.check()
+
+    def _tests_waiting(self) -> bool:
+        """The startup encoder test hasn't run (or finished) yet."""
+        if self._startup_tests is not None:
+            return True
+        if self._encoders_step is None:
+            return False
+        ffmpeg = next((w for w in self._watches if w.item.key == "ffmpeg"), None)
+        if ffmpeg is not None and ffmpeg.startup_step is None and ffmpeg.last \
+                and ffmpeg.last.seen == Seen.PROBLEM:  # no ffmpeg, no test (until it comes)
+            self._runs.line(self._encoders_step, "Waits for ffmpeg")
+            self._runs.end(self._encoders_step, failed=True, result="Waits for ffmpeg")
+            self._encoders_step = None
+            return False
+        return True
 
     def check(self) -> None:
         """Bring the Runs up to date with how every Item is now (idempotent)."""
@@ -159,9 +211,10 @@ class AppEvents:
             if w.last is None or (now.seen, now.line) != (w.last.seen, w.last.line):
                 self._changed(w, now)
                 w.last = now
-        if self.startup is not None and all(w.startup_step is None for w in self._watches):
+        if self.startup is not None and all(w.startup_step is None for w in self._watches) \
+                and not self._tests_waiting():
             failed = [w for w in self._watches if w.last and w.last.seen == Seen.PROBLEM]
-            self._runs.finish_run(self.startup, failed=bool(failed),
+            self._runs.finish_run(self.startup, failed=bool(failed) or self._tests_failed,
                                   detail=self._summary(failed))
             self.startup = None
 
