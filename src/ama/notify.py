@@ -1,4 +1,5 @@
-"""Push notifications to Discord (webhook) and ntfy (topic) that pull people back to the UI.
+"""Push notifications to Discord (webhook), ntfy (topic) and a Webhook (any URL) that pull
+people back to the UI.
 
 Four events, read off Job status changes (`JobStore.statuses()`) whenever
 anything is published on the bus, so no pipeline stage has to call this:
@@ -11,27 +12,39 @@ anything is published on the bus, so no pipeline stage has to call this:
 - Job failed: a Job became `failed` (not when the user discarded it in Review).
 
 A channel is on when its config value is set (`discord.webhook_url`,
-`ntfy.topic`), else silently absent. Sending happens off the notifier's own
+`ntfy.topic`, `webhook.url`), else silently absent. Sending happens off the notifier's own
 task, every channel on its own thread at the same time with its own 10 s
 timeout, so a slow or dead channel never delays another. Every failure is
 logged and dropped: a notification never blocks or breaks the pipeline. Discs
-already in a state at startup don't notify again. Log lines never contain the webhook URL or topic
-(both are secrets).
+already in a state at startup don't notify again. Log lines never contain the webhook URLs,
+topic or header value (all secrets).
+
+The Webhook posts one versioned JSON object per alert (`Webhook.payload`):
+
+    {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
+     "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+
+`event` is one of `Event` (rip_done, review_needed, job_filed, job_failed), or "test" from
+Settings' "Send test", whose `job` is null. `at` is UTC. `title` is what the Job was filed
+as, else its Disc label. `url` is the Job's page. A receiver should ignore keys it doesn't
+know; a change to existing keys gets a new `version`.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol
 
 import httpx
 
-from ama.config import Config
+from ama.config import Config, WebConfig
 from ama.drive import DiscType
 from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind, TitleStatus
 from ama.events import EventBus
@@ -76,6 +89,8 @@ class Notification:
     event: Event
     title: str
     message: str
+    job: JobRecord | None = None
+    at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 def _subject(rec: JobRecord) -> str:
@@ -85,17 +100,20 @@ def _subject(rec: JobRecord) -> str:
 def notification(event: Event, rec: JobRecord) -> Notification:
     match event:
         case Event.RIP_DONE:
-            return Notification(event, "Rip done · insert the next one",
-                                f"{_subject(rec)} is ripped and ejected. Insert the next Disc.")
+            title = "Rip done · insert the next one"
+            message = f"{_subject(rec)} is ripped and ejected. Insert the next Disc."
         case Event.REVIEW_NEEDED:
-            return Notification(event, "Review needed",
-                                f"{_subject(rec)} needs Review before it can be filed.")
+            title = "Review needed"
+            message = f"{_subject(rec)} needs Review before it can be filed."
         case Event.JOB_FILED:
-            return Notification(event, "Filed", f"{_subject(rec)} is filed as {rec.title}.")
+            title = "Filed"
+            message = f"{_subject(rec)} is filed as {rec.title}."
         case Event.JOB_FAILED:
             why = " ".join(p for p in (rec.failure.headline, rec.failure.advice) if p) \
                 if rec.failure else ""
-            return Notification(event, "Job failed", f"{_subject(rec)} failed. {why}".strip())
+            title = "Job failed"
+            message = f"{_subject(rec)} failed. {why}".strip()
+    return Notification(event, title, message, rec)
 
 
 class Channel(Protocol):
@@ -143,6 +161,56 @@ class Ntfy:
         }).raise_for_status()
 
 
+TEST = "test"
+VERSION = 1
+
+
+def ui_address(web: WebConfig) -> str:
+    """Where another machine opens AMA's UI: this PC's name when it listens on every address."""
+    host = socket.gethostname() if web.host in ("0.0.0.0", "::", "") else web.host
+    return f"http://{host}:{web.port}"
+
+
+@dataclass
+class Webhook:
+    http: httpx.Client
+    url: str
+    ui: str  # ui_address(), for each Job's link
+    header: tuple[str, str] | None = None
+    name: str = "Webhook"
+
+    def payload(self, event: str, at: datetime, rec: JobRecord | None) -> dict:
+        return {"version": VERSION, "event": event,
+                "at": at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "job": None if rec is None else {
+                    "id": rec.id, "disc_type": rec.disc_type.value.lower(),
+                    "title": rec.title or rec.name, "status": rec.status.value,
+                    "url": f"{self.ui}/jobs/{rec.id}"}}
+
+    def _post(self, body: dict) -> None:
+        self.http.post(self.url, timeout=TIMEOUT, json=body,
+                       headers=dict([self.header]) if self.header else None).raise_for_status()
+
+    def send(self, note: Notification) -> None:
+        self._post(self.payload(note.event, note.at, note.job))
+
+    def send_test(self) -> str | None:
+        """Post a "test" event: None if it went through, else why not (without secrets)."""
+        try:
+            self._post(self.payload(TEST, datetime.now(UTC), None))
+        except Exception as e:  # noqa: BLE001 - reported on the page, not raised
+            return _why(e)
+        return None
+
+
+def webhook(cfg: Config, http: httpx.Client) -> Webhook | None:
+    w = cfg.webhook
+    if not w.url:
+        return None
+    header = (w.header_name, w.header_value) if w.header_name and w.header_value else None
+    return Webhook(http, w.url, ui_address(cfg.web), header)
+
+
 def channels(cfg: Config, http: httpx.Client) -> list[Channel]:
     """The configured channels; one without its config value is simply not there."""
     out: list[Channel] = []
@@ -150,6 +218,8 @@ def channels(cfg: Config, http: httpx.Client) -> list[Channel]:
         out.append(Discord(http, cfg.discord.webhook_url))
     if cfg.ntfy.topic:
         out.append(Ntfy(http, cfg.ntfy.url, cfg.ntfy.topic))
+    if hook := webhook(cfg, http):
+        out.append(hook)
     return out
 
 

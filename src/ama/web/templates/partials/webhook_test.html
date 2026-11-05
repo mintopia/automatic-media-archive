@@ -1,0 +1,3 @@
+<div class="webhook-test"><button class="btn quiet" type="submit" formaction="/settings/alerts/webhook-test" formmethod="post" formnovalidate>Send test</button>
+{%- if webhook_test %}<span class="tstat{% if not webhook_test.ok %} off{% endif %}" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#{{ 'check' if webhook_test.ok else 'alert' }}"/></svg>{{ webhook_test.text }}</span>{% endif -%}
+</div>

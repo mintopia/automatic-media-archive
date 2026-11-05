@@ -6,6 +6,6 @@
 {%- elif b.problem == "plex" -%}
 <div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Plex didn't answer the last scan request</b>Filed Jobs are safe; Plex finds them on its next scan. Check <code>[plex] url</code> and <code>token</code> in ama.toml and that Plex is running. This goes once a scan works. <a href="/settings/archive/libraries">Plex settings</a><span class="ts" style="display:block;margin-top:4px">Plex said: {{ b.detail }}</span></div></div>
 {%- elif b.problem == "notify" -%}
-<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't send the last notification</b>Check <code>[discord] webhook_url</code> and <code>[ntfy]</code> in ama.toml. Everything else carries on; this goes once a notification gets through. <a href="/settings/alerts">Alert settings</a><span class="ts" style="display:block;margin-top:4px">{{ b.detail }}</span></div></div>
+<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't send the last notification</b>Check <code>[discord] webhook_url</code>, <code>[ntfy]</code> and <code>[webhook]</code> in ama.toml. Everything else carries on; this goes once a notification gets through. <a href="/settings/alerts">Alert settings</a><span class="ts" style="display:block;margin-top:4px">{{ b.detail }}</span></div></div>
 {%- endif -%}
 {%- endfor -%}
