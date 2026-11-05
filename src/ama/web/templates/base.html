@@ -17,12 +17,14 @@
   <nav class="nav" aria-label="Main">
     {%- for label, href in nav %}<a href="{{ href }}"{% if href == current %} aria-current="page"{% endif %}>{{ label }}{% if href == "/review" %}<span sse-swap="review-count" aria-live="polite" aria-atomic="true">{% include "partials/review_count.html" %}</span>{% endif %}</a>{% endfor -%}
   </nav>
+  <span class="pmark" sse-swap="pause">{% include "partials/paused_mark.html" %}</span>
   {%- if scratch %}
   <a class="scratch" href="/scratch" title="Local scratch space"{% if current == "/scratch" %} aria-current="page"{% endif %}><span class="lbl">Scratch</span><span class="meter{% if scratch.full %} full{% endif %}" role="meter" aria-valuenow="{{ scratch.used_gb }}" aria-valuemin="0" aria-valuemax="{{ scratch.total_gb }}" aria-label="Scratch used"><i style="width:{{ scratch.pct }}%"></i></span><b>{{ scratch.used_gb }} / {{ scratch.total_gb }} GB</b></a>
   {%- endif %}
   <details class="menu">
     <summary class="mbtn" aria-label="Menu"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#menu"/></svg></summary>
     <div class="mpanel">
+      <div class="mg" sse-swap="pause-menu">{% include "partials/pause_menu.html" %}</div>
       <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme">
         <button type="button" data-theme-set="system" aria-pressed="true">System</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button><button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
       </div></div>

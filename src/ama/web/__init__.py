@@ -64,12 +64,15 @@ FRAGMENTS: dict[str, str] = {
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
     "scratch-encode": "partials/scratch.html",
+    "pause": "partials/paused_mark.html",
+    "pause-menu": "partials/pause_menu.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
 FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
                                    "scratch-rip": "rip", "scratch-encode": "encode",
-                                   "review-count": "review", "drive-status": "drive"}
+                                   "review-count": "review", "drive-status": "drive",
+                                   "pause-menu": "pause"}
 
 
 def fragments_for(topic: str) -> list[str]:
@@ -101,6 +104,7 @@ def view_context(services: Services) -> dict[str, Any]:
         "nav": NAV,
         "menu": MENU,
         "can_log_out": auth.auth_required(services),
+        "paused": services.pause.paused,  # new Discs ignored (GLOSSARY.md Paused)
         "review": review_items(services),
         # The Rip under way, any Disc Type: the drive card and Ripping bin both read this.
         "current_rip": current_rip(services),

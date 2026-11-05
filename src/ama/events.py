@@ -25,6 +25,7 @@ class Topic(StrEnum):
     FILED = "filed"      # History
     REVIEW = "review"    # the Review queue
     SCRATCH = "scratch"
+    PAUSE = "pause"      # Paused or accepting new Discs: the top-bar mark and menu
 
 
 class EventBus:
