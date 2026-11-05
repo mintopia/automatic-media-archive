@@ -201,6 +201,7 @@ class CdArchiver:
     # -- one Disc (runs in a worker thread) --
     def identify(self, rec: JobRecord) -> None:
         """Identify and file one `ripped` CD, applying the Review decision if there is one."""
+        self._jobs.begin_step(rec.id, "identify", "Identification", fresh=False)
         tracks = self._tracks.load(rec.id)
         report = cyanrip.parse_report(
             (rec.scratch_dir / "rip.log").read_text(encoding="utf-8", errors="replace"))
@@ -242,6 +243,7 @@ class CdArchiver:
 
     def file(self, rec: JobRecord, match: Match, mb_disc_id: str) -> None:
         """Tag, file and verify this Disc as `match`, then delete its scratch and tell Plex."""
+        self._jobs.begin_step(rec.id, "file", "File")
         filing.require_nas(self._nas)
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}

@@ -27,7 +27,7 @@ def test_inserted_cd_is_ripped_to_scratch_verified_and_ejected(harness, client):
     files = sorted(p.name for p in rec.scratch_dir.iterdir())
     assert files == ["01.flac", "02.flac", "03.flac", "rip.cue", "rip.log"]
     assert rec.scratch_dir.parent == harness.services.config.paths.scratch / "cd"
-    assert harness.drive.ejected == 1
+    eventually(lambda: harness.drive.ejected == 1)  # just after the Rip is marked ripped
 
     page = client.get(f"/jobs/{rec.id}").text
     assert "matches 12 other rips" in page

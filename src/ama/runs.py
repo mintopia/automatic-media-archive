@@ -109,6 +109,8 @@ class Runs:
         self._bus = bus
         self._secrets = secrets
         self._now = now
+        # "ffmpeg" -> "ffmpeg 9.0.2": set by build_services from the tools' versions.
+        self.tool_label: Callable[[str], str] = lambda name: name
         self._lock = threading.Lock()
         self._ring: dict[int, collections.deque[OutputLine]] = {}
         self._count: dict[int, int] = {}
@@ -134,7 +136,7 @@ class Runs:
                    detail: str | None = None) -> None:
         self._db.execute(
             "UPDATE runs SET finished_at = ?, failed = ?, title = COALESCE(?, title), "
-            "detail = COALESCE(?, detail) WHERE id = ?",
+            "detail = COALESCE(?, detail) WHERE id = ? AND finished_at IS NULL",
             (self._ts(), int(failed), title, detail, run_id))
         self._changed()
 
@@ -186,22 +188,28 @@ class Runs:
     # --- Steps ---
 
     def begin(self, run_id: int, key: str, name: str, tool: str = "",
-              subject: str = "") -> int:
-        """Start (or start again, with fresh output) the Run's Step `key`."""
+              subject: str = "", fresh: bool = True) -> int:
+        """Start the Run's Step `key`, or start it again: with fresh output, or (`fresh`
+        False) carrying on from what it has. `tool` is a tool's name ("ffmpeg"), shown
+        with its version."""
         ts = self._ts()
+        tool = self.tool_label(tool) if tool else ""
         self._db.execute(
             "INSERT INTO steps (run_id, key, position, name, subject, tool, state, started_at) "
             "VALUES (?, ?, (SELECT COUNT(*) FROM steps WHERE run_id = ?), ?, ?, ?, 'running', ?) "
             "ON CONFLICT (run_id, key) DO UPDATE SET name = excluded.name, "
             "subject = excluded.subject, tool = excluded.tool, result = '', state = 'running', "
-            "exit_code = NULL, started_at = excluded.started_at, finished_at = NULL",
-            (run_id, key, run_id, name, subject, tool, ts))
+            "exit_code = NULL, finished_at = NULL, "
+            "started_at = CASE WHEN ? THEN excluded.started_at ELSE started_at END",
+            (run_id, key, run_id, name, subject, tool, ts, int(fresh)))
         step_id = self._db.execute("SELECT id FROM steps WHERE run_id = ? AND key = ?",
                                    (run_id, key)).fetchone()[0]
-        self._db.execute("DELETE FROM step_lines WHERE step_id = ?", (step_id,))
+        if fresh:
+            self._db.execute("DELETE FROM step_lines WHERE step_id = ?", (step_id,))
+        kept = [] if fresh else self.output(step_id)
         with self._lock:
-            self._ring[step_id] = collections.deque(maxlen=self.RING)
-            self._count[step_id] = 0
+            self._ring[step_id] = collections.deque(kept[-self.RING:], maxlen=self.RING)
+            self._count[step_id] = len(kept)
         self._changed()
         return step_id
 
@@ -274,16 +282,25 @@ class Runs:
     # --- a Job's Steps, one after another ---
 
     def job_begin(self, job_id: int, key: str, name: str, tool: str = "",
-                  subject: str = "") -> int:
+                  subject: str = "", fresh: bool = True) -> int:
         """Start the Job's Step `key`; the Step before it, if still running, is done."""
         with self._lock:
-            previous = self._open.pop(job_id, None)
+            previous = self._open.get(job_id)
+        run = self.job_run(job_id)
+        if previous is not None and not fresh and self._key_of(previous) == (run, key):
+            return previous  # already the running Step: carry on
+        with self._lock:
+            self._open.pop(job_id, None)
         if previous is not None:
             self.end(previous)
-        step = self.begin(self.job_run(job_id), key, name, tool, subject)
+        step = self.begin(run, key, name, tool, subject, fresh)
         with self._lock:
             self._open[job_id] = step
         return step
+
+    def _key_of(self, step_id: int) -> tuple[int, str] | None:
+        row = self._db.execute("SELECT run_id, key FROM steps WHERE id = ?", (step_id,)).fetchone()
+        return (row[0], row[1]) if row else None
 
     def job_note(self, job_id: int, text: str, error: bool = False) -> None:
         """A line for whichever of the Job's Steps is running (none: not kept in Logs)."""

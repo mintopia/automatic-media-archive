@@ -25,7 +25,8 @@ from ama.cdarchive import CdArchiver
 from ama.cdguess import Guesser
 from ama.cdrip import CdRipper, CdTracks
 from ama.covers import DIR as COVERS_DIR, Covers
-from ama.config import Config
+from ama.app_events import AppEvents
+from ama.config import Config, secret_values
 from ama.db import Database
 from ama.jobs import JobStore
 from ama.encoder import Encoder
@@ -44,6 +45,7 @@ from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
 from ama.restart import Busy, Restarter
+from ama.runs import Runs
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.settings import Settings
 from ama.sets import DiscSets
@@ -52,7 +54,7 @@ from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, history_pages,
-                     movie_review_pages, pages,
+                     logs_pages, movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      restart_pages, settings_pages, tv_review_pages)
 from ama.web.current_rip import current_rip
@@ -88,6 +90,8 @@ class Services:
     http: httpx.Client
     problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
     restart: Restarter
+    runs: Runs  # Logs: every Job's Run and each app event's, with Step output
+    app_events: AppEvents  # startup, NAS and tool events as Runs
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
@@ -101,7 +105,7 @@ class Services:
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.problems.run, self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
+        return [self.problems.run, self.runs.run, self.app_events.run, self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
@@ -129,7 +133,11 @@ def build_services(
     tool = tool or tools.path
     drive = DriveMonitor(probe or default_probe(cfg.drive.letter or None), bus,
                          interval=cfg.drive.poll_seconds)
-    jobs = JobStore(db, cfg.paths.scratch)
+    # Logs: masks whatever secrets the running settings hold (`services` is set below).
+    runs = Runs(db, bus, secrets=lambda: secret_values(services.config))
+    runs.recover()
+    runs.tool_label = tools.label
+    jobs = JobStore(db, cfg.paths.scratch, runs=runs)
     scratch = ScratchGate(cfg.scratch, cfg.paths.scratch, drive, bus, disk_usage)
     http = http or httpx.Client(timeout=30)
     http.headers["User-Agent"] = USER_AGENT
@@ -197,6 +205,8 @@ def build_services(
         http=http,
         problems=problems,
         restart=restart,
+        runs=runs,
+        app_events=AppEvents(runs, bus, nas, tools, config_path),
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
     return services
@@ -239,4 +249,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(history_pages.router)
     app.include_router(settings_pages.router)
     app.include_router(restart_pages.router)
+    app.include_router(logs_pages.router)
     return app

@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import collections
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -79,6 +80,14 @@ class TitleEncode:
 
 
 UHD_MIN_HEIGHT = 1500  # taller than this is a 4K (UHD) picture, whatever the Disc looked like
+
+_FFMPEG_ERROR = re.compile(r"\b(error|invalid|failed|cannot|could not|conversion failed)\b",
+                           re.IGNORECASE)
+
+
+def is_ffmpeg_error(line: str) -> bool:
+    """An ffmpeg output line worth marking in Logs (its errors carry these words)."""
+    return bool(_FFMPEG_ERROR.search(line))
 
 
 def encode_disc_type(disc_type: DiscType, video_height: int) -> DiscType:
@@ -180,6 +189,7 @@ class Encoder:
                     raise _Aborted
                 if not reader.is_progress(line):
                     tail.append(line)
+                    self._jobs.step_output(rec.id, line, error=is_ffmpeg_error(line))
                     return
                 p = reader.feed(line)
                 if p is not None and self.current is not None:
@@ -200,7 +210,8 @@ class Encoder:
                 return self._failed(rec, then, f"ffmpeg couldn't be started ({e.strerror or e})", [])
             if code != 0 or not tmp.exists():
                 tmp.unlink(missing_ok=True)
-                return self._failed(rec, then, f"ffmpeg stopped with exit code {code}", list(tail))
+                return self._failed(rec, then, f"ffmpeg stopped with exit code {code}", list(tail),
+                                    code)
             if source_hdr.is_hdr10:
                 encoded_hdr = await self._probe_hdr(ffprobe, tmp)
                 lost = ([f"ffprobe couldn't read it ({encoded_hdr})"]
@@ -212,11 +223,11 @@ class Encoder:
                                              + "; ".join(lost), [])
                 self._jobs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
             os.replace(tmp, done)
-            self._jobs.encode_finished(rec.id, title.number)
             minutes = max(1, round((self._clock() - started) / 60))
             self._jobs.log(rec.id, f"Encode{f' of the Extra “{name}”' if extra else ''} "
                                     f"finished in {minutes} min "
                                     f"({done.stat().st_size / 1000**3:.1f} GB)")
+            self._jobs.encode_finished(rec.id, title.number)
             return probe.height
         finally:
             self.current = None
@@ -258,10 +269,13 @@ class Encoder:
         except ValueError as e:
             return f"{e}; ffprobe exit {code}"
 
-    def _failed(self, rec: JobRecord, then: str, why: str, tail: list[str]) -> None:
-        for line in tail:
-            self._jobs.log(rec.id, line, error=True)
+    def _failed(self, rec: JobRecord, then: str, why: str, tail: list[str],
+                exit_code: int | None = None) -> None:
+        for line in tail:  # already in the Step's output in Logs
+            self._jobs.log(rec.id, line, error=True, in_step=False)
         self._jobs.log(rec.id, f"The Encode didn't work: {why}. {then}", error=True)
+        self._jobs.end_step(rec.id, failed=True, exit_code=exit_code,
+                            result=f"The Encode didn't work: {why}")
 
     def _publish(self) -> None:
         self._loop = asyncio.get_running_loop()

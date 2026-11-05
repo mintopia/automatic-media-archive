@@ -42,6 +42,14 @@ class Step:
     finished: datetime | None = None
     progress: EncodeProgress | None = None  # the Encode running now
     colour: str = ""   # "rip" | "enc": the Phase colour while running
+    number: int | None = None  # an Encode's Title
+
+    @property
+    def key(self) -> str:
+        """The Step's key in its Job's Run (runs.py), which holds its output."""
+        if self.name == "Encode":
+            return f"encode:{self.number}" if self.number is not None else "encode"
+        return {"Rip": "rip", "Identification": "identify", "File": "file"}[self.name]
 
     def took(self, now: datetime) -> str:
         """How long it took, or has taken so far; "" when it hasn't started."""
@@ -194,7 +202,7 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
         started, finished = times.get(number, (None, None))
         if status is None:
             steps.append(Step("Encode", StepState.NOT_RUN if note.startswith("Not run")
-                              else StepState.WAITING, note, subject))
+                              else StepState.WAITING, note, subject, number=number))
             continue
         if rec.status == JobStatus.FILED and status == EncodeStatus.ENCODED:
             status = EncodeStatus.FILED  # a film's row stays "encoded" once it is filed
@@ -205,7 +213,8 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
         steps.append(Step("Encode", state, note or _DETAIL[EncodeStatus.ENCODING if live
                                                            else status], subject,
                           started=started, finished=finished if state != StepState.RUNNING
-                          else None, progress=encode.progress if live else None, colour="enc"))
+                          else None, progress=encode.progress if live else None, colour="enc",
+                          number=number))
     return steps
 
 
