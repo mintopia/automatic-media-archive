@@ -95,6 +95,31 @@ def test_each_makemkv_problem_has_its_own_fix(tmp_path, output, key, expect):
         assert "I've fixed it, check again" in page
 
 
+@pytest.mark.parametrize("name,waits", [("ffmpeg", "Encodes wait"),
+                                        ("ffprobe", "Encodes wait"),
+                                        ("cyanrip", "CD Rips wait")])
+def test_a_tool_set_in_ama_toml_but_missing_gives_a_banner_until_it_is_there(
+        tmp_path, name, waits):
+    h = make_harness(tmp_path)
+    exe = tmp_path / f"{name}.exe"
+    exe.unlink()
+    with TestClient(create_app(h.services)) as c:
+        now = html.unescape(c.get("/").text)
+        assert f"Can't find {name}" in now and str(exe) in now and f"[tools] {name}" in now
+        assert waits in now
+        exe.write_bytes(b"")
+        eventually(lambda: f"Can't find {name}" not in c.get("/").text)
+
+
+def test_makemkv_is_checked_again_on_its_own_until_it_is_fixed(tmp_path):
+    h = make_harness(tmp_path)
+    h.makemkv_check["key"] = ""
+    with TestClient(create_app(h.services)) as c:
+        eventually(lambda: "Rips are paused" in c.get("/").text)
+        h.makemkv_check["key"] = "T-fixed"  # registered in MakeMKV; nobody presses a button
+        eventually(lambda: "Rips are paused" not in c.get("/").text)
+
+
 def test_check_again_rechecks_makemkv(tmp_path):
     h = make_harness(tmp_path)
     h.makemkv_check["key"] = ""

@@ -36,6 +36,7 @@
     {%- elif disc.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
     <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ disc.total_size }}</span></div>
     <div class="status">{% set p = disc.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if disc.finished_at %}Disc ejected at {{ disc.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
+    {%- if on_page and disc.status == "ripped" %}{% with disc_id = disc.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
     {%- else %}
     <div class="meta">{{ disc.failure.headline if disc.failure else "" }}</div>
     <div class="status"><span class="stk fail">Failed</span><a class="ts" href="/discs/{{ disc.id }}">See what went wrong</a></div>

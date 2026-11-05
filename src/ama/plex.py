@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from ama.config import Kind, PlexConfig
+from ama.problems import Problem, Problems
 
 if TYPE_CHECKING:
     from ama.archive import Archive
@@ -25,8 +26,10 @@ PLEX_TYPE = {Kind.FILMS: "movie", Kind.TV: "show", Kind.MUSIC: "artist"}
 
 
 class Plex:
-    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive: Archive) -> None:
+    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive: Archive,
+                 problems: Problems | None = None) -> None:
         self.cfg = cfg
+        self._problems = problems
         self._http = http
         self._archive = archive
         self._listed: tuple[tuple[str, str], float, list[dict] | None] | None = None
@@ -75,7 +78,19 @@ class Plex:
         return [d.get("title", "") for d in found if d.get("type") == PLEX_TYPE[kind]]
 
     def scan(self, folder: Path) -> str:
-        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError."""
+        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError,
+        and shows a banner until a scan works again."""
+        try:
+            said = self._scan(folder)
+        except httpx.HTTPError as e:
+            if self._problems is not None:
+                self._problems.report(Problem.PLEX, _why(e))
+            raise
+        if self._problems is not None:
+            self._problems.resolved(Problem.PLEX)
+        return said
+
+    def _scan(self, folder: Path) -> str:
         if not self.configured:
             return "Plex isn't set up in ama.toml, so it will find this on its next scan"
         path = self.server_path(folder)
@@ -120,3 +135,10 @@ def _section_for(sections: dict, path: str) -> str | None:
         if any(_within(path, loc.get("path", "")) for loc in d.get("Location", [])):
             return str(d["key"])
     return None
+
+
+def _why(e: httpx.HTTPError) -> str:
+    """A failure without the request (its URL could name the server's private address)."""
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"HTTP {e.response.status_code}"
+    return type(e).__name__

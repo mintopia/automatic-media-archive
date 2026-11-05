@@ -43,6 +43,7 @@ from ama.media import MediaStore, screen
 from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Streamer
+from ama.problems import Problem, Problems
 from ama.retry import Backoff, RetryLater
 from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, load_hints, \
     movie_file_stem, movie_folder, search_terms, title_matches
@@ -148,7 +149,8 @@ class MovieArchiver:
                  streamer: Streamer, interval: float, retry_seconds: float = 60.0,
                  clock: Callable[[], float] = time.monotonic,
                  claimed: Callable[[int], bool] = lambda disc_id: False, *,
-                 extras: Extras, media: MediaStore, covers: Covers) -> None:
+                 extras: Extras, media: MediaStore, covers: Covers,
+                 problems: Problems | None = None) -> None:
         self._media = media
         self._covers = covers
         self._discs = discs
@@ -162,7 +164,8 @@ class MovieArchiver:
         self.encoder = encoder
         self._stream = streamer  # for Extras' stills
         self._interval = interval
-        self.backoff = Backoff(retry_seconds, clock)
+        # keys are (step, Disc id): Identification and Encode back off separately
+        self.backoff = Backoff(retry_seconds, clock, problems, job=lambda key: key[1])
         self._claimed = claimed  # Discs another stage files (TV): not identified here
 
     # -- lifecycle ----------------------------------------------------------
@@ -181,8 +184,8 @@ class MovieArchiver:
             self._discs.log(disc_id, "Encode queued again after a restart")
         self.extras.requeue_unfinished()
 
-    def _later(self, key: tuple[str, int], why: str) -> None:
-        if self.backoff.later(key):
+    def _later(self, key: tuple[str, int], why: str, problem: Problem | None = None) -> None:
+        if self.backoff.later(key, why, problem):
             self._discs.log(key[1], f"{why}; trying again in a while", error=True)
 
     # -- Identification -----------------------------------------------------
@@ -198,7 +201,7 @@ class MovieArchiver:
             try:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
-                self._later(key, str(e))
+                self._later(key, str(e), e.problem)
             except Exception:
                 log.exception("Movie Identification of Disc %s crashed", rec.id)
                 self._later(key, "Identification went wrong (see the app's log file)")
@@ -215,7 +218,8 @@ class MovieArchiver:
             self._to_tv_review(rec, "Several Titles are episode-length, so this looks like TV")
             return
         if not self._tmdb.configured:
-            raise RetryLater("No TMDB API key is set in ama.toml ([tmdb] api_key)")
+            raise RetryLater("No TMDB API key is set in ama.toml ([tmdb] api_key)",
+                             Problem.TMDB_KEY)
         hints = load_hints(rec.scratch_dir, rec.label)
         terms = search_terms(hints)
         try:
@@ -286,7 +290,7 @@ class MovieArchiver:
                 await self._encode_extras(rec, movie)
                 await asyncio.to_thread(self.file, rec, self.movies.get(movie.disc_id) or movie)
             except RetryLater as e:
-                self._later(key, str(e))
+                self._later(key, str(e), e.problem)
                 continue
             except Exception:
                 log.exception("Encode/filing of Disc %s crashed", rec.id)

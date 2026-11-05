@@ -27,7 +27,7 @@ from ama.web.current_rip import current_rip
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
-from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
+from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, ToolNotFound, makemkv_headline
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -60,16 +60,21 @@ FRAGMENTS: dict[str, str] = {
     "review": "partials/review_bin.html",
     "review-count": "partials/review_count.html",
     "drive-status": "partials/drive_status.html",
+    "problems": "partials/problems.html",  # app-wide banners (problems.py)
     # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
     "scratch-encode": "partials/scratch.html",
+    "pause": "partials/paused_mark.html",
+    "pause-menu": "partials/pause_menu.html",
+    "pause-settings": "partials/settings_pause_now.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
 FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
                                    "scratch-rip": "rip", "scratch-encode": "encode",
-                                   "review-count": "review", "drive-status": "drive"}
+                                   "review-count": "review", "drive-status": "drive",
+                                   "pause-menu": "pause", "pause-settings": "pause"}
 
 
 def fragments_for(topic: str) -> list[str]:
@@ -101,6 +106,7 @@ def view_context(services: Services) -> dict[str, Any]:
         "nav": NAV,
         "menu": MENU,
         "can_log_out": auth.auth_required(services),
+        "paused": services.pause.paused,  # new Discs ignored (GLOSSARY.md Paused)
         "review": review_items(services),
         # The Rip under way, any Disc Type: the drive card and Ripping bin both read this.
         "current_rip": current_rip(services),
@@ -109,6 +115,12 @@ def view_context(services: Services) -> dict[str, Any]:
         "cd_last_id": cd.last_disc_id,
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
+        # video Discs ripped and not yet identified (still in the Ripping Phase)
+        "ripped_video": [d for d in services.discs.list(DiscStatus.RIPPED, types=VIDEO_DISC_TYPES)
+                         if services.movie_archive.movies.get(d.id) is None
+                         and not services.tv_archive.titles.has(d.id)],
+        "waiting_for": services.problems.why,  # Job id -> Waiting (why it can't move on) | None
+        "problems": services.problems.banners(),
         "filed": [d for d in filed_discs(services)
                   if d.record.filed_at and d.record.filed_at.date() == date.today()],
         "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
@@ -161,9 +173,10 @@ def _tools_context(services: Services) -> dict[str, Any]:
     for pin in tools.pins:
         for m in pin.members:
             st = tools.status(m.name)
-            if isinstance(st, ToolDownloading | ToolFailed):
-                managed.append({"status": st, "needed_for": NEEDED_FOR[m.name]})
-                break
+            entry = {"status": st, "needed_for": NEEDED_FOR[m.name]}
+            # One notice per download (its members share it); one per missing override.
+            if isinstance(st, ToolDownloading | ToolFailed | ToolNotFound) and entry not in managed:
+                managed.append(entry)
     return {"tools": managed, "makemkv": tools.status("makemkvcon"),
             "retry_seconds": tools.retry_seconds}
 
