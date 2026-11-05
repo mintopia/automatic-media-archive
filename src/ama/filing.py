@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -17,16 +18,31 @@ from ama.retry import RetryLater
 
 @contextmanager
 def to_library(archive: Archive, rel: Path, library: str | None) -> Iterator[None]:
-    """Copying into `rel`'s Library folder: any failure means try again later, and a folder
-    that can't be reached is a Problem naming it."""
+    """Copying into `rel`'s Library folder: its failures wait as a Problem naming the folder."""
     where = archive.folder(Path(rel.parts[0]), library)
     try:
         yield
     except FilingError as e:
         raise RetryLater(f"Couldn't file to {where} ({e})") from e
     except OSError as e:
-        raise RetryLater(f"Can't reach the Library folder {where}", Problem.LIBRARY_FOLDER,
-                         str(where)) from e
+        if isinstance(e, FileNotFoundError) and not _within(e.filename, where):
+            raise  # a source gone from Scratch: no wait for the Library folder fixes that
+        if not os.path.isdir(where):
+            raise RetryLater(f"Can't reach the Library folder {where}", Problem.LIBRARY_FOLDER,
+                             f"Can't reach {where}") from e
+        cause = e.strerror or str(e)
+        raise RetryLater(f"Couldn't file to the Library folder {where}: {cause}",
+                         Problem.LIBRARY_FOLDER, f"{where}: {cause}") from e
+
+
+def _within(filename: object, folder: Path) -> bool:
+    if not isinstance(filename, str):
+        return True
+    for prefix, plain in (("\\\\?\\UNC\\", "\\\\"), ("\\\\?\\", "")):
+        if filename.startswith(prefix):
+            filename = plain + filename[len(prefix):]
+            break
+    return Path(filename).is_relative_to(folder)
 
 
 def scan(plex: Plex, jobs: JobStore, job_id: int, folder: Path) -> None:

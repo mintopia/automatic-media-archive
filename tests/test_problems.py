@@ -145,7 +145,8 @@ def test_a_job_waiting_for_an_unreachable_library_folder_says_which_until_it_fil
         assert f"Waiting: Can't reach the Library folder {folder}" in encoding
         assert "Encoded · filing" in encoding
         banner = page[page.index('sse-swap="problems"'):page.index('class="split"')]
-        assert "A Library folder isn't reachable" in banner and str(folder) in banner
+        assert "Jobs can't be filed to a Library folder" in banner
+        assert f"Can't reach {folder}" in html.unescape(banner)
         rec = h.services.jobs.get(1)
         assert rec.status == JobStatus.RIPPED and (rec.scratch_dir / "encode.mkv").exists()
 

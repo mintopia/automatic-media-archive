@@ -117,6 +117,20 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    handled by the supervisor itself, so the task keeps running through it; an
    older task registered with `-m ama --config ...` keeps working (`run` is the default).
 
+## Webhook alerts
+
+With `[webhook] url` set, every alert is one POST of versioned JSON:
+
+```json
+{"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
+ "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+```
+
+`event` is `rip_done`, `review_needed`, `job_filed` or `job_failed`, or `test` from
+Settings' "Send test", whose `job` is null. `at` is UTC. `title` is what the Job was
+filed as, else its Disc label; `url` is the Job's page. Ignore keys you don't know; a
+change to existing keys gets a new `version`.
+
 ## Deploying an update
 
 ```powershell

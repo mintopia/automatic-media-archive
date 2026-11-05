@@ -16,7 +16,8 @@ from ama.app import create_app
 from ama.config import secret_values
 from ama.drive import DiscType
 from ama.jobs import JobStatus
-from ama.notify import Event, Notification, Webhook
+from ama.config import WebConfig
+from ama.notify import Event, Notification, Webhook, ui_address
 from tests.conftest import Harness, eventually, make_harness, write_config
 from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response
 
@@ -124,3 +125,10 @@ def test_every_alert_is_one_post_that_gives_up_after_10_seconds(event):
     assert set(timeout.values()) == {10}
     assert body == {"version": 1, "event": event.value, "at": "2026-11-05T12:00:00Z",
                     "job": None}
+
+
+@pytest.mark.parametrize("host, link", [("192.168.1.20", "http://192.168.1.20:8080"),
+                                        ("fe80::1", "http://[fe80::1]:8080"),
+                                        ("ama.local", "http://ama.local:8080")])
+def test_the_job_link_is_a_valid_address_for_an_ipv6_host(host, link):
+    assert ui_address(WebConfig(host=host, port=8080)) == link

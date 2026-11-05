@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ama.config import LibraryKind, load_config
+from ama.config import ConfigError, LibraryKind, load_config
 from ama.settings import SettingsFile, SettingsRejected, upgrade
 from tests.conftest import make_harness, write_config
 
@@ -247,6 +247,20 @@ def test_running_the_rewrite_again_changes_nothing(tmp_path):
     once, bak = p.read_bytes(), p.with_name("ama.toml.bak").read_bytes()
     assert not upgrade(p)
     assert p.read_bytes() == once and p.with_name("ama.toml.bak").read_bytes() == bak
+
+
+@pytest.mark.parametrize("unc", ["", "unc = ''\n"])
+def test_relative_libraries_without_a_share_are_left_alone_with_a_clear_error(tmp_path, unc):
+    p = tmp_path / "ama.toml"
+    before = (f"[nas]\n{unc}\n[paths]\nscratch = 'scratch'\n\n"
+              "[[libraries]]\nname = \"Movies\"\nkind = \"films\"\npath = 'Films'\n"
+              "default = true\n")
+    p.write_text(before, encoding="utf-8")
+    for _ in range(2):  # nothing is stranded: it says the same until the file is fixed
+        with pytest.raises(ConfigError, match=r"Films.*nas\.unc"):
+            upgrade(p)
+        assert p.read_text(encoding="utf-8") == before
+    assert not p.with_name("ama.toml.bak").exists()
 
 
 def test_the_example_needs_no_rewrite(toml):

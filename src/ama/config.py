@@ -21,6 +21,7 @@ from typing import Annotated, Any, Literal
 from pydantic import (AfterValidator, BaseModel, ConfigDict, Field, ValidationError,
                       ValidationInfo, model_validator)
 
+from ama.drive import DiscType
 from ama.languages import parse_languages
 
 
@@ -105,22 +106,24 @@ class PathsConfig(_Section):
 
 
 class ScratchConfig(_Section):
-    """Free scratch (GB) a Disc of each Type needs before its Rip starts; less = refused.
-    `retention_days`: Scratch cleanup removes kept Scratch older than this; 0 = never.
-    `floor_gb`: below this much free, it removes kept Scratch of any age; 0 = off."""
+    """Free Scratch (GB) each Disc Type needs before its Rip starts; less = refused."""
 
     cd: int = Field(default=1, ge=0)
     dvd: int = Field(default=10, ge=0)
     bd: int = Field(default=50, ge=0)
     uhd: int = Field(default=100, ge=0)
-    retention_days: int = Field(default=0, ge=0)
-    floor_gb: int = Field(default=0, ge=0)
+    retention_days: int = Field(default=0, ge=0)  # remove kept Scratch older than this; 0 = never
+    floor_gb: int = Field(default=0, ge=0)  # below this free, remove kept Scratch of any age
 
 
 class MinTitleConfig(_Section):
     dvd: int = Field(default=30, ge=0)
     bd: int = Field(default=30, ge=0)
     uhd: int = Field(default=30, ge=0)
+
+    def seconds(self, disc_type: DiscType) -> int:
+        """A video Disc Type's minimum; a CD has no Titles, so none."""
+        return {DiscType.DVD: self.dvd, DiscType.BD: self.bd, DiscType.UHD: self.uhd}[disc_type]
 
 
 class RipConfig(_Section):
@@ -136,9 +139,7 @@ class TmdbConfig(_Section):
 class PlexConfig(_Section):
     url: Annotated[str, AfterValidator(_web_address("plex.url", "http"))] = ""
     token: str = _secret()
-    # Where the Plex server sees the Libraries ("Plex sees Libraries at"): each Library
-    # folder is <libraries_path>/<its folder name>. Empty = the same path as AMA.
-    libraries_path: str = ""
+    libraries_path: str = ""  # where Plex sees the Libraries; empty = the same path as AMA
 
 
 class DiscordConfig(_Section):

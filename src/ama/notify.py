@@ -1,34 +1,4 @@
-"""Push notifications to Discord (webhook), ntfy (topic) and a Webhook (any URL) that pull
-people back to the UI.
-
-Four events, read off Job status changes (`JobStore.statuses()`) whenever
-anything is published on the bus, so no pipeline stage has to call this:
-
-- Rip done: a Job's Rip finished and its Disc was ejected (left `ripping` for
-  `ripped`/`review`/`filed`), so the next Disc can go in.
-- Review needed: a Job entered `review`.
-- Filed: a Job became `filed`, unless nothing in it was ripped (every Title
-  Skipped).
-- Job failed: a Job became `failed` (not when the user discarded it in Review).
-
-A channel is on when its config value is set (`discord.webhook_url`,
-`ntfy.topic`, `webhook.url`), else silently absent. Sending happens off the notifier's own
-task, every channel on its own thread at the same time with its own 10 s
-timeout, so a slow or dead channel never delays another. Every failure is
-logged and dropped: a notification never blocks or breaks the pipeline. Discs
-already in a state at startup don't notify again. Log lines never contain the webhook URLs,
-topic or header value (all secrets).
-
-The Webhook posts one versioned JSON object per alert (`Webhook.payload`):
-
-    {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
-     "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
-
-`event` is one of `Event` (rip_done, review_needed, job_filed, job_failed), or "test" from
-Settings' "Send test", whose `job` is null. `at` is UTC. `title` is what the Job was filed
-as, else its Disc label. `url` is the Job's page. A receiver should ignore keys it doesn't
-know; a change to existing keys gets a new `version`.
-"""
+"""Alerts on Job status changes, to Discord, ntfy and a Webhook."""
 
 from __future__ import annotations
 
@@ -45,8 +15,7 @@ from typing import Protocol
 import httpx
 
 from ama.config import Config, WebConfig
-from ama.drive import DiscType
-from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind, TitleStatus
+from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind
 from ama.events import EventBus
 from ama.problems import Problem, Problems
 
@@ -168,6 +137,8 @@ VERSION = 1
 def ui_address(web: WebConfig) -> str:
     """Where another machine opens AMA's UI: this PC's name when it listens on every address."""
     host = socket.gethostname() if web.host in ("0.0.0.0", "::", "") else web.host
+    if ":" in host:  # an IPv6 literal
+        host = f"[{host}]"
     return f"http://{host}:{web.port}"
 
 
@@ -244,12 +215,6 @@ def _send_all(ch: Channel, notes: Sequence[Notification]) -> str | None:
     return why
 
 
-def _empty(rec: JobRecord) -> bool:
-    """A video Job with no Title ripped (every Title Skipped); a CD's tracks aren't Titles."""
-    return rec.disc_type != DiscType.CD and not any(
-        t.status == TitleStatus.RIPPED for t in rec.titles)
-
-
 class Notifier:
     """Background task: watches Job statuses after every bus event and notifies."""
 
@@ -286,12 +251,10 @@ class Notifier:
             if rec is None:
                 continue
             if event == Event.JOB_FAILED and rec.failure \
-                    and rec.failure.kind in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
-                continue  # the user's own decision in Review, or housekeeping
+                    and rec.failure.kind == FailureKind.DISCARDED:
+                continue  # the user's own decision in Review
             if rec.all_skipped:
                 continue  # the user's own decision during the Rip: nothing to go back for
-            if event == Event.JOB_FILED and _empty(rec):
-                continue
             notes.append(notification(event, rec))
         return notes
 

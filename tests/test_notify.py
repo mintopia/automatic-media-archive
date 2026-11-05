@@ -16,7 +16,7 @@ from ama.app import create_app
 from ama.events import EventBus
 from ama.notify import Discord, Event, Notification, Notifier, Ntfy
 from ama.problems import Problem, Problems
-from ama.jobs import JobStatus, TitleRecord
+from ama.jobs import Failure, FailureKind, JobStatus, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
 from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response
@@ -102,6 +102,18 @@ def test_discarding_a_rip_in_review_is_not_a_failure_to_report(app):
     eventually(lambda: h.services.jobs.get(rec.id).status == JobStatus.FAILED)
     time.sleep(0.3)
     assert _titles(h) == ([DONE, "Review needed"],) * 2
+
+
+def test_a_job_whose_scratch_was_cleaned_up_is_a_failure_to_report(notified):
+    jobs = notified.services.jobs
+    old = jobs.create(DiscType.BD, "OLD_FILM", "video")
+    jobs.mark_ripped(old.id)
+    jobs.mark_scratch_cleaned(old.id, Failure(FailureKind.SCRATCH_CLEANED, "Scratch cleaned up",
+                                              "Insert the Disc again to rip it again."))
+    notified.drive.insert(DiscType.CD, "KID_A")  # any bus event makes the notifier look
+
+    eventually(lambda: "Job failed" in _titles(notified)[1])
+    assert any("OLD_FILM" in m["message"] for m in _ntfy(notified) if m["title"] == "Job failed")
 
 
 def test_the_messages_are_safe_well_formed_requests(notified):
@@ -226,7 +238,8 @@ def test_filing_a_job_notifies_both_channels_with_what_it_was_filed_as(notified)
 def test_a_job_filed_with_no_titles_in_it_sends_no_filed_alert(notified):
     jobs = notified.services.jobs
     empty = jobs.create(DiscType.BD, "ALL_SKIPPED", "empty")
-    jobs.set_titles(empty.id, [TitleRecord(1, 0, 3600, 1, 1, 0, "", "t1.mkv")], 0, 0)
+    jobs.set_titles(empty.id, [TitleRecord(1, 0, 3600, 1, 1, 0, "", "t1.mkv",
+                                           status=TitleStatus.SKIPPED)], 0, 0)
     jobs.mark_ripped(empty.id)
     jobs.mark_filed(empty.id, "Nothing", notified.libraries_root / "Nothing")
     _insert(notified, DISC_1, 24, _response(only=SPECIAL))

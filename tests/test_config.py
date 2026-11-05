@@ -5,7 +5,8 @@ from typing import get_args, get_origin
 import pytest
 from pydantic import BaseModel
 
-from ama.config import Config, ConfigError, load_config
+from ama.config import Config, ConfigError, MinTitleConfig, load_config
+from ama.drive import DiscType
 
 EXAMPLE = Path(__file__).parent.parent / "ama.example.toml"
 
@@ -199,3 +200,8 @@ def test_without_libraries_each_kind_defaults_to_a_folder_in_the_users_home(tmp_
         ("films", "Movies", str(home / "Videos" / "Movies"), True),
         ("tv", "TV", str(home / "Videos" / "TV"), True),
         ("music", "Music", str(home / "Music"), True)}
+
+
+def test_each_video_disc_type_has_its_own_minimum_title_length():
+    mins = MinTitleConfig(dvd=10, bd=20, uhd=40)
+    assert [mins.seconds(t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [10, 20, 40]
