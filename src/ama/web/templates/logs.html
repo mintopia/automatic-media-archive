@@ -10,7 +10,7 @@
     {%- set p = "&problems=1" if problems else "" %}
     <nav class="segs" aria-label="Show"><a href="/logs{{ '?problems=1' if problems }}"{% if not kind %} aria-current="page"{% endif %}>All</a><a href="/logs?kind=jobs{{ p }}"{% if kind == 'jobs' %} aria-current="page"{% endif %}>Jobs</a><a href="/logs?kind=app{{ p }}"{% if kind == 'app' %} aria-current="page"{% endif %}>App</a></nav>
     <a class="toggle" role="button" aria-pressed="{{ 'true' if problems else 'false' }}" href="/logs{% if kind or not problems %}?{% endif %}{% if kind %}kind={{ kind }}{% endif %}{% if not problems %}{{ '&' if kind }}problems=1{% endif %}"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>Problems only</a>
-    <span class="keep-note">Step output is kept until you remove it</span>
+    <span class="keep-note">{% if keep_days %}Output older than {{ keep_days }} day{{ "s" if keep_days != 1 }} is removed{% else %}Step output is kept until you remove it{% endif %} · <a href="/settings/logs">Change</a></span>
   </div>
 
   <p class="sr" role="status" id="run-count"></p>

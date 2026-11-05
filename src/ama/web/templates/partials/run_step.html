@@ -9,7 +9,16 @@
 {%- macro dur(s) -%}
 {% if s.state == "running" %}{% if s.duration %}<b>{{ s.duration }}</b> so far{% else %}Running{% endif %}{% elif s.state == "waiting" %}Waiting{% elif s.state == "notrun" %}Didn't run{% else %}{{ s.duration }}{% endif %}
 {%- endmacro %}
-{%- if s.has_output %}
+{%- if s.removed %}
+{#- Output pruned (#34): the header stays; the first such Step says what's kept. -#}
+{%- set full = gone is not defined or gone.first %}
+<details class="step" id="{{ s.anchor }}"{% if full %} open{% endif %}>
+  <summary>{{ head(s) }}<span class="dur">{{ dur(s) }}</span><svg class="i chev" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></summary>
+  <div class="gone"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#log"/></svg><p><b>Output removed after {{ s.removed.days }} day{{ "s" if s.removed.days != 1 }}.</b>
+  {%- if full %} The step's result above{% if v.job %}, the Job and its History entry are{% else %} is{% endif %} kept. <a href="/settings/logs">Keep output longer</a>{% endif %}</p></div>
+</details>
+{%- if gone is defined %}{% set gone.first = false %}{% endif %}
+{%- elif s.has_output %}
 {%- set st = s.stored %}{% set sid = st.id %}
 {%- set first = lines | selectattr("error") | first %}{% set first_err = first.n if first else 0 %}
 <details class="step" id="{{ s.anchor }}"{% if s.state in ("running", "failed") %} open{% endif %}>

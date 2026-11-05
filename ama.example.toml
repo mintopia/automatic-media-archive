@@ -131,6 +131,11 @@ dvd = "keep"
 bd = "keep"
 uhd = "keep"
 
+[logs]
+# Days to keep each step's output in Logs; 0 keeps it forever. Older output is
+# removed at startup and once a day. Jobs, History and run summaries are kept.
+keep_days = 0
+
 # Libraries: named folders of the Archive, one entry per Library. Each kind
 # ("films", "tv" or "music") needs exactly one default = true; a Job is filed
 # to its kind's default unless it picked another Library of that kind.
