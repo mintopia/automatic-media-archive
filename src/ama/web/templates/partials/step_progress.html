@@ -1,0 +1,2 @@
+{#- A running Step's bar: an Encode's percentage and time left. `s`: a StepView. -#}
+{%- if s.progress %}<div class="live"><div class="bar enc" role="progressbar" aria-valuenow="{{ s.progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ s.name }} progress"><i style="width:{{ s.progress.pct }}%"></i></div><b>{{ s.progress.pct }}%</b>{% if s.progress.eta_s is not none %}<span class="ts">{{ s.progress.eta_s | left }}</span>{% endif %}</div>{% endif -%}

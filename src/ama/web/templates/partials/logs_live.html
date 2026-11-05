@@ -1,0 +1,9 @@
+{#- The run page's live poll (logs_pages.run_live): new lines appended to each running Step's
+    log, and its line count, duration and progress swapped, all out of band. -#}
+{%- for s in v.steps if s.state == "running" and s.stored %}
+{%- set sid = s.stored.id %}{% set lines = fresh.get(sid, []) %}{% set first_err = 0 %}{% set lead = True %}
+{%- if lines %}<div hx-swap-oob="beforeend:#log-{{ sid }}">{% include "partials/step_log.html" %}</div>{% endif %}
+<span id="s{{ sid }}-count" hx-swap-oob="true">{{ s.stored.lines }} line{{ "s" if s.stored.lines != 1 }}</span>
+<span class="dur" id="s{{ sid }}-dur" hx-swap-oob="true">{% if s.duration %}<b>{{ s.duration }}</b> so far{% else %}Running{% endif %}</span>
+<div id="s{{ sid }}-prog" hx-swap-oob="true">{% include "partials/step_progress.html" %}</div>
+{%- endfor %}

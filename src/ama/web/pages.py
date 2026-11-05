@@ -8,7 +8,7 @@ from typing import Annotated
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 
 from ama.web import FRAGMENTS, TEMPLATES, auth, fragments_for, render_fragment, view_context
 
@@ -77,6 +77,23 @@ def _back(request: Request) -> Response:
 async def pause(request: Request) -> Response:
     _services(request).pause.set(True)
     return _back(request)
+
+
+@router.get("/control")
+def control(request: Request) -> Response:
+    """What the supervisor's tray shows (`ama.tray`)."""
+    return JSONResponse({"paused": _services(request).pause.paused},
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.post("/control/quit")
+def control_quit(request: Request) -> Response:
+    """The tray's Quit. Only the supervisor (it holds the token) may stop AMA for good."""
+    token = request.app.state.control_token
+    if not (token and auth.is_control(request, token)):
+        return Response(status_code=403)
+    _services(request).restart.stop()
+    return Response(status_code=204)
 
 
 @router.post("/resume")

@@ -295,6 +295,13 @@ class Tools:
         # Looked at every time, so fixing the file (or the setting) needs no restart.
         return ToolReady(override, "config") if override.is_file() else ToolNotFound(name, override)
 
+    def label(self, name: str) -> str:
+        """The tool as Logs names it: "ffmpeg 9.0.2", or just "ffmpeg" if its version isn't
+        known (a `[tools]` path, or not ready)."""
+        status = self._status.get(name)
+        version = status.version if isinstance(status, ToolReady) else ""
+        return f"{name} {version}" if version else name
+
     def _override(self, name: str) -> Path | None:
         value = getattr(self.cfg, name)
         return Path(value) if value else None

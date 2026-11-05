@@ -144,18 +144,31 @@ def title_matches(result: dict, term: str) -> bool:
                                    _norm(result.get("original_title") or "")}
 
 
+def runtime_fits(film: Candidate, main_feature_s: int) -> bool:
+    """TMDB's runtime is within the tolerance of the Main Feature."""
+    gap = abs(film.runtime_min * 60 - main_feature_s) if film.runtime_min else None
+    return gap is not None and gap <= RUNTIME_TOLERANCE_S
+
+
 def decide(candidates: list[Candidate], main_feature_s: int
            ) -> tuple[Candidate | None, ReviewReason | None]:
     """(the accepted film, None), or (None, why it needs Review)."""
     if not candidates:
         return None, ReviewReason.NO_MATCH
-    fits = {c.id: c for c in candidates
-            if c.runtime_min and abs(c.runtime_min * 60 - main_feature_s) <= RUNTIME_TOLERANCE_S}
+    fits = {c.id: c for c in candidates if runtime_fits(c, main_feature_s)}
     if not fits:
         return None, ReviewReason.RUNTIME_MISMATCH
     if len(fits) > 1:
         return None, ReviewReason.MULTIPLE_MATCHES
     return next(iter(fits.values())), None
+
+
+def decide_pick(pick: Candidate, main_feature_s: int
+                ) -> tuple[Candidate | None, ReviewReason | None]:
+    """The user's pick passes the check an automatic match must: its runtime fits."""
+    if runtime_fits(pick, main_feature_s):
+        return pick, None
+    return None, ReviewReason.PICK_RUNTIME_MISMATCH
 
 
 def movie_folder(c: Candidate) -> Path:

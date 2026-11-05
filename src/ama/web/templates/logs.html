@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Logs{% endblock %}
+{% block main %}
+{%- set qs = query | urlencode %}
+<main>
+  <h1>Logs</h1>
+  <p class="sub">What each Job and the app itself did, newest first. Open a run to see each step's output.</p>
+  <div class="filters">
+    <div class="search"><label class="sr" for="run-q">Find runs</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg><input class="input" id="run-q" type="search" placeholder="Disc, Job or kind (CD, NAS, Tools)" autocomplete="off"></div>
+    {%- set p = "&problems=1" if problems else "" %}
+    <nav class="segs" aria-label="Show"><a href="/logs{{ '?problems=1' if problems }}"{% if not kind %} aria-current="page"{% endif %}>All</a><a href="/logs?kind=jobs{{ p }}"{% if kind == 'jobs' %} aria-current="page"{% endif %}>Jobs</a><a href="/logs?kind=app{{ p }}"{% if kind == 'app' %} aria-current="page"{% endif %}>App</a></nav>
+    <a class="toggle" role="button" aria-pressed="{{ 'true' if problems else 'false' }}" href="/logs{% if kind or not problems %}?{% endif %}{% if kind %}kind={{ kind }}{% endif %}{% if not problems %}{{ '&' if kind }}problems=1{% endif %}"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>Problems only</a>
+    <span class="keep-note">Step output is kept until you remove it</span>
+  </div>
+
+  <p class="sr" role="status" id="run-count"></p>
+  <div class="runs">
+    <p class="nomatch box" id="run-none" hidden>No runs match. Older runs aren't searched until you open them.</p>
+    {%- for day, views in bins %}
+    <section class="bin ink" aria-labelledby="d-{{ loop.index }}">
+      <h2 class="tab" id="d-{{ loop.index }}">{{ day }} <span class="c">{{ views | length }}</span></h2>
+      <div class="box">
+      {%- for v in views %}{% include "partials/run_row.html" %}{% endfor %}
+      </div>
+    </section>
+    {%- else %}
+    <p class="box pad ts">{% if problems %}No problems in these runs.{% else %}Nothing has run yet. Insert a Disc, or restart AMA, and it shows up here.{% endif %}</p>
+    {%- endfor %}
+    {%- if older %}
+    <div class="older"><a class="btn quiet" href="/logs?before={{ older | urlencode }}{% if qs %}&{{ qs }}{% endif %}">Older runs</a></div>
+    {%- endif %}
+  </div>
+</main>
+<script src="/static/logs.js" defer></script>
+{% endblock %}

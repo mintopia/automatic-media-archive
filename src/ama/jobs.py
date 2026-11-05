@@ -25,6 +25,7 @@ from pathlib import Path
 
 from ama.db import Database
 from ama.drive import DiscType
+from ama.runs import Runs
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +52,9 @@ class ReviewReason(StrEnum):
     MULTIPLE_MATCHES = "multiple_matches"    # several films fit name and runtime
     EPISODES = "episodes"                    # looks like TV: Titles -> Episodes needs a human
     DECOY_PLAYLISTS = "decoy_playlists"      # many near-identical Titles: which is the film?
+    PICK_RUNTIME_MISMATCH = "pick_runtime_mismatch"  # the user's pick isn't within 5 min
+    # CD
+    PICK_NOT_FITTING = "pick_not_fitting"    # the release the user picked doesn't fit the Rip
 
 
 class TitleStatus(StrEnum):
@@ -177,10 +181,12 @@ def _rip_name(rec: JobRecord) -> str:
 
 class JobStore:
     def __init__(self, db: Database, scratch: Path,
-                 now: Callable[[], datetime] = datetime.now) -> None:
+                 now: Callable[[], datetime] = datetime.now, runs: Runs | None = None) -> None:
         self._db = db
         self._scratch = scratch
         self._now = now
+        # Logs (runs.py): each Job's Run follows its records here; None keeps no Run.
+        self.runs = runs
 
     def _ts(self) -> str:
         return self._now().isoformat(timespec="seconds")
@@ -217,6 +223,9 @@ class JobStore:
         job = self.get(job_id)
         assert job is not None
         log.info("Rip started: %s", _rip_name(job))
+        if self.runs:
+            self.runs.job_begin(job_id, "rip", "Rip",
+                                tool="cyanrip" if disc_type == DiscType.CD else "makemkvcon")
         return job
 
     def get(self, job_id: int) -> JobRecord | None:
@@ -259,6 +268,7 @@ class JobStore:
                          (self._ts(), job_id))
         if rec := self.get(job_id):
             log.info("Rip finished: %s: ripped", _rip_name(rec))
+        # The Rip Step carries on (the eject is still to come) until Identification begins.
 
     def mark_failed(self, job_id: int, failure: Failure) -> None:
         """Fail the record and delete its partial scratch files (idempotent)."""
@@ -274,10 +284,14 @@ class JobStore:
             (failure.kind.value, failure.headline, failure.advice, self._ts(), job_id))
         self._db.execute("UPDATE titles SET status = 'failed' WHERE job_id = ? "
                          "AND status = 'ripping'", (job_id,))
+        if self.runs:
+            self.runs.job_end(job_id, failed=True, result=failure.headline, finish=True)
 
     def mark_review(self, job_id: int, reason: ReviewReason) -> None:
         self._db.execute("UPDATE jobs SET status = 'review', review_reason = ? WHERE id = ?",
                          (reason.value, job_id))
+        if self.runs:
+            self.runs.job_end(job_id, result="Needs Review")
 
     def requeue(self, job_id: int) -> bool:
         """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
@@ -304,9 +318,40 @@ class JobStore:
     def dismiss(self, job_id: int) -> None:
         self._db.execute("UPDATE jobs SET dismissed = 1 WHERE id = ?", (job_id,))
 
-    def log(self, job_id: int, text: str, error: bool = False) -> None:
+    def log(self, job_id: int, text: str, error: bool = False, in_step: bool = True) -> None:
+        """A line for the Job's log, and (`in_step`) for its running Step's output in Logs."""
         self._db.execute("INSERT INTO job_log (job_id, at, error, text) VALUES (?, ?, ?, ?)",
                          (job_id, self._ts(), int(error), text))
+        if self.runs and in_step:
+            self.runs.job_note(job_id, text, error)
+
+    # --- the Job's Steps in Logs (runs.py), beyond what the methods above record ---
+
+    def begin_step(self, job_id: int, key: str, name: str, tool: str = "",
+                   subject: str = "", fresh: bool = True) -> None:
+        """`fresh=False`: a Step taken up again (TV files Title by Title) keeps its output."""
+        if self.runs:
+            self.runs.job_begin(job_id, key, name, tool, subject, fresh)
+
+    def finish_run(self, job_id: int) -> None:
+        """Filing is over (the Plex scan asked for): the Job's Run is done."""
+        if self.runs:
+            self.runs.job_end(job_id, finish=True)
+
+    def step_output(self, job_id: int, text: str, error: bool = False) -> None:
+        """A tool's own output line for the running Step: Logs only, not the Job's log."""
+        if self.runs:
+            self.runs.job_note(job_id, text, error)
+
+    def step_exit(self, job_id: int, exit_code: int | None) -> None:
+        """The running Step's tool exited (the Step itself may have more to do)."""
+        if self.runs and exit_code is not None:
+            self.runs.job_exit(job_id, exit_code)
+
+    def end_step(self, job_id: int, failed: bool = False, exit_code: int | None = None,
+                 result: str | None = None) -> None:
+        if self.runs:
+            self.runs.job_end(job_id, failed, exit_code, result)
 
     def log_lines(self, job_id: int) -> builtins.list[LogLine]:  # `list` here is the method above
         rows = self._db.execute(
@@ -320,11 +365,13 @@ class JobStore:
             "INSERT INTO encode_times (job_id, title_number, started_at) VALUES (?, ?, ?) "
             "ON CONFLICT (job_id, title_number) DO UPDATE SET started_at = excluded.started_at, "
             "finished_at = NULL", (job_id, title_number, self._ts()))
+        self.begin_step(job_id, f"encode:{title_number}", "Encode", tool="ffmpeg")
 
     def encode_finished(self, job_id: int, title_number: int) -> None:
         self._db.execute("UPDATE encode_times SET finished_at = ? "
                          "WHERE job_id = ? AND title_number = ?",
                          (self._ts(), job_id, title_number))
+        self.end_step(job_id, exit_code=0)
 
     def encode_times(self, job_id: int) -> dict[int, tuple[datetime, datetime | None]]:
         """Title number -> (Encode started, finished or None) for each Title Encoded so far."""

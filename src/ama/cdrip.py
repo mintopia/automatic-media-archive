@@ -460,6 +460,7 @@ class CdRipper:
                                     cfg.retries), on_line, cwd)
         except FileNotFoundError:
             code = None
+        self._jobs.step_exit(rec.id, code)
 
         # 3. Result: the .log is authoritative; stdout is the fallback.
         log_file = rec.scratch_dir / "rip.log"

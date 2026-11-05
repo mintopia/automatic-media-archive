@@ -41,6 +41,8 @@ def test_a_video_rip_is_a_row_in_the_ripping_bin_with_its_progress(client, harne
 def test_a_video_rip_shows_the_same_phase_and_progress_on_the_drive_card_and_in_the_bin(client, harness):
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
     eventually(lambda: "Title 1 of 2" in _frag(harness, "ripping"))
+    eventually(lambda: harness.makemkv.ripping)  # held at 50%: progress stops moving
+    eventually(lambda: "Title 1 of 2 · 0%" not in _frag(harness, "ripping"))
     drive, ripping = _frag(harness, "drive"), _frag(harness, "ripping")
     assert _chips(drive) == _chips(ripping) == ["Ripping"]
     pct = re.search(r"Title 1 of 2 · (\d+)%", ripping).group(1)

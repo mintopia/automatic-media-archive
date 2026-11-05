@@ -49,9 +49,7 @@ def test_the_user_can_search_tmdb_from_the_rip_card_and_pick_another_film(client
     assert guess is not None and guess.film.id == 1539 and guess.picked  # stored at once
     page = page_text(client, "/disc")
     assert "Collateral (2004)" in page and "your pick" in page
-    harness.makemkv.release()
-    eventually(lambda: in_review(harness))
-    assert 'value="1539" checked' in client.get("/review/1").text
+    harness.makemkv.release()  # what a pick does to Review: test_confirmed_pick.py
 
 
 def test_the_best_guess_is_re_ranked_by_runtime_once_the_title_scan_has_the_longest_title(

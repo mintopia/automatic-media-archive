@@ -11,6 +11,8 @@ dependencies = [
     { name = "httpx" },
     { name = "jinja2" },
     { name = "mutagen" },
+    { name = "pillow", marker = "sys_platform == 'win32'" },
+    { name = "pystray", marker = "sys_platform == 'win32'" },
     { name = "python-multipart" },
     { name = "tomlkit" },
     { name = "uvicorn" },
@@ -28,6 +30,8 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "mutagen", specifier = ">=1.48.1" },
+    { name = "pillow", marker = "sys_platform == 'win32'", specifier = ">=11" },
+    { name = "pystray", marker = "sys_platform == 'win32'", specifier = ">=0.19" },
     { name = "python-multipart", specifier = ">=0.0.18" },
     { name = "tomlkit", specifier = ">=0.13" },
     { name = "uvicorn", specifier = ">=0.32" },
@@ -240,6 +244,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pillow"
+version = "13.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/a4/9cc30690a394a8305e8be4c9036aa16d0dfddadd09079860b582f562496d/pillow-13.0.0.tar.gz", hash = "sha256:cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510", size = 47058631, upload-time = "2026-10-16T22:18:09.718Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/e2/9132d38df320e8099e2642d9fa538f18a7dfebf68a875a31725dc2a115aa/pillow-13.0.0-cp313-cp313-ios_13_0_arm64_iphoneos.whl", hash = "sha256:e98b4f91f99b24b1da72e10621ba181f7281922384a7403094debb4199de6c00", size = 4190620, upload-time = "2026-10-16T22:16:02.527Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/be/436dac0996876f65ef1916ffb711c5ef4af2ebc57414b6f16642e07f6b47/pillow-13.0.0-cp313-cp313-ios_13_0_arm64_iphonesimulator.whl", hash = "sha256:34fb3db1149c879343861831728c243c432d4a5afc8f1878ca7612ef8de2a033", size = 4290286, upload-time = "2026-10-16T22:16:04.861Z" },
+    { url = "https://files.pythonhosted.org/packages/60/16/7c1007162e4169ea0d5bec47e2e0b2174f56c50cf5b8c02a1dc23e41037e/pillow-13.0.0-cp313-cp313-ios_13_0_x86_64_iphonesimulator.whl", hash = "sha256:2d50500a4a3bc6469adcdb319cf05d688b08ca3bf0f22a05339f3b25b433a599", size = 3723169, upload-time = "2026-10-16T22:16:06.956Z" },
+    { url = "https://files.pythonhosted.org/packages/78/9f/d3c3cb0518f3dd1eee0ef501535f53d15597a53c5c4118d178086143397a/pillow-13.0.0-cp313-cp313-win32.whl", hash = "sha256:12b0fa15879fe5a9d9eebe66e4e2d74128a773b1a4448010c9c714f45e04b9d8", size = 6516013, upload-time = "2026-10-16T22:16:21.389Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/ed/1b16fb66a37e1b9e41370b93b2c614c7da761a5b2a41dc333f7af4639962/pillow-13.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:9dda0788a9932776a75d8bcc020076edc308ce2508b51f6739a45e3158b3fc42", size = 7284777, upload-time = "2026-10-16T22:16:23.393Z" },
+    { url = "https://files.pythonhosted.org/packages/87/7d/8d02eba9f7ecc87f8e90f731e032cc4773802f2a843763afd0c66a535ff4/pillow-13.0.0-cp313-cp313-win_arm64.whl", hash = "sha256:40a266371ece581e5de13b6635ef78d7487824af80561b6ca27694a88c19bc0f", size = 2698826, upload-time = "2026-10-16T22:16:25.382Z" },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -299,6 +317,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pystray"
+version = "0.19.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pillow" },
+    { name = "six" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/64/927a4b9024196a4799eba0180e0ca31568426f258a4a5c90f87a97f51d28/pystray-0.19.5-py2.py3-none-any.whl", hash = "sha256:a0c2229d02cf87207297c22d86ffc57c86c227517b038c0d3c59df79295ac617", size = 49068, upload-time = "2023-09-17T13:44:26.872Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -321,6 +351,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9f/b7/15b905f6142a9a8a68f66900788da1a32e4d4254452783b37ad1eccb0506/python_multipart-0.0.33.tar.gz", hash = "sha256:b8112424a6abd162ec08d390565dd113ad699f2fe6fef3c987b8bbcbfe9e390d", size = 50499, upload-time = "2026-10-31T14:23:47.461Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dd/1b/6b1b4164ec734cac911460ab599bfbe46afedd42c5c9627fe4235942c314/python_multipart-0.0.33-py3-none-any.whl", hash = "sha256:8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45", size = 32253, upload-time = "2026-10-31T14:23:46.33Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]

@@ -221,6 +221,11 @@ def _cd_page(request: Request, services, rec: JobRecord, form: dict[str, str] | 
         "done": done_note(request),
         "editions": editions, "pick": cd.pick,
         "notice": _ar_notice(rec.review_reason, tracks),
+        "pick_notice": (f"You picked {cd.pick.name} while it ripped, but the music database "
+                        "(MusicBrainz) no longer lists that edition with this CD's tracks. "
+                        "Pick the edition that matches, or enter the details."
+                        if cd.pick and rec.review_reason == ReviewReason.PICK_NOT_FITTING
+                        else None),
         "form": form, "errors": errors or [], "manual_open": not editions or bool(errors),
         "track_count": len(cdreview.audio_tracks(tracks)),
         "length": _length(sum(t.seconds for t in tracks)),

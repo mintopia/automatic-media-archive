@@ -37,3 +37,5 @@ def scan(plex: Plex, jobs: JobStore, job_id: int, folder: Path) -> None:
     except httpx.HTTPError as e:
         jobs.log(job_id, f"Couldn't ask Plex to scan the folder ({e}); "
                            "Plex will find it on its next scan", error=True)
+    finally:
+        jobs.finish_run(job_id)
