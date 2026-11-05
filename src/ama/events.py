@@ -25,6 +25,7 @@ class Topic(StrEnum):
     FILED = "filed"      # History
     REVIEW = "review"    # the Review queue
     SCRATCH = "scratch"
+    PROBLEMS = "problems"  # Now page banners; a Job's Waiting line (problems.py)
 
 
 class EventBus:

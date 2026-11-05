@@ -46,7 +46,8 @@ MAKEMKV_OK = ('MSG:1005,0,1,"MakeMKV v2.0.0 win(x64-release) started","%1 starte
               '"MakeMKV v2.0.0 win(x64-release)"\n')
 
 
-def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str = "") -> Config:
+def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str = "",
+                tmdb_key: str = "tmdb-key") -> Config:
     return Config(
         discord=DiscordConfig(webhook_url=discord),
         ntfy=NtfyConfig(topic=ntfy_topic),
@@ -58,7 +59,7 @@ def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
         encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=24)),
-        tmdb=TmdbConfig(api_key="tmdb-key"),
+        tmdb=TmdbConfig(api_key=tmdb_key),
     )
 
 
@@ -81,10 +82,10 @@ class Harness:
 
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                  fetch: FakeFetch | None = None, pins: tuple | None = None,
-                 discord: str = "", ntfy_topic: str = "") -> Harness:
+                 discord: str = "", ntfy_topic: str = "", tmdb_key: str = "tmdb-key") -> Harness:
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
     MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
-    cfg = make_config(tmp_path, password, discord, ntfy_topic)
+    cfg = make_config(tmp_path, password, discord, ntfy_topic, tmdb_key)
     drive = FakeDrive()
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
@@ -97,6 +98,8 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
     exe.parent.mkdir(exist_ok=True)
     exe.write_bytes(b"")
     fakes = {} if fetch else {n: str(tmp_path / f"{n}.exe") for n in ("ffmpeg", "ffprobe", "cyanrip")}
+    for path in fakes.values():  # an override is only ready while its file is there
+        Path(path).write_bytes(b"")
 
     def make_tools(bus: EventBus) -> Tools:
         return Tools(ToolsConfig(dir=str(tmp_path / "tools"), **fakes), bus,

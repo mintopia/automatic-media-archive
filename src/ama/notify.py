@@ -30,6 +30,7 @@ import httpx
 from ama.config import Config
 from ama.discs import DiscRecord, DiscStatus, DiscStore, FailureKind
 from ama.events import EventBus
+from ama.problems import Problem, Problems
 
 log = logging.getLogger(__name__)
 
@@ -149,13 +150,17 @@ def _why(e: Exception) -> str:
 class Notifier:
     """Background task: watches Disc statuses after every bus event and notifies."""
 
-    def __init__(self, discs: DiscStore, bus: EventBus, channels: Sequence[Channel]) -> None:
+    def __init__(self, discs: DiscStore, bus: EventBus, channels: Sequence[Channel],
+                 problems: Problems | None = None) -> None:
         self._discs = discs
+        self._problems = problems
+        self._failing: dict[str, str] = {}  # channel name -> why its last send failed
         self._bus = bus
         self.channels = list(channels)
 
     def send(self, notes: Sequence[Notification]) -> None:
-        """Every note to every channel; failures are logged, never raised."""
+        """Every note to every channel; failures are logged and shown as a banner until a
+        send works again, never raised."""
         for note in notes:
             for ch in self.channels:
                 try:
@@ -163,6 +168,15 @@ class Notifier:
                 except Exception as e:  # noqa: BLE001 - nothing here may break the pipeline
                     log.warning("Couldn't send the %s notification to %s: %s",
                                 note.title, ch.name, _why(e))
+                    self._failing[ch.name] = _why(e)
+                else:
+                    self._failing.pop(ch.name, None)
+        if self._problems is not None:
+            if self._failing:
+                self._problems.report(Problem.NOTIFY, ", ".join(
+                    f"{name}: {why}" for name, why in self._failing.items()))
+            else:
+                self._problems.resolved(Problem.NOTIFY)
 
     def _notes(self, events: list[tuple[int, Event]]) -> list[Notification]:
         notes = []

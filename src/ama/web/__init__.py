@@ -25,7 +25,7 @@ from ama.web import auth
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
-from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, makemkv_headline
+from ama.tools import NEEDED_FOR, ToolDownloading, ToolFailed, ToolNotFound, makemkv_headline
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -53,6 +53,7 @@ FRAGMENTS: dict[str, str] = {
     "review": "partials/review_bin.html",
     "review-count": "partials/review_count.html",
     "drive-status": "partials/drive_status.html",
+    "problems": "partials/problems.html",  # app-wide banners (problems.py)
     # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
@@ -99,6 +100,12 @@ def view_context(services: Services) -> dict[str, Any]:
         "cd_last_id": cd.last_disc_id,
         "ripped": cd.discs(DiscStatus.RIPPED),
         "failed": cd.discs(DiscStatus.FAILED),
+        # video Discs ripped and not yet identified (still in the Ripping Phase)
+        "ripped_video": [d for d in services.discs.list(DiscStatus.RIPPED, types=VIDEO_DISC_TYPES)
+                         if services.movie_archive.movies.get(d.id) is None
+                         and not services.tv_archive.titles.has(d.id)],
+        "waiting_for": services.problems.why,  # Job id -> Waiting (why it can't move on) | None
+        "problems": services.problems.banners(),
         "filed": [d for d in filed_discs(services)
                   if d.record.filed_at and d.record.filed_at.date() == date.today()],
         "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
@@ -151,9 +158,10 @@ def _tools_context(services: Services) -> dict[str, Any]:
     for pin in tools.pins:
         for m in pin.members:
             st = tools.status(m.name)
-            if isinstance(st, ToolDownloading | ToolFailed):
-                managed.append({"status": st, "needed_for": NEEDED_FOR[m.name]})
-                break
+            entry = {"status": st, "needed_for": NEEDED_FOR[m.name]}
+            # One notice per download (its members share it); one per missing override.
+            if isinstance(st, ToolDownloading | ToolFailed | ToolNotFound) and entry not in managed:
+                managed.append(entry)
     return {"tools": managed, "makemkv": tools.status("makemkvcon"),
             "retry_seconds": tools.retry_seconds}
 

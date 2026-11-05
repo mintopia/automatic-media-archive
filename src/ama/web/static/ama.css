@@ -185,6 +185,7 @@ main:has(>.solo),main:has(.solo){max-width:844px}
 .ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
 .ok .i{width:16px;height:16px}
 .wait{color:var(--ink2)}
+.waiting{color:var(--rev-ink);margin-top:2px}
 .warn{color:var(--rev-ink);font-weight:600}
 .bad{color:var(--fail);font-weight:600}
 .tbl tr.now td{background:var(--well)}

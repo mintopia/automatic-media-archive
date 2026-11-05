@@ -12,11 +12,14 @@ from pathlib import Path
 import httpx
 
 from ama.config import PlexConfig
+from ama.problems import Problem, Problems
 
 
 class Plex:
-    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive_root: Path) -> None:
+    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive_root: Path,
+                 problems: Problems | None = None) -> None:
         self._cfg = cfg
+        self._problems = problems
         self._http = http
         self._root = archive_root
 
@@ -28,7 +31,19 @@ class Plex:
         return sep.join([base.rstrip("/\\"), *parts])
 
     def scan(self, folder: Path) -> str:
-        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError."""
+        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError,
+        and shows a banner until a scan works again."""
+        try:
+            said = self._scan(folder)
+        except httpx.HTTPError as e:
+            if self._problems is not None:
+                self._problems.report(Problem.PLEX, _why(e))
+            raise
+        if self._problems is not None:
+            self._problems.resolved(Problem.PLEX)
+        return said
+
+    def _scan(self, folder: Path) -> str:
         if not (self._cfg.url and self._cfg.token):
             return "Plex isn't set up in ama.toml, so it will find this on its next scan"
         path = self.server_path(folder)
@@ -59,3 +74,10 @@ def _section_for(sections: dict, path: str) -> str | None:
         if any(_within(path, loc.get("path", "")) for loc in d.get("Location", [])):
             return str(d["key"])
     return None
+
+
+def _why(e: httpx.HTTPError) -> str:
+    """A failure without the request (its URL could name the server's private address)."""
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"HTTP {e.response.status_code}"
+    return type(e).__name__

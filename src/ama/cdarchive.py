@@ -41,6 +41,7 @@ from ama.media import Album, MediaStore
 from ama.musicbrainz import Match, MusicBrainz
 from ama.nas import NasMonitor
 from ama.plex import Plex
+from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
 
 log = logging.getLogger(__name__)
@@ -156,7 +157,8 @@ def rename_cue_files(cue: str, names: dict[str, str]) -> str:
 class CdArchiver:
     def __init__(self, discs: DiscStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
                  archive: Archive, plex: Plex, bus: EventBus, interval: float,
-                 covers: Covers, media: MediaStore, retry_seconds: float = 60.0) -> None:
+                 covers: Covers, media: MediaStore, retry_seconds: float = 60.0,
+                 problems: Problems | None = None) -> None:
         self._covers = covers
         self._media = media
         self._discs = discs
@@ -167,7 +169,7 @@ class CdArchiver:
         self._plex = plex
         self._bus = bus
         self._interval = interval
-        self.backoff = Backoff(retry_seconds)
+        self.backoff = Backoff(retry_seconds, problems=problems)
 
     async def run(self) -> None:
         await asyncio.to_thread(self._discs.clean_filed_scratch)
@@ -183,11 +185,11 @@ class CdArchiver:
             try:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
-                if self.backoff.later(rec.id):
+                if self.backoff.later(rec.id, str(e), e.problem):
                     self._discs.log(rec.id, f"{e}; trying again in a while", error=True)
             except Exception:
                 log.exception("CD Identification/filing of Disc %s crashed", rec.id)
-                self.backoff.later(rec.id)
+                self.backoff.later(rec.id, "Identification went wrong (see the app's log file)")
             else:
                 self.backoff.done(rec.id)
             self._publish()

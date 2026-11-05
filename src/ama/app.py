@@ -38,6 +38,7 @@ from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.notify import Notifier, channels
+from ama.problems import Problems
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
@@ -78,11 +79,12 @@ class Services:
     covers: Covers
     media: MediaStore
     backfill: Backfill
+    problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
-                self.tools.run, self.cd_archive.run, self.movie_archive.run,
+        return [self.problems.run, self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
+                self.tools.run, self.tools.watch_makemkv,self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
                 self.backfill.run]
 
@@ -101,6 +103,7 @@ def build_services(
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
+    problems = Problems(bus)
     db = Database(cfg.paths.state_db)
     tools = make_tools(bus) if make_tools else Tools(cfg.tools, bus, runner=runner)
     tool = tool or tools.path
@@ -117,7 +120,7 @@ def build_services(
     covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
-    plex = Plex(cfg.plex, http, archive.root)
+    plex = Plex(cfg.plex, http, archive.root, problems)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
     encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
@@ -125,7 +128,7 @@ def build_services(
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
-                                  media=media, covers=covers)
+                                  media=media, covers=covers, problems=problems)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -148,7 +151,8 @@ def build_services(
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
-                              interval=cfg.drive.poll_seconds, covers=covers, media=media),
+                              interval=cfg.drive.poll_seconds, covers=covers, media=media,
+                              problems=problems),
         movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(discs, tool, streamer, interval=cfg.drive.poll_seconds),
@@ -157,13 +161,14 @@ def build_services(
         tv_archive=TvArchiver(discs, tv_titles, encoder, nas, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
-                              covers=covers),
-        notifier=Notifier(discs, bus, channels(cfg, http)),
+                              covers=covers, problems=problems),
+        notifier=Notifier(discs, bus, channels(cfg, http), problems),
         sets=DiscSets(db),
         covers=covers,
         media=media,
         backfill=Backfill(db, discs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
+        problems=problems,
     )
 
 
