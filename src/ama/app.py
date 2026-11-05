@@ -222,7 +222,8 @@ def busy(services: Services) -> Busy:
     return Busy(rip.name if rip else None, 1 if encode else 0, max(etas) if etas else None)
 
 
-def create_app(services: Services) -> FastAPI:
+def create_app(services: Services, control_token: str = "") -> FastAPI:
+    """`control_token`: the supervisor's tray gets past the password with it (`ama.tray`)."""
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         tasks = [asyncio.create_task(fn()) for fn in services.background_tasks()]
@@ -235,7 +236,8 @@ def create_app(services: Services) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.services = services
-    auth.install(app, services)
+    app.state.control_token = control_token
+    auth.install(app, services, control_token)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(jobs_pages.router)
