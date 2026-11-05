@@ -27,6 +27,7 @@ from ama.db import Database
 from ama.jobs import JobRecord, JobStatus, JobStore, Failure, FailureKind
 from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
 from ama.events import EventBus, Topic
+from ama.pause import Pause
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, cd_fingerprint
 from ama.scratch import ScratchGate
@@ -220,8 +221,9 @@ class CdRipper:
 
     def __init__(self, cfg: CdConfig, drive: DriveMonitor, jobs: JobStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
-                 repeat: RepeatGuard, scratch: ScratchGate,
+                 repeat: RepeatGuard, scratch: ScratchGate, pause: Pause,
                  guesser: Guesser | None = None) -> None:
+        self._pause = pause
         self.cfg = cfg
         self._guesser = guesser
         self.guess_retry_seconds = 60.0  # MusicBrainz trouble during the early guess
@@ -270,7 +272,7 @@ class CdRipper:
         state = self._drive.state
         candidate = (isinstance(state, DiscPresent) and state.disc_type == DiscType.CD) \
             or isinstance(state, UnrecognisedDisc)
-        if not candidate or self._handled == self._drive.insertion:
+        if not candidate or self._handled == self._drive.insertion or self._pause.paused:
             return
         try:
             self._tool("cyanrip")

@@ -38,6 +38,7 @@ from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
 from ama.nas import NasMonitor
 from ama.notify import Notifier, channels
+from ama.pause import Pause
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
@@ -79,6 +80,7 @@ class Services:
     covers: Covers
     media: MediaStore
     backfill: Backfill
+    pause: Pause
     plex: Plex
     http: httpx.Client
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
@@ -133,6 +135,7 @@ def build_services(
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
+    pause = Pause(db, bus)
     tv_titles = TvTitles(db)
     encoder = Encoder(jobs, bus, cfg.encode.cq, tool, streamer)
     movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
@@ -154,10 +157,10 @@ def build_services(
         jobs=jobs,
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch, guesser=Guesser(mb, covers)),
+                    scratch=scratch, pause=pause, guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
-                              disc_root=disc_root,
+                              pause=pause, disc_root=disc_root,
                               guess=lambda label: film_guess(tmdb, covers, label)),
         archive=archive,
         musicbrainz=mb,
@@ -178,6 +181,7 @@ def build_services(
         media=media,
         backfill=Backfill(db, jobs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
+        pause=pause,
         plex=plex,
         http=http,
     )
