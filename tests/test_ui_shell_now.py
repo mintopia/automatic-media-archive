@@ -73,7 +73,7 @@ def test_sign_in_page_has_no_inline_styles(tmp_path):
 
 def test_encoding_progress_is_a_progressbar():
     src = TEMPLATES.env.loader.get_source(TEMPLATES.env, "partials/encoding_bin.html")[0]
-    assert 'role="progressbar" aria-valuenow="{{ job.progress.pct }}"' in src
+    assert 'role="progressbar" aria-valuenow="{{ encode.progress.pct }}"' in src
 
 
 def test_scratch_says_when_the_space_in_use_is_other_files(client, harness):

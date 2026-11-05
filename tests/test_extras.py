@@ -11,7 +11,7 @@ from __future__ import annotations
 import html
 
 from ama.archive import extended_path
-from ama.discs import DiscStatus, TitleRecord, TitleStatus
+from ama.jobs import JobStatus, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.extras import default_names
 from tests.conftest import eventually
@@ -26,8 +26,8 @@ def _film(harness) -> None:
 def _rip_and_file(harness):
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED), timeout=5)
-    return harness.services.discs.list(DiscStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
+    return harness.services.jobs.list(JobStatus.FILED)[0]
 
 
 def _film_folder(harness):
@@ -44,7 +44,7 @@ def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_revie
     assert extra.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # Encoded from the Rip
     eventually(lambda: not rec.scratch_dir.exists())
     eventually(lambda: "Filed 1 Extra to Other" in "\n".join(
-        map(str, harness.services.discs.log_lines(rec.id))))
+        map(str, harness.services.jobs.log_lines(rec.id))))
 
 
 def test_extras_are_named_from_the_disc_unless_the_name_is_just_the_discs():
@@ -67,14 +67,14 @@ def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
     folder = _film_folder(harness)
     assert (folder / f"{FOLDER} - 1080p.mkv").exists()
     assert not (folder / "Other").exists()
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "The Extra “EXAMPLE_MOVIE - Title 2” is left out; the film is filed without it" in log
 
 
 def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harness):
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # no film on TMDB: Review
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=5)
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=5)
     page = html.unescape(client.get("/review/1").text)
     assert "<dt>Extras</dt><dd>1 Extra, filed under Other</dd>" in page
 
@@ -100,8 +100,8 @@ def test_decoy_versions_of_the_film_are_not_extras(client, harness):
 
 
 def _rip_and_file_wait(harness):
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED), timeout=5)
-    return harness.services.discs.list(DiscStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
+    return harness.services.jobs.list(JobStatus.FILED)[0]
 
 
 def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_folder(
@@ -111,16 +111,16 @@ def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_fold
     rec = _rip_and_file(harness)
 
     queue = html.unescape(client.get("/review").text)
-    assert f'href="/discs/{rec.id}/extras"' in queue and "Example Movie (2016)" in queue
-    page = html.unescape(client.get(f"/discs/{rec.id}/extras").text)
+    assert f'href="/jobs/{rec.id}/extras"' in queue and "Example Movie (2016)" in queue
+    page = html.unescape(client.get(f"/jobs/{rec.id}/extras").text)
     assert "Want to sort the Extras for Example Movie (2016)?" in page
     assert "Already filed. Changes are optional." in page
     assert 'value="Making Of"' in page and "Title 2 on the Disc · 3 min" in page
-    assert f'src="/discs/{rec.id}/extras/2/50.jpg"' in page  # stills kept after scratch
-    assert client.get(f"/discs/{rec.id}/extras/2/50.jpg").content == b"\xff\xd8 fake jpeg"
+    assert f'src="/jobs/{rec.id}/extras/2/50.jpg"' in page  # stills kept after scratch
+    assert client.get(f"/jobs/{rec.id}/extras/2/50.jpg").content == b"\xff\xd8 fake jpeg"
 
     scans = len(harness.web.plex_requests)
-    r = client.post(f"/discs/{rec.id}/extras",
+    r = client.post(f"/jobs/{rec.id}/extras",
                     data={"name_2": "The Making of Example Movie", "category_2": "Featurettes"},
                     follow_redirects=False)
     assert r.status_code == 303
@@ -129,8 +129,8 @@ def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_fold
     assert moved.read_bytes() == b"HEVC Example_Movie_t01.mkv"
     assert not (folder / "Other" / "Making Of.mkv").exists()
     assert len(harness.web.plex_requests) > scans  # Plex rescans the film's folder
-    assert f"/discs/{rec.id}/extras" not in client.get("/review").text  # sorted: off the list
-    page = html.unescape(client.get(f"/discs/{rec.id}/extras").text)
+    assert f"/jobs/{rec.id}/extras" not in client.get("/review").text  # sorted: off the list
+    page = html.unescape(client.get(f"/jobs/{rec.id}/extras").text)
     assert 'value="The Making of Example Movie"' in page
     assert '<option selected>Featurettes</option>' in page
 
@@ -138,9 +138,9 @@ def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_fold
 def test_leaving_the_extras_as_they_are_takes_them_off_the_review_list(client, harness):
     _film(harness)
     rec = _rip_and_file(harness)
-    assert f"/discs/{rec.id}/extras" in client.get("/review").text
-    client.post(f"/discs/{rec.id}/extras/leave")
-    assert f"/discs/{rec.id}/extras" not in client.get("/review").text
+    assert f"/jobs/{rec.id}/extras" in client.get("/review").text
+    client.post(f"/jobs/{rec.id}/extras/leave")
+    assert f"/jobs/{rec.id}/extras" not in client.get("/review").text
     assert extended_path(_film_folder(harness) / "Other" / "EXAMPLE_MOVIE - Title 2.mkv").exists()
 
 
@@ -148,6 +148,6 @@ def test_a_filed_film_links_to_its_extras_from_now_and_its_disc_page(client, har
     _film(harness)
     rec = _rip_and_file(harness)
     now = html.unescape(client.get("/").text)
-    assert f'Movies · 1080p · <a href="/discs/{rec.id}/extras">1 Extra</a>' in now  # History, on Now
-    disc = client.get(f"/discs/{rec.id}").text
-    assert f'href="/discs/{rec.id}/extras"' in disc
+    assert f'Movies · 1080p · <a href="/jobs/{rec.id}/extras">1 Extra</a>' in now  # History, on Now
+    disc = client.get(f"/jobs/{rec.id}").text
+    assert f'href="/jobs/{rec.id}/extras"' in disc

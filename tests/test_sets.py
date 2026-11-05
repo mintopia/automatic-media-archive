@@ -11,7 +11,7 @@ from __future__ import annotations
 import html
 
 from ama.archive import extended_path
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 from tests.test_tv_review import OFFICE, SHOW, _in_review, _page, _the_office, _tv_disc
@@ -20,9 +20,9 @@ EPISODES = [(1, 29 * 60 + 10, "1"), (2, 29 * 60 + 40, "2"), (3, 30 * 60 + 5, "3"
 
 
 def _filed(harness, rec):
-    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
                timeout=10)
-    return harness.services.discs.get(rec.id)
+    return harness.services.jobs.get(rec.id)
 
 
 def _file_first_office_disc(harness, client):
@@ -82,8 +82,8 @@ def _file_example_movie(harness):
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED), timeout=10)
-    return harness.services.discs.list(DiscStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=10)
+    return harness.services.jobs.list(JobStatus.FILED)[0]
 
 
 def test_an_extras_disc_files_its_titles_as_extras_in_the_films_folder(harness, client):

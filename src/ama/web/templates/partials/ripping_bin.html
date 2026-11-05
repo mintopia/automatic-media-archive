@@ -8,7 +8,7 @@
   {%- endif %}
   {%- for d in ripped %}
     {%- set p = d.record.status | phase %}
-    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div></div><span class="stk {{ p.css }}">{{ p }}</span></div>
+    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/jobs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div></div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
   {%- if not r and not ripped and repeat %}
     <p class="pad ts">Waiting for your choice on {{ repeat.name }}.</p>

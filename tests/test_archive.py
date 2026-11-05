@@ -8,7 +8,7 @@ import shutil
 import pytest
 
 from ama.archive import PARTIAL, Archive, FilingError, safe_name
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
 from tests.conftest import eventually
 
@@ -66,10 +66,10 @@ def test_names_are_made_safe_for_windows():
 def test_a_disc_whose_filing_cant_be_verified_keeps_its_scratch(harness, client):
     harness.services.archive.copy = lambda src, dest: dest.write_bytes(b"garbage")
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    rec = _wait_for(harness, DiscStatus.RIPPED)
+    rec = _wait_for(harness, JobStatus.RIPPED)
     eventually(lambda: any("Couldn't file to the NAS" in ln.text
-                           for ln in harness.services.discs.log_lines(rec.id)))
-    assert harness.services.discs.get(rec.id).status == DiscStatus.RIPPED
+                           for ln in harness.services.jobs.log_lines(rec.id)))
+    assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
     harness.services.archive.copy = shutil.copyfile  # e.g. the NAS recovered
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)

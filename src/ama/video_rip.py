@@ -1,7 +1,7 @@
 """Video Rip to scratch: a DVD/BD/UHD in the drive is ripped with makemkvcon, then ejected.
 
 Every Title >= 30 s is ripped (exact duplicates dropped) into
-`scratch/video/<disc id>/`, one `makemkvcon mkv` run per Title, regardless of
+`scratch/video/<Job id>/`, one `makemkvcon mkv` run per Title, regardless of
 Identification (ADR-0005). On any failure the Disc is ejected, marked failed
 with its log, and its partial files are deleted. Nothing is retried on its own:
 a Disc is ripped once per insertion.
@@ -18,10 +18,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ama import makemkv
-from ama.discs import (
-    DiscRecord,
-    DiscStatus,
-    DiscStore,
+from ama.jobs import (
+    JobRecord,
+    JobStatus,
+    JobStore,
     Failure,
     FailureKind,
     TitleRecord,
@@ -62,7 +62,7 @@ INTERRUPTED_FAILURE = Failure(
 
 @dataclass(frozen=True)
 class RipProgress:
-    """Live state of the Rip in progress (memory only; titles live on the DiscRecord)."""
+    """Live state of the Rip in progress (memory only; titles live on the JobRecord)."""
 
     title_number: int | None = None  # the Title being ripped; None while reading the Disc
     title_fraction: float = 0.0
@@ -105,7 +105,7 @@ class _Fail(Exception):
 
 class VideoRipper:
 
-    def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
+    def __init__(self, drive: DriveMonitor, store: JobStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
                  scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
@@ -122,7 +122,7 @@ class VideoRipper:
         self._exe = makemkvcon
         self._run_lines = streamer
         self._clock = clock
-        self.disc: DiscRecord | None = None  # the Disc being ripped, else the last one this run
+        self.job: JobRecord | None = None  # the Disc being ripped, else the last one this run
         self.progress: RipProgress | None = None  # set only while ripping
         self._handled: int | None = None  # the `DriveMonitor.insertion` already dealt with
         self._abort = False
@@ -130,8 +130,8 @@ class VideoRipper:
         self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
-    def active(self) -> DiscRecord | None:
-        return self.disc if self.progress is not None else None
+    def active(self) -> JobRecord | None:
+        return self.job if self.progress is not None else None
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -147,7 +147,7 @@ class VideoRipper:
 
     async def recover(self) -> None:
         """A Rip cut short by a restart: fail it, delete its files, eject its Disc."""
-        stale = self._store.list(DiscStatus.RIPPING, include_dismissed=True,
+        stale = self._store.list(JobStatus.RIPPING, include_dismissed=True,
                                  types=VIDEO_DISC_TYPES)
         for d in stale:
             self._store.mark_failed(d.id, INTERRUPTED_FAILURE)
@@ -188,16 +188,16 @@ class VideoRipper:
     async def rip(self, inserted: DiscPresent, fingerprint: str | None = None) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
-        disc = self._store.create(inserted.disc_type, inserted.label, "video")
-        self._repeat.remember(disc.id, fingerprint)
-        shutil.rmtree(disc.scratch_dir, ignore_errors=True)
-        disc.scratch_dir.mkdir(parents=True, exist_ok=True)
-        self.disc, self.progress, self.likely = disc, RipProgress(), None
-        self._store.log(disc.id, f"Ripping {inserted.disc_type.long_name} “{disc.name}”")
+        job = self._store.create(inserted.disc_type, inserted.label, "video")
+        self._repeat.remember(job.id, fingerprint)
+        shutil.rmtree(job.scratch_dir, ignore_errors=True)
+        job.scratch_dir.mkdir(parents=True, exist_ok=True)
+        self.job, self.progress, self.likely = job, RipProgress(), None
+        self._store.log(job.id, f"Ripping {inserted.disc_type.long_name} “{job.name}”")
         self._publish()
-        guessing = asyncio.create_task(self._guess(disc.label))             if self._guesser and disc.label else None
+        guessing = asyncio.create_task(self._guess(job.label))             if self._guesser and job.label else None
         try:
-            failure = await self._rip_titles(disc)
+            failure = await self._rip_titles(job)
         except asyncio.CancelledError:
             self._abort = True  # stops makemkvcon; recover() cleans up on next start
             raise
@@ -207,21 +207,21 @@ class VideoRipper:
                               "Insert the Disc again to retry. If it keeps happening, check "
                               "the app's log file.")
         if failure:
-            self._store.log(disc.id, failure.headline, error=True)
-            self._store.log(disc.id, "Removing partial files from scratch")
-            self._store.mark_failed(disc.id, failure)
+            self._store.log(job.id, failure.headline, error=True)
+            self._store.log(job.id, "Removing partial files from scratch")
+            self._store.mark_failed(job.id, failure)
         else:
-            self._store.log(disc.id, "Rip complete")
-            self._store.mark_ripped(disc.id)
+            self._store.log(job.id, "Rip complete")
+            self._store.mark_ripped(job.id)
         try:
             await self._drive.eject()
-            self._store.log(disc.id, "Disc ejected")
+            self._store.log(job.id, "Disc ejected")
         except OSError as e:
             log.warning("eject failed: %s", e)
-            self._store.log(disc.id, f"Couldn't eject the Disc: {e}", error=True)
+            self._store.log(job.id, f"Couldn't eject the Disc: {e}", error=True)
         if guessing:
             guessing.cancel()
-        self.disc, self.progress, self.likely = self._store.get(disc.id), None, None
+        self.job, self.progress, self.likely = self._store.get(job.id), None, None
         self._publish()
 
     async def _guess(self, label: str) -> None:
@@ -234,7 +234,7 @@ class VideoRipper:
         if self.likely is not None and self.progress is not None:
             self._publish()
 
-    async def _rip_titles(self, disc: DiscRecord) -> Failure | None:
+    async def _rip_titles(self, job: JobRecord) -> Failure | None:
         try:
             exe = self._exe()
         except ToolUnavailable as e:  # the MakeMKV preflight hasn't passed (ADR 0006)
@@ -242,21 +242,21 @@ class VideoRipper:
                            "DVDs and Blu-rays can't be ripped until MakeMKV is fixed. CDs still "
                            "work. The MakeMKV page says what to do.")
         try:
-            _, out = await self._makemkv(disc, makemkv.drives_args(exe), quiet=True)
+            _, out = await self._makemkv(job, makemkv.drives_args(exe), quiet=True)
             source = makemkv.pick_source(makemkv.parse_scan_records(out).drives)
             if source is None:
                 return Failure(FailureKind.MAKEMKV, "MakeMKV can't see the drive.",
                                "Check the drive is connected, close the MakeMKV window if it's "
                                "open, then insert the Disc again.")
-            scan = await self._scan(disc, exe, source)
+            scan = await self._scan(job, exe, source)
             if makemkv.libredrive_refused(scan.messages):
                 # LibreDrive mode can drop when the drive resets; a fresh scan may bring it back
-                self._store.log(disc.id, "Reading the Disc once more, in case the drive "
+                self._store.log(job.id, "Reading the Disc once more, in case the drive "
                                          "switches to LibreDrive mode")
-                scan = await self._scan(disc, exe, source)
+                scan = await self._scan(job, exe, source)
                 if makemkv.libredrive_refused(scan.messages):
                     return LIBREDRIVE_FAILURE
-            await self._save_hints(disc, scan)
+            await self._save_hints(job, scan)
             if not scan.titles:
                 return Failure(FailureKind.DISC, "MakeMKV couldn't read this Disc.", _DISC_ADVICE)
             sel = makemkv.select_titles(scan.titles, MIN_TITLE_SECONDS)
@@ -264,21 +264,21 @@ class VideoRipper:
                 return Failure(FailureKind.DISC, "There are no Titles of 30 seconds or more.",
                                "Nothing on this Disc looks worth archiving.")
             titles = title_records(sel.keep)
-            self._store.set_titles(disc.id, titles,
+            self._store.set_titles(job.id, titles,
                                    skipped_short=scan.skipped_short + len(sel.short),
                                    skipped_duplicates=scan.skipped_duplicates + len(sel.duplicates))
             number = {t.makemkv_id: t.number for t in titles}
             for _dup, of in sel.duplicates:
-                self._store.log(disc.id, f"Skipping a Title with the same segments as "
+                self._store.log(job.id, f"Skipping a Title with the same segments as "
                                          f"Title {number[of.id]}")
-            self._store.log(disc.id, f"{len(titles)} Titles to rip")
-            self._refresh(disc.id)
+            self._store.log(job.id, f"{len(titles)} Titles to rip")
+            self._refresh(job.id)
             total = sum(t.size_bytes for t in titles) or 1
             done = 0
             started: float | None = None
             for t in titles:
-                self._store.set_title_status(disc.id, t.number, TitleStatus.RIPPING)
-                self._refresh(disc.id)
+                self._store.set_title_status(job.id, t.number, TitleStatus.RIPPING)
+                self._refresh(job.id)
                 self.progress = RipProgress(t.number, 0.0, done / total, self._eta(started, done / total))
                 self._publish()
                 saving = False
@@ -295,31 +295,31 @@ class VideoRipper:
                         self._publish_soon()
 
                 code, out = await self._makemkv(
-                    disc, makemkv.mkv_args(exe, source, t.makemkv_id, disc.scratch_dir,
+                    job, makemkv.mkv_args(exe, source, t.makemkv_id, job.scratch_dir,
                                            MIN_TITLE_SECONDS), on_progress)
                 summary = makemkv.rip_summary(out)
-                ok = (code == 0 and (disc.scratch_dir / t.file).exists()
+                ok = (code == 0 and (job.scratch_dir / t.file).exists()
                       and (summary is None or (summary[0] >= 1 and summary[1] == 0)))
                 if not ok:
-                    self._store.set_title_status(disc.id, t.number, TitleStatus.FAILED)
+                    self._store.set_title_status(job.id, t.number, TitleStatus.FAILED)
                     return Failure(FailureKind.TITLE, f"Title {t.number} couldn't be ripped.",
                                    _DISC_ADVICE)
-                self._store.set_title_status(disc.id, t.number, TitleStatus.RIPPED)
-                self._store.log(disc.id, f"Title {t.number} ripped ({t.size})")
+                self._store.set_title_status(job.id, t.number, TitleStatus.RIPPED)
+                self._store.log(job.id, f"Title {t.number} ripped ({t.size})")
                 done += t.size_bytes
             return None
         except _Fail as f:
             return f.failure
 
-    async def _scan(self, disc: DiscRecord, exe: Path, source: str) -> makemkv.Scan:
-        _, out = await self._makemkv(disc, makemkv.info_args(exe, source, MIN_TITLE_SECONDS))
+    async def _scan(self, job: JobRecord, exe: Path, source: str) -> makemkv.Scan:
+        _, out = await self._makemkv(job, makemkv.info_args(exe, source, MIN_TITLE_SECONDS))
         return makemkv.parse_scan_records(out)
 
-    async def _save_hints(self, disc: DiscRecord, scan: makemkv.Scan) -> None:
+    async def _save_hints(self, job: JobRecord, scan: makemkv.Scan) -> None:
         """Keep what the Disc says it is, for Identification after it's ejected."""
         root = self._disc_root()
         bd_title = await asyncio.to_thread(bd_meta_title, root) if root else ""
-        save_hints(disc.scratch_dir, DiscHints(volume_label=disc.label, disc_name=scan.disc_name,
+        save_hints(job.scratch_dir, DiscHints(volume_label=job.label, disc_name=scan.disc_name,
                                                bd_title=bd_title, volume_name=scan.volume_name))
 
     def _eta(self, started: float | None, overall: float) -> int | None:
@@ -330,7 +330,7 @@ class VideoRipper:
             return None
         return int(elapsed * (1 - overall) / overall)
 
-    async def _makemkv(self, disc: DiscRecord, args: list[str],
+    async def _makemkv(self, job: JobRecord, args: list[str],
                        on_record: Callable[[RobotLine], None] | None = None,
                        quiet: bool = False) -> tuple[int, list[RobotLine]]:
         """Run makemkvcon, logging its messages (only licence ones if `quiet`); raises _Fail on a
@@ -347,10 +347,10 @@ class VideoRipper:
                 return
             records.append(rec)
             if isinstance(rec, Msg):
-                bad_licence = makemkv.licence_problem(rec, disc.disc_type)
+                bad_licence = makemkv.licence_problem(rec, job.disc_type)
                 licence = licence or bad_licence
                 if bad_licence or not quiet:
-                    self._store.log(disc.id, rec.text, error=rec.is_error or bad_licence)
+                    self._store.log(job.id, rec.text, error=rec.is_error or bad_licence)
             if on_record:
                 on_record(rec)
 
@@ -364,13 +364,13 @@ class VideoRipper:
         if licence:
             raise _Fail(LICENCE_FAILURE)
         if code != 0 and args[-1] != "disc:9999":  # a drive listing's exit code means nothing
-            self._store.log(disc.id, f"makemkvcon exited with code {code}", error=True)
+            self._store.log(job.id, f"makemkvcon exited with code {code}", error=True)
         return code, records
 
-    # -- publishing (the UI re-renders from .disc / .progress) -------------
+    # -- publishing (the UI re-renders from .job / .progress) -------------
 
-    def _refresh(self, disc_id: int) -> None:
-        self.disc = self._store.get(disc_id)
+    def _refresh(self, job_id: int) -> None:
+        self.job = self._store.get(job_id)
 
     def _publish(self) -> None:
         self._last_publish = self._clock()

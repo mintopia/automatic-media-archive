@@ -1,5 +1,5 @@
 """Running external programs. Everything that shells out takes a `Runner` (or a
-`Streamer` for long jobs), so tests can pass a fake instead of spawning real processes."""
+`Streamer` for long processes), so tests can pass a fake instead of spawning real processes."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def run(args: Sequence[str]) -> ProcResult:
 
 
 class Streamer(Protocol):
-    """Run a long job, calling `on_line` per output line; the exit code. Raising from `on_line`
+    """Run a long process, calling `on_line` per output line; the exit code. Raising from `on_line`
     kills the process (how a caller aborts)."""
 
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],

@@ -194,7 +194,7 @@ class FakeCyanrip:
         self.drive = drive
         self.enhanced_cd = False  # an UnrecognisedDisc that is really an enhanced CD
         self.calls: list[list[str]] = []
-        self.disc_id = "iV4zYu5_g1huHgbfxS6qgxQBL_A-"  # MusicBrainz Disc ID
+        self.mb_disc_id = "iV4zYu5_g1huHgbfxS6qgxQBL_A-"  # MusicBrainz Disc ID
         self.mcn: str | None = None  # the Disc's barcode, if it carries one
         self.tracks: list[tuple[int, float]] = [(1, 200.0), (2, 100.0), (3, 300.0)]
         self.preemphasis: set[int] = set()
@@ -229,7 +229,7 @@ class FakeCyanrip:
         header = ["cyanrip 0.9.3.1 (fake)", "System device:  \\\\.\\D:",
                   "Device model:   PIONEER BD-RW   BDR-S11J 1.01 SCSI CD-ROM",
                   "Offset:         +667 samples", f"Disc tracks:    {len(self.tracks)}",
-                  f"DiscID:         {self.disc_id}",
+                  f"DiscID:         {self.mb_disc_id}",
                   *([f"Disc MCN:       {self.mcn}"] if self.mcn else []),
                   f"AccurateRip:    {'found' if self.in_accuraterip else 'not found'}", "",
                   "Gaps:"]
@@ -324,7 +324,7 @@ def flac_bytes(n: int, seconds: float) -> bytes:
 class FakeWeb:
     """MusicBrainz, the Cover Art Archive and Plex, as an httpx transport.
 
-    MusicBrainz is offline until a test sets `musicbrainz[disc_id]` (a response
+    MusicBrainz is offline until a test sets `musicbrainz[mb_disc_id]` (a response
     dict, or an HTTP status). `covers[release_id]` = image bytes. Plex requests
     are recorded in `plex_requests`; its libraries are `plex_sections`.
     """

@@ -1,8 +1,8 @@
 {#- A CD's Rip: drive card, tracks with AccurateRip results, and what was found on it.
-    `view` is a CdRip (live) or a CdDisc (finished); `live` says which. -#}
+    `view` is a CdRip (live) or a CdJob (finished); `live` says which. -#}
 {%- if view is none -%}
 {#- The Rip being watched just finished: load its result in place. -#}
-<div hx-get="/discs/{{ cd_last_id }}" hx-trigger="load" hx-select="#disc" hx-target="#disc" hx-swap="outerHTML"></div>
+<div hx-get="/jobs/{{ cd_last_id }}" hx-trigger="load" hx-select="#disc" hx-target="#disc" hx-swap="outerHTML"></div>
 {%- else -%}
 <div class="split">
   <div class="stack">

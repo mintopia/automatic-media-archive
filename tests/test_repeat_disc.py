@@ -10,7 +10,7 @@ from __future__ import annotations
 import html
 import json
 
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from ama.repeat import video_fingerprint
 from tests.conftest import eventually
@@ -31,11 +31,11 @@ def _file_cd(harness) -> None:
                       .read_text(encoding="utf-8"))
     resp["releases"] = [r for r in resp["releases"] if r["id"] == SPECIAL]
     harness.web.musicbrainz[DISC_1] = resp
-    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.mb_disc_id = DISC_1
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 25)}
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED))
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
 
 
 def _rips(harness) -> int:
@@ -63,7 +63,7 @@ def _file_movie(harness, root, disc_type=DiscType.BD) -> None:
     harness.drive.root = root
     harness.makemkv.release()
     harness.drive.insert(disc_type, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.discs.list(DiscStatus.FILED), timeout=5)
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
     harness.drive.eject()
 
 
@@ -82,7 +82,7 @@ def test_a_known_cd_is_recognised_on_insert_and_not_ripped(harness, client):
     assert f"Music/Various Artists/{ALBUM}" in page
     assert "Waiting for your choice on" in page  # the Ripping bin
     assert _rips(harness) == rips
-    assert len(harness.services.discs.list(DiscStatus.FILED)) == 1
+    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
 
 
 def test_skip_ejects_the_known_disc_without_ripping(harness, client):
@@ -97,8 +97,8 @@ def test_skip_ejects_the_known_disc_without_ripping(harness, client):
     eventually(lambda: harness.drive.ejected == ejected + 1)
     assert WARNING not in _page(client)
     assert _rips(harness) == rips
-    assert harness.services.discs.list(DiscStatus.RIPPING) == []
-    assert len(harness.services.discs.list(DiscStatus.FILED)) == 1
+    assert harness.services.jobs.list(JobStatus.RIPPING) == []
+    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
 
 
 def test_archive_again_rips_and_files_the_disc_normally(harness, client):
@@ -108,7 +108,7 @@ def test_archive_again_rips_and_files_the_disc_normally(harness, client):
     eventually(lambda: WARNING in _page(client))
 
     client.post("/repeat/again")
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2)
     assert WARNING not in _page(client)
 
 
@@ -127,7 +127,7 @@ def test_taking_the_disc_out_while_asked_clears_the_warning(harness, client):
 def test_a_different_cd_is_ripped_without_asking(harness, client):
     _file_cd(harness)
     harness.drive.eject()
-    harness.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # disc 2 of the same album
+    harness.cyanrip.mb_disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # disc 2 of the same album
     rips = _rips(harness)
     harness.drive.insert(DiscType.CD)
     eventually(lambda: _rips(harness) == rips + 1)
@@ -135,7 +135,7 @@ def test_a_different_cd_is_ripped_without_asking(harness, client):
 
 
 def test_a_cd_ripped_but_not_yet_filed_is_a_repeat_waiting_to_be_filed(harness, client):
-    harness.cyanrip.disc_id = DISC_1  # MusicBrainz offline: Ripped, never filed
+    harness.cyanrip.mb_disc_id = DISC_1  # MusicBrainz offline: Ripped, never filed
     harness.drive.insert(DiscType.CD)
     eventually(lambda: harness.drive.ejected == 1)
     rips = _rips(harness)
@@ -147,9 +147,9 @@ def test_a_cd_ripped_but_not_yet_filed_is_a_repeat_waiting_to_be_filed(harness, 
 
 def test_a_cd_waiting_in_review_is_a_repeat_waiting_for_review(harness, client):
     harness.web.musicbrainz[DISC_1] = 404  # not on MusicBrainz: Review
-    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.mb_disc_id = DISC_1
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW))
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW))
     harness.drive.eject()
     harness.drive.insert(DiscType.CD)
     eventually(lambda: "Already ripped, waiting for Review" in _page(client))
@@ -188,7 +188,7 @@ def test_a_known_blu_ray_is_recognised_and_skip_ejects_it(harness, client, tmp_p
     client.post("/repeat/skip")
     eventually(lambda: harness.drive.ejected == ejected + 1)
     assert len(harness.makemkv.ripped_ids) == rips
-    assert len(harness.services.discs.list(DiscStatus.FILED)) == 1
+    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
 
 
 def test_the_uhd_of_an_archived_blu_ray_is_not_a_repeat(harness, client, tmp_path):
@@ -220,5 +220,5 @@ def test_cd_fingerprint_is_the_musicbrainz_disc_id_from_the_real_ffvii_toc():
 
     report = cyanrip.parse_report((DATA / "cyanrip" / "info-ffvii-rebirth-disc1.txt")
                                   .read_text(encoding="utf-8"))
-    assert cd_fingerprint(report.disc_id) == f"CD:{DISC_1}"
+    assert cd_fingerprint(report.mb_disc_id) == f"CD:{DISC_1}"
     assert cd_fingerprint(None) is None

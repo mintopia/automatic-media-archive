@@ -1,4 +1,4 @@
-"""Routes: the Now page, sign-in, and the SSE stream. Disc pages are in `discs_pages`."""
+"""Routes: the Now page, sign-in, and the SSE stream. Job pages are in `jobs_pages`."""
 
 from __future__ import annotations
 

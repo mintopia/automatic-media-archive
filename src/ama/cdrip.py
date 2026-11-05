@@ -2,13 +2,13 @@
 
 `CdRipper.run()` watches the drive. When a Disc arrives it first reads the TOC
 (`cyanrip -I`), which also catches enhanced CDs that Windows only shows as a
-data Disc. If there are audio tracks it Rips them to `scratch/cd/<disc id>/`
+data Disc. If there are audio tracks it Rips them to `scratch/cd/<Job id>/`
 (per-track FLAC, `rip.cue`, `rip.log`), recording per-track AccurateRip results,
 and ejects the Disc whatever happened. A failed Rip is recorded with its log,
 its partial files are deleted and it is not retried: the user re-inserts.
 
 Live state (`current`) is published on the `rip` topic; everything that must
-survive a restart is in the `discs`/`disc_log`/`cd_tracks` tables.
+survive a restart is in the `jobs`/`job_log`/`cd_tracks` tables.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from ama import cyanrip
 from ama.config import CdConfig
 from ama.cyanrip import ArResult, ArStatus, Report
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, Failure, FailureKind
+from ama.jobs import JobRecord, JobStatus, JobStore, Failure, FailureKind
 from ama.drive import DiscPresent, DiscType, DriveMonitor, UnrecognisedDisc
 from ama.events import EventBus, Topic
 from ama.proc import Streamer
@@ -55,7 +55,7 @@ class Track:
 class CdRip:
     """A CD Rip in progress, as the UI shows it."""
 
-    disc_id: int
+    job_id: int
     label: str
     tracks: list[Track]
     current: int | None = None       # track number being ripped
@@ -96,10 +96,10 @@ class CdRip:
 
 
 @dataclass
-class CdDisc:
+class CdJob:
     """A finished (or failed) CD record with its tracks, for the UI."""
 
-    record: DiscRecord
+    record: JobRecord
     tracks: list[Track] = field(default_factory=list)
     album: Album | None = None  # what it was filed as (media.py), once filed
 
@@ -137,21 +137,21 @@ class CdTracks:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def save(self, disc_id: int, tracks: list[Track]) -> None:
+    def save(self, job_id: int, tracks: list[Track]) -> None:
         for t in tracks:
             self._db.execute(
-                "INSERT INTO cd_tracks (disc_id, number, seconds, preemphasis, ripped, "
+                "INSERT INTO cd_tracks (job_id, number, seconds, preemphasis, ripped, "
                 "ar_status, ar_confidence) VALUES (?, ?, ?, ?, ?, ?, ?) "
-                "ON CONFLICT(disc_id, number) DO UPDATE SET seconds = excluded.seconds, "
+                "ON CONFLICT(job_id, number) DO UPDATE SET seconds = excluded.seconds, "
                 "preemphasis = excluded.preemphasis, ripped = excluded.ripped, "
                 "ar_status = excluded.ar_status, ar_confidence = excluded.ar_confidence",
-                (disc_id, t.number, t.seconds, int(t.preemphasis), int(t.ripped),
+                (job_id, t.number, t.seconds, int(t.preemphasis), int(t.ripped),
                  t.ar.status.value if t.ar else None, t.ar.confidence if t.ar else None))
 
-    def load(self, disc_id: int) -> list[Track]:
+    def load(self, job_id: int) -> list[Track]:
         rows = self._db.execute(
             "SELECT number, seconds, preemphasis, ripped, ar_status, ar_confidence "
-            "FROM cd_tracks WHERE disc_id = ? ORDER BY number", (disc_id,)).fetchall()
+            "FROM cd_tracks WHERE job_id = ? ORDER BY number", (job_id,)).fetchall()
         return [Track(n, s, bool(p), bool(r), 100.0 if r else 0.0,
                       ArResult(ArStatus(a), c) if a else None)
                 for n, s, p, r, a, c in rows]
@@ -218,7 +218,7 @@ def tracks_from_info(report: Report) -> list[Track]:
 class CdRipper:
     PUBLISH_EVERY = 0.5  # seconds between progress pushes to the UI
 
-    def __init__(self, cfg: CdConfig, drive: DriveMonitor, discs: DiscStore, tracks: CdTracks,
+    def __init__(self, cfg: CdConfig, drive: DriveMonitor, jobs: JobStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
                  repeat: RepeatGuard, scratch: ScratchGate,
                  guesser: Guesser | None = None) -> None:
@@ -229,36 +229,36 @@ class CdRipper:
         self._scratch = scratch
         self._tool = tool
         self._drive = drive
-        self._discs = discs
+        self._jobs = jobs
         self._tracks = tracks
         self._bus = bus
         self._stream = streamer
         self._interval = interval
         self.current: CdRip | None = None
         self.reading_toc = False
-        self.last_disc_id: int | None = None
+        self.last_job_id: int | None = None
         self._handled: int | None = None  # the `DriveMonitor.insertion` already dealt with
 
     # -- queries for the UI --
-    def disc(self, disc_id: int) -> CdDisc | None:
-        rec = self._discs.get(disc_id)
+    def job(self, job_id: int) -> CdJob | None:
+        rec = self._jobs.get(job_id)
         if rec is None or rec.disc_type != DiscType.CD:
             return None
-        return CdDisc(rec, self._tracks.load(disc_id))
+        return CdJob(rec, self._tracks.load(job_id))
 
-    def discs(self, status: DiscStatus, limit: int = 10) -> list[CdDisc]:
+    def jobs(self, status: JobStatus, limit: int = 10) -> list[CdJob]:
         """Recent CD records in `status` (not dismissed), newest first."""
-        recs = [r for r in self._discs.list(status) if r.disc_type == DiscType.CD][:limit]
-        return [CdDisc(r, self._tracks.load(r.id)) for r in recs]
+        recs = [r for r in self._jobs.list(status) if r.disc_type == DiscType.CD][:limit]
+        return [CdJob(r, self._tracks.load(r.id)) for r in recs]
 
     # -- lifecycle --
     def recover(self) -> None:
         """A CD Rip still `ripping` at startup was cut off by a restart: fail it."""
-        for rec in self._discs.list(DiscStatus.RIPPING, include_dismissed=True):
+        for rec in self._jobs.list(JobStatus.RIPPING, include_dismissed=True):
             if rec.disc_type == DiscType.CD:
-                self._discs.log(rec.id, "AMA restarted during the Rip", error=True)
-                self._discs.mark_failed(rec.id, INTERRUPTED)
-                self._discs.log(rec.id, "Removed partial files from scratch")
+                self._jobs.log(rec.id, "AMA restarted during the Rip", error=True)
+                self._jobs.mark_failed(rec.id, INTERRUPTED)
+                self._jobs.log(rec.id, "Removed partial files from scratch")
 
     async def run(self) -> None:
         await asyncio.to_thread(self.recover)
@@ -288,15 +288,15 @@ class CdRipper:
         self._bus.publish(Topic.RIP)
         self._bus.publish(Topic.DRIVE)
 
-    async def _eject(self, disc_id: int | None) -> None:
+    async def _eject(self, job_id: int | None) -> None:
         try:
             await self._drive.eject()
-            if disc_id is not None:
-                self._discs.log(disc_id, "Disc ejected")
+            if job_id is not None:
+                self._jobs.log(job_id, "Disc ejected")
         except Exception as e:
             log.warning("eject failed: %s", e)
-            if disc_id is not None:
-                self._discs.log(disc_id, f"Couldn't eject the Disc: {e}", error=True)
+            if job_id is not None:
+                self._jobs.log(job_id, f"Couldn't eject the Disc: {e}", error=True)
 
     async def _run_tool(self, args: list[str], on_line, cwd: Path | None = None) -> int:
         return await asyncio.to_thread(self._stream, args, on_line, cwd)
@@ -322,34 +322,34 @@ class CdRipper:
             self._publish()
             return  # a data Disc, not an enhanced CD: not ours
         # A known CD waits for the user first; one they want again still needs room.
-        fingerprint = cd_fingerprint(info.disc_id) if tracks else None
+        fingerprint = cd_fingerprint(info.mb_disc_id) if tracks else None
         if not await self._repeat.admit(DiscType.CD, fingerprint):
             return
         if tracks and await self._scratch.refuses(DiscType.CD, label):  # ejected unripped
             self._publish()
             return
-        rec = self._discs.create(DiscType.CD, label, SCRATCH_SUBDIR)
+        rec = self._jobs.create(DiscType.CD, label, SCRATCH_SUBDIR)
         self._repeat.remember(rec.id, fingerprint)
-        self.last_disc_id = rec.id
+        self.last_job_id = rec.id
         for ln in info_lines:
-            self._discs.log(rec.id, ln, error=is_error_line(ln))
+            self._jobs.log(rec.id, ln, error=is_error_line(ln))
         if not tracks:
             failure = NOT_INSTALLED if code is None else \
                 DRIVE if any(_DRIVE_ERRORS.search(ln) for ln in info_lines) else NO_AUDIO
             await self._fail(rec, failure)
             return
         self._tracks.save(rec.id, tracks)
-        self.current = CdRip(rec.id, label, tracks, mb_disc_id=info.disc_id or "")
+        self.current = CdRip(rec.id, label, tracks, mb_disc_id=info.mb_disc_id or "")
         self._publish()
         guessing = asyncio.create_task(self._guesser.follow(
-            self.current, info.mcn, self._publish, lambda: self.guess_retry_seconds))             if self._guesser and info.disc_id else None
+            self.current, info.mcn, self._publish, lambda: self.guess_retry_seconds))             if self._guesser and info.mb_disc_id else None
         try:
             await self._rip(rec, exe, device, tracks)
         finally:
             if guessing:
                 guessing.cancel()
 
-    async def _rip(self, rec: DiscRecord, exe: Path, device: str, tracks: list[Track]) -> None:
+    async def _rip(self, rec: JobRecord, exe: Path, device: str, tracks: list[Track]) -> None:
 
         # 2. Rip.
         rec.scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -373,7 +373,7 @@ class CdRipper:
                 live.current, live.eta_seconds = p.track, p.eta_seconds
             else:
                 rip_lines.append(line)
-                self._discs.log(rec.id, line, error=is_error_line(line))
+                self._jobs.log(rec.id, line, error=is_error_line(line))
                 if line.lstrip().startswith(("Track ", "Accurip", "Preemphasis")):
                     self._apply(live, cyanrip.parse_report("\n".join(rip_lines)))
             # Throttle pushes, but always push the latest state eventually (trailing edge).
@@ -412,8 +412,8 @@ class CdRipper:
             if cue.exists():
                 cue.write_text(strip_data_tracks(cue.read_text(encoding="utf-8")),
                                encoding="utf-8")
-            self._discs.mark_ripped(rec.id)
-            self._discs.log(rec.id, "Rip finished")
+            self._jobs.mark_ripped(rec.id)
+            self._jobs.log(rec.id, "Rip finished")
             await self._eject(rec.id)
         else:
             if code is None:
@@ -441,11 +441,11 @@ class CdRipper:
             if r.preemphasis:
                 t.preemphasis = True
 
-    async def _fail(self, rec: DiscRecord, failure: Failure) -> None:
-        self._discs.log(rec.id, failure.headline, error=True)
+    async def _fail(self, rec: JobRecord, failure: Failure) -> None:
+        self._jobs.log(rec.id, failure.headline, error=True)
         await self._eject(rec.id)
-        self._discs.log(rec.id, "Removing partial files from scratch")
-        await asyncio.to_thread(self._discs.mark_failed, rec.id, failure)
+        self._jobs.log(rec.id, "Removing partial files from scratch")
+        await asyncio.to_thread(self._jobs.mark_failed, rec.id, failure)
         log.info("CD Rip %s failed: %s", rec.id, failure.kind)
         self.current = None
         self._publish()

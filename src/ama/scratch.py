@@ -4,7 +4,7 @@ Every Rip lands on local scratch and stays there through Identification, Review
 and Encode, so a Review or Encode backlog fills it. Before a Rip starts, the
 ripper asks `ScratchGate.refuses(disc_type, label)`: if free space is below
 that Disc Type's configured threshold (`[scratch]` in ama.toml) the Disc is
-ejected unripped, no Disc record is made, and `refused` says why for the UI
+ejected unripped, no Job record is made, and `refused` says why for the UI
 until the next Disc is let in.
 """
 

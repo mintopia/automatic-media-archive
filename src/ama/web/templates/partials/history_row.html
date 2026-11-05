@@ -1,5 +1,5 @@
-{#- One filed Disc in History (the Now bin and /history). `d`: a CdDisc, FiledMovie or FiledTv; `dated`: show the day it was filed, else the time.
-    `set_pos` (History only): disc id -> (Disc number, highest filed) for video sets. What the Disc holds opens below the meta line. -#}
+{#- One filed Disc in History (the Now bin and /history). `d`: a CdJob, FiledMovie or FiledTv; `dated`: show the day it was filed, else the time.
+    `set_pos` (History only): Job id -> (Disc number, highest filed) for video sets. What the Disc holds opens below the meta line. -#}
 {%- set m = media_of(d.record.id) -%}
 {%- set art = (m.cover if m.kind == "album" else m.poster) if m else none -%}
 {%- set names = contents_of(d) -%}
@@ -16,11 +16,11 @@
 {%- set count = d.extras if d.movie is defined else (n or d.episodes | length) if d.episodes is defined else d.tracks | length -%}
 <div class="row compact hist">
   {%- if art %}<div class="dtype art"><img src="/covers/{{ art }}" alt="" loading="lazy"></div>{% else %}<div class="dtype">{{ d.record.disc_type }}</div>{% endif %}
-  <div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.title }}</a></div>
+  <div><div class="tt"><a href="/jobs/{{ d.record.id }}">{{ d.record.title }}</a></div>
     <div class="ts meta">{{ kind }}
       {%- if d.movie is defined and d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}
       {%- if pos %} · <span class="nw">Disc {{ pos[0] }} of {{ pos[1] }}</span>{% endif %}
-      {%- if d.movie is defined and d.extras %} · <a href="/discs/{{ d.record.id }}/extras">{{ count }} Extra{{ "s" if count != 1 }}</a>
+      {%- if d.movie is defined and d.extras %} · <a href="/jobs/{{ d.record.id }}/extras">{{ count }} Extra{{ "s" if count != 1 }}</a>
       {%- elif count %} · {{ count }} {{ held }}{{ "s" if count != 1 }}{% endif %}
       {%- if d.tracks is defined %} · {{ d.accuraterip }}{% endif %}
       {%- if src %} <a class="src" href="{{ src[2] }}" rel="noreferrer" target="_blank">{{ "MusicBrainz" if src[1] == "MB" else src[1] }}</a>{% endif %}</div>

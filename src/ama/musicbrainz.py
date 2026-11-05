@@ -104,7 +104,7 @@ class MusicBrainz:
         self._last = -min_interval
         self._lock = threading.Lock()
 
-    def lookup(self, disc_id: str) -> dict[str, Any] | None:
+    def lookup(self, mb_disc_id: str) -> dict[str, Any] | None:
         """The `/ws/2/discid` response, or None if MusicBrainz doesn't know the Disc."""
         with self._lock:
             wait = self._last + self.min_interval - time.monotonic()
@@ -112,7 +112,7 @@ class MusicBrainz:
                 time.sleep(wait)
             try:
                 # Built by hand: MusicBrainz wants literal `+` between inc values.
-                r = self._http.get(f"{self.BASE}/discid/{disc_id}?inc={self.INC}"
+                r = self._http.get(f"{self.BASE}/discid/{mb_disc_id}?inc={self.INC}"
                                    "&fmt=json&cdstubs=no")
             finally:
                 self._last = time.monotonic()
@@ -137,13 +137,13 @@ class MusicBrainz:
         return None
 
 
-def matches(response: dict[str, Any], disc_id: str) -> list[Match]:
-    """Every (release, disc) in a `/ws/2/discid` response whose medium carries `disc_id`."""
+def matches(response: dict[str, Any], mb_disc_id: str) -> list[Match]:
+    """Every (release, disc) in a `/ws/2/discid` response whose medium carries `mb_disc_id`."""
     out: list[Match] = []
     for r in response.get("releases", []):
         release = _release(r)
         for medium in r.get("media", []):
-            if any(d.get("id") == disc_id for d in medium.get("discs", [])):
+            if any(d.get("id") == mb_disc_id for d in medium.get("discs", [])):
                 out.append(Match(release, medium["position"], medium.get("title") or "",
                                  tuple(_track(t) for t in medium.get("tracks", []))))
     return out

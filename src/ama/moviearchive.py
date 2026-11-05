@@ -34,7 +34,7 @@ from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
 from ama.covers import Covers
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason, TitleRecord, TitleStatus
+from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
 from ama.events import EventBus
@@ -60,7 +60,7 @@ ENCODED = "encode.mkv"
 class Movie:
     """A video Disc Identified as a film, and its place in the Encode queue."""
 
-    disc_id: int
+    job_id: int
     film: Candidate
     title_number: int  # the Main Feature
     status: EncodeStatus
@@ -78,42 +78,42 @@ class Movies:
         self._now = now
         self._queue = EncodeQueue(db, "movies", "encode_status")
 
-    _COLS = ("disc_id, tmdb_id, title, original_title, year, original_language, runtime_min, "
+    _COLS = ("job_id, tmdb_id, title, original_title, year, original_language, runtime_min, "
              "title_number, encode_status, queued_at, video_height")
 
     def _movie(self, row) -> Movie:
-        (disc_id, tmdb_id, title, orig, year, lang, runtime, number, status, queued,
+        (job_id, tmdb_id, title, orig, year, lang, runtime, number, status, queued,
          height) = row
-        return Movie(disc_id, Candidate(tmdb_id, title, orig, year, lang, runtime), number,
+        return Movie(job_id, Candidate(tmdb_id, title, orig, year, lang, runtime), number,
                      EncodeStatus(status), datetime.fromisoformat(queued), height)
 
-    def enqueue(self, disc_id: int, film: Candidate, title_number: int) -> None:
+    def enqueue(self, job_id: int, film: Candidate, title_number: int) -> None:
         """Queue the Disc's Main Feature for Encode as `film` (idempotent; Review calls it too)."""
         self._db.execute(
             f"INSERT INTO movies ({self._COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
-            "ON CONFLICT (disc_id) DO UPDATE SET tmdb_id = excluded.tmdb_id, "
+            "ON CONFLICT (job_id) DO UPDATE SET tmdb_id = excluded.tmdb_id, "
             "title = excluded.title, original_title = excluded.original_title, "
             "year = excluded.year, original_language = excluded.original_language, "
             "runtime_min = excluded.runtime_min, title_number = excluded.title_number",
-            (disc_id, film.id, film.title, film.original_title, film.year,
+            (job_id, film.id, film.title, film.original_title, film.year,
              film.original_language, film.runtime_min, title_number, EncodeStatus.QUEUED,
              self._now().isoformat(timespec="seconds")))
 
-    def get(self, disc_id: int) -> Movie | None:
-        row = self._db.execute(f"SELECT {self._COLS} FROM movies WHERE disc_id = ?",
-                               (disc_id,)).fetchone()
+    def get(self, job_id: int) -> Movie | None:
+        row = self._db.execute(f"SELECT {self._COLS} FROM movies WHERE job_id = ?",
+                               (job_id,)).fetchone()
         return self._movie(row) if row else None
 
     def queue(self) -> list[Movie]:
         """Movies not yet filed, first in first out."""
         cols = ", ".join("q." + c.strip() for c in self._COLS.split(","))
-        return [self._movie(r) for r in self._queue.waiting(cols, "q.queued_at, q.disc_id")]
+        return [self._movie(r) for r in self._queue.waiting(cols, "q.queued_at, q.job_id")]
 
-    def set_status(self, disc_id: int, status: EncodeStatus, video_height: int | None = None
+    def set_status(self, job_id: int, status: EncodeStatus, video_height: int | None = None
                    ) -> None:
         self._db.execute("UPDATE movies SET encode_status = ?, "
-                         "video_height = COALESCE(?, video_height) WHERE disc_id = ?",
-                         (status.value, video_height, disc_id))
+                         "video_height = COALESCE(?, video_height) WHERE job_id = ?",
+                         (status.value, video_height, job_id))
 
     def requeue_unfinished(self) -> list[int]:
         """At startup: Encodes cut short, or failed, go back in the queue (Rips are kept)."""
@@ -124,13 +124,13 @@ class Movies:
 class FiledMovie:
     """A filed movie Disc, for the UI."""
 
-    record: DiscRecord
+    record: JobRecord
     movie: Movie
     extras: int = 0  # Extras filed with it
 
 
 def main_feature(titles: tuple[TitleRecord, ...]) -> TitleRecord | None:
-    """The Main Feature: the longest Title ripped (decoys and TV are Review's job)."""
+    """The Main Feature: the longest Title ripped (decoys and TV are left to Review)."""
     ripped = [t for t in titles if t.status == TitleStatus.RIPPED]
     return max(ripped, key=lambda t: (t.duration_s, -t.number), default=None)
 
@@ -143,15 +143,15 @@ def plex_version(disc_type: DiscType, video_height: int) -> str | None:
 
 
 class MovieArchiver:
-    def __init__(self, discs: DiscStore, movies: Movies, tmdb: Tmdb, nas: NasMonitor,
+    def __init__(self, jobs: JobStore, movies: Movies, tmdb: Tmdb, nas: NasMonitor,
                  archive: Archive, plex: Plex, bus: EventBus, encoder: Encoder,
                  streamer: Streamer, interval: float, retry_seconds: float = 60.0,
                  clock: Callable[[], float] = time.monotonic,
-                 claimed: Callable[[int], bool] = lambda disc_id: False, *,
+                 claimed: Callable[[int], bool] = lambda job_id: False, *,
                  extras: Extras, media: MediaStore, covers: Covers) -> None:
         self._media = media
         self._covers = covers
-        self._discs = discs
+        self._jobs = jobs
         self.movies = movies
         self.extras = extras
         self._tmdb = tmdb
@@ -177,18 +177,18 @@ class MovieArchiver:
             await asyncio.sleep(self._interval)
 
     def recover(self) -> None:
-        for disc_id in self.movies.requeue_unfinished():
-            self._discs.log(disc_id, "Encode queued again after a restart")
+        for job_id in self.movies.requeue_unfinished():
+            self._jobs.log(job_id, "Encode queued again after a restart")
         self.extras.requeue_unfinished()
 
     def _later(self, key: tuple[str, int], why: str) -> None:
         if self.backoff.later(key):
-            self._discs.log(key[1], f"{why}; trying again in a while", error=True)
+            self._jobs.log(key[1], f"{why}; trying again in a while", error=True)
 
     # -- Identification -----------------------------------------------------
 
     async def identify_once(self) -> None:
-        waiting = self._discs.list(DiscStatus.RIPPED, include_dismissed=True,
+        waiting = self._jobs.list(JobStatus.RIPPED, include_dismissed=True,
                                    types=VIDEO_DISC_TYPES)
         for rec in reversed(waiting):  # oldest first
             key = ("identify", rec.id)
@@ -200,13 +200,13 @@ class MovieArchiver:
             except RetryLater as e:
                 self._later(key, str(e))
             except Exception:
-                log.exception("Movie Identification of Disc %s crashed", rec.id)
+                log.exception("Movie Identification of Job %s crashed", rec.id)
                 self._later(key, "Identification went wrong (see the app's log file)")
             else:
                 self.backoff.done(key)
             self._publish()
 
-    def identify(self, rec: DiscRecord) -> None:
+    def identify(self, rec: JobRecord) -> None:
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
@@ -238,7 +238,7 @@ class MovieArchiver:
         if found is not None:
             likely = found.likely
             name = f"Title {likely.number}" + (f" ({likely.source})" if likely.source else "")
-            self._discs.log(rec.id, f"Suspected decoy playlists: {len(found.versions)} Titles "
+            self._jobs.log(rec.id, f"Suspected decoy playlists: {len(found.versions)} Titles "
                                     f"run within {decoys.DURATION_TOLERANCE_S} s of each other; "
                                     + (f"{name} plays in order, likely the film"
                                        if found.confident else
@@ -247,19 +247,19 @@ class MovieArchiver:
                 reason, film = ReviewReason.DECOY_PLAYLISTS, None
         if film is None:
             assert reason is not None
-            self._discs.mark_review(rec.id, reason)
-            self._discs.log(rec.id, f"Searched TMDB for {searched}: {len(candidates)} "
+            self._jobs.mark_review(rec.id, reason)
+            self._jobs.log(rec.id, f"Searched TMDB for {searched}: {len(candidates)} "
                                     f"film{'s' if len(candidates) != 1 else ''} found. "
                                     f"Needs Review: {reason.value.replace('_', ' ')}")
             return
-        self._discs.log(rec.id, f"Identified as {film.name} (TMDB {film.id}, {film.runtime_min} "
+        self._jobs.log(rec.id, f"Identified as {film.name} (TMDB {film.id}, {film.runtime_min} "
                                 f"min; Main Feature is Title {main.number}, {main.duration})")
         self.movies.enqueue(rec.id, film, main.number)
-        self._discs.log(rec.id, "Queued for Encode")
+        self._jobs.log(rec.id, "Queued for Encode")
 
-    def _to_tv_review(self, rec: DiscRecord, why: str) -> None:
-        self._discs.mark_review(rec.id, ReviewReason.EPISODES)
-        self._discs.log(rec.id, f"{why}. Needs Review: match the Titles to Episodes")
+    def _to_tv_review(self, rec: JobRecord, why: str) -> None:
+        self._jobs.mark_review(rec.id, ReviewReason.EPISODES)
+        self._jobs.log(rec.id, f"{why}. Needs Review: match the Titles to Episodes")
 
     def _series_named(self, terms: list[str]) -> Series | None:
         """The first TMDB series titled exactly like one of `terms`. Raises TmdbError."""
@@ -274,22 +274,22 @@ class MovieArchiver:
     async def encode_once(self) -> None:
         """Encode (or file) the first Movie in the queue that can go now."""
         for movie in self.movies.queue():
-            key = ("encode", movie.disc_id)
+            key = ("encode", movie.job_id)
             if movie.status == EncodeStatus.FAILED or not self.backoff.due(key):
                 continue
-            rec = self._discs.get(movie.disc_id)
+            rec = self._jobs.get(movie.job_id)
             assert rec is not None
             try:
                 if movie.status != EncodeStatus.ENCODED:
                     if not await self._encode(rec, movie):
                         return
                 await self._encode_extras(rec, movie)
-                await asyncio.to_thread(self.file, rec, self.movies.get(movie.disc_id) or movie)
+                await asyncio.to_thread(self.file, rec, self.movies.get(movie.job_id) or movie)
             except RetryLater as e:
                 self._later(key, str(e))
                 continue
             except Exception:
-                log.exception("Encode/filing of Disc %s crashed", rec.id)
+                log.exception("Encode/filing of Job %s crashed", rec.id)
                 self._later(key, "The Encode or filing went wrong (see the app's log file)")
                 continue
             finally:
@@ -297,7 +297,7 @@ class MovieArchiver:
             self.backoff.done(key)
             return  # one at a time; the next waits for the next pass
 
-    async def _encode(self, rec: DiscRecord, movie: Movie) -> bool:
+    async def _encode(self, rec: JobRecord, movie: Movie) -> bool:
         """Run the Encode; True when `encode.mkv` is ready. Raises RetryLater for tools."""
         ffmpeg, ffprobe = self.encoder.tools()
         title = next(t for t in rec.titles if t.number == movie.title_number)
@@ -312,7 +312,7 @@ class MovieArchiver:
         self.movies.set_status(rec.id, EncodeStatus.ENCODED, video_height=height)
         return True
 
-    async def _encode_extras(self, rec: DiscRecord, movie: Movie) -> None:
+    async def _encode_extras(self, rec: JobRecord, movie: Movie) -> None:
         """Encode each Extra not Encoded yet. One that fails is left out, logged."""
         titles = extras_mod.extra_titles(rec.titles, movie.title_number)
         hints = load_hints(rec.scratch_dir, rec.label)
@@ -336,7 +336,7 @@ class MovieArchiver:
             self.extras.set_status(rec.id, extra.title_number, ExtraStatus.ENCODED)
             await self._take_stills(rec, title, ffmpeg)
 
-    async def _take_stills(self, rec: DiscRecord, title: TitleRecord, ffmpeg: Path) -> None:
+    async def _take_stills(self, rec: JobRecord, title: TitleRecord, ffmpeg: Path) -> None:
         """Stills of an Extra for the sorting page, kept after scratch is deleted."""
         from ama.moviereview import POSITIONS, thumb_args  # that module imports this one
 
@@ -357,8 +357,8 @@ class MovieArchiver:
 
     # -- filing -------------------------------------------------------------
 
-    def file(self, rec: DiscRecord, movie: Movie) -> None:
-        """File `encode.mkv` into the Archive, then delete the Disc's scratch and tell Plex."""
+    def file(self, rec: JobRecord, movie: Movie) -> None:
+        """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
         filing.require_nas(self._nas)
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
@@ -368,15 +368,15 @@ class MovieArchiver:
             extras = self._file_extras(rec, rel)
         film = movie.film
         self._media.save(rec.id, screen(self._tmdb, self._covers, False, film.id, film.title,
-                                        film.year, lambda text: self._discs.log(rec.id, text)))
-        self._discs.mark_filed(rec.id, movie.film.name, folder)
-        self._discs.log(rec.id, f"Filed {name} to {folder}; scratch deleted")
+                                        film.year, lambda text: self._jobs.log(rec.id, text)))
+        self._jobs.mark_filed(rec.id, movie.film.name, folder)
+        self._jobs.log(rec.id, f"Filed {name} to {folder}; scratch deleted")
         if extras:
-            self._discs.log(rec.id, f"Filed {extras} Extra{'s' if extras != 1 else ''} to "
+            self._jobs.log(rec.id, f"Filed {extras} Extra{'s' if extras != 1 else ''} to "
                                     f"{Category.OTHER.value}")
-        filing.scan(self._plex, self._discs, rec.id, folder)
+        filing.scan(self._plex, self._jobs, rec.id, folder)
 
-    def _file_extras(self, rec: DiscRecord, rel: Path) -> int:
+    def _file_extras(self, rec: JobRecord, rel: Path) -> int:
         """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are filed.
         Each name is saved before copying so a retry reuses it."""
         film = self._archive.root / rel
@@ -395,7 +395,7 @@ class MovieArchiver:
                 self.extras.set_status(rec.id, e.title_number, ExtraStatus.FILED)
         return sum(e.status == ExtraStatus.FILED for e in self.extras.of(rec.id))
 
-    def sort_extras(self, rec: DiscRecord, changes: dict[int, tuple[str, Category]]) -> int:
+    def sort_extras(self, rec: JobRecord, changes: dict[int, tuple[str, Category]]) -> int:
         """Move each Extra the user re-sorted ({Title: (name, category)}) to its Plex folder
         and mark the Disc's Extras sorted; how many moved. Blocking: call in a thread."""
         filing.require_nas(self._nas)
@@ -420,17 +420,17 @@ class MovieArchiver:
                 raise RetryLater(f"Couldn't move “{e.name}” on the NAS ({err})") from err
             self.extras.place(rec.id, number, name, category, file)
             taken.add(file.casefold())
-            self._discs.log(rec.id, f"Extra “{e.name}” moved to {file}")
+            self._jobs.log(rec.id, f"Extra “{e.name}” moved to {file}")
             moved += 1
         self.extras.mark_reviewed(rec.id)
         if moved:
-            filing.scan(self._plex, self._discs, rec.id, film)
+            filing.scan(self._plex, self._jobs, rec.id, film)
         return moved
 
     # -- for the UI ---------------------------------------------------------
 
     def filed(self, limit: int = 100) -> list[FiledMovie]:
-        recs = self._discs.list(DiscStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
+        recs = self._jobs.list(JobStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
         return [FiledMovie(r, m, sum(e.status == ExtraStatus.FILED
                                      for e in self.extras.of(r.id)))
                 for r in recs if (m := self.movies.get(r.id))]
@@ -438,9 +438,9 @@ class MovieArchiver:
     def queue_view(self) -> dict[str, Any]:
         """The Encoding bin: the queue, the running Encode and who's next."""
         queue = self.movies.queue()
-        next_up = next((m.disc_id for m in queue if m.status == EncodeStatus.QUEUED), None)
-        types = {m.disc_id: rec.disc_type for m in queue if (rec := self._discs.get(m.disc_id))}
-        return {"encoding": queue, "encode_job": self.encoder.current, "encode_next": next_up,
+        next_up = next((m.job_id for m in queue if m.status == EncodeStatus.QUEUED), None)
+        types = {m.job_id: rec.disc_type for m in queue if (rec := self._jobs.get(m.job_id))}
+        return {"encoding": queue, "title_encode": self.encoder.current, "encode_next": next_up,
                 "disc_types": types}
 
     # -- publishing ---------------------------------------------------------

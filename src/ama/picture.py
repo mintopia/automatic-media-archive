@@ -119,7 +119,7 @@ class Picture:
         return ",".join(chain) or None
 
     def describe(self) -> str:
-        """For the Disc log."""
+        """For the Job log."""
         scan = {Scan.PROGRESSIVE: "progressive",
                 Scan.TELECINED: f"telecined film ({self.scan.order.upper()}), "
                                 "detelecined to film rate",

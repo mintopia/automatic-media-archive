@@ -1,4 +1,4 @@
-{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Disc page.
+{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Job page.
     `cd.guess` (a likely release from MusicBrainz, only for show) fills in the album, artist and cover while it rips. -#}
 {%- set tag = heading or "div" -%}
 {%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
@@ -12,7 +12,7 @@
   <div class="body">
     {%- if cd %}
     {%- set name = g.match.release.title if g else (cd.label or "Unknown CD") %}
-    <{{ tag }} class="title">{% if link %}<a href="/discs/{{ cd.disc_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
+    <{{ tag }} class="title">{% if link %}<a href="/jobs/{{ cd.job_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
     <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
     {%- if g %}
     <div class="guess"><b>Likely</b>, from the CD's track list{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} versions of this album</span>{% endif %} · checked again after the Rip</div>

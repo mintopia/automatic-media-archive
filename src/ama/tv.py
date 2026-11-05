@@ -15,7 +15,7 @@ from pathlib import PurePosixPath
 
 from ama import decoys, extras
 from ama.archive import safe_name
-from ama.discs import TitleRecord, TitleStatus
+from ama.jobs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints, Episode, Series, clean_term
 
 TV = PurePosixPath("TV")

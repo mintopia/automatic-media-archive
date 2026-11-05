@@ -1,6 +1,6 @@
 """Push notifications to Discord (webhook) and ntfy (topic) that pull people back to the UI.
 
-Three events, read off Disc status changes (`DiscStore.statuses()`) whenever
+Three events, read off Job status changes (`JobStore.statuses()`) whenever
 anything is published on the bus, so no pipeline stage has to call this:
 
 - Disc done: a Disc's Rip finished and it was ejected (left `ripping` for
@@ -28,35 +28,35 @@ from typing import Protocol
 import httpx
 
 from ama.config import Config
-from ama.discs import DiscRecord, DiscStatus, DiscStore, FailureKind
+from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind
 from ama.events import EventBus
 
 log = logging.getLogger(__name__)
 
 
 class Event(StrEnum):
-    DISC_DONE = "disc_done"
+    RIP_DONE = "rip_done"
     REVIEW_NEEDED = "review_needed"
-    DISC_FAILED = "disc_failed"
+    JOB_FAILED = "job_failed"
 
 
-_DONE = {DiscStatus.RIPPED, DiscStatus.REVIEW, DiscStatus.FILED}
+_DONE = {JobStatus.RIPPED, JobStatus.REVIEW, JobStatus.FILED}
 
 
-def changes(before: Mapping[int, DiscStatus],
-            after: Mapping[int, DiscStatus]) -> list[tuple[int, Event]]:
-    """The events between two `statuses()` snapshots, oldest Disc first."""
+def changes(before: Mapping[int, JobStatus],
+            after: Mapping[int, JobStatus]) -> list[tuple[int, Event]]:
+    """The events between two `statuses()` snapshots, oldest Job first."""
     out: list[tuple[int, Event]] = []
-    for disc_id in sorted(after):
-        prev, cur = before.get(disc_id), after[disc_id]
+    for job_id in sorted(after):
+        prev, cur = before.get(job_id), after[job_id]
         if prev == cur:
             continue
-        if prev in (None, DiscStatus.RIPPING) and cur in _DONE:
-            out.append((disc_id, Event.DISC_DONE))
-        if cur == DiscStatus.REVIEW:
-            out.append((disc_id, Event.REVIEW_NEEDED))
-        if cur == DiscStatus.FAILED:
-            out.append((disc_id, Event.DISC_FAILED))
+        if prev in (None, JobStatus.RIPPING) and cur in _DONE:
+            out.append((job_id, Event.RIP_DONE))
+        if cur == JobStatus.REVIEW:
+            out.append((job_id, Event.REVIEW_NEEDED))
+        if cur == JobStatus.FAILED:
+            out.append((job_id, Event.JOB_FAILED))
     return out
 
 
@@ -67,19 +67,19 @@ class Notification:
     message: str
 
 
-def _subject(rec: DiscRecord) -> str:
+def _subject(rec: JobRecord) -> str:
     return f"{rec.disc_type.long_name} “{rec.label}”" if rec.label else rec.disc_type.long_name
 
 
-def notification(event: Event, rec: DiscRecord) -> Notification:
+def notification(event: Event, rec: JobRecord) -> Notification:
     match event:
-        case Event.DISC_DONE:
+        case Event.RIP_DONE:
             return Notification(event, "Disc done · insert the next one",
                                 f"{_subject(rec)} is ripped and ejected. Insert the next Disc.")
         case Event.REVIEW_NEEDED:
             return Notification(event, "Review needed",
                                 f"{_subject(rec)} needs Review before it can be filed.")
-        case Event.DISC_FAILED:
+        case Event.JOB_FAILED:
             why = " ".join(p for p in (rec.failure.headline, rec.failure.advice) if p) \
                 if rec.failure else ""
             return Notification(event, "Disc failed", f"{_subject(rec)} failed. {why}".strip())
@@ -93,10 +93,10 @@ class Channel(Protocol):
 
 
 # Discord embed colours / ntfy tags+priority per event.
-_COLOUR = {Event.DISC_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.DISC_FAILED: 0xC62828}
-_TAGS = {Event.DISC_DONE: "white_check_mark", Event.REVIEW_NEEDED: "eyes",
-         Event.DISC_FAILED: "warning"}
-_PRIORITY = {Event.DISC_DONE: 3, Event.REVIEW_NEEDED: 4, Event.DISC_FAILED: 4}
+_COLOUR = {Event.RIP_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.JOB_FAILED: 0xC62828}
+_TAGS = {Event.RIP_DONE: "white_check_mark", Event.REVIEW_NEEDED: "eyes",
+         Event.JOB_FAILED: "warning"}
+_PRIORITY = {Event.RIP_DONE: 3, Event.REVIEW_NEEDED: 4, Event.JOB_FAILED: 4}
 
 
 @dataclass
@@ -147,10 +147,10 @@ def _why(e: Exception) -> str:
 
 
 class Notifier:
-    """Background task: watches Disc statuses after every bus event and notifies."""
+    """Background task: watches Job statuses after every bus event and notifies."""
 
-    def __init__(self, discs: DiscStore, bus: EventBus, channels: Sequence[Channel]) -> None:
-        self._discs = discs
+    def __init__(self, jobs: JobStore, bus: EventBus, channels: Sequence[Channel]) -> None:
+        self._jobs = jobs
         self._bus = bus
         self.channels = list(channels)
 
@@ -166,11 +166,11 @@ class Notifier:
 
     def _notes(self, events: list[tuple[int, Event]]) -> list[Notification]:
         notes = []
-        for disc_id, event in events:
-            rec = self._discs.get(disc_id)
+        for job_id, event in events:
+            rec = self._jobs.get(job_id)
             if rec is None:
                 continue
-            if event == Event.DISC_FAILED and rec.failure \
+            if event == Event.JOB_FAILED and rec.failure \
                     and rec.failure.kind == FailureKind.DISCARDED:
                 continue  # the user's own decision in Review
             notes.append(notification(event, rec))
@@ -180,17 +180,17 @@ class Notifier:
         if not self.channels:
             return
         with self._bus.subscribe() as topics:
-            seen = self._discs.statuses()
+            seen = self._jobs.statuses()
             while True:
                 await topics.get()
                 while not topics.empty():  # one look covers a burst of events
                     topics.get_nowait()
                 try:
-                    now = self._discs.statuses()
+                    now = self._jobs.statuses()
                     notes = self._notes(changes(seen, now))
                     seen = now
                 except Exception:  # noqa: BLE001
-                    log.exception("Couldn't check Discs for notifications")
+                    log.exception("Couldn't check Jobs for notifications")
                     continue
                 if notes:
                     await asyncio.to_thread(self.send, notes)

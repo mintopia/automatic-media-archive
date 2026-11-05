@@ -20,7 +20,7 @@ from pathlib import Path
 import httpx
 
 from ama.archive import safe_name
-from ama.discs import ReviewReason
+from ama.jobs import ReviewReason
 
 BASE = "https://api.themoviedb.org/3"
 IMAGES = "https://image.tmdb.org/t/p"
@@ -39,7 +39,7 @@ class DiscHints:
     volume_name: str = ""   # MakeMKV's volume name (CINFO 32)
 
 
-HINTS_FILE = "disc.json"  # in the Disc's scratch folder
+HINTS_FILE = "disc.json"  # in the Job's scratch folder
 
 
 def save_hints(scratch_dir: Path, hints: DiscHints) -> None:

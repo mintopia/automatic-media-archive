@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ama.cdrip import CdRip
-from ama.discs import DiscRecord
+from ama.jobs import JobRecord
 from ama.drive import DiscType
 from ama.phase import Phase
 from ama.video_rip import RipProgress
@@ -32,7 +32,7 @@ class CurrentRip:
     phase: Phase = Phase.RIPPING
     # The source state, for the drive card's full detail.
     cd: CdRip | None = None
-    disc: DiscRecord | None = None
+    job: JobRecord | None = None
     progress: RipProgress | None = None
 
 
@@ -51,13 +51,13 @@ def current_rip(services: Services) -> CurrentRip | None:
 def _cd(rip: CdRip) -> CurrentRip:
     g = rip.guess
     return CurrentRip(DiscType.CD, g.match.release.title if g else (rip.label or "Unknown CD"),
-                      rip.position(), int(rip.percent), f"/discs/{rip.disc_id}",
+                      rip.position(), int(rip.percent), f"/jobs/{rip.job_id}",
                       likely=g is not None, cover=g.cover if g else None, cd=rip)
 
 
-def _video(disc: DiscRecord, progress: RipProgress, likely: Screen | None) -> CurrentRip:
-    detail = (f"Title {progress.title_number} of {len(disc.titles)}" if progress.title_number
+def _video(job: JobRecord, progress: RipProgress, likely: Screen | None) -> CurrentRip:
+    detail = (f"Title {progress.title_number} of {len(job.titles)}" if progress.title_number
               else "Reading the Disc")
-    return CurrentRip(disc.disc_type, likely.name if likely else disc.name, detail,
-                      progress.pct, "/disc", likely=likely is not None, disc=disc,
+    return CurrentRip(job.disc_type, likely.name if likely else job.name, detail,
+                      progress.pct, "/disc", likely=likely is not None, job=job,
                       progress=progress)

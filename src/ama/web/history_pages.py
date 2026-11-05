@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from ama.sets import SetKind
-from ama.web import TEMPLATES, filed_discs, view_context
+from ama.web import TEMPLATES, filed_jobs, view_context
 
 router = APIRouter()
 
@@ -17,18 +17,18 @@ LIMIT = 500  # rows on the History page
 def history(request: Request) -> Response:
     services = request.app.state.services
     ctx = view_context(services) | {"current": "/history",
-                                    "history": filed_discs(services, LIMIT),
+                                    "history": filed_jobs(services, LIMIT),
                                     "set_pos": set_positions(services)}
     return TEMPLATES.TemplateResponse(request, "history.html", ctx)
 
 
 def set_positions(services) -> dict[int, tuple[int, int]]:
-    """Disc id -> (its number, the highest number filed) for video Discs in a set of 2 or more."""
+    """Job id -> (its number, the highest number filed) for video Discs in a set of 2 or more."""
     out = {}
     for kind in SetKind:
         for s in services.sets.filed(kind):
             if len(s.members) > 1:
-                out |= {disc_id: (n, max(s.numbers)) for disc_id, n in s.members}
+                out |= {job_id: (n, max(s.numbers)) for job_id, n in s.members}
     return out
 
 

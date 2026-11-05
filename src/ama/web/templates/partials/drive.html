@@ -4,7 +4,7 @@
 {%- elif current_rip and current_rip.disc_type == "CD" -%}{#- the same view as the Ripping bin -#}
 {%- with heading=None, link=True, cd=current_rip.cd, phase=current_rip.phase %}{% include "partials/cd_drive.html" %}{% endwith -%}
 {%- elif current_rip -%}
-{%- with disc = current_rip.disc, progress = current_rip.progress, on_page = false, phase = current_rip.phase -%}
+{%- with job = current_rip.job, progress = current_rip.progress, on_page = false, phase = current_rip.phase -%}
 {% include "partials/rip_card.html" %}
 {%- endwith -%}
 {%- elif kind == "DiscPresent" -%}
@@ -47,9 +47,9 @@
 {%- elif rip_failure and not current_rip %}
 <div class="notice" role="alert" style="margin-top:16px">
   {%- if rip_failure.failure.kind == "licence" %}
-  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/jobs/{{ rip_failure.id }}">What to do</a></div>
   {%- else %}
-  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't rip “{{ rip_failure.name }}”.</b>{{ rip_failure.failure.headline }} <a href="/discs/{{ rip_failure.id }}">See what went wrong</a></div>
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't rip “{{ rip_failure.name }}”.</b>{{ rip_failure.failure.headline }} <a href="/jobs/{{ rip_failure.id }}">See what went wrong</a></div>
   {%- endif %}
 </div>
 {%- endif -%}

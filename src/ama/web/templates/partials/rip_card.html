@@ -1,16 +1,16 @@
 {#- The drive card for a video Disc being ripped (or just ripped).
-    Needs `disc` (DiscRecord), `progress` (RipProgress or None), `on_page` (h1 vs link).
+    Needs `disc` (JobRecord), `progress` (RipProgress or None), `on_page` (h1 vs link).
     `rip_likely` (a media.Screen guessed from the label, only for show) fills in the film and poster while it rips. -#}
-{%- set n = disc.titles | length -%}
+{%- set n = job.titles | length -%}
 {%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
 {%- set g = rip_likely if progress else none -%}
-{%- set name = g.name if g else disc.name -%}
-{%- set source = ("Disc " ~ disc.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
+{%- set name = g.name if g else job.name -%}
+{%- set source = ("Disc " ~ job.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
 <div class="drive">
   {%- if g and g.poster %}
-  <div class="cell art poster"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ disc.disc_type.long_name }}</span></div>
+  <div class="cell art poster"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ job.disc_type.long_name }}</span></div>
   {%- else %}
-  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ disc.disc_type.long_name }}</span></div>
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ job.disc_type.long_name }}</span></div>
   {%- endif %}
   <div class="body">
     {%- if on_page %}
@@ -23,7 +23,7 @@
     <div class="guess"><b>Likely</b>, from the Disc label · checked again after the Rip</div>
     {%- endif %}
     {%- if progress.title_number %}
-    <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ disc.total_size }}</span></div>
+    <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ job.total_size }}</span></div>
     <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
     {%- else %}
     <div class="meta">{{ source }}</div>
@@ -33,12 +33,12 @@
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ progress.pct }}%"></i></div><div class="eta"><span class="nw">{{ progress.eta or "Working out the time left" }}</span> · the Disc ejects when it's done</div></div>
       <div class="pct">{{ progress.pct }}%</div>
     </div>
-    {%- elif disc.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
-    <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ disc.total_size }}</span></div>
-    <div class="status">{% set p = disc.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if disc.finished_at %}Disc ejected at {{ disc.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
+    {%- elif job.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
+    <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ job.total_size }}</span></div>
+    <div class="status">{% set p = job.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if job.finished_at %}Disc ejected at {{ job.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
     {%- else %}
-    <div class="meta">{{ disc.failure.headline if disc.failure else "" }}</div>
-    <div class="status"><span class="stk fail">Failed</span><a class="ts" href="/discs/{{ disc.id }}">See what went wrong</a></div>
+    <div class="meta">{{ job.failure.headline if job.failure else "" }}</div>
+    <div class="status"><span class="stk fail">Failed</span><a class="ts" href="/jobs/{{ job.id }}">See what went wrong</a></div>
     {%- endif %}
   </div>
 </div>

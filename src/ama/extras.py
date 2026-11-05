@@ -3,7 +3,7 @@
 `MovieArchiver` Encodes them after the Main Feature and files them with it, to
 `<film folder>/Other/<name>.mkv`, named from the Title's name on the Disc (Plex's
 "Other" local extras folder). No Review is needed. Afterwards the user may sort
-them (`/discs/{id}/extras`): a new category or name moves the file to that Plex
+them (`/jobs/{id}/extras`): a new category or name moves the file to that Plex
 folder (`Featurettes/`, `Deleted Scenes/`, ...). Stills of each Extra are taken
 from the Rip before it is deleted and kept beside the state database, so the
 sorting page still has pictures once scratch is gone.
@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 from ama import decoys
 from ama.archive import safe_name
 from ama.db import Database
-from ama.discs import TitleRecord, TitleStatus
+from ama.jobs import TitleRecord, TitleStatus
 from ama.encoder import EncodeQueue, EncodeStatus
 
 
@@ -41,7 +41,7 @@ ExtraStatus = EncodeStatus  # a FAILED Extra is left out; the film is filed with
 
 @dataclass(frozen=True)
 class Extra:
-    disc_id: int
+    job_id: int
     title_number: int
     name: str            # the name in Plex
     category: Category
@@ -51,7 +51,7 @@ class Extra:
 
     @property
     def encoded(self) -> str:
-        """The Encode's file name in the Disc's scratch."""
+        """The Encode's file name in the Job's scratch."""
         return f"extra_t{self.title_number}.mkv"
 
 
@@ -102,55 +102,55 @@ def file_name(category: Category, name: str, taken: Callable[[str], bool]) -> st
     raise ValueError(f"No free name for {name}")
 
 
-STILLS = "extras"  # beside the state database: <dir>/<disc id>/t<title>_<pct>.jpg
+STILLS = "extras"  # beside the state database: <dir>/<Job id>/t<title>_<pct>.jpg
 
 
 class Extras:
-    _COLS = "disc_id, title_number, name, category, status, file, reviewed"
+    _COLS = "job_id, title_number, name, category, status, file, reviewed"
 
     def __init__(self, db: Database, stills_dir: Path) -> None:
         self._db = db
         self.stills_dir = stills_dir
 
     def _extra(self, row) -> Extra:
-        disc_id, number, name, category, status, file, reviewed = row
-        return Extra(disc_id, number, name, Category(category), ExtraStatus(status), file,
+        job_id, number, name, category, status, file, reviewed = row
+        return Extra(job_id, number, name, Category(category), ExtraStatus(status), file,
                      bool(reviewed))
 
-    def plan(self, disc_id: int, names: dict[int, str]) -> None:
+    def plan(self, job_id: int, names: dict[int, str]) -> None:
         """The Disc's Extras, queued for Encode (idempotent: known ones are kept)."""
         for number, name in names.items():
-            self._db.execute("INSERT OR IGNORE INTO extras (disc_id, title_number, name) "
-                             "VALUES (?, ?, ?)", (disc_id, number, name))
+            self._db.execute("INSERT OR IGNORE INTO extras (job_id, title_number, name) "
+                             "VALUES (?, ?, ?)", (job_id, number, name))
 
-    def of(self, disc_id: int) -> list[Extra]:
-        rows = self._db.execute(f"SELECT {self._COLS} FROM extras WHERE disc_id = ? "
-                                "ORDER BY title_number", (disc_id,)).fetchall()
+    def of(self, job_id: int) -> list[Extra]:
+        rows = self._db.execute(f"SELECT {self._COLS} FROM extras WHERE job_id = ? "
+                                "ORDER BY title_number", (job_id,)).fetchall()
         return [self._extra(r) for r in rows]
 
-    def get(self, disc_id: int, number: int) -> Extra | None:
-        row = self._db.execute(f"SELECT {self._COLS} FROM extras WHERE disc_id = ? AND "
-                               "title_number = ?", (disc_id, number)).fetchone()
+    def get(self, job_id: int, number: int) -> Extra | None:
+        row = self._db.execute(f"SELECT {self._COLS} FROM extras WHERE job_id = ? AND "
+                               "title_number = ?", (job_id, number)).fetchone()
         return self._extra(row) if row else None
 
-    def set_status(self, disc_id: int, number: int, status: ExtraStatus) -> None:
-        self._db.execute("UPDATE extras SET status = ? WHERE disc_id = ? AND title_number = ?",
-                         (status.value, disc_id, number))
+    def set_status(self, job_id: int, number: int, status: ExtraStatus) -> None:
+        self._db.execute("UPDATE extras SET status = ? WHERE job_id = ? AND title_number = ?",
+                         (status.value, job_id, number))
 
-    def place(self, disc_id: int, number: int, name: str, category: Category,
+    def place(self, job_id: int, number: int, name: str, category: Category,
               file: str) -> None:
         """Record where the Extra is (or is about to be) in the film's folder."""
         self._db.execute("UPDATE extras SET name = ?, category = ?, file = ? "
-                         "WHERE disc_id = ? AND title_number = ?",
-                         (name, category.value, file, disc_id, number))
+                         "WHERE job_id = ? AND title_number = ?",
+                         (name, category.value, file, job_id, number))
 
-    def mark_reviewed(self, disc_id: int) -> None:
-        self._db.execute("UPDATE extras SET reviewed = 1 WHERE disc_id = ?", (disc_id,))
+    def mark_reviewed(self, job_id: int) -> None:
+        self._db.execute("UPDATE extras SET reviewed = 1 WHERE job_id = ?", (job_id,))
 
     def to_sort(self) -> list[int]:
         """Filed Discs whose Extras nobody has looked at yet, oldest first."""
-        rows = self._db.execute("SELECT DISTINCT disc_id FROM extras WHERE status = ? "
-                                "AND reviewed = 0 ORDER BY disc_id",
+        rows = self._db.execute("SELECT DISTINCT job_id FROM extras WHERE status = ? "
+                                "AND reviewed = 0 ORDER BY job_id",
                                 (EncodeStatus.FILED,)).fetchall()
         return [r[0] for r in rows]
 
@@ -158,5 +158,5 @@ class Extras:
         """At startup: Extra Encodes cut short go back in the queue."""
         EncodeQueue(self._db, "extras", "status").requeue(EncodeStatus.ENCODING)
 
-    def still(self, disc_id: int, number: int, pct: int) -> Path:
-        return self.stills_dir / str(disc_id) / f"t{number}_{pct}.jpg"
+    def still(self, job_id: int, number: int, pct: int) -> Path:
+        return self.stills_dir / str(job_id) / f"t{number}_{pct}.jpg"

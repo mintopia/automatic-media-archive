@@ -45,20 +45,38 @@ def test_a_failing_migration_leaves_the_database_unchanged(tmp_path):
     assert db.execute("SELECT count(*) FROM b").fetchone() == (0,)
 
 
-def test_rebuilding_the_discs_table_keeps_every_discs_log_and_tracks(tmp_path):
-    early = tmp_path / "early"
-    early.mkdir()
-    for f in sorted(MIGRATIONS.glob("000[1-4]_*.sql")):
-        shutil.copy(f, early / f.name)
-    db = Database(tmp_path / "s.db", migrations=early)
+def test_a_v1_database_is_recreated_with_jobs_and_its_rows_dropped(tmp_path):
+    v1 = tmp_path / "v1"
+    v1.mkdir()
+    for f in sorted(MIGRATIONS.glob("*.sql")):
+        if int(f.name[:4]) <= 12:
+            shutil.copy(f, v1 / f.name)
+    db = Database(tmp_path / "s.db", migrations=v1)
+    db.set_value("secret", "kept")
     db.execute("INSERT INTO discs (disc_type, status, scratch_dir, started_at) "
                "VALUES ('CD', 'ripped', 'x', '2026-11-04T10:00:00')")
     db.execute("INSERT INTO disc_log (disc_id, at, text) VALUES (1, '2026-11-04T10:00:00', 'hi')")
-    db.execute("INSERT INTO cd_tracks (disc_id, number, seconds) VALUES (1, 1, 60.0)")
     db.close()
 
     db = Database(tmp_path / "s.db")
-    assert db.execute("SELECT text FROM disc_log").fetchall() == [("hi",)]
-    assert db.execute("SELECT number FROM cd_tracks").fetchall() == [(1,)]
-    db.execute("UPDATE discs SET status = 'filed' WHERE id = 1")
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+              .fetchall()}
+    assert "discs" not in tables and "disc_log" not in tables
+    assert db.execute("SELECT count(*) FROM jobs").fetchone() == (0,)
+    assert db.execute("SELECT count(*) FROM job_log").fetchone() == (0,)
+    assert db.get_value("secret") == "kept"
     assert db.execute("PRAGMA foreign_keys").fetchone() == (1,)
+
+
+def test_a_new_database_has_the_same_schema_as_a_recreated_v1_one(tmp_path):
+    v1 = tmp_path / "v1"
+    v1.mkdir()
+    for f in sorted(MIGRATIONS.glob("*.sql")):
+        if int(f.name[:4]) <= 12:
+            shutil.copy(f, v1 / f.name)
+    Database(tmp_path / "old.db", migrations=v1).close()
+
+    def schema(db: Database) -> list:
+        return db.execute("SELECT type, name, sql FROM sqlite_master ORDER BY name").fetchall()
+
+    assert schema(Database(tmp_path / "old.db")) == schema(Database(tmp_path / "new.db"))

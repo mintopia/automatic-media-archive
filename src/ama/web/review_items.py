@@ -1,4 +1,4 @@
-"""The Review queue as the UI lists it: one row per Disc, saying why it needs a human.
+"""The Review queue as the UI lists it: one row per Job, saying why it needs a human.
 
 A Disc Type with its own Review adds a branch to `review_items` (and its
 ReviewReasons to `_GENERIC`, used when there is nothing more specific to say).
@@ -14,7 +14,7 @@ from fastapi.responses import RedirectResponse
 
 from ama import cdreview, decoys, review
 from ama.cyanrip import ArStatus
-from ama.discs import DiscRecord, ReviewReason, TitleStatus
+from ama.jobs import JobRecord, ReviewReason, TitleStatus
 from ama.drive import DiscType
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ReviewItem:
-    record: DiscRecord
+    record: JobRecord
     title: str
     summary: str  # why it's here, e.g. "3 editions match this CD · pick yours"
     action: str   # the button, e.g. "Choose edition"
@@ -61,7 +61,7 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
 
 def review_items(services: Services) -> list[ReviewItem]:
     items = []
-    for rec in review.queue(services.discs):
+    for rec in review.queue(services.jobs):
         if rec.disc_type == DiscType.CD:
             items.append(_cd_item(services, rec))
         else:
@@ -69,7 +69,7 @@ def review_items(services: Services) -> list[ReviewItem]:
     return items
 
 
-def _video_item(rec: DiscRecord) -> ReviewItem:
+def _video_item(rec: JobRecord) -> ReviewItem:
     summary, action = _GENERIC[rec.review_reason or ReviewReason.NO_RELEASE]
     if rec.review_reason == ReviewReason.DECOY_PLAYLISTS and (
             found := decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)):
@@ -78,15 +78,15 @@ def _video_item(rec: DiscRecord) -> ReviewItem:
     return ReviewItem(rec, rec.name, summary, action)
 
 
-def cd_title(services: Services, rec: DiscRecord) -> str:
+def cd_title(services: Services, rec: JobRecord) -> str:
     """A CD in Review by its first matching edition, else its label."""
-    editions = cdreview.candidates(rec.scratch_dir, services.cd.disc(rec.id).tracks)
+    editions = cdreview.candidates(rec.scratch_dir, services.cd.job(rec.id).tracks)
     return (f"{editions[0].release.title} — {editions[0].release.artist}" if editions
             else rec.label or "Unknown CD")
 
 
-def _cd_item(services: Services, rec: DiscRecord) -> ReviewItem:
-    tracks = services.cd.disc(rec.id).tracks
+def _cd_item(services: Services, rec: JobRecord) -> ReviewItem:
+    tracks = services.cd.job(rec.id).tracks
     editions = cdreview.candidates(rec.scratch_dir, tracks)
     title = cd_title(services, rec)
     summary, action = _GENERIC[rec.review_reason or ReviewReason.NO_RELEASE]
@@ -110,20 +110,20 @@ def _notes(request: Request) -> dict[int, tuple[str, str]]:
     return state.review_notes
 
 
-def after_decision(request: Request, disc_id: int, headline: str, detail: str) -> RedirectResponse:
+def after_decision(request: Request, job_id: int, headline: str, detail: str) -> RedirectResponse:
     """Go on to the next Disc in Review (else the queue), saying what happens to this one."""
     notes = _notes(request)
-    notes.pop(disc_id, None)
-    notes[disc_id] = (headline, detail)
+    notes.pop(job_id, None)
+    notes[job_id] = (headline, detail)
     while len(notes) > _NOTES_KEPT:
         notes.pop(next(iter(notes)))
     services = request.app.state.services
-    nxt = next((r for r in review.queue(services.discs) if r.id != disc_id), None)
+    nxt = next((r for r in review.queue(services.jobs) if r.id != job_id), None)
     page = f"/review/{nxt.id}" if nxt else "/review"
-    return RedirectResponse(f"{page}?done={disc_id}", status_code=303)
+    return RedirectResponse(f"{page}?done={job_id}", status_code=303)
 
 
 def done_note(request: Request) -> tuple[str, str] | None:
-    """The note `after_decision` left for `?done=<disc id>`, if any."""
+    """The note `after_decision` left for `?done=<Job id>`, if any."""
     raw = request.query_params.get("done", "")
     return _notes(request).get(int(raw)) if raw.isdigit() else None

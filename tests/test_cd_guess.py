@@ -13,7 +13,7 @@ from html import unescape
 from ama import musicbrainz
 from ama.cdguess import likely
 from ama.cdrip import Track
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 from tests.fakes import DATA
@@ -59,7 +59,7 @@ def _rip_held(harness, response) -> None:
     """Insert the FFVII disc and hold its Rip half-way through track 3."""
     if response is not None:
         harness.web.musicbrainz[DISC_1] = response
-    harness.cyanrip.disc_id = DISC_1
+    harness.cyanrip.mb_disc_id = DISC_1
     harness.cyanrip.mcn = "4988601470865"
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 25)}
@@ -80,13 +80,13 @@ def test_while_ripping_the_likely_album_cover_and_track_titles_are_shown(harness
     assert cover in now
     assert client.get(cover).content == COVER
 
-    disc = harness.services.cd.current.disc_id
-    page = unescape(client.get(f"/discs/{disc}").text)
+    disc = harness.services.cd.current.job_id
+    page = unescape(client.get(f"/jobs/{disc}").text)
     assert "The Unknown Journey Continues" in page   # track 1's title on MusicBrainz
     assert "1 of 3 versions of this album" in page and cover in page
 
     harness.cyanrip.release()
-    rec = eventually_status(harness, DiscStatus.REVIEW)   # the guess never files anything
+    rec = eventually_status(harness, JobStatus.REVIEW)   # the guess never files anything
     assert not (harness.nas_root / "Music").exists()
     assert rec.title == ""
 
@@ -106,6 +106,6 @@ def test_while_musicbrainz_is_unreachable_the_disc_id_and_track_count_are_shown_
     harness.cyanrip.release()
 
 
-def eventually_status(harness, status: DiscStatus):
-    eventually(lambda: harness.services.discs.list(status))
-    return harness.services.discs.list(status)[0]
+def eventually_status(harness, status: JobStatus):
+    eventually(lambda: harness.services.jobs.list(status))
+    return harness.services.jobs.list(status)[0]
