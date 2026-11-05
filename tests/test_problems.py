@@ -14,6 +14,7 @@ import uvicorn
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
+from ama.archive import Archive
 from ama.jobs import JobStatus
 from ama.drive import DiscType
 from ama.config import PlexConfig
@@ -171,7 +172,7 @@ def test_a_failing_plex_scan_shows_a_banner_until_a_scan_works(tmp_path):
             {"key": "1", "Location": [{"path": "/media/Movies"}]}]}})))
     problems = Problems(EventBus(), now=lambda: NOW)
     plex = Plex(PlexConfig(url="http://plex:32400", token="t", nas_path="/media"), web,
-                tmp_path, problems)
+                Archive(tmp_path), problems)
     with pytest.raises(httpx.HTTPError):
         plex.scan(tmp_path / "Movies" / "Film")
     [banner] = problems.banners()

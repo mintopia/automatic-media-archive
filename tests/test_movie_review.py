@@ -63,12 +63,14 @@ def test_the_review_page_offers_the_films_found_with_how_their_runtime_fits(harn
     assert 'value="Example Movie"' in page  # the search box holds what was searched
     assert "Ann Example · 2 h 1 m · matches the Disc" in page
     assert "Bob Older · 1 h 35 m · 26 m shorter than the Disc" in page
-    assert page.index("Example Movie (2016)") < page.index("Example Movie (2020)") \
-        < page.index("Example Movie (1987)")  # films that fit first
-    assert 'name="film" value="1234" checked' in page
+    # The Best guess first (the closest runtime, film_guess.py), then films that fit.
+    assert page.index("Example Movie (2020)") < page.index("Example Movie (2016)") \
+        < page.index("Example Movie (1987)")
+    assert "<b>Best guess</b> · 2 h 2 m · matches the Disc" in page
+    assert 'name="film" value="78" checked' in page
     assert 'name="title" value="1" checked' in page  # the Main Feature by default
     assert "2 h 1 m 33 s · the longest, likely the film" in page and "2 m 31 s" in page
-    assert "Movies/Example Movie (2016) {tmdb-1234}" in page  # where it will be filed
+    assert "Movies/Example Movie (2020) {tmdb-78}" in page  # where it will be filed
 
 
 def test_the_user_can_search_tmdb_for_another_film(harness, client):

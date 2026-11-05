@@ -140,7 +140,9 @@ def view_context(services: Services) -> dict[str, Any]:
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_job": services.video_rip.job,
         "rip_progress": services.video_rip.progress,
-        "rip_likely": services.video_rip.likely,  # a film guessed from the label, only for show
+        "guess_of": services.film_guesses.get,  # Job id -> its Best guess (film_guess.py)
+        "guessing": services.video_rip.guessing,  # TMDB is still being asked for it
+        "guess_search": services.film_guesses.configured,  # a TMDB key: the guess can change
         "rip_failure": next(iter(services.jobs.list(JobStatus.FAILED, types=VIDEO_DISC_TYPES)),
                             None),
         **_tools_context(services),

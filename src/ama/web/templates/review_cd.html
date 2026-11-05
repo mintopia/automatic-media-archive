@@ -39,7 +39,7 @@
         <form class="box" method="post" action="/review/{{ record.id }}/release">
           {%- for e in editions %}
           <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if loop.first %} checked{% endif %}><div>
-            <div class="edition">{% if e.match.release.has_front is not false %}<img class="cover" src="/review/{{ record.id }}/cover/{{ e.match.release.id }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}<div><div class="tt">{{ e.heading }}</div><dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div></div>
+            <div class="edition">{% if e.match.release.has_front is not false %}<img class="cover" src="/review/{{ record.id }}/cover/{{ e.match.release.id }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}<div><div class="tt">{{ e.heading }}</div>{% if pick and pick.value == e.value %}<div class="ts">Your pick during the Rip</div>{% endif %}<dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div></div>
             <details class="preview"{% if e.differences or (loop.first and not editions | selectattr("differences") | list) %} open{% endif %}><summary>Track list{% if e.differences %} · <span class="diffnote">{{ e.differences }} title{{ "s" if e.differences != 1 }} differ from the other editions, marked</span>{% endif %}</summary>
               <table class="tbl cdt"><thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th></tr></thead><tbody>
               {%- for t in e.tracks %}

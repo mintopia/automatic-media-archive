@@ -169,10 +169,3 @@ def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year:
         log(f"No poster kept: couldn't fetch it from TMDB ({type(e).__name__})")
     return Screen(tmdb_id, title, year, tv=tv, overview=overview, poster=poster)
 
-
-def film_guess(tmdb: Tmdb, covers: Covers, volume_label: str) -> Screen | None:
-    """A likely film for a Disc being ripped, with its poster cached; only for show."""
-    film = tmdb.guess(volume_label)
-    if film is None:
-        return None
-    return screen(tmdb, covers, False, film.id, film.title, film.year, lambda _: None)

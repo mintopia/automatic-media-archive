@@ -225,6 +225,20 @@ def _check(services: Services, section: Section, changes: dict[str, str]) -> Non
         raise SettingsRejected(errors, [])
 
 
+def render_section(request: Request, services: Services, slug: str, status: int = 200,
+                   **extra: Any) -> Response:
+    """The section's page as GET shows it, with `extra` in place of the usual context
+    (a section's own routes use it to re-render a rejected edit)."""
+    section = _section(slug)
+    try:
+        page = _page(services, section)
+    except ConfigError as e:
+        return _render(request, _context(request, services, section, problem=str(e)), status)
+    if section.context and not set(extra) & {"problem"}:
+        extra = section.context(services, request) | extra
+    return _render(request, _context(request, services, section, page=page, **extra), status)
+
+
 @router.get("/settings")
 def settings_home() -> Response:
     return RedirectResponse(f"/settings/{SECTIONS[0].slug}", status_code=303)
@@ -238,12 +252,8 @@ def settings_page(request: Request, slug: str, saved: str = "", restart: str = "
         return _render(request, _context(request, services, section,
                                          problem="AMA wasn't started from a config file."))
     services.settings.refresh()
-    try:
-        page = _page(services, section)
-    except ConfigError as e:
-        return _render(request, _context(request, services, section, problem=str(e)))
-    return _render(request, _context(request, services, section, page=page, saved=saved,
-                                     confirm=restart == "confirm"))
+    return render_section(request, services, slug, saved=saved,
+                          confirm=restart == "confirm")
 
 
 @router.post("/settings/archive/encode/test-encoders")
@@ -267,7 +277,7 @@ async def settings_save(request: Request, slug: str) -> Response:
     form = await request.form()
     removed = set(form.getlist("remove"))
     changes: dict[str, str] = {}
-    for key in section.keys():
+    for key in section.field_keys():
         typed = form.get(key)
         if is_secret(key):
             if key in removed:

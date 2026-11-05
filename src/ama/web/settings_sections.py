@@ -13,14 +13,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 from markupsafe import Markup
 
 from ama.encode import ENCODERS, SPEED_LABELS, SPEEDS
 from ama.languages import name_of
+from ama.web import settings_libraries
 
 if TYPE_CHECKING:
+    from fastapi import Request
+
     from ama.app import Services
     from ama.config import Config
 
@@ -136,16 +139,27 @@ class Section:
     name: str  # "General", or the sub-section name ("NAS")
     groups: tuple[Group, ...]
     note: str | Markup = ""  # under the sheet; default says the file is the source
-    template: str = ""  # an extra partial after the groups (later sections)
+    # A section with its own UI beyond field rows: a partial rendered after the groups'
+    # save bar, the context it needs, and the keys it edits (saved by its own routes).
+    template: str = ""
     header: str = ""  # a partial above the groups (e.g. the Encode's broken-encoder notice)
+    context: Callable[[Services, Request], dict[str, Any]] | None = None
+    owns: tuple[str, ...] = ()
+    foot: str = ""  # the save bar's name for the groups ("Plex connection"); default `name`
+    note_only: bool = False  # `note` replaces the usual "Saved to ama.toml…" line
 
     @property
     def sub(self) -> bool:
         return self.slug.count("/") > 0
 
-    def keys(self) -> Iterator[str]:
+    def field_keys(self) -> Iterator[str]:
+        """The keys the section's own form posts."""
         for g in self.groups:
             yield from g.keys()
+
+    def keys(self) -> Iterator[str]:
+        yield from self.field_keys()
+        yield from self.owns
 
 
 # --- dynamic bits --------------------------------------------------------------
@@ -244,6 +258,14 @@ def _encode_summary(cfg: Config) -> str:
 
 
 _ENCODE_NOTE = "Used for Encodes that haven't started"
+
+
+def _plex_status(services: Services) -> Status:
+    if not services.plex.configured:
+        return Status("Not set up", ok=False)
+    if services.plex.listing() is None:
+        return Status("Can't reach Plex", ok=False)
+    return Status("Connected")
 
 
 def _key(*keys: str) -> Markup:
@@ -384,8 +406,12 @@ SECTIONS: list[Section] = [
                   "Only if Plex runs on another machine: where that machine sees the NAS share. "
                   "Leave empty when Plex sees the same path as AMA.",
                   placeholder="Same as the NAS share"),
-        ), live=True, note="Used from the next filing"),
-    )),
+        ), live=True, status=_plex_status),
+    ), note=Markup("A Job goes to its kind's default unless you pick another Library in its "
+                   "settings before it's filed. Each Library saves on its own, to "
+                   "<code>ama.toml</code>."), note_only=True,
+        template="partials/settings_libraries.html", context=settings_libraries.context,
+        owns=("libraries",), foot="Plex connection"),
     Section("archive/nas", "archive", "NAS", (
         Group("NAS share", (
             Field("nas.unc", "Share",

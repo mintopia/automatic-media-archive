@@ -24,14 +24,14 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from ama.config import Config, ConfigError, load_config
+from ama.config import Config, ConfigError, Kind, load_config
 
 log = logging.getLogger(__name__)
 
 # Tables whose new values running code picks up at once (`Services.apply_live`).
 # Everything else is read once at startup. A table added here needs its consumer
 # wired in `apply_live`.
-LIVE_TABLES = frozenset({"cd", "encode", "plex", "tmdb", "discord", "ntfy"})
+LIVE_TABLES = frozenset({"cd", "encode", "plex", "tmdb", "discord", "ntfy", "libraries"})
 
 
 def is_live(key: str) -> bool:
@@ -143,6 +143,10 @@ def _write_atomic(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
+# A Library's keys that the file can leave out, and their value then.
+_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False}
+
+
 class SettingsFile:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -202,6 +206,101 @@ class SettingsFile:
             _write_atomic(self.path, doc.as_string())
         return changed
 
+    # -- Libraries: `[[libraries]]` entries, each saved on its own ---------------------
+
+    def save_library(self, kind: Kind, original: str | None, typed: Mapping[str, str]) -> None:
+        """Add a `kind` Library (`original` None) or edit the one called `original`, from
+        `{"name", "plex", "path"}`; leaving out "plex" keeps the one it has. Raises
+        SettingsRejected keyed by those names."""
+        doc, libraries = self._libraries()
+        index = (len(libraries) if original is None
+                 else next((i for i, lib in enumerate(libraries) if lib["name"] == original),
+                           None))
+        if index is None:
+            raise SettingsRejected({}, [f"There's no Library called {original}"])
+        kept = libraries[index]["plex"] if original is not None else ""
+        fields = {k: str(typed.get(k, kept if k == "plex" else "")).strip()
+                  for k in ("name", "plex", "path")}
+        errors: dict[str, str] = {}
+        for k in ("name", "path"):
+            if not fields[k]:
+                errors[k] = "This can't be empty"
+        clash = next((lib["name"] for i, lib in enumerate(libraries)
+                      if i != index and lib["name"].casefold() == fields["name"].casefold()),
+                     None)
+        if clash and fields["name"]:
+            errors["name"] = f"There's already a Library called {clash}"
+        share = Path(doc.unwrap().get("nas", {}).get("unc", ""))
+        if fields["path"] and (Path(fields["path"]) == share
+                               or not Path(fields["path"]).is_relative_to(share)):
+            errors["path"] = f"Pick a folder inside the NAS share, {share}"
+        if errors:
+            raise SettingsRejected(errors, [])
+        if original is None:
+            libraries.append({"name": fields["name"], "kind": kind.value, "path": fields["path"],
+                              "plex": fields["plex"], "default": False})
+        else:
+            libraries[index] = libraries[index] | fields
+        self._write_libraries(doc, libraries)
+
+    def remove_library(self, name: str) -> None:
+        doc, libraries = self._libraries()
+        index = next((i for i, lib in enumerate(libraries) if lib["name"] == name), None)
+        if index is None:
+            return  # already gone
+        if libraries[index]["default"]:
+            raise SettingsRejected({}, [f"{name} is a default Library, so it can't be removed: "
+                                        "make another Library the default first"])
+        del libraries[index]
+        self._write_libraries(doc, libraries, removed=index)
+
+    def make_default(self, name: str) -> None:
+        doc, libraries = self._libraries()
+        chosen = next((lib for lib in libraries if lib["name"] == name), None)
+        if chosen is None:
+            raise SettingsRejected({}, [f"There's no Library called {name}"])
+        for lib in libraries:
+            if lib["kind"] == chosen["kind"]:
+                lib["default"] = lib is chosen
+        self._write_libraries(doc, libraries)
+
+    def _libraries(self) -> tuple[tomlkit.TOMLDocument, list[dict[str, Any]]]:
+        """The file and its Libraries as plain values (the defaults when it lists none)."""
+        _, cfg = self.values()
+        doc = tomlkit.parse(self._text())
+        return doc, [lib.model_dump(mode="json") for lib in cfg.libraries]
+
+    def _write_libraries(self, doc: tomlkit.TOMLDocument, libraries: list[dict[str, Any]],
+                         removed: int | None = None) -> None:
+        """Validate `libraries` as the whole file would load, then change only the entries
+        that differ (an entry left out of the file, `removed`, is deleted)."""
+        candidate = doc.unwrap() | {"libraries": libraries}
+        try:
+            Config.model_validate(candidate)
+        except ValidationError as e:
+            raise SettingsRejected({}, [_message(err) for err in e.errors()]) from None
+        if "libraries" not in doc:
+            # The file relied on the defaults: write out the ones in use.
+            doc.add(tomlkit.nl())
+            doc["libraries"] = tomlkit.aot()
+        aot = doc["libraries"]
+        if removed is not None and removed < len(aot):
+            del aot[removed]
+        for i, want in enumerate(libraries):
+            if i >= len(aot):
+                aot.append(tomlkit.table())
+            entry = aot[i]
+            for key in ("name", "kind", "path", "plex", "default"):
+                value = want[key]
+                optional = key in _LIBRARY_OPTIONAL  # left out of the file when empty
+                if entry.get(key, _LIBRARY_OPTIONAL.get(key)) == value:
+                    continue
+                if optional and not value:
+                    del entry[key]
+                else:
+                    entry[key] = _toml_value(value, str(value))
+        _write_atomic(self.path, doc.as_string())
+
 
 class Settings:
     """The running config versus the file. `config` is what code should read now."""
@@ -259,6 +358,23 @@ class Settings:
         changed = self.file.save(changes)
         self.refresh(force=True)
         return changed
+
+    def _file(self) -> SettingsFile:
+        if self.file is None:
+            raise SettingsRejected({}, ["AMA wasn't started from a config file"])
+        return self.file
+
+    def save_library(self, kind: Kind, original: str | None, typed: Mapping[str, str]) -> None:
+        self._file().save_library(kind, original, typed)
+        self.refresh(force=True)
+
+    def remove_library(self, name: str) -> None:
+        self._file().remove_library(name)
+        self.refresh(force=True)
+
+    def make_default(self, name: str) -> None:
+        self._file().make_default(name)
+        self.refresh(force=True)
 
     async def run(self) -> None:
         """Notice hand edits: a hand edit and a UI edit are the same thing."""

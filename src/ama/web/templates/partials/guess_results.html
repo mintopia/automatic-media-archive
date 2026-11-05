@@ -1,0 +1,14 @@
+{#- Results of the rip card's TMDB search (guess_pages.search): `films` as (Candidate, note), closest runtime first. -#}
+{%- if error %}
+<p class="ts bad" role="alert">{{ error }}</p>
+{%- elif q and not films %}
+<p class="ts">TMDB has no film called “{{ q }}”. Try fewer words, or the original title.</p>
+{%- elif not changeable %}
+<p class="ts">The Rip is done: choose the film in <a href="/review/{{ job.id }}">Review</a>.</p>
+{%- else %}
+<ul class="picks">
+  {%- for f, note in films %}
+  <li><form method="post" action="/jobs/{{ job.id }}/guess"><input type="hidden" name="film" value="{{ f.id }}"><input type="hidden" name="next" value="{{ next }}"><div><div class="tt">{{ f.name }}</div>{% if note %}<div class="ts">{{ note }}</div>{% endif %}</div><button class="btn sm" type="submit" aria-label="Pick {{ f.name }}">Pick</button></form></li>
+  {%- endfor %}
+</ul>
+{%- endif %}

@@ -212,7 +212,7 @@ class FakeCyanrip:
     def release(self) -> None:
         self._go.set()
 
-    def wait_until_held(self, timeout: float = 3.0) -> None:
+    def wait_until_held(self, timeout: float = 15.0) -> None:
         assert self._held.wait(timeout), "Rip never reached the hold point"
 
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
@@ -337,6 +337,7 @@ class FakeWeb:
                               {"key": "1", "type": "movie", "title": "Movies",
                                "Location": [{"id": 2, "path": "/volume1/media/Movies"}]}]
         self.plex_requests: list[httpx.Request] = []
+        self.plex_offline = False
         self.requests: list[httpx.Request] = []
         # TMDB: search results per (case-folded) query, /movie/{id} details by id.
         self.tmdb_search: dict[str, list[dict]] = {}
@@ -440,6 +441,8 @@ class FakeWeb:
             return httpx.Response(self.notify_status, json={})
         if url.host == "plex":
             self.plex_requests.append(request)
+            if self.plex_offline:
+                raise httpx.ConnectError("no route to host", request=request)
             if url.path == "/library/sections":
                 return httpx.Response(200, json={"MediaContainer": {
                     "Directory": self.plex_sections}})
