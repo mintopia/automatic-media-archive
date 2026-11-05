@@ -17,7 +17,7 @@ from ama.video_rip import RipProgress
 
 if TYPE_CHECKING:
     from ama.app import Services
-    from ama.media import Screen
+    from ama.film_guess import FilmGuess
 
 
 @dataclass(frozen=True)
@@ -27,8 +27,8 @@ class CurrentRip:
     detail: str           # sub-detail of the Phase: "Starting", "Track 2 of 12", "Title 3 of 7"
     percent: int | None   # whole Disc; None before there's anything to measure
     href: str | None      # where its live page is
-    likely: bool = False  # `name` is a guess, only for show
-    cover: str | None = None  # a guessed album's cached cover (CD)
+    likely: bool = False  # `name` is a guess (a CD's likely album, a video Best guess)
+    cover: str | None = None  # a guessed album's cover or film's poster, cached
     phase: Phase = Phase.RIPPING
     # The source state, for the drive card's full detail.
     cd: CdRip | None = None
@@ -44,7 +44,7 @@ def current_rip(services: Services) -> CurrentRip | None:
         return CurrentRip(DiscType.CD, DiscType.CD.long_name, "Starting", None, None)
     video = services.video_rip
     if video.active is not None and video.progress is not None:
-        return _video(video.active, video.progress, video.likely)
+        return _video(video.active, video.progress, services.film_guesses.get(video.active.id))
     return None
 
 
@@ -55,9 +55,9 @@ def _cd(rip: CdRip) -> CurrentRip:
                       likely=g is not None, cover=g.cover if g else None, cd=rip)
 
 
-def _video(job: JobRecord, progress: RipProgress, likely: Screen | None) -> CurrentRip:
+def _video(job: JobRecord, progress: RipProgress, guess: FilmGuess | None) -> CurrentRip:
     detail = (f"Title {progress.title_number} of {len(job.titles)}" if progress.title_number
               else "Reading the Disc")
-    return CurrentRip(job.disc_type, likely.name if likely else job.name, detail,
-                      progress.pct, "/disc", likely=likely is not None, job=job,
-                      progress=progress)
+    return CurrentRip(job.disc_type, guess.name if guess else job.name, detail,
+                      progress.pct, "/disc", likely=guess is not None,
+                      cover=guess.poster if guess else None, job=job, progress=progress)

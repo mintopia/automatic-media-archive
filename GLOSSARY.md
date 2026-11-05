@@ -54,6 +54,10 @@ _Avoid_: Job, encode job (a Job is the whole pass of a Disc)
 Matching a Disc to its real-world release (album, film, series) so it can be named and filed.
 _Avoid_: Lookup, matching, tagging
 
+**Best guess**:
+The film a video Job most likely is, kept on the Job from the Rip on: guessed from the volume label (re-ranked by runtime once the longest Title is known) or picked by the user on the rip card. Review starts from it; only Identification and Review decide.
+_Avoid_: Likely film, match (a Best guess is not an Identification)
+
 **Review**:
 A human confirming or correcting an Identification whose confidence was too low to accept automatically.
 _Avoid_: Approval, triage

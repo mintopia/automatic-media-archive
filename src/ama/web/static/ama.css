@@ -252,6 +252,16 @@ a.radio.pick{color:inherit;text-decoration:none;align-items:center}
 .drive .cell.art.poster img{aspect-ratio:2/3}
 .drive .cell.art span{padding:12px 14px}
 .guess{color:var(--ink2);font-size:13px}
+/* The video rip card's "Change the film" (#22): search TMDB, pick the Best guess */
+details.change{margin-top:4px}
+details.change>summary{display:inline-flex;padding:0;min-height:32px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px;border:0}
+details.change[open]{margin-bottom:10px}details.change[open]>summary{border:0}
+.change .search{margin-top:6px;max-width:420px}
+.picks{list-style:none;margin:8px 0 0;padding:0;max-width:520px;border:1px solid var(--rule);border-radius:3px;background:var(--sheet)}
+.picks li+li{border-top:1px solid var(--rule)}
+.picks form{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px}
+.btn.sm{min-height:36px;padding:0 14px}
+@media (max-width:720px){details.change>summary,.btn.sm{min-height:44px}.change .search{max-width:none}}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .dtype.art{padding:0;overflow:hidden}
 .dtype.art img{width:100%;height:100%;object-fit:cover;display:block}

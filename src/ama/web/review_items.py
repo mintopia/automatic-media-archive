@@ -70,16 +70,18 @@ def review_items(services: Services) -> list[ReviewItem]:
         if rec.disc_type == DiscType.CD:
             items.append(_cd_item(services, rec))
         else:
-            items.append(_video_item(rec))
+            items.append(_video_item(services, rec))
     return items
 
 
-def _video_item(rec: JobRecord) -> ReviewItem:
+def _video_item(services: Services, rec: JobRecord) -> ReviewItem:
     summary, action = _GENERIC[rec.review_reason or ReviewReason.NO_RELEASE]
     if rec.review_reason == ReviewReason.DECOY_PLAYLISTS and (
             found := decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)):
         summary = (f"{len(found.versions)} near-identical versions of the film "
                    "(a copy-protection trick) · check which is right")
+    if guess := services.film_guesses.get(rec.id):
+        summary = f"Best guess {guess.name} · {summary}"
     return ReviewItem(rec, rec.name, summary, action)
 
 

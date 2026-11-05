@@ -174,7 +174,7 @@ def test_while_ripping_a_likely_film_is_guessed_from_the_volume_label(client, ha
     harness.web.add_film("Heat", 949, "Heat", runtime=170, year=1995, poster_path="/heat.jpg")
     harness.web.tmdb_images["/heat.jpg"] = b"\xff\xd8 heat poster"
     harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
-    eventually(lambda: "Likely" in page_text(client, "/"))
+    eventually(lambda: "Best guess" in page_text(client, "/"))
     for page in (page_text(client, "/"), page_text(client, "/disc")):
         assert "Heat (1995)" in page and "from the Disc label" in page
         assert '<img src="/covers/tmdb-movie-949.jpg" alt="Poster of Heat (1995)">' in page
@@ -189,7 +189,8 @@ def test_a_film_guess_tmdb_cant_give_is_left_out_quietly(client, harness):
     harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
     eventually(lambda: "Title 1 of 2" in page_text(client, "/disc"))
     eventually(lambda: harness.web.tmdb_requests)
-    assert "Likely" not in page_text(client, "/disc") and "TMDB" not in page_text(client, "/disc")
+    assert "Best guess" not in page_text(client, "/disc")
+    assert "TMDB" not in page_text(client, "/disc")
     harness.makemkv.release()
     eventually(lambda: harness.drive.ejected == 1)
 
