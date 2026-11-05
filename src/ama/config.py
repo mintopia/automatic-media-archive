@@ -112,12 +112,14 @@ class PathsConfig(_Section):
 
 
 class ScratchConfig(_Section):
-    """Free scratch (GB) a Disc of each Type needs before its Rip starts; less = refused."""
+    """Free scratch (GB) a Disc of each Type needs before its Rip starts; less = refused.
+    `retention_days`: Scratch cleanup removes kept Scratch older than this; 0 = never."""
 
     cd: int = Field(default=1, ge=0)
     dvd: int = Field(default=10, ge=0)
     bd: int = Field(default=50, ge=0)
     uhd: int = Field(default=100, ge=0)
+    retention_days: int = Field(default=0, ge=0)
 
 
 class TmdbConfig(_Section):

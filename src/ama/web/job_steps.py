@@ -139,7 +139,7 @@ def _rip(services: Services, rec: JobRecord) -> Step:
         return Step("Rip", StepState.RUNNING, "Copying the Disc to scratch",
                     started=rec.started_at, colour="rip")
     if rec.status == JobStatus.FAILED and rec.failure is not None \
-            and rec.failure.kind != FailureKind.DISCARDED:
+            and rec.failure.kind not in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
         return Step("Rip", StepState.FAILED, rec.failure.headline, **times)
     return Step("Rip", StepState.DONE, what, **times)
 
@@ -164,7 +164,7 @@ def _identification(services: Services, rec: JobRecord, rip: Step,
                     else StepState.NOT_RUN, "After the Rip")
     why = _why(lines)
     started = rec.finished_at
-    if rec.status == JobStatus.FAILED:  # the Rip was discarded in Review
+    if rec.status == JobStatus.FAILED and rec.scratch_cleaned_at is None:  # discarded in Review
         return Step(name, StepState.FAILED, "The Rip was discarded in Review", started=started)
     if rec.status == JobStatus.REVIEW:
         reason = reason_summary(rec.review_reason) if rec.review_reason else "Needs a decision"
@@ -235,8 +235,10 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
         state = StepState.RUNNING if live else _STATE[status]
         if rec.status == JobStatus.FILED and state == StepState.WAITING:
             state = StepState.NOT_RUN
-        steps.append(Step("Encode", state, note or _DETAIL[EncodeStatus.ENCODING if live
-                                                           else status], subject,
+        detail = note or _DETAIL[EncodeStatus.ENCODING if live else status]
+        if rec.status == JobStatus.FAILED and status == EncodeStatus.FAILED:
+            detail = "The Encode didn't work"  # no retry: its Rip is gone
+        steps.append(Step("Encode", state, detail, subject,
                           started=started, finished=finished if state != StepState.RUNNING
                           else None, progress=encode.progress if live else None, colour="enc",
                           number=number))

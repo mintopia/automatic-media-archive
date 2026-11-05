@@ -329,6 +329,7 @@ class MovieArchiver:
                                          rec.scratch_dir / ENCODED, ffmpeg, ffprobe)
         if height is None:
             self.movies.set_status(rec.id, EncodeStatus.FAILED)
+            self._jobs.encode_failed(rec.id)
             return False
         self.movies.set_status(rec.id, EncodeStatus.ENCODED, video_height=height)
         return True

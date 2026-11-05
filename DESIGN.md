@@ -406,7 +406,7 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 
 | Tab | Holds | TOML tables |
 |---|---|---|
-| General | Web UI (Address, Port), New Discs (read-only), Storage; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
+| General | Web UI (Address, Port), New Discs (read-only), Storage, Scratch cleanup; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
 | Ripping | Drive; Advanced "Reading CDs" and "Tools" | `[drive]`, `[cd]`, `[tools]` |
 | Archive | sub-nav: Encode, Libraries, NAS, Identification | `[encode.*]`; `[plex]` and the Libraries; `[nas]`; `[tmdb]` |
 | Alerts | Discord, ntfy | `[discord]`, `[ntfy]` |
