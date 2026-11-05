@@ -310,3 +310,22 @@ class DiscStore:
             "SELECT at, error, text FROM disc_log WHERE disc_id = ? ORDER BY id",
             (disc_id,)).fetchall()
         return [LogLine(datetime.fromisoformat(a), bool(e), t) for a, e, t in rows]
+
+    def encode_started(self, disc_id: int, title_number: int) -> None:
+        """A Title's Encode began (again, after a failure or restart: the clock restarts)."""
+        self._db.execute(
+            "INSERT INTO encode_times (disc_id, title_number, started_at) VALUES (?, ?, ?) "
+            "ON CONFLICT (disc_id, title_number) DO UPDATE SET started_at = excluded.started_at, "
+            "finished_at = NULL", (disc_id, title_number, self._ts()))
+
+    def encode_finished(self, disc_id: int, title_number: int) -> None:
+        self._db.execute("UPDATE encode_times SET finished_at = ? "
+                         "WHERE disc_id = ? AND title_number = ?",
+                         (self._ts(), disc_id, title_number))
+
+    def encode_times(self, disc_id: int) -> dict[int, tuple[datetime, datetime | None]]:
+        """Title number -> (Encode started, finished or None) for each Title Encoded so far."""
+        rows = self._db.execute("SELECT title_number, started_at, finished_at FROM encode_times "
+                                "WHERE disc_id = ?", (disc_id,)).fetchall()
+        return {n: (datetime.fromisoformat(s), datetime.fromisoformat(f) if f else None)
+                for n, s, f in rows}

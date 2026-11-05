@@ -91,7 +91,8 @@ def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(
     assert 'History <span class="c">1</span>' in now and cover in now
 
 
-def test_the_section_is_called_history_on_every_disc_page_never_ripped_or_filed(harness, client):
+def test_a_job_still_on_its_way_is_under_now_never_ripped_or_filed(harness, client):
+    """#41: the crumb follows the Job's Phase; History only once it is Filed."""
     harness.cyanrip.disc_id = DISC_1   # MusicBrainz offline: it stays ripped, waiting
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.drive.insert(DiscType.CD)
@@ -100,8 +101,8 @@ def test_the_section_is_called_history_on_every_disc_page_never_ripped_or_filed(
     page = unescape(client.get(f"/discs/{rec.id}").text)
     crumb = page[page.index('class="crumb"'):]
     crumb = crumb[:crumb.index("</div>")]
-    assert '<a href="/history">History</a>' in crumb and "Ripped" not in crumb
-    assert "· History · Automatic Media Archive</title>" in page
+    assert '<a href="/">Now</a>' in crumb and "History" not in crumb and "Ripped" not in crumb
+    assert "· Now · Automatic Media Archive</title>" in page
 
 
 def test_history_is_empty_until_something_is_filed(client):

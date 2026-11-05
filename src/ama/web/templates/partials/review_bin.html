@@ -3,7 +3,7 @@
   <h2 class="tab" id="rev-h">Needs Review <span class="c">{{ review | length }}</span></h2>
   <div class="box">
   {%- for item in review %}
-    <div class="row"><div class="dtype">{{ item.record.disc_type }}</div><div><div class="tt">{{ item.title }}</div><div class="ts">{{ item.summary }}</div></div><a class="btn{% if loop.first %} pri{% endif %}" href="{{ item.href }}">{{ item.action }}</a></div>
+    <div class="row"><div class="dtype">{{ item.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ item.record.id }}">{{ item.title }}</a></div><div class="ts">{{ item.summary }}</div></div><a class="btn{% if loop.first %} pri{% endif %}" href="{{ item.href }}">{{ item.action }}</a></div>
   {%- endfor %}
   {%- if not review %}
     <p class="pad ts">Nothing needs you right now. You'll get a notification when a Disc needs a decision.</p>

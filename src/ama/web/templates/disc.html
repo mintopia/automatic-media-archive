@@ -1,20 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{% if live %}{{ rip_disc.name if rip_disc else "Disc in drive" }}{% else %}{{ screen.name if screen else rip_disc.name }} · History{% endif %}{% endblock %}
+{% block title %}{{ job_name }} · {{ section.label }}{% endblock %}
 {% block main %}
 <main>
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg>{% if live %}<span>Disc in drive</span>{% else %}<a href="/history">History</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ screen.name if screen else rip_disc.name }}</span>{% endif %}</div>
+  {% include "partials/job_crumb.html" %}
   <div class="split">
-    {% if live %}<div sse-swap="rip">{% include "partials/rip.html" %}</div>{% else %}<div>{% include "partials/rip.html" %}</div>{% endif %}
+    <div class="stack">
+      {% if live %}<div sse-swap="rip">{% include "partials/rip.html" %}</div>{% else %}<div>{% include "partials/rip.html" %}</div>{% endif %}
+    </div>
     <div class="aside stack">
-      {%- if not screen %}
-      <section class="bin ink" aria-labelledby="next-h">
-        <h2 class="tab" id="next-h">After the Rip</h2>
-        <div class="box"><div class="pad" style="display:flex;flex-direction:column;gap:10px;font-size:14px">
-          <p>Everything is copied off the Disc first, so the drive is free again quickly.</p>
-          <p class="ts">Then we work out which film this is. If we're sure, it's encoded and filed to Movies. If not, it waits in Review with pictures from each Title so you can choose.</p>
-        </div></div>
-      </section>
-      {%- endif %}
+      {#- Beside the drive card, so the Step running now (an Encode's progress) is in view. #}
+      {% include "partials/job_steps.html" %}
       {%- if extras_href %}
       <p class="ts">Its Extras are filed under Other. <a href="{{ extras_href }}">Sort the Extras</a> if you like.</p>
       {%- endif %}

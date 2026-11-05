@@ -5,7 +5,7 @@
 {%- set rec = view.record %}
 {%- set verified = view.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length %}
 <main id="disc">
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><a href="/history">History</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ album.title }}</span></div>
+  {% include "partials/job_crumb.html" %}
   <div class="split">
     <div class="stack">
       <div class="drive">
@@ -38,6 +38,7 @@
       </section>
     </div>
     <div class="aside stack">
+      {% include "partials/job_steps.html" %}
       <section class="bin ink" aria-labelledby="about-h">
         <h2 class="tab" id="about-h">About this CD</h2>
         <div class="box"><div class="pad">
