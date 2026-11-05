@@ -73,6 +73,7 @@ def test_scratch_page_lists_the_discs_holding_scratch(client, harness):
     assert 'href="/review/2"' in review
     assert "Example Movie (2016)" in encoding and "Encoding · 40%" in encoding
     assert "Not enough space" not in page and "Ejected" not in page
+    assert "Needs Review <span" not in page and "Encoding <span" not in page
     assert 'href="/scratch"' in page_text(client, "/")  # the top-bar meter links here
     harness.cyanrip.release()
     harness.ffmpeg.release()
@@ -96,3 +97,18 @@ def test_a_refusal_is_pushed_live_to_the_scratch_page(live_server, harness):
         harness.drive.insert(DiscType.DVD, "SPIRITED_AWAY")
         while "Ejected: not enough space" not in html.unescape(_read_event(lines, "scratch")):
             pass
+
+
+def test_the_using_scratch_list_is_pushed_live(live_server, harness):
+    import httpx
+
+    from tests.test_web_now import _read_event
+
+    with httpx.stream("GET", f"{live_server}/events", timeout=5) as r:
+        lines = r.iter_lines()
+        assert "No Rips are on scratch." in _read_event(lines, "scratch")
+        harness.cyanrip.hold_at = 2
+        harness.drive.insert(DiscType.CD, "OK_COMPUTER")
+        while "OK_COMPUTER" not in _read_event(lines, "scratch-rip"):
+            pass
+        harness.cyanrip.release()

@@ -351,6 +351,7 @@ Plain, firm and printed.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`). The scratch link gets the same active state on `/scratch`.
 - **Review count:** a tomato badge (700, 12px, 3px corners). It is its own `sse-swap` span with `aria-live="polite"`, announcing "N waiting".
 - **Scratch meter:** a 160px × 8px `well` track with a rule border and an `ink` fill that turns `review-tomato` when full. When space in use isn't all Rips, `/scratch` says "N GB is other files on this drive".
+- **Scratch page:** `/scratch`, opened from the meter, is only about scratch: one `.solo` column with the drive panel (space in use, or "Ejected: not enough space" for a refused Disc) above an `ink` "Using scratch" bin listing each Job holding scratch with its size and state, live (`docs/mockups/scratch-full.html`). The Needs Review and Encoding bins belong on Now, not here.
 - **Breadcrumb:** 14px `ink-2` text, underlined on hover; each link is a 24px target (44px on phones).
 
 ### Divider Tab + Bin (signature)

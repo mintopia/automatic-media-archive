@@ -94,7 +94,4 @@ def _rip_pct(services: Services, rec: JobRecord) -> int:
 
 def scratch_context(services: Services) -> dict:
     items = scratch_items(services)
-    encode = services.movie_archive.encoder.current
-    freeing = next((i for i in items if encode and i.record.id == encode.job.id), None)
-    return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items),
-            "encode_freeing": (freeing.gb, encode.progress.eta_s) if freeing and encode else None}
+    return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items)}
