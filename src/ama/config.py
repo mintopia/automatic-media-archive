@@ -11,9 +11,11 @@ from __future__ import annotations
 import re
 import tomllib
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
+
+from ama.languages import parse_languages
 
 
 class _Section(BaseModel):
@@ -118,8 +120,40 @@ class CqConfig(_Section):
     uhd: int = Field(ge=0, le=51)
 
 
+# Encode choices (ADR 0010). `encode.py` maps each to ffmpeg arguments; the Settings
+# page lists them in this order.
+EncoderName = Literal["hevc_nvenc", "av1_nvenc", "hevc_qsv", "libx265"]
+Speed = Literal["faster", "balanced", "slower", "slowest"]  # fastest to slowest
+AudioChoice = Literal["all", "first_plus_stereo", "languages"]
+SubtitleChoice = Literal["all", "languages", "none"]
+
+
+class MaxResolutionConfig(_Section):
+    """The tallest picture an Encode of each Disc Type keeps; "keep" = the Disc's own."""
+
+    dvd: Literal["keep"] = "keep"
+    bd: Literal["keep", "720p"] = "keep"
+    uhd: Literal["keep", "1080p"] = "keep"
+
+
+def _languages(value: str) -> str:
+    parse_languages(value)
+    return value
+
+
 class EncodeConfig(_Section):
+    encoder: EncoderName = "hevc_nvenc"
+    speed: Speed = "slower"
+    audio: AudioChoice = "languages"
+    subtitles: SubtitleChoice = "languages"
+    languages: Annotated[str, AfterValidator(_languages)] = "English"  # as typed
     cq: CqConfig
+    max_resolution: MaxResolutionConfig = MaxResolutionConfig()
+
+    @property
+    def preferred_languages(self) -> tuple[str, ...]:
+        """ISO 639-1 codes, most preferred first."""
+        return parse_languages(self.languages)
 
 
 class Config(_Section):

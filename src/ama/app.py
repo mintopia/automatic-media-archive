@@ -30,6 +30,7 @@ from ama.config import Config, secret_values
 from ama.db import Database
 from ama.jobs import JobStore
 from ama.encoder import Encoder
+from ama.encoder_probe import EncoderProbe
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.media import MediaStore, film_guess
@@ -88,6 +89,7 @@ class Services:
     pause: Pause
     plex: Plex
     http: httpx.Client
+    encoders: EncoderProbe  # which encoders pass a test encode (ADR 0010)
     problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
     restart: Restarter
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
@@ -96,9 +98,11 @@ class Services:
 
     def apply_live(self, cfg: Config) -> None:
         """Hand the settings.LIVE_TABLES values in `cfg` to the code that reads them."""
+        if cfg.encode != self.config.encode:
+            self.encoders.request()  # test the encoders again on save (ADR 0010)
         self.config = cfg
         self.cd.cfg = cfg.cd
-        self.movie_archive.encoder.cq = cfg.encode.cq
+        self.movie_archive.encoder.cfg = cfg.encode
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
         self.notifier.channels = channels(cfg, self.http)
@@ -109,7 +113,8 @@ class Services:
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
-                self.backfill.run, self.restart.run, *([self.settings.run] if self.settings else [])]
+                self.backfill.run, self.restart.run, self.encoders.run,
+                *([self.settings.run] if self.settings else [])]
 
 
 def build_services(
@@ -153,7 +158,7 @@ def build_services(
     pause = Pause(db, bus)
     tv_titles = TvTitles(db)
     restart = Restarter(lambda: busy(services), bus)
-    encoder = Encoder(jobs, bus, cfg.encode.cq, tool, streamer, hold=restart.holding)
+    encoder = Encoder(jobs, bus, cfg.encode, tool, streamer, hold=restart.holding)
     movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
@@ -203,6 +208,7 @@ def build_services(
         pause=pause,
         plex=plex,
         http=http,
+        encoders=EncoderProbe(bus, tool, streamer, lambda: services.config.encode),
         problems=problems,
         restart=restart,
         runs=runs,
