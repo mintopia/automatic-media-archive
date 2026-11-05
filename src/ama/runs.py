@@ -6,16 +6,24 @@ held in a ring of recent lines while it runs, so a page can follow it live (topi
 `logs`, at most twice a second). Callers pass only output text, never command lines;
 known secrets are masked on the way in all the same.
 
+Lines are stored in batches for throughput, but never lost on the way out: an error
+line is stored at once, a Step's lines are stored before it is marked done or failed,
+and whatever is left is stored when the background task stops and when the process
+exits (atexit). Only a hard kill can lose the last second of output; `recover` marks
+that possible gap in a Job's Step that carries on after a restart.
+
 Thread-safe: tools' output arrives from worker threads.
 """
 
 from __future__ import annotations
 
 import asyncio
+import atexit
 import collections
 import logging
 import threading
 import time
+import weakref
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -30,6 +38,7 @@ PUBLISH_EVERY_SECONDS = 0.5
 FLUSH_LINES = 200     # output lines are stored in batches: this many,
 FLUSH_SECONDS = 1.0   # or this long after the last batch (whichever comes first)
 STOPPED = "AMA stopped before this finished"
+RESUMED = "AMA restarted while this ran: output from just before the restart may be missing"
 
 
 class RunKind(StrEnum):
@@ -109,6 +118,16 @@ _STEP_COLS = ("s.id, s.run_id, s.key, s.name, s.subject, s.tool, s.result, s.sta
               "(SELECT COUNT(*) FROM step_lines l WHERE l.step_id = s.id AND l.error)")
 
 
+def _flush_at_exit(ref: weakref.ref[Runs]) -> None:
+    runs = ref()
+    if runs is None:
+        return
+    try:
+        runs.flush()
+    except Exception:  # the database may already be closed: nothing more to do
+        log.exception("Couldn't store the last Step output at exit")
+
+
 def _dt(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
 
@@ -135,6 +154,7 @@ class Runs:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._pending = False
         self._last_publish = 0.0
+        atexit.register(_flush_at_exit, weakref.ref(self))
 
     def _ts(self) -> str:
         return self._now().isoformat(timespec="milliseconds")  # a Step can take 0.1 s
@@ -240,7 +260,7 @@ class Runs:
         at = self._now().replace(microsecond=0)
         with self._lock:
             self._unsaved.append((step_id, at.isoformat(), int(error), text))
-            due = len(self._unsaved) >= FLUSH_LINES \
+            due = error or len(self._unsaved) >= FLUSH_LINES \
                 or time.monotonic() - self._saved_at >= FLUSH_SECONDS
         if due:
             self.flush()
@@ -417,6 +437,7 @@ class Runs:
                     self._open[job_id] = step_id
                     self._ring[step_id] = collections.deque(kept[-self.RING:], maxlen=self.RING)
                     self._count[step_id] = len(kept)
+                self.line(step_id, RESUMED)
             else:
                 self._db.execute("UPDATE steps SET state = 'failed', result = ?, "
                                  "finished_at = COALESCE(finished_at, started_at) WHERE id = ?",

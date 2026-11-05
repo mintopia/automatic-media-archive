@@ -278,6 +278,8 @@ class JobStore:
         if rec.status == JobStatus.RIPPING:
             log.info("Rip finished: %s: failed (%s)", _rip_name(rec), failure.headline)
         shutil.rmtree(rec.scratch_dir, ignore_errors=True)
+        if self.runs:
+            self.runs.flush()  # its Step's last lines (why it failed) before the Job reads failed
         self._db.execute(
             "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
             "failure_advice = ?, finished_at = COALESCE(finished_at, ?) WHERE id = ?",

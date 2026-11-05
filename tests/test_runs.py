@@ -95,7 +95,10 @@ def test_a_restart_lets_a_jobs_running_step_carry_on(tmp_path):
     again.job_note(3, "after it")
     [s] = again.steps(again.job_run(3))
     assert s.state == StepState.RUNNING
-    assert [ln.text for ln in again.tail(s.id)] == ["before the restart", "after it"]
+    assert [ln.text for ln in again.tail(s.id)] == [
+        "before the restart",
+        "AMA restarted while this ran: output from just before the restart may be missing",
+        "after it"]
 
 
 def test_a_job_has_one_run_whose_steps_follow_one_another(tmp_path):
@@ -185,3 +188,36 @@ def test_a_pruned_step_run_again_has_fresh_output(tmp_path):
     runs.end(again)
     assert runs.get_step(again).removed is None
     assert [ln.text for ln in runs.output(again)] == ["new line"]
+
+
+def _stored(tmp_path, step: int) -> list[str]:
+    """The Step's output as another process would read it from the database."""
+    return [ln.text for ln in make_runs(tmp_path).output(step)]
+
+
+def test_an_error_line_is_stored_at_once(tmp_path):
+    runs = make_runs(tmp_path)
+    step = runs.begin(runs.start_run(RunKind.APP, "x"), "s", "S")
+    runs.line(step, "working")
+    runs.line(step, "MakeMKV crashed", error=True)
+    assert _stored(tmp_path, step) == ["working", "MakeMKV crashed"]
+
+
+def test_a_steps_lines_are_stored_when_the_process_exits(tmp_path):
+    import subprocess
+    import sys
+    script = (
+        "import sys\n"
+        "from ama.db import Database\n"
+        "from ama.events import EventBus\n"
+        "from ama.runs import RunKind, Runs\n"
+        "from pathlib import Path\n"
+        "runs = Runs(Database(Path(sys.argv[1])), EventBus())\n"
+        "step = runs.begin(runs.start_run(RunKind.APP, 'x'), 's', 'S')\n"
+        "runs.line(step, 'the last words')\n"
+        "raise SystemExit(3)\n")
+    done = subprocess.run([sys.executable, "-c", script, str(tmp_path / "ama.sqlite3")],
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 3, done.stderr
+    assert _stored(tmp_path, 1) == ["the last words"]
+
