@@ -146,5 +146,5 @@ def save(request: Request, job_id: int, key: str = Form(""), value: str = Form("
         return RedirectResponse(f"/jobs/{job_id}", status_code=303)
     label = found.label if found else target
     ctx = {"jobset": jobset_view(services, job), "saved": saved, "refused": refused,
-           "error": error, "changed": label, "summary": bool(summary)}
+           "error": error, "changed": label, "summary": bool(summary), "oob_summary": bool(summary)}
     return TEMPLATES.TemplateResponse(request, "partials/job_settings_body.html", ctx)

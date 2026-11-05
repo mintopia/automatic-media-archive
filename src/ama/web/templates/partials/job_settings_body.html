@@ -1,6 +1,7 @@
 {#- The panel's body; what POST /jobs/{id}/settings answers with. `jobset` (JobsetView), `saved`
     (the Group just saved), `refused` (job_settings.Locked: it locked first), `error` (a value it
-    couldn't take), `changed` (the setting's label), `summary` (also swap the rip card's summary line). -#}
+    couldn't take), `changed` (the setting's label), `summary` (the panel is on the rip card: its saves ask for the summary line too, which
+    the answer swaps in out of band as `oob_summary`). -#}
 {%- set id = jobset.job.id %}
 {%- set post = "hx-post=\"/jobs/%d/settings\" hx-target=\"#jobset-body-%d\" hx-swap=\"outerHTML\""|format(id, id) %}
 {%- set extra = ', "summary": "1"' if summary else '' %}
@@ -59,4 +60,4 @@
   {%- endfor %}
   </div>
 </div>
-{%- if summary %}{% with js=jobset, oob=true %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
+{%- if oob_summary is defined and oob_summary %}{% with js=jobset, oob=true %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
