@@ -54,7 +54,8 @@ def test_libraries_are_grouped_by_kind_with_the_default_first_and_locked(setup):
     client, _, h = setup
     page = _page(client)
     assert "<h2>Plex connection</h2>" in page and "Connected" in page
-    assert "Save Plex connection" in page
+    assert "Save Plex connection" in page and "Plex sees Libraries at" in page
+    assert "Share path seen by Plex" not in page
     films = _group(page, "Films")
     assert "Default: Movies" in films
     assert films.index(">Movies<") < films.index(">Family Films<")
@@ -113,12 +114,12 @@ def test_a_rejected_library_keeps_the_form_open_with_its_messages(setup):
     client, toml, _ = setup
     before = toml.read_bytes()
     r = client.post(PAGE + "/save", data={"lib.kind": "films", "lib.name": "tv",
-                                          "lib.plex": "Movies", "lib.path": "D:\\Films"})
+                                          "lib.plex": "Movies", "lib.path": "Films"})
     assert r.status_code == 422
     page = html.unescape(r.text)
     films = _group(page, "Films")
-    assert "New Films Library" in films and 'value="D:\\Films"' in films
-    assert "There's already a Library called TV" in films and "inside the NAS share" in films
+    assert "New Films Library" in films and 'value="Films"' in films
+    assert "There's already a Library called TV" in films and "full folder path" in films
     assert toml.read_bytes() == before
 
 

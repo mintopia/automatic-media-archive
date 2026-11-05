@@ -93,12 +93,13 @@ def test_saved_encode_settings_apply_to_the_next_encode(tmp_path):
 
 
 def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_library(
-        client, harness):
+        client, harness, tmp_path):
     nas = harness.nas_root
+    elsewhere = tmp_path / "local disk" / "Films HD"  # a Library needn't be on the share
     cfg = harness.services.config
     libraries = [
         {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "plex": "Movies"},
-        {"name": "Films", "kind": "films", "path": str(nas / "Films HD"), "plex": "Films",
+        {"name": "Films", "kind": "films", "path": str(elsewhere), "plex": "Films",
          "default": True},
         {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
         {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]
@@ -111,7 +112,7 @@ def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_librar
     _rip(harness)
 
     _wait_for(harness, JobStatus.FILED)
-    assert extended_path(nas / "Films HD" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
+    assert extended_path(elsewhere / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
     assert not (nas / "Movies").exists()
     eventually(lambda: any("/refresh" in r.url.path for r in harness.web.plex_requests))
     scan = next(r for r in harness.web.plex_requests if "/refresh" in r.url.path)

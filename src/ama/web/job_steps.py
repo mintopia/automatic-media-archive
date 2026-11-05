@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 from ama import extras as extras_mod
@@ -123,7 +123,7 @@ def job_steps(services: Services, rec: JobRecord) -> list[Step]:
     rip = _rip(services, rec)
     ident = _identification(services, rec, rip, lines)
     encodes = [] if rec.disc_type == DiscType.CD else _encodes(services, rec, ident)
-    return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.root)]
+    return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.shown)]
 
 
 def _rip(services: Services, rec: JobRecord) -> Step:
@@ -243,14 +243,10 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
     return steps
 
 
-def _file(rec: JobRecord, ident: Step, encodes: list[Step], root: Path) -> Step:
+def _file(rec: JobRecord, ident: Step, encodes: list[Step],
+          shown: Callable[[Path], str]) -> Step:
     if rec.status == JobStatus.FILED:
-        where = "the Archive"
-        if rec.archive_dir is not None:
-            try:
-                where = rec.archive_dir.relative_to(root).as_posix()
-            except ValueError:
-                where = str(rec.archive_dir)
+        where = "the Archive" if rec.archive_dir is None else shown(rec.archive_dir)
         before = [s.finished for s in (ident, *encodes) if s.finished]
         return Step("File", StepState.DONE, f"Filed to {where}",
                     started=max(before) if before else None, finished=rec.filed_at)
