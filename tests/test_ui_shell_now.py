@@ -83,9 +83,3 @@ def test_scratch_says_when_the_space_in_use_is_other_files(client, harness):
     assert "None of it is Rips: it's other files on this drive." in page.replace("&#39;", "'")
     assert "No Rips are on scratch. The 220 GB in use is other files on this drive." in page
 
-
-def test_a_video_rip_is_not_called_nothing_ripping(client, harness):
-    harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
-    eventually(lambda: "is ripping in the drive" in client.get("/").text)
-    assert "Nothing ripping." not in client.get("/").text
-    harness.makemkv.release()

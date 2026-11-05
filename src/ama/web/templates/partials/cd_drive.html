@@ -1,6 +1,7 @@
 {#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Disc page.
     `cd.guess` (a likely release from MusicBrainz, only for show) fills in the album, artist and cover while it rips. -#}
 {%- set tag = heading or "div" -%}
+{%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
 {%- set g = cd.guess if cd else none -%}
 <div class="drive">
   {%- if g and g.cover %}
@@ -18,7 +19,7 @@
     {%- elif cd.mb_disc_id %}
     <div class="guess">Album not known yet · looked up again after the Rip<span class="mono" style="display:block;overflow-wrap:anywhere">MusicBrainz Disc ID {{ cd.mb_disc_id }}</span></div>
     {%- endif %}
-    <div class="status"><span class="stk rip">Ripping</span><span class="ts">{{ cd.position() }}</span></div>
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">{{ cd.position() }}</span></div>
     <div class="prog">
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ cd.percent | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ '%.1f' | format(cd.percent) }}%"></i></div><div class="eta">{% if cd.eta_seconds is not none %}<span class="nw">{{ cd.eta_seconds | left }}</span> · {% endif %}the Disc ejects when it's done</div></div>
       <div class="pct">{{ cd.percent | int }}%</div>
@@ -26,7 +27,7 @@
     {%- else %}
     <{{ tag }} class="title">Audio CD</{{ tag }}>
     <div class="meta">Reading the track list</div>
-    <div class="status"><span class="stk rip">Ripping</span><span class="ts">Starting</span></div>
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">Starting</span></div>
     {%- endif %}
   </div>
 </div>

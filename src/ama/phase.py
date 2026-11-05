@@ -1,0 +1,37 @@
+"""The Phase: the single user-facing stage a Disc is in (GLOSSARY.md).
+
+Every status the UI shows is a `Phase`; finer internal states (a Disc's
+`DiscStatus`, an Encode's status) display as the Phase they belong to.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+from ama.discs import DiscStatus
+
+
+class Phase(StrEnum):
+    RIPPING = "Ripping"
+    REVIEW = "Review"
+    ENCODING = "Encoding"
+    FILED = "Filed"
+    FAILED = "Failed"
+
+    @property
+    def css(self) -> str:
+        """The status chip's class (`stk <css>`, DESIGN.md)."""
+        return _CSS[self]
+
+
+_CSS = {Phase.RIPPING: "rip", Phase.REVIEW: "rev", Phase.ENCODING: "enc",
+        Phase.FILED: "fil", Phase.FAILED: "fail"}
+
+# `ripped` = waiting for Identification, which is still part of Ripping on the Now page.
+_OF_STATUS = {DiscStatus.RIPPING: Phase.RIPPING, DiscStatus.RIPPED: Phase.RIPPING,
+              DiscStatus.REVIEW: Phase.REVIEW, DiscStatus.FILED: Phase.FILED,
+              DiscStatus.FAILED: Phase.FAILED}
+
+
+def phase_of(status: DiscStatus | str) -> Phase:
+    return _OF_STATUS[DiscStatus(status)]

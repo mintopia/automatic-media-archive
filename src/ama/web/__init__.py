@@ -20,8 +20,10 @@ from ama.discs import DiscStatus
 from ama.extras import ExtraStatus
 from ama.media import Album
 from ama.moviearchive import FiledMovie
+from ama.phase import phase_of
 from ama.tvarchive import FiledTv
 from ama.web import auth
+from ama.web.current_rip import current_rip
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -36,6 +38,8 @@ TEMPLATES = Jinja2Templates(directory=HERE / "templates")
 # `{% if state | kind == "DiscPresent" %}`: branch on which variant a state union holds.
 TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
+# `{% set p = disc.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span>`: status as a Phase.
+TEMPLATES.env.filters["phase"] = phase_of
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
 NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]
@@ -94,6 +98,8 @@ def view_context(services: Services) -> dict[str, Any]:
         "nav": NAV,
         "can_log_out": auth.auth_required(services),
         "review": review_items(services),
+        # The Rip under way, any Disc Type: the drive card and Ripping bin both read this.
+        "current_rip": current_rip(services),
         "cd": cd.current,
         "cd_reading": cd.reading_toc,
         "cd_last_id": cd.last_disc_id,

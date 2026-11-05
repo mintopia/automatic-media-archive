@@ -1,10 +1,10 @@
 {%- set kind = drive | kind -%}
 {%- if repeat -%}
 {% include "partials/repeat_disc.html" %}
-{%- elif cd or cd_reading -%}
-{%- with heading=None, link=True %}{% include "partials/cd_drive.html" %}{% endwith -%}
-{%- elif kind == "DiscPresent" and rip_progress and rip_disc.label == drive.label -%}
-{%- with disc = rip_disc, progress = rip_progress, on_page = false -%}
+{%- elif current_rip and current_rip.disc_type == "CD" -%}{#- the same view as the Ripping bin -#}
+{%- with heading=None, link=True, cd=current_rip.cd, phase=current_rip.phase %}{% include "partials/cd_drive.html" %}{% endwith -%}
+{%- elif current_rip -%}
+{%- with disc = current_rip.disc, progress = current_rip.progress, on_page = false, phase = current_rip.phase -%}
 {% include "partials/rip_card.html" %}
 {%- endwith -%}
 {%- elif kind == "DiscPresent" -%}
@@ -44,7 +44,7 @@
 <div class="notice" role="alert" style="margin-top:16px">
   <svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><div><b>Not enough space for “{{ scratch_refused.name }}”.</b>It was ejected without ripping; scratch is full. <a href="/scratch">See what's using it</a></div>
 </div>
-{%- elif rip_failure and not rip_progress %}
+{%- elif rip_failure and not current_rip %}
 <div class="notice" role="alert" style="margin-top:16px">
   {%- if rip_failure.failure.kind == "licence" %}
   <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/discs/{{ rip_failure.id }}">What to do</a></div>

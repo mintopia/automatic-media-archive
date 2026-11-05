@@ -8,7 +8,7 @@
     <div class="page-head"><div><div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>MakeMKV</span></div>
       <h1>{% if k == "ToolReady" %}MakeMKV is ready{% elif k == "ToolPending" %}Checking MakeMKV{% else %}DVD and Blu-ray Rips are paused{% endif %}</h1>
       <p class="sub">MakeMKV rips DVDs and Blu-rays. It's yours to install and register; AMA only checks it.</p></div>
-      {%- if k not in ("ToolReady", "ToolPending") %}<span class="stk fail">Stopped</span>{% endif %}</div>
+      {%- if k not in ("ToolReady", "ToolPending") %}<span class="stk fail">Failed</span>{% endif %}</div>
     {%- if k == "ToolReady" %}
     <div class="notice ok" role="status">
       <svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
