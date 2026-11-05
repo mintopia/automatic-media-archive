@@ -12,6 +12,9 @@
   {% include "partials/review_done.html" %}
   <div class="split">
     <div class="stack">
+      {%- if pick_notice %}
+      <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>The edition you picked doesn't fit this CD</b>{{ pick_notice }}</div></div>
+      {%- endif %}
       {%- if notice %}
       <div class="notice" role="status">
         <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>

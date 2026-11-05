@@ -46,6 +46,7 @@ def logs(request: Request, kind: str = "", problems: str = "", before: str = "")
     return TEMPLATES.TemplateResponse(request, "logs.html", view_context(services) | {
         "current": "/logs", "bins": bins(views, now.date()), "kind": query.get("kind", ""),
         "problems": bool(problems), "query": query, "now": now, "before": cutoff,
+        "keep_days": services.config.logs.keep_days,
         "older": runs[PAGE - 1].started_at.isoformat() if more else None})
 
 
@@ -71,7 +72,7 @@ def run_page(request: Request, run_id: int) -> Response:
     view = run_view(services, _run_or_404(services, run_id), now)
     output = {s.stored.id: services.runs.tail(s.stored.id) if s.state == "running"
               else services.runs.output(s.stored.id)
-              for s in view.steps if s.has_output and s.stored is not None}
+              for s in view.steps if s.has_output and s.stored is not None and not s.removed}
     return TEMPLATES.TemplateResponse(request, "logs_run.html", view_context(services) | {
         "current": "/logs", "v": view, "output": output, "now": now,
         "when": lambda at: when(at, now.date())})

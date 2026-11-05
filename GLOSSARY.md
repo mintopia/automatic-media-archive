@@ -55,7 +55,7 @@ Matching a Disc to its real-world release (album, film, series) so it can be nam
 _Avoid_: Lookup, matching, tagging
 
 **Best guess**:
-The film a video Job most likely is, kept on the Job from the Rip on: guessed from the volume label (re-ranked by runtime once the longest Title is known) or picked by the user on the rip card. Review starts from it; only Identification and Review decide.
+The film a video Job most likely is, kept on the Job from the Rip on: guessed from the volume label (re-ranked by runtime once the longest Title is known) or picked by the user on the rip card. Review starts from it; only Identification and Review decide. A picked film whose runtime fits the Main Feature is accepted by Identification like an automatic match (no Review); likewise a CD release picked on the rip card that fits the Rip, once AccurateRip has verified it.
 _Avoid_: Likely film, match (a Best guess is not an Identification)
 
 **Review**:

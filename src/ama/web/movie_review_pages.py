@@ -17,7 +17,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ama import decoys, moviereview
-from ama.jobs import JobRecord, JobStatus, TitleRecord
+from ama.jobs import JobRecord, JobStatus, ReviewReason, TitleRecord
 from ama.extras import extra_titles
 from ama.moviearchive import main_feature
 from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_duration, \
@@ -153,8 +153,19 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         "picked_title": main, "main_length": short_duration(main_s),
         "errors": errors or [], "done": done_note(request),
         "summary": _summary(picked_film, main, rec),
+        "pick_notice": _pick_notice(rec, guess.film if guess and guess.picked else None,
+                                    main_s),
     }
     return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
+
+
+def _pick_notice(rec: JobRecord, pick: Candidate | None, main_s: int) -> str | None:
+    """Why the film picked while it ripped wasn't accepted, if that's why it's here."""
+    if pick is None or rec.review_reason != ReviewReason.PICK_RUNTIME_MISMATCH:
+        return None
+    runs = (f"runs {short_duration(pick.runtime_min * 60)}" if pick.runtime_min
+            else "has no running time in the film database (TMDB)")
+    return f"The film you picked {runs}; the main Title runs {short_duration(main_s)}."
 
 
 def _summary(film: Candidate | None, title: TitleRecord | None, rec: JobRecord) -> dict:

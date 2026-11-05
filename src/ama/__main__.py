@@ -1,7 +1,8 @@
 """`uv run ama [run|serve] [--config PATH]`: run the app (web UI + background monitors).
 
 `run` (the default) is the supervisor (ADR 0009, `ama.supervisor`): it starts
-`serve` as a child and starts it again when it exits asking to restart.
+`serve` as a child and starts it again when it exits asking to restart; on
+Windows it shows the tray icon (`ama.tray`).
 `serve` is the server itself; it exits with RESTART_EXIT_CODE after a restart
 from the UI, so without a supervisor (or a container restart policy) it stays down.
 """
@@ -20,7 +21,8 @@ import uvicorn
 
 from ama.app import build_services, create_app
 from ama.config import ConfigError, load_config
-from ama.supervisor import RESTART_EXIT_CODE, server_launcher, supervise
+from ama.supervisor import RESTART_EXIT_CODE, run
+from ama.tray import CONTROL_ENV
 
 
 def _setup_logging(log_file: Path) -> None:
@@ -54,7 +56,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
     if args.command == "run":
-        sys.exit(supervise(server_launcher(["--config", str(args.config.resolve())])))
+        sys.exit(run(args.config.resolve()))
     serve(args.config)
 
 
@@ -73,7 +75,8 @@ def serve(config: Path) -> None:
     logging.getLogger("ama").info("starting; config %s", config.resolve())
     services = build_services(cfg, config_path=config)
     # A streaming /events response never finishes on its own: give shutdown a deadline.
-    server = uvicorn.Server(uvicorn.Config(create_app(services), host=cfg.web.host,
+    control_token = os.environ.pop(CONTROL_ENV, "")  # from `ama run`; tools don't inherit it
+    server = uvicorn.Server(uvicorn.Config(create_app(services, control_token), host=cfg.web.host,
                                            port=cfg.web.port, log_config=None,
                                            timeout_graceful_shutdown=3))
 

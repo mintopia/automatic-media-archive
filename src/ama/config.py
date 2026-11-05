@@ -117,6 +117,12 @@ class NtfyConfig(_Section):
     topic: str = _secret()
 
 
+class LogsConfig(_Section):
+    """Logs (#34): Step output older than `keep_days` is removed; 0 keeps it forever."""
+
+    keep_days: int = Field(default=0, ge=0)
+
+
 class CqConfig(_Section):
     dvd: int = Field(ge=0, le=51)
     bd: int = Field(ge=0, le=51)
@@ -206,6 +212,7 @@ class Config(_Section):
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
     encode: EncodeConfig
+    logs: LogsConfig = LogsConfig()
     # Empty in the file = one default per kind at the share's Movies, TV and Music folders.
     libraries: tuple[Library, ...] = ()
 

@@ -23,7 +23,7 @@ from ama import review
 from ama.jobs import JobRecord, JobStore, TitleRecord, TitleStatus
 from ama.moviearchive import TMDB_FILE  # the search MovieArchiver.identify saved
 from ama.proc import Streamer
-from ama.tmdb import RUNTIME_TOLERANCE_S, Candidate
+from ama.tmdb import Candidate, runtime_fits
 from ama.tools import ToolLookup, ToolUnavailable
 from ama.video_rip import VIDEO_DISC_TYPES
 
@@ -124,7 +124,7 @@ def saved_search(scratch_dir: Path) -> SavedSearch:
 
 
 def fits(film: Candidate, duration_s: int) -> bool:
-    return bool(film.runtime_min) and abs(film.runtime_min * 60 - duration_s) <= RUNTIME_TOLERANCE_S
+    return runtime_fits(film, duration_s)
 
 
 def short_duration(seconds: int, with_seconds: bool = False) -> str:

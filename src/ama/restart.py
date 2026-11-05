@@ -66,6 +66,10 @@ class Restarter:
         self.requested, self.waiting = True, False
         self.on_request()
 
+    def stop(self) -> None:
+        """Shut down without restarting (the tray's Quit): the server exits with 0."""
+        self.on_request()
+
     def when_idle(self) -> None:
         self.waiting = True
         self._bus.publish(Topic.DRIVE)

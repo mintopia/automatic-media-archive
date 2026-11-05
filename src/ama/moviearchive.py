@@ -4,7 +4,8 @@
 
 - Identification: each `ripped` video Disc with no Identification yet is searched
   on TMDB using the hints saved at Rip time and its Main Feature (the longest
-  Title). A confident match joins the Encode queue (`movies`); any other outcome
+  Title). A confident match joins the Encode queue (`movies`), as does a film the user
+  picked while it ripped (film_guess.py) whose runtime fits the Main Feature; any other outcome
   leaves the Disc for Review with its reason, and the TMDB candidates are kept in
   scratch (`tmdb.json`) for Review to choose from.
 - Encode: one at a time, oldest queued first, through the shared `Encoder`; then
@@ -45,7 +46,7 @@ from ama.plex import Plex
 from ama.proc import Streamer
 from ama.problems import Problem, Problems
 from ama.retry import Backoff, RetryLater
-from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, load_hints, \
+from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, decide_pick, load_hints, \
     movie_file_stem, movie_folder, search_terms, title_matches
 from ama.tv import looks_like_tv, might_be_tv, series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -150,8 +151,10 @@ class MovieArchiver:
                  clock: Callable[[], float] = time.monotonic,
                  claimed: Callable[[int], bool] = lambda job_id: False, *,
                  extras: Extras, media: MediaStore, covers: Covers,
+                 picked: Callable[[int], Candidate | None],
                  problems: Problems | None = None) -> None:
         self._media = media
+        self._picked = picked  # the film the user picked while it ripped (film_guess.py)
         self._covers = covers
         self._jobs = jobs
         self.movies = movies
@@ -233,7 +236,9 @@ class MovieArchiver:
             {"terms": terms, "main_feature": main.number,
              "candidates": [c.to_json() for c in candidates]}, ensure_ascii=False),
             encoding="utf-8")
-        film, reason = decide(candidates, main.duration_s)
+        pick = self._picked(rec.id)
+        film, reason = (decide_pick(pick, main.duration_s) if pick is not None
+                        else decide(candidates, main.duration_s))
         if film is None and series is not None:
             self._to_tv_review(rec, f"Two Titles are episode-length and TMDB knows the series "
                                     f"{series.title}, so this looks like TV")
@@ -253,12 +258,18 @@ class MovieArchiver:
         if film is None:
             assert reason is not None
             self._jobs.mark_review(rec.id, reason)
-            self._jobs.log(rec.id, f"Searched TMDB for {searched}: {len(candidates)} "
-                                    f"film{'s' if len(candidates) != 1 else ''} found. "
-                                    f"Needs Review: {reason.value.replace('_', ' ')}")
+            found_text = (f"Picked while it ripped: {pick.name} ({pick.runtime_min or '?'} min; "
+                          f"Main Feature is Title {main.number}, {main.duration})"
+                          if pick is not None else
+                          f"Searched TMDB for {searched}: {len(candidates)} "
+                          f"film{'s' if len(candidates) != 1 else ''} found")
+            self._jobs.log(rec.id, f"{found_text}. Needs Review: "
+                                    f"{reason.value.replace('_', ' ')}")
             return
-        self._jobs.log(rec.id, f"Identified as {film.name} (TMDB {film.id}, {film.runtime_min} "
-                                f"min; Main Feature is Title {main.number}, {main.duration})")
+        mine = "your pick, " if pick is not None else ""
+        self._jobs.log(rec.id, f"Identified as {film.name} ({mine}TMDB {film.id}, "
+                                f"{film.runtime_min} min; Main Feature is Title {main.number}, "
+                                f"{main.duration})")
         self.movies.enqueue(rec.id, film, main.number)
         self._jobs.log(rec.id, "Queued for Encode")
 

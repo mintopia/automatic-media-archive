@@ -13,15 +13,18 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import logging
 import threading
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from enum import StrEnum
 
 from ama.db import Database
 from ama.events import EventBus, Topic
+
+log = logging.getLogger(__name__)
 
 PUBLISH_EVERY_SECONDS = 0.5
 FLUSH_LINES = 200     # output lines are stored in batches: this many,
@@ -62,6 +65,14 @@ class RunRecord:
 
 
 @dataclass(frozen=True)
+class Removed:
+    """When a Step's output was removed (pruned), and the `logs.keep_days` that did it."""
+
+    at: date
+    days: int
+
+
+@dataclass(frozen=True)
 class StepRecord:
     id: int
     run_id: int
@@ -76,6 +87,7 @@ class StepRecord:
     finished_at: datetime | None
     lines: int
     errors: int
+    removed: Removed | None = None  # its output was pruned (#34)
 
     @property
     def took(self) -> timedelta | None:
@@ -92,7 +104,7 @@ class OutputLine:
 
 _RUN_COLS = "id, kind, job_id, item, title, detail, started_at, finished_at, failed"
 _STEP_COLS = ("s.id, s.run_id, s.key, s.name, s.subject, s.tool, s.result, s.state, s.exit_code, "
-              "s.started_at, s.finished_at, "
+              "s.started_at, s.finished_at, s.output_removed_at, s.output_kept_days, "
               "(SELECT COUNT(*) FROM step_lines l WHERE l.step_id = s.id), "
               "(SELECT COUNT(*) FROM step_lines l WHERE l.step_id = s.id AND l.error)")
 
@@ -204,7 +216,8 @@ class Runs:
             "VALUES (?, ?, (SELECT COUNT(*) FROM steps WHERE run_id = ?), ?, ?, ?, 'running', ?) "
             "ON CONFLICT (run_id, key) DO UPDATE SET name = excluded.name, "
             "subject = excluded.subject, tool = excluded.tool, result = '', state = 'running', "
-            "exit_code = NULL, finished_at = NULL, "
+            "exit_code = NULL, finished_at = NULL, output_removed_at = NULL, "
+            "output_kept_days = NULL, "
             "started_at = CASE WHEN ? THEN excluded.started_at ELSE started_at END",
             (run_id, key, run_id, name, subject, tool, ts, int(fresh)))
         step_id = self._db.execute("SELECT id FROM steps WHERE run_id = ? AND key = ?",
@@ -281,9 +294,11 @@ class Runs:
     @staticmethod
     def _step(row) -> StepRecord:
         (id_, run_id, key, name, subject, tool, result, state, code, started, finished,
-         lines, errors) = row
+         removed_at, kept_days, lines, errors) = row
+        removed = Removed(datetime.fromisoformat(removed_at).date(), kept_days)             if removed_at else None
         return StepRecord(id_, run_id, key, name, subject, tool, result, StepState(state), code,
-                          _dt(started), _dt(finished), lines, errors)  # type: ignore[arg-type]
+                          _dt(started), _dt(finished), lines, errors,  # type: ignore[arg-type]
+                          removed)
 
     def output(self, step_id: int) -> list[OutputLine]:
         """All of the Step's stored output."""
@@ -364,6 +379,29 @@ class Runs:
         if finish:
             self.finish_run(self.job_run(job_id), failed)
 
+    # --- pruning (#34) ---
+
+    def prune(self, keep_days: int) -> int:
+        """Remove the output of Steps that finished more than `keep_days` days ago (0 keeps
+        it all). The Steps, their results and their Runs stay. Idempotent; returns how many
+        Steps lost their output."""
+        if keep_days <= 0:
+            return 0
+        self.flush()
+        cutoff = (self._now() - timedelta(days=keep_days)).isoformat(timespec="milliseconds")
+        old = [r[0] for r in self._db.execute(
+            "SELECT id FROM steps WHERE state != 'running' AND output_removed_at IS NULL "
+            "AND COALESCE(finished_at, started_at) < ?", (cutoff,)).fetchall()]
+        for i in range(0, len(old), 500):
+            ids = old[i:i + 500]
+            marks = ",".join("?" * len(ids))
+            self._db.execute(f"DELETE FROM step_lines WHERE step_id IN ({marks})", tuple(ids))
+            self._db.execute(f"UPDATE steps SET output_removed_at = ?, output_kept_days = ? "
+                             f"WHERE id IN ({marks})", (self._ts(), keep_days, *ids))
+        if old:
+            self._changed()
+        return len(old)
+
     # --- lifecycle ---
 
     def recover(self) -> None:
@@ -424,3 +462,42 @@ class Runs:
         self._pending = False
         self._last_publish = time.monotonic()
         self._bus.publish(Topic.LOGS)
+
+
+class LogPruner:
+    """Removes Step output older than `logs.keep_days` (#34): at startup, once a day, and
+    as soon as the setting is saved (`request`). `keep_days` is read each time, so a saved
+    change applies without a restart."""
+
+    DAY = 24 * 3600.0
+
+    def __init__(self, runs: Runs, keep_days: Callable[[], int],
+                 interval: float = DAY) -> None:
+        self._runs = runs
+        self._keep_days = keep_days
+        self.interval = interval
+        self._wake = asyncio.Event()
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+    def request(self) -> None:
+        """Prune now (from any thread, e.g. a saved setting); a no-op before `run` starts,
+        which prunes first thing anyway."""
+        loop = self._loop
+        if loop is not None and not loop.is_closed():
+            try:
+                loop.call_soon_threadsafe(self._wake.set)
+            except RuntimeError:  # the loop closed meanwhile
+                pass
+
+    async def run(self) -> None:
+        self._loop = asyncio.get_running_loop()
+        while True:
+            self._wake.clear()
+            try:
+                await asyncio.to_thread(self._runs.prune, self._keep_days())
+            except Exception:  # noqa: BLE001 - never kill the loop; try again next time
+                log.exception("logs: couldn't remove old step output")
+            try:
+                await asyncio.wait_for(self._wake.wait(), self.interval)
+            except TimeoutError:
+                pass

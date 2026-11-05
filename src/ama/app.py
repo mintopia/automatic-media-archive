@@ -47,7 +47,7 @@ from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
 from ama.restart import Busy, Restarter
-from ama.runs import Runs
+from ama.runs import LogPruner, Runs
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.settings import Settings
 from ama.sets import DiscSets
@@ -96,12 +96,15 @@ class Services:
     restart: Restarter
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
     app_events: AppEvents  # startup, NAS and tool events as Runs
+    log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
         """Hand the settings.LIVE_TABLES values in `cfg` to the code that reads them."""
         if cfg.encode != self.config.encode:
             self.encoders.request()  # test the encoders again on save (ADR 0010)
+        if cfg.logs != self.config.logs:
+            self.log_pruner.request()  # a shorter keep applies at once
         self.config = cfg
         self.cd.cfg = cfg.cd
         self.movie_archive.encoder.cfg = cfg.encode
@@ -112,7 +115,8 @@ class Services:
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.problems.run, self.runs.run, self.app_events.run, self.drive.run,
+        return [self.problems.run, self.runs.run, self.log_pruner.run, self.app_events.run,
+                self.drive.run,
                 self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
@@ -158,6 +162,7 @@ def build_services(
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     film_guesses = FilmGuesses(db, tmdb, covers)
+    cd_picks = CdPicks(db)
     plex = Plex(cfg.plex, http, archive, problems)
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
@@ -168,7 +173,8 @@ def build_services(
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
-                                  media=media, covers=covers, problems=problems)
+                                  media=media, covers=covers, picked=film_guesses.picked,
+                                  problems=problems)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -183,7 +189,7 @@ def build_services(
         jobs=jobs,
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch, pause=pause, picks=CdPicks(db),
+                    scratch=scratch, pause=pause, picks=cd_picks,
                     guesser=Guesser(mb, covers), hold=restart.holding),
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
@@ -193,7 +199,7 @@ def build_services(
         musicbrainz=mb,
         cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds, covers=covers, media=media,
-                              problems=problems),
+                              picked=cd_picks.get, problems=problems),
         movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(jobs, tool, streamer, interval=cfg.drive.poll_seconds),
@@ -218,6 +224,7 @@ def build_services(
         restart=restart,
         runs=runs,
         app_events=AppEvents(runs, bus, nas, tools, config_path),
+        log_pruner=LogPruner(runs, lambda: services.config.logs.keep_days),
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
     services.encoders.log = services.app_events  # each encoder test is a Step in Logs
@@ -234,7 +241,8 @@ def busy(services: Services) -> Busy:
     return Busy(rip.name if rip else None, 1 if encode else 0, max(etas) if etas else None)
 
 
-def create_app(services: Services) -> FastAPI:
+def create_app(services: Services, control_token: str = "") -> FastAPI:
+    """`control_token`: the supervisor's tray gets past the password with it (`ama.tray`)."""
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         tasks = [asyncio.create_task(fn()) for fn in services.background_tasks()]
@@ -247,7 +255,8 @@ def create_app(services: Services) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.services = services
-    auth.install(app, services)
+    app.state.control_token = control_token
+    auth.install(app, services, control_token)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(jobs_pages.router)

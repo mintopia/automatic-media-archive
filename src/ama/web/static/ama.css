@@ -580,6 +580,7 @@ a.row.runrow{grid-template-columns:56px minmax(0,1fr) auto;text-decoration:none}
 a.row.runrow:hover{background:var(--well)}
 a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .runrow .ts{margin-top:2px}
+.runrow .pruned{color:var(--ink2)}
 .errs{color:var(--fail);font-weight:600}
 .dtype.app{flex-direction:column;justify-content:space-between;align-items:flex-start;gap:4px}
 .dtype.app .i{width:18px;height:18px}
@@ -622,7 +623,10 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .run-aside h2{font-size:16px;margin-bottom:12px}
 .run-aside dl.facts dd{overflow-wrap:anywhere}
 .run-aside .grp+.grp{margin-top:24px;padding-top:20px;border-top:1px solid var(--rule)}
-.keep-note a,.run-aside a{display:inline-block;padding:5px 2px;margin:-5px -2px}
+.gone{display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;align-items:start;padding:14px 18px;background:var(--well);color:var(--ink2);font-size:14px}
+.gone .i{width:18px;height:18px;margin-top:1px;color:var(--ink3)}
+.gone p{margin:0}.gone b{color:var(--ink);font-weight:600}
+.keep-note a,.run-aside a,.gone a{display:inline-block;padding:5px 2px;margin:-5px -2px}
 @media (prefers-reduced-motion:reduce){.mark.running .i{animation:none}.step .chev{transition:none}}
 @media (max-width:720px){
   .filters{margin:16px 0 22px}.filters .segs{flex:1}.filters .segs a{flex:1;justify-content:center;padding:0 8px}.filters .toggle{flex:1;justify-content:center}.filters .keep-note{margin-left:0;width:100%}
@@ -635,7 +639,7 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
   .step>summary .chev{grid-column:3;grid-row:1}
   .step-meta{padding:10px 14px}.step-meta .acts{margin-left:0;width:100%;flex-wrap:wrap}.step-meta .acts .btn{flex:1}
   .logwrap .log{--pad-x:14px;max-height:360px;font-size:12px;padding-top:12px;padding-bottom:12px}
-  .keep-note a,.run-aside a{padding:15px 4px;margin:-15px -4px}
+  .keep-note a,.run-aside a,.gone a{padding:15px 4px;margin:-15px -4px}
 }
 
 /* Inline output on Now (#33): the rip card's foot line and running Encoding rows (docs/mockups/now-output.html) */
