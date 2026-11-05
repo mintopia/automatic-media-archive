@@ -1,25 +1,26 @@
-{#- Now page: the Ripping bin. Topic "rip". `ripped` (CDs) and `ripped_video` are ripped
-    Discs not yet identified; `waiting_for(id)` says why one can't move on, if it can't. -#}
+{#- Now page: the Ripping bin. Topic "rip". `current_rip` (any Disc Type) is the same view the drive card reads.
+    `ripped` (CDs) and `ripped_video` are ripped Discs not yet identified; `waiting_for(id)`
+    says why one can't move on, if it can't. -#}
 {%- from "partials/waiting_line.html" import line -%}
+{%- set r = current_rip -%}
 {%- set waiting_rows = ripped | length + ripped_video | length -%}
-<section class="bin rip{% if not cd and not waiting_rows and not repeat and not rip_progress %} empty{% endif %}" aria-labelledby="ripping-h">
-  <h2 class="tab" id="ripping-h">Ripping <span class="c">{{ (1 if cd else 0) + (1 if rip_progress and not cd else 0) + waiting_rows }}</span></h2>
+<section class="bin rip{% if not r and not waiting_rows and not repeat %} empty{% endif %}" aria-labelledby="ripping-h">
+  <h2 class="tab" id="ripping-h">Ripping <span class="c">{{ (1 if r else 0) + waiting_rows }}</span></h2>
   <div class="box">
-  {%- if cd %}
-    {%- set g = cd.guess %}
-    <div class="row compact">{% if g and g.cover %}<div class="dtype art"><img src="/covers/{{ g.cover }}" alt=""></div>{% else %}<div class="dtype">CD</div>{% endif %}<div><div class="tt"><a href="/discs/{{ cd.disc_id }}">{{ g.match.release.title if g else (cd.label or "Unknown CD") }}</a></div><div class="ts">{% if g %}Likely · {% endif %}{{ cd.position() }} · {{ cd.percent | int }}%</div></div><span class="stk rip">Ripping</span></div>
+  {%- if r %}
+    <div class="row compact">{% if r.cover %}<div class="dtype art"><img src="/covers/{{ r.cover }}" alt=""></div>{% else %}<div class="dtype">{{ r.disc_type }}</div>{% endif %}<div><div class="tt">{% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</div><div class="ts">{% if r.likely %}Likely · {% endif %}{{ r.detail }}{% if r.percent is not none %} · {{ r.percent }}%{% endif %}</div></div><span class="stk {{ r.phase.css }}">{{ r.phase }}</span></div>
   {%- endif %}
   {%- for d in ripped %}
-    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div>{{ line(waiting_for(d.record.id)) }}</div><span class="stk rip">Ripping</span></div>
+    {%- set p = d.record.status | phase %}
+    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div>{{ line(waiting_for(d.record.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
   {%- for d in ripped_video %}
-    <div class="row compact"><div class="dtype">{{ d.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.id }}">{{ d.name }}</a></div><div class="ts">{{ d.titles | length }} Titles ripped · waiting to be identified</div>{{ line(waiting_for(d.id)) }}</div><span class="stk rip">Ripping</span></div>
+    {%- set p = d.status | phase %}
+    <div class="row compact"><div class="dtype">{{ d.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.id }}">{{ d.name }}</a></div><div class="ts">{{ d.titles | length }} Titles ripped · waiting to be identified</div>{{ line(waiting_for(d.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
-  {%- if not cd and not waiting_rows and repeat %}
+  {%- if not r and not waiting_rows and repeat %}
     <p class="pad ts">Waiting for your choice on {{ repeat.name }}.</p>
-  {%- elif not cd and not waiting_rows and rip_progress %}
-    <p class="pad ts">{{ rip_disc.name }} is ripping in the drive.</p>
-  {%- elif not cd and not waiting_rows %}
+  {%- elif not r and not waiting_rows %}
     <p class="pad ts">Nothing ripping.</p>
   {%- endif %}
   </div>

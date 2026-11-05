@@ -2,6 +2,7 @@
     Needs `disc` (DiscRecord), `progress` (RipProgress or None), `on_page` (h1 vs link).
     `rip_likely` (a media.Screen guessed from the label, only for show) fills in the film and poster while it rips. -#}
 {%- set n = disc.titles | length -%}
+{%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
 {%- set g = rip_likely if progress else none -%}
 {%- set name = g.name if g else disc.name -%}
 {%- set source = ("Disc " ~ disc.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
@@ -23,10 +24,10 @@
     {%- endif %}
     {%- if progress.title_number %}
     <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ disc.total_size }}</span></div>
-    <div class="status"><span class="stk rip">Ripping</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
     {%- else %}
     <div class="meta">{{ source }}</div>
-    <div class="status"><span class="stk rip">Ripping</span><span class="ts">Reading the Disc</span></div>
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">Reading the Disc</span></div>
     {%- endif %}
     <div class="prog">
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ progress.pct }}%"></i></div><div class="eta"><span class="nw">{{ progress.eta or "Working out the time left" }}</span> · the Disc ejects when it's done</div></div>
@@ -34,7 +35,7 @@
     </div>
     {%- elif disc.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
     <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ disc.total_size }}</span></div>
-    <div class="status">{% if disc.status == "review" %}<span class="stk rev">Review</span>{% elif disc.status == "filed" %}<span class="stk fil">Filed</span>{% else %}<span class="stk rip">Ripping</span>{% endif %}<span class="ts">{% if disc.finished_at %}Disc ejected at {{ disc.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
+    <div class="status">{% set p = disc.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if disc.finished_at %}Disc ejected at {{ disc.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
     {%- if on_page and disc.status == "ripped" %}{% with disc_id = disc.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
     {%- else %}
     <div class="meta">{{ disc.failure.headline if disc.failure else "" }}</div>

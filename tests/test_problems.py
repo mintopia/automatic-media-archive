@@ -97,7 +97,7 @@ def test_with_no_tmdb_key_a_ripped_video_disc_shows_a_banner_and_why_its_card_wa
         disc_page = html.unescape(c.get("/discs/1").text)
         assert "Waiting: No TMDB API key" in disc_page
 
-        h.services.tmdb._key = "tmdb-key"  # the key is set (Settings, #26)
+        h.services.tmdb.api_key = "tmdb-key"  # the key is set (Settings, #26)
         eventually(lambda: h.services.discs.list(DiscStatus.FILED), timeout=5)
         page = _now(c)
         assert "[tmdb] api_key" not in page and "Waiting:" not in page
@@ -122,7 +122,7 @@ def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_p
                 pass
             while "Waiting: No TMDB API key" not in _read_event(lines, "ripping"):
                 pass
-            h.services.tmdb._key = "tmdb-key"
+            h.services.tmdb.api_key = "tmdb-key"
             while "[tmdb] api_key" in _read_event(lines, "problems"):
                 pass
             while "Waiting:" in _read_event(lines, "ripping"):

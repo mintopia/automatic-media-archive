@@ -186,7 +186,8 @@ class FakeCyanrip:
 
     Output lines use cyanrip's real formats (see tests/data/cyanrip/). A Rip
     writes NN.flac, rip.cue and rip.log into `cwd / <-D value>`.
-    `hold_at=n` pauses the Rip half-way through track n until `release()`.
+    `hold_at=n` pauses the Rip half-way through track n until `release()`;
+    `hold_toc` pauses the `-I` track-list read the same way.
     """
 
     def __init__(self, drive: FakeDrive) -> None:
@@ -204,6 +205,7 @@ class FakeCyanrip:
         self.installed = True
         self.no_disc = False
         self.hold_at: int | None = None
+        self.hold_toc = False
         self._held = threading.Event()
         self._go = threading.Event()
 
@@ -242,6 +244,9 @@ class FakeCyanrip:
         for ln in header:
             on_line(ln)
         if "-I" in args:
+            if self.hold_toc:
+                self._held.set()
+                self._go.wait(5)
             for n, secs in self.tracks:
                 for ln in [f"Track {n} info:", *self._block(n, secs, ripped=False)]:
                     on_line(ln)

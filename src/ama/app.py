@@ -43,6 +43,7 @@ from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
 from ama.scratch import DiskUsageFn, ScratchGate
+from ama.settings import Settings
 from ama.sets import DiscSets
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
@@ -51,7 +52,7 @@ from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
-                     tv_review_pages)
+                     settings_pages, tv_review_pages)
 
 
 @dataclass
@@ -79,14 +80,27 @@ class Services:
     covers: Covers
     media: MediaStore
     backfill: Backfill
+    plex: Plex
+    http: httpx.Client
     problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
+    settings: Settings | None = None  # set by build_services; ama.toml vs what's running
+
+    def apply_live(self, cfg: Config) -> None:
+        """Hand the settings.LIVE_TABLES values in `cfg` to the code that reads them."""
+        self.config = cfg
+        self.cd.cfg = cfg.cd
+        self.movie_archive.encoder.cq = cfg.encode.cq
+        self.tmdb.api_key = cfg.tmdb.api_key
+        self.plex.cfg = cfg.plex
+        self.notifier.channels = channels(cfg, self.http)
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
         return [self.problems.run, self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
-                self.tools.run, self.tools.watch_makemkv,self.cd_archive.run, self.movie_archive.run,
+                self.tools.run, self.tools.watch_makemkv,
+                self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
-                self.backfill.run]
+                self.backfill.run, *([self.settings.run] if self.settings else [])]
 
 
 def build_services(
@@ -100,6 +114,7 @@ def build_services(
     http: httpx.Client | None = None,
     disc_root: Callable[[], Path | None] | None = None,
     disk_usage: DiskUsageFn = shutil.disk_usage,
+    config_path: Path | None = None,
 ) -> Services:
     cfg.paths.scratch.mkdir(parents=True, exist_ok=True)
     bus = EventBus()
@@ -133,7 +148,7 @@ def build_services(
         def disc_root() -> Path | None:
             device = drive.device()
             return Path(device + "\\") if device else None
-    return Services(
+    services = Services(
         config=cfg,
         db=db,
         bus=bus,
@@ -168,8 +183,12 @@ def build_services(
         media=media,
         backfill=Backfill(db, discs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
+        plex=plex,
+        http=http,
         problems=problems,
     )
+    services.settings = Settings(config_path, cfg, services.apply_live)
+    return services
 
 
 def create_app(services: Services) -> FastAPI:
@@ -197,4 +216,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     app.include_router(history_pages.router)
+    app.include_router(settings_pages.router)
     return app

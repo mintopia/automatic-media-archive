@@ -2,12 +2,10 @@
 {%- set kind = drive | kind -%}
 {%- if repeat -%}
 You've {{ "archived" if repeat.filed else "ripped" }} {{ repeat.name }} before. Choose what to do with it.
-{%- elif cd -%}
-Ripping the Audio CD.
-{%- elif cd_reading -%}
-Reading the Audio CD.
-{%- elif kind == "DiscPresent" and rip_progress and rip_disc.label == drive.label -%}
-Ripping {{ rip_disc.name }}.
+{%- elif current_rip and current_rip.disc_type == "CD" -%}
+{{ "Ripping" if current_rip.cd else "Reading" }} the Audio CD.
+{%- elif current_rip -%}
+Ripping {{ current_rip.disc.name }}.
 {%- elif kind == "DiscPresent" -%}
 {{ drive.label or drive.disc_type.long_name }} is in the drive.
 {%- elif kind == "UnrecognisedDisc" -%}
@@ -16,7 +14,7 @@ This Disc can't be archived. Eject it and insert another.
 Can't find the drive.
 {%- elif scratch_refused -%}
 Disc ejected without ripping: not enough space.
-{%- elif rip_failure and not rip_progress -%}
+{%- elif rip_failure and not current_rip -%}
 Disc ejected. Couldn't rip {{ rip_failure.name }}.
 {%- elif rip_disc or cd_last_id -%}
 Disc ejected. The drive is empty.
