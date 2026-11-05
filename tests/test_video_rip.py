@@ -71,7 +71,9 @@ def test_licence_error_is_a_hard_stop_shown_as_a_makemkv_problem(client, harness
     page = page_text(client, "/jobs/1")
     assert "licence key isn't valid" in page and "MATRIX_BD" in page
     assert "This isn't a problem with the Disc" in page
-    assert "too old" in client.get("/jobs/1/log").text
+    assert '<a class="btn quiet" href="/logs/jobs/1">Show the log</a>' in page
+    assert 'class="log"' not in page
+    assert "too old" in client.get("/logs/jobs/1", follow_redirects=True).text
     assert ripped_files(harness) == []
 
 
@@ -117,7 +119,8 @@ def test_failed_rip_ejects_deletes_partial_files_and_keeps_the_log(client, harne
     assert not (Path(harness.services.config.paths.scratch) / "video" / "1").exists()
     page = page_text(client, "/jobs/1")
     assert "Failed" in page and "Title 2 couldn't be ripped" in page
-    assert "Error 'Scsi error - MEDIUM ERROR' occurred while reading" in page  # the log
+    run = page_text(client, "/logs/jobs/1")
+    assert "Error 'Scsi error - MEDIUM ERROR' occurred while reading" in run  # the log
     assert "Scsi error" in client.get("/jobs/1/log").text
 
     # No auto-retry: reinserting is up to the person, and dismissing clears the notice.

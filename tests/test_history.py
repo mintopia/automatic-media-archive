@@ -57,6 +57,8 @@ def test_a_filed_cds_page_shows_what_it_is_without_scratch_or_the_web(harness, c
     assert "The Unknown Journey Continues" in page and "2:01" in page   # track 1, 121 s
     assert "matches 65 other rips" in page
     assert str(rec.archive_dir) in page   # where it was filed
+    assert f'<a class="view-log" href="/logs/jobs/{rec.id}">' in page and "View log" in page
+    assert f'href="/jobs/{rec.id}/log"' not in page   # the Run, not the raw log
     for link in (f"https://musicbrainz.org/release/{SPECIAL}",
                  f"https://musicbrainz.org/release-group/{GROUP}",
                  f"https://musicbrainz.org/cdtoc/{DISC_1}",

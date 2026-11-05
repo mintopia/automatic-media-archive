@@ -137,7 +137,7 @@ def test_data_disc_is_left_alone(harness, client):
     assert harness.drive.ejected == 0
 
 
-def test_unreadable_track_fails_ejects_deletes_partial_files_and_shows_log(harness, client):
+def test_unreadable_track_fails_ejects_deletes_partial_files_and_links_its_run(harness, client):
     harness.cyanrip.read_errors_in = 2
     harness.drive.insert(DiscType.CD)
     rec = _only_disc(harness, JobStatus.FAILED)
@@ -148,9 +148,10 @@ def test_unreadable_track_fails_ejects_deletes_partial_files_and_shows_log(harne
     page = client.get(f"/jobs/{rec.id}").text
     assert "Couldn't read this CD" in page
     assert "Unknown CD · 3 tracks" in page
-    assert "Ripping errors: 3" in page                      # cyanrip's own log
-    assert '<span class="e">' in page                         # errors highlighted
-    assert "Disc ejected" in page
+    assert f'<a class="view-log" href="/logs/jobs/{rec.id}">' in page
+    assert "full log" not in page and "Ripping errors: 3" not in page
+    run = client.get(f"/logs/jobs/{rec.id}", follow_redirects=True).text
+    assert "Ripping errors: 3" in run                       # cyanrip's own output
     now = client.get("/").text
     assert "Didn't work" in now and f'href="/jobs/{rec.id}"' in now
 
@@ -162,7 +163,8 @@ def test_failed_rip_is_not_retried(harness, client):
     rec = _only_disc(harness, JobStatus.FAILED)
     time.sleep(0.3)  # many drive polls
     assert len(_rip_calls(harness)) == 1
-    assert "eject the Disc: The tray is stuck" in client.get(f"/jobs/{rec.id}").text
+    run = client.get(f"/logs/jobs/{rec.id}", follow_redirects=True).text
+    assert "eject the Disc: The tray is stuck" in run
 
 
 def test_dismissing_a_failure_clears_it_from_now(harness, client):

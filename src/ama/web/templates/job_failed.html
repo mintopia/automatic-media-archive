@@ -2,7 +2,7 @@
 {% block title %}Rip failed{% endblock %}
 {% block main %}
 <main>
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Didn't work</span></div>
+  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Didn't work</span>{% include "partials/job_log_link.html" %}</div>
   <div class="solo">
     <div class="stack">
       <div class="page-head"><div><h1>Couldn't rip this {{ job.disc_type.long_name }}</h1><p class="sub">{{ job.name }}{% if job.titles %} · {{ job.titles | length }} Titles{% endif %}{% if job.finished_at %} · ejected at {{ job.finished_at.strftime("%H:%M") }}{% endif %}</p></div><span class="stk fail">Failed</span></div>
@@ -16,7 +16,6 @@
       </form>
       <p class="ts after-actions">This takes it off Now. Nothing is retried on its own: put the Disc back in when you're ready and it's ripped from the start.</p>
       {% include "partials/job_steps.html" %}
-      {% include "partials/job_log.html" %}
     </div>
   </div>
 </main>
