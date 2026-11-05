@@ -86,7 +86,7 @@ def test_a_menu_page_is_marked_current_on_itself_and_its_subpages(harness, monke
     monkeypatch.setattr(web, "MENU", [("Settings", "/settings", "settings")])
     base = TEMPLATES.env.get_template("base.html")
     ctx = web.view_context(harness.services)
-    assert 'href="/settings" aria-current="page"' in base.render(ctx | {"current": "/settings/nas"})
+    assert 'href="/settings" aria-current="page"' in base.render(ctx | {"current": "/settings/general"})
     assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/"})
     assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/settingsx"})
 

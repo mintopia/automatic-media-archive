@@ -6,8 +6,8 @@ again; sub-detail inside its Phase, never a Phase of its own), and app-wide
 an app-wide cause (`Waiting.problem`, e.g. no TMDB key) or from a component that
 `report`s one (Plex, notifications) until it `resolved`s it.
 
-NAS and tool readiness have their own live state and banners (`nas.html`,
-`tools.html`); they aren't repeated here. A waiting cause's `detail` (which Library
+Tool readiness has its own live state and banner (`tools.html`); it isn't
+repeated here. A waiting cause's `detail` (which Library
 folder) shows on its banner.
 """
 

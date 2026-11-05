@@ -18,7 +18,6 @@ class Topic(StrEnum):
     """What changed; each names the UI fragments that re-render (web.FRAGMENTS)."""
 
     DRIVE = "drive"      # the drive card
-    NAS = "nas"
     TOOLS = "tools"
     RIP = "rip"          # a Rip, and the Ripping bin
     ENCODE = "encode"    # the Encode queue

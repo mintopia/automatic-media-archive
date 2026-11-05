@@ -15,9 +15,9 @@ PAGE = "/settings/archive/libraries"
 
 @pytest.fixture
 def setup(tmp_path):
-    nas = tmp_path / "nas"
+    root = tmp_path / "libraries"
     toml = write_config(tmp_path, extra="".join(
-        f"\n[[libraries]]\nname = \"{name}\"\nkind = \"{kind}\"\npath = '{nas / folder}'\n"
+        f"\n[[libraries]]\nname = \"{name}\"\nkind = \"{kind}\"\npath = '{root / folder}'\n"
         f"plex = \"{plex}\"\n" + ("default = true\n" if default else "")
         for name, kind, folder, plex, default in [
             ("Movies", "films", "Movies", "Movies", True),
@@ -63,7 +63,7 @@ def test_libraries_are_grouped_by_kind_with_the_default_first_and_locked(setup):
     assert "Default, can't be removed" in movies and "Remove" not in movies
     assert 'aria-label="Make Family Films the Films default"' in family
     assert 'aria-label="Remove Family Films"' in family
-    assert str(h.nas_root / "Family Films") in family.replace("<wbr>", "")
+    assert str(h.libraries_root / "Family Films") in family.replace("<wbr>", "")
     assert "Add Films Library" in films
     assert "Default: TV" in _group(page, "TV") and "TV Shows" in _group(page, "TV")
     assert "Add Music Library" in _group(page, "Music")
@@ -74,7 +74,7 @@ def test_a_long_folder_breaks_after_its_separators_not_mid_name(setup):
     family = _group(_page(client), "Films").split('role="listitem"')[2]
     path = family.split('<span class="path">')[1].split("</span>")[0]
     assert path.endswith("\\<wbr>Family Films")
-    assert path.replace("<wbr>", "") == str(h.nas_root / "Family Films")
+    assert path.replace("<wbr>", "") == str(h.libraries_root / "Family Films")
 
 
 def test_add_opens_an_empty_form_whose_plex_list_holds_only_that_kinds_libraries(setup):
@@ -91,7 +91,7 @@ def test_adding_a_library_saves_it_to_its_kind(setup):
     client, toml, h = setup
     r = client.post(PAGE + "/save", data={"lib.kind": "tv", "lib.name": "Anime",
                                           "lib.plex": "Anime",
-                                          "lib.path": str(h.nas_root / "Anime")},
+                                          "lib.path": str(h.libraries_root / "Anime")},
                     follow_redirects=False)
     assert r.status_code == 303
     assert ("tv", "Anime", "Anime", False) in _libraries(toml)
@@ -102,11 +102,11 @@ def test_edit_opens_the_form_under_its_row_and_saves_that_library(setup):
     client, toml, h = setup
     films = _group(_page(client, "?edit=Family Films"), "Films")
     assert 'aria-label="Edit Family Films"' in films and "Save Library" in films
-    assert f'value="{h.nas_root / "Family Films"}"' in films
+    assert f'value="{h.libraries_root / "Family Films"}"' in films
     assert re.search(r"<option selected>Family Films</option>", films)
     client.post(PAGE + "/save", data={"lib.original": "Family Films", "lib.kind": "films",
                                       "lib.name": "Kids", "lib.plex": "Movies",
-                                      "lib.path": str(h.nas_root / "Kids")})
+                                      "lib.path": str(h.libraries_root / "Kids")})
     assert ("films", "Kids", "Movies", False) in _libraries(toml)
 
 
@@ -163,5 +163,5 @@ def test_without_plex_the_list_is_disabled_and_saving_still_works(setup):
     assert re.search(r'<select class="select" id="lib-plex"[^>]* disabled', films)
     assert "AMA couldn't reach Plex at http://plex:32400" in films
     client.post(PAGE + "/save", data={"lib.original": "Family Films", "lib.kind": "films",
-                                      "lib.name": "Family", "lib.path": str(h.nas_root / "F")})
+                                      "lib.name": "Family", "lib.path": str(h.libraries_root / "F")})
     assert ("films", "Family", "Family Films", False) in _libraries(toml)  # Plex pick kept

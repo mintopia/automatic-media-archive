@@ -263,5 +263,5 @@ def _file(rec: JobRecord, ident: Step, encodes: list[Step],
     ready = ident.state == StepState.DONE and all(
         s.state in (StepState.DONE, StepState.FAILED, StepState.NOT_RUN) for s in encodes)
     if ready:
-        return Step("File", StepState.RUNNING, "Filing to the NAS, then a Plex scan")
-    return Step("File", StepState.WAITING, "To the NAS, then a Plex scan")
+        return Step("File", StepState.RUNNING, "Filing to the Library, then a Plex scan")
+    return Step("File", StepState.WAITING, "To the Library, then a Plex scan")

@@ -208,7 +208,6 @@ def test_cd_tool_path_comes_from_the_tool_lookup(tmp_path):
     drive = FakeDrive()
     fake = FakeCyanrip(drive)
     services = build_services(make_config(tmp_path), probe=drive, streamer=fake,
-                              nas_exists=lambda p: True,
                               tool=lambda name: tmp_path / "tools" / f"{name}.exe")
     import asyncio
     drive.insert(DiscType.CD)

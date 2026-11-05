@@ -98,13 +98,6 @@ class CdConfig(_Section):
     retries: int = Field(default=10, ge=1)
 
 
-class NasConfig(_Section):
-    unc: str
-    username: str = ""
-    password: str = _secret()
-    retry_seconds: float = Field(default=60.0, gt=0)
-
-
 class PathsConfig(_Section):
     scratch: Path
     state_db: Path = Path("ama.sqlite3")
@@ -280,7 +273,6 @@ class Config(_Section):
     drive: DriveConfig = DriveConfig()
     cd: CdConfig = CdConfig()
     tools: ToolsConfig = ToolsConfig()
-    nas: NasConfig
     paths: PathsConfig
     scratch: ScratchConfig = ScratchConfig()
     rip: RipConfig = RipConfig()

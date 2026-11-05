@@ -67,8 +67,15 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    git clone https://git.mintopia.net/mintopia/automatic-media-archive.git C:\ama
    cd C:\ama
    uv sync --frozen --no-dev
-   copy ama.example.toml ama.toml   # then edit ama.toml: NAS, secrets, scratch...
+   copy ama.example.toml ama.toml   # then edit ama.toml: Libraries, secrets, scratch...
    ```
+
+   Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
+   if a Library is on a network share, make sure the Windows user AMA runs as can
+   reach it (a mapped drive, or credentials saved in Windows). While a folder
+   isn't reachable, its Jobs wait at "Encoded · filing" and filing is retried
+   every minute. An `ama.toml` from v1/v2 is rewritten once at startup (its
+   `[nas]` table is dropped and each Library gets its full path; a `.bak` is kept).
 
 3. Try it in a console first: `uv run ama` (reads `.\ama.toml`; `--config PATH`
    or `$env:AMA_CONFIG` to use another file). Open `http://<box>:8080/`. Ctrl+C to stop.

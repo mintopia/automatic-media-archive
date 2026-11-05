@@ -6,7 +6,7 @@
   <h1>Logs</h1>
   <p class="sub">What each Job and the app itself did, newest first. Open a run to see each step's output.</p>
   <div class="filters">
-    <div class="search"><label class="sr" for="run-q">Find runs</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg><input class="input" id="run-q" type="search" placeholder="Disc, Job or kind (CD, NAS, Tools)" autocomplete="off"></div>
+    <div class="search"><label class="sr" for="run-q">Find runs</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg><input class="input" id="run-q" type="search" placeholder="Disc, Job or kind (CD, App, Tools)" autocomplete="off"></div>
     {%- set p = "&problems=1" if problems else "" %}
     <nav class="segs" aria-label="Show"><a href="/logs{{ '?problems=1' if problems }}"{% if not kind %} aria-current="page"{% endif %}>All</a><a href="/logs?kind=jobs{{ p }}"{% if kind == 'jobs' %} aria-current="page"{% endif %}>Jobs</a><a href="/logs?kind=app{{ p }}"{% if kind == 'app' %} aria-current="page"{% endif %}>App</a></nav>
     <a class="toggle" role="button" aria-pressed="{{ 'true' if problems else 'false' }}" href="/logs{% if kind or not problems %}?{% endif %}{% if kind %}kind={{ kind }}{% endif %}{% if not problems %}{{ '&' if kind }}problems=1{% endif %}"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>Problems only</a>

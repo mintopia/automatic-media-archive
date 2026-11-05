@@ -1,10 +1,10 @@
-"""App events as Runs in Logs (GLOSSARY: Run): startup, the NAS dropping or coming back, and
-tools being fetched or fixed after startup.
+"""App events as Runs in Logs (GLOSSARY: Run): startup, and tools being fetched or fixed after
+startup.
 
-`AppEvents` watches what the monitors already know (`NasMonitor.status`, `Tools.status`)
+`AppEvents` watches what the monitors already know (`Tools.status`)
 rather than being told: each watched thing is an `Item` whose `observe()` says how it is
 now. At startup each Item is a Step of the "AMA started" Run until it settles; after that,
-trouble opens a Run of its own (NAS, Tools) that ends when the trouble does.
+trouble opens a Run of its own (Tools) that ends when the trouble does.
 """
 
 from __future__ import annotations
@@ -12,12 +12,10 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
 from ama.events import EventBus
-from ama.nas import NasConnected, NasConnecting, NasMonitor, NasUnreachable
 from ama.runs import RunKind, Runs
 from ama.tools import (Pin, ToolDownloading, ToolFailed, ToolNotFound, ToolPending, ToolReady,
                        Tools, makemkv_headline)
@@ -27,7 +25,7 @@ POLL_SECONDS = 1.0  # also woken by every bus event
 
 class Seen(StrEnum):
     PENDING = "pending"  # not known yet
-    BUSY = "busy"        # being fetched or connected
+    BUSY = "busy"        # being fetched
     OK = "ok"
     PROBLEM = "problem"
 
@@ -42,32 +40,11 @@ class Observation:
 @dataclass(frozen=True)
 class Item:
     key: str
-    step: str                 # the Step's name: "Connect to the NAS"
+    step: str                 # the Step's name: "Check MakeMKV"
     kind: RunKind             # the Run it gets after startup
     observe: Callable[[], Observation]
     trouble: Callable[[bool], str]  # a later Run's title; arg: it was fine before
     fixed: Callable[[bool], str]    # its title once fixed; arg: it was fine before
-    later_step: str = ""      # the Step a later Run works on ("Reconnect"); default `step`
-
-
-def nas_item(nas: NasMonitor) -> Item:
-    def observe() -> Observation:
-        unc = nas.cfg.unc
-        match nas.status:
-            case NasConnecting():
-                return Observation(Seen.PENDING)
-            case NasConnected():
-                return Observation(Seen.OK, f"Connected to {unc}", unc)
-            case NasUnreachable(detail=detail):
-                return Observation(Seen.PROBLEM, f"{unc} didn't answer: {detail}",
-                                   f"{unc} isn't reachable · filing waits")
-        return Observation(Seen.PENDING)
-
-    return Item("nas", "Connect to the NAS", RunKind.NAS, observe,
-                trouble=lambda was_ok: "Lost the NAS" if was_ok else "Couldn't reach the NAS",
-                fixed=lambda was_ok: ("Lost the NAS, then reconnected" if was_ok
-                                      else "Reached the NAS"),
-                later_step="Reconnect")
 
 
 def makemkv_item(tools: Tools) -> Item:
@@ -130,7 +107,7 @@ class _Watch:
 
 
 class AppEvents:
-    def __init__(self, runs: Runs, bus: EventBus, nas: NasMonitor, tools: Tools,
+    def __init__(self, runs: Runs, bus: EventBus, tools: Tools,
                  config_path: Path | None = None, test_encoders: bool = True) -> None:
         self._runs = runs
         # (no ffmpeg pin means no ffmpeg to wait for: tests only)
@@ -139,8 +116,7 @@ class AppEvents:
         self._tests_failed = False
         self._bus = bus
         self._config_path = config_path
-        self.items = [nas_item(nas), makemkv_item(tools),
-                      *(pin_item(tools, p) for p in tools.pins)]
+        self.items = [makemkv_item(tools), *(pin_item(tools, p) for p in tools.pins)]
         self._watches: list[_Watch] = []
         self.startup: int | None = None  # the "AMA started" Run, while it's open
         # The encoder test (encoder_probe, which writes it through begin/line/end below):
@@ -223,7 +199,7 @@ class AppEvents:
         if failed:
             return "Trouble with " + ", ".join(w.item.step.split(" ", 1)[-1].removeprefix("the ")
                                                for w in failed)
-        return "Tools ready, NAS connected"
+        return "Tools ready"
 
     def _changed(self, w: _Watch, now: Observation) -> None:
         problem = now.seen == Seen.PROBLEM
@@ -241,14 +217,8 @@ class AppEvents:
                 self._runs.line(w.run_step, now.line, error=problem)
             if now.seen == Seen.OK:
                 self._runs.end(w.run_step, result=now.result)
-                detail = now.result
-                started = self._runs.get_run(w.run)
-                if w.item.kind == RunKind.NAS and started is not None:
-                    away = max(1, round((datetime.now() - started.started_at).total_seconds()
-                                        / 60))
-                    detail = f"{now.result} · away for {away} min"
                 self._runs.finish_run(w.run, failed=False, title=w.item.fixed(w.was_ok),
-                                      detail=detail)
+                                      detail=now.result)
                 w.run = w.run_step = None
                 w.was_ok = True
             elif problem:
@@ -257,12 +227,7 @@ class AppEvents:
         if now.seen in (Seen.PROBLEM, Seen.BUSY):
             w.run = self._runs.start_run(w.item.kind, w.item.trouble(w.was_ok), item=w.item.key,
                                          detail=now.result)
-            if w.item.kind == RunKind.NAS and w.was_ok:
-                hold = self._runs.begin(w.run, "hold", "Hold filing")
-                self._runs.line(hold, "Filing waits until the NAS is back; Rips carry on to "
-                                      "scratch")
-                self._runs.end(hold, result=now.result)
-            w.run_step = self._runs.begin(w.run, w.item.key, w.item.later_step or w.item.step)
+            w.run_step = self._runs.begin(w.run, w.item.key, w.item.step)
             self._runs.line(w.run_step, now.line, error=problem)
             if problem:
                 self._runs.set_result(w.run_step, now.result)
@@ -270,7 +235,7 @@ class AppEvents:
             # Fine again with no Run open (it failed at startup): say so in a Run of its own.
             run = self._runs.start_run(w.item.kind, w.item.fixed(False), item=w.item.key,
                                        detail=now.result)
-            step = self._runs.begin(run, w.item.key, w.item.later_step or w.item.step)
+            step = self._runs.begin(run, w.item.key, w.item.step)
             self._runs.line(step, now.line)
             self._runs.end(step, result=now.result)
             self._runs.finish_run(run, failed=False)

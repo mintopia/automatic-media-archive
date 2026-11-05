@@ -8,13 +8,13 @@ with its reason. The MusicBrainz answer is kept in scratch
 (`musicbrainz.json`) for Review to choose from.
 
 Filing: tag the scratch FLACs (incl. MusicBrainz IDs), fetch the cover, and
-place FLACs + cue + log + cover into `Music/<album artist>/<album>/` on the
-NAS (temp name -> rename, verified; see `archive.py`). Discs of a multi-disc
+place FLACs + cue + log + cover into `<album artist>/<album>/` in its Library
+(temp name -> rename, verified; see `archive.py`). Discs of a multi-disc
 release share the album folder: track files are `<disc><track:02> - <title>.flac`
 and the cue/log are named per disc. Then the Job is marked filed, its scratch
 deleted, and Plex asked to scan the folder.
 
-Network or NAS trouble leaves the Job `ripped`; it is retried every
+Network trouble or an unreachable Library folder leaves the Job `ripped`; it is retried every
 `retry_seconds`. Every step is idempotent, so a retry or restart just redoes it.
 """
 

@@ -1,11 +1,7 @@
-import html
-
 import httpx
-from fastapi.testclient import TestClient
 
-from ama.app import create_app
 from ama.drive import DiscType, UnrecognisedDisc
-from tests.conftest import eventually, make_harness
+from tests.conftest import eventually
 
 
 def test_empty_drive_asks_for_a_disc(client):
@@ -26,16 +22,11 @@ def test_unrecognised_disc_says_so_plainly(client, harness):
     assert "can't archive this Disc" in client.get("/").text
 
 
-def test_nas_failure_is_shown_and_clears_when_the_share_comes_back(tmp_path):
-    h = make_harness(tmp_path, nas_reachable=False)
-    with TestClient(create_app(h.services)) as client:
-        eventually(lambda: "Can't reach the NAS" in client.get("/").text)
-        page = client.get("/").text
-        unc = h.services.config.nas.unc
-        assert unc in html.unescape(page) and "The network path was not found." in page
-        assert h.runner.calls[0][:3] == ["net", "use", unc]
-        h.share["reachable"] = True
-        eventually(lambda: "Can't reach the NAS" not in client.get("/").text)
+def test_ama_never_connects_storage_and_now_has_no_nas_panel(client, harness):
+    eventually(lambda: any(r.title == "AMA started" and r.finished_at
+                           for r in harness.services.runs.list_runs()))
+    assert harness.runner.calls == []
+    assert "NAS" not in client.get("/").text
 
 
 def test_static_assets_are_served(client):

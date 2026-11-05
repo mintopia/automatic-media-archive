@@ -36,7 +36,7 @@ def test_files_are_written_under_a_temporary_name_then_renamed(tmp_path):
         assert dest.name.endswith(PARTIAL)
         shutil.copyfile(src, dest)
 
-    archive = Archive(_libraries(tmp_path / "nas"), copy=watching_copy)
+    archive = Archive(_libraries(tmp_path / "libraries"), copy=watching_copy)
     folder = archive.place(tmp_path.joinpath("Music", "X", "Y").relative_to(tmp_path),
                            _sources(tmp_path))
     assert sorted(p.name for p in folder.iterdir()) == ["01 - A.flac", "02 - B.flac"]
@@ -47,15 +47,15 @@ def test_a_copy_that_comes_out_different_is_not_renamed_into_place(tmp_path):
     def truncating_copy(src, dest):
         dest.write_bytes(src.read_bytes()[:10])
 
-    archive = Archive(_libraries(tmp_path / "nas"), copy=truncating_copy)
+    archive = Archive(_libraries(tmp_path / "libraries"), copy=truncating_copy)
     with pytest.raises(FilingError):
         archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), _sources(tmp_path))
-    assert list((tmp_path / "nas" / "Music").iterdir()) == []
+    assert list((tmp_path / "libraries" / "Music").iterdir()) == []
 
 
 def test_filing_again_skips_files_already_in_place(tmp_path):
     copies = []
-    archive = Archive(_libraries(tmp_path / "nas"), copy=lambda s, d: (copies.append(d), shutil.copyfile(s, d)))
+    archive = Archive(_libraries(tmp_path / "libraries"), copy=lambda s, d: (copies.append(d), shutil.copyfile(s, d)))
     files = _sources(tmp_path)
     archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), files)
     archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), files)
@@ -77,5 +77,5 @@ def test_a_disc_whose_filing_cant_be_verified_keeps_its_scratch(harness, client)
                            for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
-    harness.services.archive.copy = shutil.copyfile  # e.g. the NAS recovered
+    harness.services.archive.copy = shutil.copyfile  # e.g. the Library folder came back
     _wait_for(harness, JobStatus.FILED)

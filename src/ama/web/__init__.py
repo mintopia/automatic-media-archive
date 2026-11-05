@@ -63,7 +63,6 @@ MENU: list[tuple[str, str, str]] = [("Settings", "/settings", "settings"), ("Log
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
-    "nas": "partials/nas.html",
     "tools": "partials/tools.html",
     "rip": "partials/rip.html",
     "ripping": "partials/ripping_bin.html",
@@ -147,9 +146,7 @@ def view_context(services: Services) -> dict[str, Any]:
         **services.tv_archive.queue_view(),  # TV Episodes not yet filed
         "drive": services.drive.state,
         "repeat": services.repeat.pending,  # an archived Disc waiting for the user
-        "nas": services.nas.status,
         "encoder_problem": services.encoders.problem(),  # the configured encoder failed its test
-        "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
         "scratch_refused": services.scratch.refused,
         "scratch_view": lambda: scratch_context(services),  # walks scratch: call only if shown

@@ -93,13 +93,13 @@ def test_a_value_that_isnt_offered_is_refused(h):
 
 
 def test_the_library_pick_locks_when_filing_starts(h):
-    nas = h.nas_root
+    root = h.libraries_root
     cfg = h.services.config
     h.services.apply_live(Config.model_validate(cfg.model_dump() | {"libraries": [
-        {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "default": True},
-        {"name": "Family Films", "kind": "films", "path": str(nas / "Family")},
-        {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
-        {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]}))
+        {"name": "Movies", "kind": "films", "path": str(root / "Movies"), "default": True},
+        {"name": "Family Films", "kind": "films", "path": str(root / "Family")},
+        {"name": "TV", "kind": "tv", "path": str(root / "TV"), "default": True},
+        {"name": "Music", "kind": "music", "path": str(root / "Music"), "default": True}]}))
     job = _job(h)
     settings = h.services.job_settings
     settings.set(job.id, "library", "Family Films")
@@ -126,13 +126,13 @@ FOLDER = "Example Movie (2016) {tmdb-1234}"
 
 
 def _family_films(h) -> None:
-    nas = h.nas_root
+    root = h.libraries_root
     cfg = h.services.config
     h.services.apply_live(Config.model_validate(cfg.model_dump() | {"libraries": [
-        {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "default": True},
-        {"name": "Family Films", "kind": "films", "path": str(nas / "Family")},
-        {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
-        {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]}))
+        {"name": "Movies", "kind": "films", "path": str(root / "Movies"), "default": True},
+        {"name": "Family Films", "kind": "films", "path": str(root / "Family")},
+        {"name": "TV", "kind": "tv", "path": str(root / "TV"), "default": True},
+        {"name": "Music", "kind": "music", "path": str(root / "Music"), "default": True}]}))
 
 
 def test_a_film_job_encodes_and_files_with_the_settings_changed_while_it_ripped(tmp_path):
@@ -159,7 +159,7 @@ def test_a_film_job_encodes_and_files_with_the_settings_changed_while_it_ripped(
     for args in encodes:
         assert args[args.index("-cq") + 1] == "19"
         assert args[args.index("-preset") + 1] == "p7"  # "slower", as when it locked
-    assert extended_path(h.nas_root / "Family" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
+    assert extended_path(h.libraries_root / "Family" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
     stored = settings.group(job, Group.LIBRARY)
     assert stored.locked and stored.values[0].value == "Family Films"
 

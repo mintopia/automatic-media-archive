@@ -32,8 +32,9 @@ def test_example_config_documents_every_setting():
 def test_example_config_mentions_each_secret_and_required_setting():
     text = EXAMPLE.read_text(encoding="utf-8").lower()
     for needle in ["tmdb", "plex", "token", "discord", "webhook", "ntfy", "topic",
-                   "unc", "username", "password", "scratch", "cq"]:
+                   "password", "scratch", "cq", "[[libraries]]"]:
         assert needle in text, needle
+    assert "[nas]" not in text and "unc =" not in text and "net use" not in text
 
 
 def test_example_config_loads(tmp_path):
