@@ -34,6 +34,7 @@
       <section class="bin ink" aria-labelledby="steps-h">
         <h2 class="tab" id="steps-h">Steps <span class="c">{{ v.steps | length }}</span></h2>
         <div class="box">
+        {%- set gone = namespace(first=true) %}
         {%- for s in v.steps %}
           {%- set lines = output.get(s.stored.id, []) if s.stored else [] %}
           {%- include "partials/run_step.html" %}
@@ -59,7 +60,7 @@
           {%- set failed = v.steps | selectattr("state", "eq", "failed") | list | length %}
           {%- set notrun = v.steps | selectattr("state", "eq", "notrun") | list | length %}
           <dt>Steps</dt><dd>{% if failed or notrun %}{{ v.done_count }} done{% if failed %}, {{ failed }} failed{% endif %}{% if notrun %}, {{ notrun }} didn't run{% endif %}{% else %}{{ v.done_count }} of {{ v.steps | length }} done{% endif %}</dd>
-          <dt>Output</dt><dd>Kept</dd>
+          <dt>Output</dt><dd>{% if v.removed %}Removed {{ v.removed.at.day }} {{ v.removed.at.strftime("%b") }} · <a href="/settings/logs">Change</a>{% else %}Kept{% endif %}</dd>
         </dl>
       </div>
       {%- if not job %}

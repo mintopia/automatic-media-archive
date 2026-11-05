@@ -47,7 +47,7 @@ from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
 from ama.restart import Busy, Restarter
-from ama.runs import Runs
+from ama.runs import LogPruner, Runs
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.settings import Settings
 from ama.sets import DiscSets
@@ -96,12 +96,15 @@ class Services:
     restart: Restarter
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
     app_events: AppEvents  # startup, NAS and tool events as Runs
+    log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
         """Hand the settings.LIVE_TABLES values in `cfg` to the code that reads them."""
         if cfg.encode != self.config.encode:
             self.encoders.request()  # test the encoders again on save (ADR 0010)
+        if cfg.logs != self.config.logs:
+            self.log_pruner.request()  # a shorter keep applies at once
         self.config = cfg
         self.cd.cfg = cfg.cd
         self.movie_archive.encoder.cfg = cfg.encode
@@ -112,7 +115,8 @@ class Services:
 
     def background_tasks(self) -> list[Callable[[], object]]:
         """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.problems.run, self.runs.run, self.app_events.run, self.drive.run,
+        return [self.problems.run, self.runs.run, self.log_pruner.run, self.app_events.run,
+                self.drive.run,
                 self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
@@ -220,6 +224,7 @@ def build_services(
         restart=restart,
         runs=runs,
         app_events=AppEvents(runs, bus, nas, tools, config_path),
+        log_pruner=LogPruner(runs, lambda: services.config.logs.keep_days),
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
     services.encoders.log = services.app_events  # each encoder test is a Step in Logs

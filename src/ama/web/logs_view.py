@@ -15,7 +15,7 @@ from ama.drive import DiscType
 from ama.encode import EncodeProgress
 from ama.jobs import JobRecord, JobStatus
 from ama.phase import Phase, phase_of
-from ama.runs import RunKind, RunRecord, StepRecord
+from ama.runs import Removed, RunKind, RunRecord, StepRecord
 from ama.web.job_steps import Step, job_steps
 
 if TYPE_CHECKING:
@@ -78,6 +78,11 @@ class StepView:
     def has_output(self) -> bool:
         return self.stored is not None and self.state not in ("waiting", "notrun")
 
+    @property
+    def removed(self) -> Removed | None:
+        """When its output was pruned (#34), if it was."""
+        return self.stored.removed if self.has_output and self.stored else None
+
 
 @dataclass(frozen=True)
 class RunView:
@@ -106,6 +111,12 @@ class RunView:
     @property
     def problem(self) -> bool:
         return self.state == "failed" or self.errors > 0 or self.phase == Phase.FAILED
+
+    @property
+    def removed(self) -> Removed | None:
+        """The latest removal of any of its Steps' output (#34), if any."""
+        gone = [s.removed for s in self.steps if s.removed]
+        return max(gone, key=lambda r: r.at) if gone else None
 
     @property
     def done_count(self) -> int:
