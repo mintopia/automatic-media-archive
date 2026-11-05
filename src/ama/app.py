@@ -240,8 +240,10 @@ def build_services(
         runs=runs,
         app_events=AppEvents(runs, bus, nas, tools, config_path),
         log_pruner=LogPruner(runs, lambda: services.config.logs.keep_days),
-        scratch_cleaner=ScratchCleaner(jobs, runs,
-                                       lambda: services.config.scratch.retention_days),
+        scratch_cleaner=ScratchCleaner(
+            jobs, runs, lambda: services.config.scratch.retention_days,
+            floor_gb=lambda: services.config.scratch.floor_gb,
+            free=lambda: usage.free if (usage := scratch.usage()) else None),
     )
     jobs.finished = services.scratch_cleaner.request
     services.settings = Settings(config_path, cfg, services.apply_live)
