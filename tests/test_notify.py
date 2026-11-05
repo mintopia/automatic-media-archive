@@ -6,11 +6,16 @@ import json
 import threading
 import time
 from collections.abc import Iterator
+from datetime import datetime
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
+from ama.events import EventBus
+from ama.notify import Discord, Event, Notification, Notifier, Ntfy
+from ama.problems import Problem, Problems
 from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
@@ -153,3 +158,54 @@ def test_a_channel_that_hangs_never_holds_up_the_next_rip(notified, monkeypatch)
     notified.drive.insert(DiscType.CD, "SECOND")
     eventually(lambda: len(notified.services.jobs.list(JobStatus.RIPPED)) == 2)
     gate.set()
+
+
+def test_each_channel_gives_up_after_10_seconds_on_its_own():
+    timeouts = []
+
+    def answer(request):
+        timeouts.append(request.extensions["timeout"])
+        return httpx.Response(200, json={})
+
+    http = httpx.Client(transport=httpx.MockTransport(answer), timeout=30)
+    note = Notification(Event.RIP_DONE, DONE, "Insert the next Disc.")
+    Discord(http, WEBHOOK).send(note)
+    Ntfy(http, "https://ntfy.sh", "ama-test-topic").send(note)
+    assert [set(t.values()) for t in timeouts] == [{10}, {10}]
+
+
+def test_a_hanging_channel_never_delays_the_others(notified, monkeypatch):
+    gate = threading.Event()
+    monkeypatch.setattr(notified.services.notifier.channels[0], "send",
+                        lambda note: gate.wait(10))
+    notified.drive.insert(DiscType.CD, "KID_A")
+    try:
+        eventually(lambda: len(notified.web.ntfy) == 1, timeout=5)
+    finally:
+        gate.set()
+    assert notified.web.discord == []
+
+
+def test_a_failed_channel_is_named_in_the_problem_while_the_others_deliver(harness):
+    class Down:
+        name = "Discord"
+
+        def send(self, note):
+            raise OSError("no network")
+
+    class Up:
+        name = "ntfy"
+
+        def __init__(self):
+            self.sent = []
+
+        def send(self, note):
+            self.sent.append(note)
+
+    problems = Problems(EventBus(), now=lambda: datetime(2026, 11, 5, 21, 40))
+    up = Up()
+    Notifier(harness.services.jobs, EventBus(), [Down(), up], problems).send(
+        [Notification(Event.RIP_DONE, DONE, "Insert the next Disc.")])
+    [banner] = problems.banners()
+    assert banner.problem == Problem.NOTIFY and banner.detail == "Discord: OSError"
+    assert len(up.sent) == 1
