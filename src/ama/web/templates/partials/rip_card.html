@@ -38,6 +38,10 @@
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ progress.pct }}%"></i></div><div class="eta"><span class="nw">{{ progress.eta or "Working out the time left" }}</span> · the Disc ejects when it's done</div></div>
       <div class="pct">{{ progress.pct }}%</div>
     </div>
+    {%- set out = output_of(job.id, "rip") if not on_page else none %}
+    {%- if out %}{% from "partials/now_output.html" import foot %}
+    {{- foot(out, "makemkvcon · " ~ ("Title " ~ progress.title_number ~ " of " ~ n if progress.title_number else "Reading the Disc")) }}
+    {%- endif %}
     {%- elif job.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
     {%- if g %}
     <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · Disc {{ job.name }}</div>

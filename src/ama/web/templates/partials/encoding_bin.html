@@ -3,8 +3,11 @@
     now (live progress), or None; `encode_next`: the Job id that encodes next.
     A row queued behind another Encode is plain "Waiting"; `waiting_for(id)` lines are problems. -#}
 {%- from "partials/waiting_line.html" import line -%}
+{%- from "partials/now_output.html" import row as output_row -%}
 {%- macro running(encode, href, name) %}
     <div class="row compact"><div class="dtype">{{ encode.job.disc_type }}</div><div><div class="tt"><a href="{{ href }}">{{ name }}</a></div><div class="bar thin enc" role="progressbar" aria-valuenow="{{ encode.progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Encode progress"><i style="width:{{ encode.progress.pct }}%"></i></div></div><span class="ts">{{ encode.progress.pct }}%{% if encode.progress.eta_s is not none %} · {{ encode.progress.eta_s | minutes }}{% endif %}</span></div>
+    {%- set out = output_of(encode.job.id, "encode:" ~ encode.title_number) %}
+    {%- if out %}{{ output_row(out) }}{% endif %}
 {%- endmacro %}
 <section class="bin enc{% if not encoding and not tv_encoding %} empty{% endif %}" aria-labelledby="encoding-h">
   <h2 class="tab" id="encoding-h">Encoding <span class="c">{{ encoding | length + tv_encoding | length }}</span></h2>

@@ -22,5 +22,7 @@
       <div sse-swap="rip-failed" class="contents">{% include "partials/rip_failed.html" %}</div>
     </div>
   </div>
+  <div hidden data-now-output hx-get="/now/output" hx-trigger="sse:logs" hx-swap="none"></div>
 </main>
+<script src="/static/now_output.js" defer></script>
 {% endblock %}

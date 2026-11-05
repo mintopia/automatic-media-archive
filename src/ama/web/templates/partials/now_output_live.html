@@ -1,0 +1,5 @@
+{#- /now/output: each open tail's newest lines, swapped in out of band. -#}
+{%- from "partials/now_output.html" import lines -%}
+{%- for out in outs %}
+<div id="tail-{{ out.step_id }}" hx-swap-oob="innerHTML">{{ lines(out) }}</div>
+{%- endfor %}

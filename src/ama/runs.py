@@ -345,6 +345,15 @@ class Runs:
         with self._lock:
             return self._open.get(job_id)
 
+    def running_step(self, job_id: int, key: str) -> int | None:
+        """The Job's running Step, if it is the Step `key` ("rip", "encode:1")."""
+        step = self.job_step(job_id)
+        if step is None:
+            return None
+        row = self._db.execute("SELECT s.key FROM steps s JOIN runs r ON r.id = s.run_id "
+                               "WHERE s.id = ? AND r.job_id = ?", (step, job_id)).fetchone()
+        return step if row and row[0] == key else None
+
     def job_end(self, job_id: int, failed: bool = False, exit_code: int | None = None,
                 result: str | None = None, finish: bool = False) -> None:
         """End the Job's running Step; `finish` also ends its Run (Filed or Failed)."""
