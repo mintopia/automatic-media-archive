@@ -24,6 +24,7 @@ from ama.phase import phase_of
 from ama.tvarchive import FiledTv
 from ama.web import auth
 from ama.web.current_rip import current_rip
+from ama.web.now_output import step_output
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -112,6 +113,8 @@ def view_context(services: Services) -> dict[str, Any]:
         "review": review_items(services),
         # The Rip under way, any Disc Type: the drive card and Ripping bin both read this.
         "current_rip": current_rip(services),
+        # (Job id, Step key) -> the running Step's newest lines for Now's "Show output", or None
+        "output_of": lambda job_id, key: step_output(services, job_id, key),
         "cd": cd.current,
         "cd_reading": cd.reading_toc,
         "cd_last_id": cd.last_job_id,

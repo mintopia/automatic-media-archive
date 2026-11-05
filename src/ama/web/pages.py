@@ -11,6 +11,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 
 from ama.web import FRAGMENTS, TEMPLATES, auth, fragments_for, render_fragment, view_context
+from ama.web.now_output import StepOutput, tail
 
 router = APIRouter()
 
@@ -25,6 +26,16 @@ def _services(request: Request):
 def now(request: Request) -> Response:
     ctx = view_context(_services(request)) | {"current": "/"}
     return TEMPLATES.TemplateResponse(request, "now.html", ctx)
+
+
+@router.get("/now/output", response_class=HTMLResponse)
+def now_output(request: Request, steps: str = "") -> Response:
+    """What Now polls on each `logs` SSE event while a "Show output" is open: the newest
+    lines of each running Step in `steps` (comma-separated ids), swapped in out of band."""
+    services = _services(request)
+    ids = [int(s) for s in steps.split(",") if s.strip().isdigit()]
+    outs = [StepOutput(i, "", tail(services, i)) for i in ids if services.runs.running(i)]
+    return TEMPLATES.TemplateResponse(request, "partials/now_output_live.html", {"outs": outs})
 
 
 @router.get("/makemkv", response_class=HTMLResponse)

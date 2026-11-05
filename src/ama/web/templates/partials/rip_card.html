@@ -39,6 +39,10 @@
       <div class="pct">{{ progress.pct }}%</div>
     </div>
     {%- if on_page and jobset_of is defined %}{% with js = jobset_of(job.id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
+    {%- set out = output_of(job.id, "rip") if not on_page else none %}
+    {%- if out %}{% from "partials/now_output.html" import foot %}
+    {{- foot(out, "makemkvcon · " ~ ("Title " ~ progress.title_number ~ " of " ~ n if progress.title_number else "Reading the Disc")) }}
+    {%- endif %}
     {%- elif job.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
     {%- if g %}
     <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · Disc {{ job.name }}</div>

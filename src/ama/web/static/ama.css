@@ -684,3 +684,22 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
   .logwrap .log{--pad-x:14px;max-height:360px;font-size:12px;padding-top:12px;padding-bottom:12px}
   .keep-note a,.run-aside a,.gone a{padding:15px 4px;margin:-15px -4px}
 }
+
+/* Inline output on Now (#33): the rip card's foot line and running Encoding rows (docs/mockups/now-output.html) */
+.linkbtn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 2px;background:none;border:0;color:var(--ink);font:600 14px Archivo,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.linkbtn .i{width:16px;height:16px}
+.out-sum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;margin-top:12px;padding-top:4px;border-top:1px solid var(--rule);font-size:14px}
+.out-sum .linkbtn:last-child{margin-left:auto}
+.drive .tail{margin-top:4px}
+.log.tail{--pad-x:16px;max-height:200px;padding-top:12px;padding-bottom:12px;font-size:12px;line-height:1.55}
+.rowout{display:flex;flex-wrap:wrap;align-items:center;gap:0 16px;padding:0 16px 4px 72px;margin-top:-6px}
+.rowout .linkbtn{font-size:13px}
+.rowout .linkbtn:last-child{margin-left:auto}
+.rowout+.log{margin:0 16px 14px;max-height:160px}
+.log.tail[hidden]{display:none}
+.log.tail[data-wrapped]{white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:720px){
+  .rowout{padding:0 14px 4px 66px}
+  .out-sum .linkbtn:last-child{margin-left:0}
+  .drive .log.tail,.rowout+.log{max-height:150px}
+}

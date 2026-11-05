@@ -1,0 +1,30 @@
+{#- Inline output on Now (DESIGN.md "Logs" > "Inline output on Now"). `out` is a
+    now_output.StepOutput. Collapsed by default; static/now_output.js opens it, keeps it open
+    across SSE swaps and fetches newer lines (/now/output) while open. -#}
+{%- macro lines(out) -%}
+{%- for ln in out.lines -%}
+{%- if not loop.first %}{{ "\n" }}{% endif -%}
+{%- if ln.error %}<span class="errline"><span class="e">{% endif -%}
+<span class="time">{{ ln.at.strftime("%H:%M:%S") }}</span>  {{ ln.text }}
+{%- if ln.error %}</span></span>{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro buttons(out) -%}
+<button class="linkbtn" type="button" aria-expanded="false" aria-controls="tail-{{ out.step_id }}" data-tail>Show output</button><button class="linkbtn" type="button" data-wrap="tail-{{ out.step_id }}" aria-pressed="false">Wrap lines</button><a class="linkbtn" href="{{ out.href }}">Open in Logs<svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></a>
+{%- endmacro -%}
+{%- macro log(out, label) -%}
+<div class="log tail" id="tail-{{ out.step_id }}" role="log" tabindex="0" aria-label="{{ label }}" hidden>{% if out.lines %}{{ lines(out) }}{% else %}<span class="time">No output yet</span>{% endif %}</div>
+{%- endmacro -%}
+{#- The rip card's foot line: `where` is the tool and step ("makemkvcon · Title 3 of 7"). -#}
+{%- macro foot(out, where) %}
+    <div class="out-sum">
+      <span class="ts">{{ where }}</span>
+      {{ buttons(out) }}
+    </div>
+{{ log(out, "Latest Rip output") }}
+{%- endmacro -%}
+{#- Under a running Encoding row. -#}
+{%- macro row(out) %}
+    <div class="rowout">{{ buttons(out) }}</div>
+{{ log(out, "Latest Encode output") }}
+{%- endmacro -%}

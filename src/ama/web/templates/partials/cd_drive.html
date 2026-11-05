@@ -25,6 +25,10 @@
       <div class="pct">{{ cd.percent | int }}%</div>
     </div>
     {%- if heading == "h1" and jobset_of is defined %}{% with js = jobset_of(cd.job_id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
+    {%- set out = output_of(cd.job_id, "rip") if link else none %}
+    {%- if out %}{% from "partials/now_output.html" import foot %}
+    {{- foot(out, "cyanrip · " ~ cd.position()) }}
+    {%- endif %}
     {%- else %}
     <{{ tag }} class="title">Audio CD</{{ tag }}>
     <div class="meta">Reading the track list</div>
