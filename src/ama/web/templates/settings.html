@@ -40,6 +40,7 @@
   {%- set box = input(f, r, f.kind, r.placeholder) -%}
   {%- if r.row.unit %}<div class="unit">{{ box }}<span>{{ r.row.unit }}</span></div>{% else %}{{ box }}{% endif %}{{ ferr(f) }}
 {%- endif -%}
+{%- if r.row.after %}{% include r.row.after %}{% endif -%}
 {%- endmacro %}
 {% macro row(r) -%}
 <div class="sf"><div><div class="lb">

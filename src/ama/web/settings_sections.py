@@ -49,6 +49,7 @@ class Field:
     unit: str = ""
     placeholder: str | Dynamic = ""
     status: Callable[[Services], Status] | None = None  # e.g. a tool's state
+    after: str = ""  # a partial rendered under the control (e.g. "Send test")
 
     def keys(self) -> Iterator[str]:
         yield self.key
@@ -448,6 +449,18 @@ SECTIONS: list[Section] = [
             Field("ntfy.topic", "Topic",
                   "Anyone who knows the topic can read your alerts, so it's kept like a "
                   "password. Empty turns ntfy off."),
+        ), live=True, note="Used from the next alert"),
+        Group("Webhook", (
+            Field("webhook.url", "URL",
+                  "Gets every alert as one JSON POST, for Home Assistant or your own "
+                  "script. Empty turns the webhook off.",
+                  Markup("The JSON is described under <code>[webhook]</code> in "
+                         "<code>ama.example.toml</code>."),
+                  after="partials/webhook_test.html"),
+            Field("webhook.header_name", "Header name",
+                  "An optional header sent with every POST, like a token your receiver "
+                  "checks. Leave empty to send none.", placeholder="X-Ama-Token"),
+            Field("webhook.header_value", "Header value", "Once saved it's never shown again."),
         ), live=True, note="Used from the next alert"),
     ), note=Markup("Alerts go out when a Rip is done (“insert the next one”) and when a Job "
                    "needs Review, is filed or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"

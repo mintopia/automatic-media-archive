@@ -22,7 +22,7 @@ Semi-automated archiving of the household's own physical media (CD, DVD, Blu-ray
 
 - One optical drive; drive time is the bottleneck. A Disc is ripped and ejected immediately; Identification, Review and Encode happen afterwards from local scratch.
 - The UI is the place to see what the drive and pipeline are doing right now, and the queue of Discs awaiting Review.
-- Notifications (Discord, ntfy) pull people back to the UI when Review is needed, a Disc is done ("insert next"), or a Disc failed.
+- Notifications (Discord, ntfy, a Webhook) pull people back to the UI when Review is needed, a Disc is done ("insert next"), or a Disc failed.
 - LAN only; optional shared password.
 
 ## Capabilities and Constraints

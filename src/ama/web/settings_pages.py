@@ -9,6 +9,7 @@ posts its key only to replace it, and `remove=<key>` to empty it.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, get_origin
@@ -17,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ama.config import ConfigError
+from ama.notify import webhook
 from ama.tools import ToolUnavailable
 from ama.settings import SettingsRejected, field_info, is_secret, raw_at, value_at
 from ama.web import TEMPLATES, view_context
@@ -266,6 +268,22 @@ async def test_encoders(request: Request) -> Response:
     except ToolUnavailable:
         pass  # ffmpeg isn't ready; the background test runs once it is
     return RedirectResponse("/settings/archive/encode", status_code=303)
+
+
+@router.post("/settings/alerts/webhook-test", response_class=HTMLResponse)
+async def webhook_test(request: Request) -> Response:
+    """"Send test": post a test event to the saved webhook and say how it went."""
+    services: Services = request.app.state.services
+    if services.settings is None or services.settings.file is None:
+        raise HTTPException(409, "AMA wasn't started from a config file")
+    hook = webhook(services.config, services.http)
+    if hook is None:
+        result = Status("Save a webhook URL first, then send a test.", ok=False)
+    elif (why := await asyncio.to_thread(hook.send_test)) is None:
+        result = Status("Test alert sent")
+    else:
+        result = Status(f"Couldn't send the test alert: {why}", ok=False)
+    return render_section(request, services, "alerts", webhook_test=result)
 
 
 @router.post("/settings/{slug:path}", response_class=HTMLResponse)

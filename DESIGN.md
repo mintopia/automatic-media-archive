@@ -410,7 +410,7 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 | General | Web UI (Address, Port), Storage, Scratch cleanup; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
 | Ripping | Drive; Advanced "Reading CDs" and "Tools" | `[drive]`, `[cd]`, `[tools]` |
 | Archive | sub-nav: Encode, Libraries, Identification | `[encode.*]`; `[plex]` and the Libraries; `[tmdb]` |
-| Alerts | Discord, ntfy | `[discord]`, `[ntfy]` |
+| Alerts | Discord, ntfy, Webhook (with "Send test") | `[discord]`, `[ntfy]`, `[webhook]` |
 | Logs | Step output retention | the log settings |
 
 - **Divider file:** the five tabs are divider tabs in a row, 32px below the h1. Each tab's hit area reaches 10px upward into that gap; on phones the tabs are 44px tall (48px when open). Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each tab is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
