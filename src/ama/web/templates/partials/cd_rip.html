@@ -10,11 +10,19 @@
     {%- with cd=view, heading="h1", link=False %}{% include "partials/cd_drive.html" %}{% endwith %}
     {%- else %}
     {%- set verified = view.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length %}
+    {%- set pick = view.pick %}
     <div class="drive">
+      {%- if pick and pick.cover %}
+      <div class="cell art"><img src="/covers/{{ pick.cover }}" alt="Cover of {{ pick.album }}"><span>Audio CD</span></div>
+      {%- else %}
       <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+      {%- endif %}
       <div class="body">
-        <h1 class="title">{{ view.record.label or "Unknown CD" }}</h1>
-        <div class="meta">{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
+        <h1 class="title">{{ pick.album if pick else (view.record.label or "Unknown CD") }}</h1>
+        <div class="meta">{% if pick %}{{ pick.artist }} · {% endif %}{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
+        {%- if pick %}
+        <div class="guess"><b>Your pick</b>, while it ripped{% if (record is defined and record.status == "review") %} · <a href="/review/{{ view.record.id }}">pick again in Review</a>{% endif %}</div>
+        {%- endif %}
         <div class="status">{%- set st = record.status if record is defined else "ripped" %}{% set p = st | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips</span></div>
         {%- if st == "ripped" %}{% with job_id = view.record.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
       </div>

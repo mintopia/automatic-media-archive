@@ -16,6 +16,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from ama import cdreview, tvreview
+from ama.cdguess import value
 from ama.cyanrip import ArStatus
 from ama.jobs import JobRecord, JobStatus, Failure, FailureKind, ReviewReason
 from ama.drive import DiscType
@@ -143,6 +144,14 @@ def _edition(m: Match, show_title: bool, others: list[Match] = (),
     return Edition(m, heading, tuple(facts), tracks)
 
 
+def cd_editions(matches: list[Match], tracks) -> list[Edition]:
+    """The releases a CD's Rip fits, each with what tells it apart from the others."""
+    titles_differ = len({m.release.title for m in matches}) > 1
+    seconds = {t.number: t.seconds for t in tracks}
+    return [_edition(m, titles_differ, [o for o in matches if o is not m], seconds)
+            for m in matches]
+
+
 def _join(numbers: list[int]) -> str:
     s = [str(n) for n in numbers]
     return s[0] if len(s) == 1 else f"{', '.join(s[:-1])} and {s[-1]}"
@@ -183,12 +192,12 @@ def _when(at: datetime | None) -> str:
 
 def _cd_page(request: Request, services, rec: JobRecord, form: dict[str, str] | None = None,
              errors: list[str] | None = None, status_code: int = 200) -> Response:
-    tracks = services.cd.job(rec.id).tracks
-    matches = cdreview.candidates(rec.scratch_dir, tracks)
-    titles_differ = len({m.release.title for m in matches}) > 1
-    seconds = {t.number: t.seconds for t in tracks}
-    editions = [_edition(m, titles_differ, [o for o in matches if o is not m], seconds)
-                for m in matches]
+    cd = services.cd.job(rec.id)
+    tracks = cd.tracks
+    # The release picked while it ripped comes first, selected.
+    matches = sorted(cdreview.candidates(rec.scratch_dir, tracks),
+                     key=lambda m: not (cd.pick and value(m) == cd.pick.value))
+    editions = cd_editions(matches, tracks)
     first = matches[0] if matches else None
     if form is None:
         form = {"album": first.release.title if first else "",
@@ -210,7 +219,8 @@ def _cd_page(request: Request, services, rec: JobRecord, form: dict[str, str] | 
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "heading": heading, "sub": sub,
         "done": done_note(request),
-        "editions": editions, "notice": _ar_notice(rec.review_reason, tracks),
+        "editions": editions, "pick": cd.pick,
+        "notice": _ar_notice(rec.review_reason, tracks),
         "form": form, "errors": errors or [], "manual_open": not editions or bool(errors),
         "track_count": len(cdreview.audio_tracks(tracks)),
         "length": _length(sum(t.seconds for t in tracks)),

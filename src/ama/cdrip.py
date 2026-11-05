@@ -36,8 +36,9 @@ from ama.scratch import ScratchGate
 from ama.tools import ToolLookup, ToolUnavailable
 
 if TYPE_CHECKING:
-    from ama.cdguess import Guess, Guesser
+    from ama.cdguess import CdPick, CdPicks, Guess, Guesser
     from ama.media import Album
+    from ama.musicbrainz import Match
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class CdRip:
     current: int | None = None       # track number being ripped
     eta_seconds: int | None = None   # whole Disc
     mb_disc_id: str = ""             # MusicBrainz Disc ID, from the TOC
-    guess: Guess | None = None       # likely release while it rips (cdguess.py); only for show
+    guess: Guess | None = None       # likely or picked release while it rips (cdguess.py)
 
     def track_title(self, number: int) -> str | None:
         return self.guess.track_title(number) if self.guess else None
@@ -110,9 +111,16 @@ class CdJob:
     record: JobRecord
     tracks: list[Track] = field(default_factory=list)
     album: Album | None = None  # what it was filed as (media.py), once filed
+    pick: CdPick | None = None  # the release the user picked while it ripped (cdguess.py)
+    picked_titles: dict[int, str] = field(default_factory=dict)  # that release's, by track
+
+    @property
+    def name(self) -> str:
+        """The picked album, else the Disc's label."""
+        return self.pick.name if self.pick else (self.record.label or "Unknown CD")
 
     def track_title(self, number: int) -> str | None:
-        return self.album.track_title(number) if self.album else None
+        return self.album.track_title(number) if self.album else self.picked_titles.get(number)
 
     @property
     def hidden_track(self) -> Track | None:
@@ -163,6 +171,14 @@ class CdTracks:
         return [Track(n, s, bool(p), bool(r), 100.0 if r else 0.0,
                       ArResult(ArStatus(a), c) if a else None)
                 for n, s, p, r, a, c in rows]
+
+
+class NotRipping(Exception):
+    """That Job's CD isn't the one ripping."""
+
+
+class NotOffered(Exception):
+    """That release isn't one of those that fit the CD being ripped."""
 
 
 # ---- failures ---------------------------------------------------------------
@@ -228,10 +244,11 @@ class CdRipper:
 
     def __init__(self, cfg: CdConfig, drive: DriveMonitor, jobs: JobStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
-                 repeat: RepeatGuard, scratch: ScratchGate, pause: Pause,
+                 repeat: RepeatGuard, scratch: ScratchGate, pause: Pause, picks: CdPicks,
                  guesser: Guesser | None = None,
                  hold: Callable[[], bool] = lambda: False) -> None:
         self._pause = pause
+        self.picks = picks
         self.cfg = cfg
         self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesser = guesser
@@ -255,12 +272,31 @@ class CdRipper:
         rec = self._jobs.get(job_id)
         if rec is None or rec.disc_type != DiscType.CD:
             return None
-        return CdJob(rec, self._tracks.load(job_id))
+        return CdJob(rec, self._tracks.load(job_id), pick=self.picks.get(job_id))
 
     def jobs(self, status: JobStatus, limit: int = 10) -> list[CdJob]:
         """Recent CD records in `status` (not dismissed), newest first."""
         recs = [r for r in self._jobs.list(status) if r.disc_type == DiscType.CD][:limit]
-        return [CdJob(r, self._tracks.load(r.id)) for r in recs]
+        return [CdJob(r, self._tracks.load(r.id), pick=self.picks.get(r.id)) for r in recs]
+
+    async def cover(self, match: Match) -> str | None:
+        """A release's cached front cover, fetched if need be (None: none, or unreachable)."""
+        return await self._guesser.cover(match) if self._guesser else None
+
+    async def pick(self, job_id: int, release: str) -> CdPick:
+        """The user picks `release` ("<release id>:<disc number>") for the CD being ripped: the
+        rip card shows it at once (album, tracks, cover) and the Job keeps it."""
+        live = self.current
+        if live is None or live.job_id != job_id or self._guesser is None:
+            raise NotRipping(job_id)
+        pick = await self._guesser.pick(live, release)
+        if pick is None:
+            raise NotOffered(release)
+        self.picks.save(job_id, pick)
+        self._jobs.log(job_id, f"Picked {pick.album} by {pick.artist} (MusicBrainz release "
+                               f"{pick.release_id}, disc {pick.disc_number})")
+        self._publish()
+        return pick
 
     # -- lifecycle --
     def recover(self) -> None:
@@ -420,6 +456,7 @@ class CdRipper:
                                     self.cfg.retries), on_line, cwd)
         except FileNotFoundError:
             code = None
+        self._jobs.step_exit(rec.id, code)
 
         # 3. Result: the .log is authoritative; stdout is the fallback.
         log_file = rec.scratch_dir / "rip.log"

@@ -1,5 +1,5 @@
 {#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Job page.
-    `cd.guess` (a likely release from MusicBrainz, only for show) fills in the album, artist and cover while it rips. -#}
+    `cd.guess` (the likely release from MusicBrainz, or the one the user picked) fills in the album, artist and cover while it rips. -#}
 {%- set tag = heading or "div" -%}
 {%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
 {%- set g = cd.guess if cd else none -%}
@@ -15,7 +15,7 @@
     <{{ tag }} class="title">{% if link %}<a href="/jobs/{{ cd.job_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
     <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
     {%- if g %}
-    <div class="guess"><b>Likely</b>, from the CD's track list{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} versions of this album</span>{% endif %} · checked again after the Rip</div>
+    <div class="guess">{% if g.picked %}<b>Your pick</b>{% else %}<b>Likely</b>, from the CD's track list{% endif %}{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} versions of this album</span> · <a href="/jobs/{{ cd.job_id }}/release">{{ "Change" if g.picked else "Pick yours" }}</a>{% else %} · checked again after the Rip{% endif %}</div>
     {%- elif cd.mb_disc_id %}
     <div class="guess">Album not known yet · looked up again after the Rip<span class="mono" style="display:block;overflow-wrap:anywhere">MusicBrainz Disc ID {{ cd.mb_disc_id }}</span></div>
     {%- endif %}

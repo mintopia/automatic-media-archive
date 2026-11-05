@@ -1,0 +1,9 @@
+{#- Step output lines (DESIGN.md "Step output"): `sid` the stored Step's id, `lines` OutputLines,
+    `first_err` the n of its first error line (0: none), `lead` a newline first (lines
+    appended live). The log block is `white-space: pre`: one text line per output line. -#}
+{%- for ln in lines -%}
+{%- if lead or not loop.first %}{{ "\n" }}{% endif -%}
+{%- if ln.error %}<span class="errline"{% if ln.n == first_err %} id="s{{ sid }}-err"{% endif %}><span class="e">{% endif -%}
+<a class="time" id="s{{ sid }}-L{{ ln.n }}" href="#s{{ sid }}-L{{ ln.n }}">{{ ln.at.strftime("%H:%M:%S") }}</a>  {{ ln.text }}
+{%- if ln.error %}</span></span>{% endif -%}
+{%- endfor -%}

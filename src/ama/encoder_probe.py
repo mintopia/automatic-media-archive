@@ -15,6 +15,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
 
 from ama import encode
 from ama.config import EncodeConfig, EncoderName
@@ -23,6 +24,14 @@ from ama.proc import Streamer
 from ama.tools import ToolLookup, ToolUnavailable
 
 log = logging.getLogger(__name__)
+
+
+class ProbeLog(Protocol):
+    """Where a test run's lines go in Logs (`app_events.AppEvents` is one)."""
+
+    def begin(self) -> int: ...
+    def line(self, step: int, text: str, error: bool = False) -> None: ...
+    def end(self, step: int, failed: bool, result: str) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -69,6 +78,8 @@ class EncoderProbe:
         self._worked: set[EncoderName] = set()
         self._again = asyncio.Event()
         self._lock = asyncio.Lock()
+        # Logs: each test run is a Step (app_events.EncoderTests); None keeps no record.
+        self.log: ProbeLog | None = None
 
     def working(self) -> list[EncoderName]:
         return [e for e, s in self.states.items() if isinstance(s, ProbeWorks)]
@@ -101,6 +112,13 @@ class EncoderProbe:
         async with self._lock:
             speed = self._config().speed
             at = self._clock()  # one test run, one time ("the test at 20:14")
+            step = self.log.begin() if self.log else None
+
+            def say(text: str, error: bool = False) -> None:
+                if self.log and step is not None:
+                    self.log.line(step, text, error)
+
+            say("Test encode: 5 s of a 1080p test pattern with each encoder")
             for name in encode.ENCODERS:
                 lines: list[str] = []
                 try:
@@ -112,9 +130,22 @@ class EncoderProbe:
                     self.states[name] = ProbeWorks(at)
                     self._worked.add(name)
                     log.info("encoder test: %s works", name)
+                    say(f"{name} works · {encode.ENCODERS[name].label}")
                 else:
                     detail = next((ln.strip() for ln in lines if ln.strip()),
                                   f"ffmpeg exit code {code}")
                     self.states[name] = ProbeFailed(at, detail)
                     log.info("encoder test: %s doesn't work: %s", name, " | ".join(lines[-5:]))
+                    say(f"{name} doesn't work · {encode.ENCODERS[name].label}")
+                    for ln in lines[-5:]:
+                        say(ln, error=True)
+            configured = self._config().encoder
+            works = isinstance(self.states[configured], ProbeWorks)
+            verdict = "works" if works else "doesn't work"
+            say(f"Configured encoder: {encode.ENCODERS[configured].label} · {verdict}",
+                error=not works)
+            if self.log and step is not None:
+                n = len(self.working())
+                self.log.end(step, failed=not works,
+                             result=f"{n} of {len(encode.ENCODERS)} work on this PC")
         self._bus.publish(Topic.TOOLS)

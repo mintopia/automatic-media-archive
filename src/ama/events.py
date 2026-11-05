@@ -27,6 +27,7 @@ class Topic(StrEnum):
     SCRATCH = "scratch"
     PAUSE = "pause"      # Paused or accepting new Discs: the top-bar mark and menu
     PROBLEMS = "problems"  # Now page banners; a Job's Waiting line (problems.py)
+    LOGS = "logs"        # a Run or Step changed, or a running Step has new output (runs.py)
 
 
 class EventBus:
