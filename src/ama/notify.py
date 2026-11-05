@@ -177,8 +177,7 @@ class Notifier:
         return notes
 
     async def run(self) -> None:
-        if not self.channels:
-            return
+        # Runs even with no channels: Settings can add one at any time (`channels` is live).
         with self._bus.subscribe() as topics:
             seen = self._discs.statuses()
             while True:

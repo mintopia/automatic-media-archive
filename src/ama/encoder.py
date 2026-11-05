@@ -95,7 +95,7 @@ class Encoder:
                  streamer: Streamer, clock: Callable[[], float] = time.monotonic) -> None:
         self._discs = discs
         self._bus = bus
-        self._cq = cq
+        self.cq = cq
         self._tool = tool
         self._stream = streamer
         self._clock = clock
@@ -155,7 +155,7 @@ class Encoder:
             if kind != rec.disc_type and not extra:
                 self._discs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
                                         f"its Main Feature is 4K, so it is encoded as a UHD")
-            cq = encode.cq_for(self._cq, kind)
+            cq = encode.cq_for(self.cq, kind)
             pic = await self._analyse_picture(rec, ffmpeg, src, probe)
             self._discs.log(rec.id, pic.describe())
             self._discs.log(rec.id, f"Encoding Title {title.number} as {name}: HEVC "

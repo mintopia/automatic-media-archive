@@ -345,7 +345,7 @@ Plain, firm and printed.
 - **Top bar:** a 60px `sheet` bar with a bottom rule. It holds the uppercase Archivo Narrow brand, nav links (Now, Review, History) in Archivo 500 / `ink-2`, then the scratch meter and the menu button pushed to the right. The brand and scratch link are 44px tall targets.
 - **Menu:** a 44px square button with the three-line icon (`aria-label="Menu"`). It opens a 280px `sheet` panel under it, bordered all round in 1px `rule` with no stage or `ink` top edge. Segmented groups have 44px segments; rows are 48px. On phones the button sits at the right end of the nav row.
   - **Mockups:** the panel (`#menu`, `hidden`) is always in the page: New Discs (Accepting / Paused; the menu owns this state), Theme (System / Light / Dark), then Settings, Logs and Log out. `menu.js` closes it on Escape (focus returns to the button) and on a click outside.
-  - **Built v1:** a `<details>` menu with Theme only, plus Log out when a password is set. Pause, Settings and Logs arrive in v2.
+  - **Built:** a `<details>` menu (Escape and a click or focus outside close it) with Theme, then the pages in `web.MENU` (Settings, Logs; the current one in 700), then Log out when a password is set. Pause arrives with its ticket.
 - **Paused mark:** while the drive is paused, an `ink`-outlined 26px "Paused" label (a mark, not a control; the menu changes it) with a pause icon sits before the scratch meter on every page. It is hidden on phones, where the menu shows the state.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`). The scratch link gets the same active state on `/scratch`.
 - **Review count:** a tomato badge (700, 12px, 3px corners). It is its own `sse-swap` span with `aria-live="polite"`, announcing "N waiting".
