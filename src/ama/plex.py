@@ -15,14 +15,14 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from ama.config import Kind, PlexConfig
+from ama.config import LibraryKind, PlexConfig
 from ama.problems import Problem, Problems
 
 if TYPE_CHECKING:
     from ama.archive import Archive
 
 # The Plex library type that holds each kind.
-PLEX_TYPE = {Kind.FILMS: "movie", Kind.TV: "show", Kind.MUSIC: "artist"}
+PLEX_TYPE = {LibraryKind.FILMS: "movie", LibraryKind.TV: "show", LibraryKind.MUSIC: "artist"}
 
 
 class Plex:
@@ -70,7 +70,7 @@ class Plex:
         self._listed = (key, time.monotonic(), found)
         return found
 
-    def libraries(self, kind: Kind) -> list[str] | None:
+    def libraries(self, kind: LibraryKind) -> list[str] | None:
         """The names of Plex's libraries that can hold `kind`; None as for `listing`."""
         found = self.listing()
         if found is None:

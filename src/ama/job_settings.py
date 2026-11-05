@@ -22,7 +22,7 @@ from enum import StrEnum
 from typing import get_args
 
 from ama import encode
-from ama.config import (AudioChoice, CdConfig, Config, EncodeConfig, Kind,
+from ama.config import (AudioChoice, CdConfig, Config, EncodeConfig, LibraryKind,
                         MaxResolutionConfig, SubtitleChoice, library_for)
 from ama.db import Database
 from ama.drive import DiscType
@@ -71,7 +71,7 @@ class Scope:
 
     cfg: Config
     disc_type: DiscType
-    kind: Kind  # the Library kind the Job files to (as far as is known)
+    kind: LibraryKind  # the Library kind the Job files to (as far as is known)
 
 
 Choices = tuple[tuple[str, str], ...]  # (value, label)
@@ -214,7 +214,7 @@ class JobSettings:
     """`services.job_settings`. Thread-safe: an edit and a lock never interleave."""
 
     def __init__(self, db: Database, jobs: JobStore, config: Callable[[], Config],
-                 kind_of: Callable[[JobRecord], Kind]) -> None:
+                 kind_of: Callable[[JobRecord], LibraryKind]) -> None:
         self._db = db
         self._jobs = jobs
         self._config = config  # the running settings (ama.toml as last applied)
@@ -223,7 +223,7 @@ class JobSettings:
 
     # -- reading -------------------------------------------------------------
 
-    def scope(self, job: JobRecord, kind: Kind | None = None) -> Scope:
+    def scope(self, job: JobRecord, kind: LibraryKind | None = None) -> Scope:
         return Scope(self._config(), job.disc_type, kind or self._kind_of(job))
 
     def _overrides(self, job_id: int) -> dict[str, str]:
@@ -319,7 +319,7 @@ class JobSettings:
 
     # -- locking at Phase start -----------------------------------------------
 
-    def lock(self, job: JobRecord, group: Group, kind: Kind | None = None) -> dict[str, str]:
+    def lock(self, job: JobRecord, group: Group, kind: LibraryKind | None = None) -> dict[str, str]:
         """Lock `group` now if it isn't yet (idempotent); its values, {key: value}."""
         with self._lock:
             stored = self._stored(job.id, group)
@@ -353,7 +353,7 @@ class JobSettings:
                 update={t: v["encode.max_resolution"]})
         return enc.model_copy(update=update)
 
-    def library(self, job: JobRecord, kind: Kind) -> str:
+    def library(self, job: JobRecord, kind: LibraryKind) -> str:
         """The Library a Job of `kind` files to; locks Library and Identification (filing
         is starting)."""
         self.lock(job, Group.IDENTIFICATION, kind)

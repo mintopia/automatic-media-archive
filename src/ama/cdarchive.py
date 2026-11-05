@@ -33,7 +33,7 @@ from mutagen.flac import FLAC
 from ama import cdreview, cyanrip, filing, musicbrainz
 from ama.archive import Archive, safe_name
 from ama.cdguess import CdPick
-from ama.config import Kind
+from ama.config import LibraryKind
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
@@ -172,7 +172,7 @@ class CdArchiver:
                  covers: Covers, media: MediaStore, *,
                  picked: Callable[[int], CdPick | None], retry_seconds: float = 60.0,
                  problems: Problems | None = None,
-                 library: Callable[[JobRecord, Kind], str | None] = lambda rec, kind: None
+                 library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
         self._picked = picked  # the release the user picked while it ripped (cdguess.py)
         # The Library a Job files to; asking locks its pick (job_settings). None = default.
@@ -302,7 +302,7 @@ class CdArchiver:
             files[f"cover{cached.suffix}"] = cached
         with filing.to_nas():
             folder = self._archive.place(album_folder(match), files,
-                                         self._library(rec, Kind.MUSIC))
+                                         self._library(rec, LibraryKind.MUSIC))
         title = f"{match.release.title} — {match.release.artist}"
         self._media.save(rec.id, Album.of(match, mb_disc_id, art))
         self._jobs.mark_filed(rec.id, title, folder)

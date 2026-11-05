@@ -24,7 +24,7 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from ama.config import EDITED, Config, ConfigError, Kind, load_config
+from ama.config import EDITED, Config, ConfigError, LibraryKind, load_config
 
 log = logging.getLogger(__name__)
 
@@ -210,7 +210,8 @@ class SettingsFile:
 
     # -- Libraries: `[[libraries]]` entries, each saved on its own ---------------------
 
-    def save_library(self, kind: Kind, original: str | None, typed: Mapping[str, str]) -> None:
+    def save_library(self, kind: LibraryKind, original: str | None,
+                     typed: Mapping[str, str]) -> None:
         """Add a `kind` Library (`original` None) or edit the one called `original`, from
         `{"name", "plex", "path"}`; leaving out "plex" keeps the one it has. Raises
         SettingsRejected keyed by those names."""
@@ -366,7 +367,8 @@ class Settings:
             raise SettingsRejected({}, ["AMA wasn't started from a config file"])
         return self.file
 
-    def save_library(self, kind: Kind, original: str | None, typed: Mapping[str, str]) -> None:
+    def save_library(self, kind: LibraryKind, original: str | None,
+                     typed: Mapping[str, str]) -> None:
         self._file().save_library(kind, original, typed)
         self.refresh(force=True)
 

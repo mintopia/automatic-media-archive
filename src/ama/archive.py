@@ -15,7 +15,7 @@ import shutil
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
-from ama.config import Kind, Library, library_for
+from ama.config import LibraryKind, Library, library_for
 
 PARTIAL = ".ama-partial"
 NAME_LIMIT = 80  # characters per folder/file name, keeps paths under Windows' MAX_PATH
@@ -69,10 +69,10 @@ def _digest(path: Path) -> tuple[int, str]:
     return path.stat().st_size, h.hexdigest()
 
 
-_KIND_OF = {k.folder: k for k in Kind}
+_KIND_OF = {k.folder: k for k in LibraryKind}
 
 
-def kind_of_path(rel: Path) -> Kind | None:
+def kind_of_path(rel: Path) -> LibraryKind | None:
     """The kind an archiver's logical path (`Movies/…`, `TV/…`, `Music/…`) files as."""
     return _KIND_OF.get(rel.parts[0]) if rel.parts else None
 

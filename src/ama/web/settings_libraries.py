@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from markupsafe import Markup
 
-from ama.config import ConfigError, Kind, Library
+from ama.config import ConfigError, LibraryKind, Library
 from ama.settings import SettingsRejected
 
 if TYPE_CHECKING:
@@ -28,14 +28,14 @@ router = APIRouter()
 
 SLUG = "archive/libraries"
 PAGE = f"/settings/{SLUG}"
-_TYPE_WORD = {Kind.FILMS: "movie", Kind.TV: "TV", Kind.MUSIC: "music"}
+_TYPE_WORD = {LibraryKind.FILMS: "movie", LibraryKind.TV: "TV", LibraryKind.MUSIC: "music"}
 
 
 @dataclass
 class Form:
     """The open Add or Edit form."""
 
-    kind: Kind
+    kind: LibraryKind
     original: str | None  # None = a new Library
     name: str = ""
     plex: str = ""
@@ -54,7 +54,7 @@ class Row:
 
 @dataclass
 class KindGroup:
-    kind: Kind
+    kind: LibraryKind
     default: Library
     rows: list[Row]
     adding: Form | None = None
@@ -95,15 +95,15 @@ def libraries_view(services: Services, query: Mapping[str, str],
     _, cfg = settings.file.values()
     libraries = cfg.libraries
     if form is None:
-        if (add := query.get("add")) in {k.value for k in Kind}:
-            form = Form(Kind(add), None)
+        if (add := query.get("add")) in {k.value for k in LibraryKind}:
+            form = Form(LibraryKind(add), None)
         elif (lib := _named(libraries, query.get("edit"))) is not None:
             form = Form(lib.kind, lib.name, lib.name, lib.plex, lib.path)
     removing = _named(libraries, query.get("remove"))
     if removing is not None and removing.default:
         removing = None
     groups = []
-    for kind in Kind:
+    for kind in LibraryKind:
         ofkind = sorted((lib for lib in libraries if lib.kind == kind),
                         key=lambda lib: not lib.default)  # stable: file order otherwise
         rows = [Row(lib, f"lib-{libraries.index(lib)}",
@@ -133,7 +133,7 @@ async def libraries_save(request: Request, action: str) -> Response:
         match action:
             case "save":
                 try:
-                    kind = Kind(form.get("lib.kind", ""))
+                    kind = LibraryKind(form.get("lib.kind", ""))
                 except ValueError:
                     raise HTTPException(400, "Unknown kind of Library") from None
                 original = form.get("lib.original") or None

@@ -187,7 +187,7 @@ class EncodeConfig(_Section):
         return parse_languages(self.languages)
 
 
-class Kind(StrEnum):
+class LibraryKind(StrEnum):
     """What a Library holds; each kind has one default Library."""
 
     FILMS = "films"
@@ -196,12 +196,17 @@ class Kind(StrEnum):
 
     @property
     def label(self) -> str:
-        return {"films": "Films", "tv": "TV", "music": "Music"}[self.value]
+        return _KINDS[self][0]
 
     @property
     def folder(self) -> str:
         """The kind's folder on the share when no Libraries are configured."""
-        return {"films": "Movies", "tv": "TV", "music": "Music"}[self.value]
+        return _KINDS[self][1]
+
+
+# kind -> (label, default folder on the share)
+_KINDS = {LibraryKind.FILMS: ("Films", "Movies"), LibraryKind.TV: ("TV", "TV"),
+          LibraryKind.MUSIC: ("Music", "Music")}
 
 
 def _not_blank(value: str) -> str:
@@ -215,7 +220,7 @@ class Library(_Section):
     """A named folder of the Archive for one kind of media, matching one Plex library."""
 
     name: Annotated[str, AfterValidator(_not_blank)]
-    kind: Kind
+    kind: LibraryKind
     path: Annotated[str, AfterValidator(_not_blank)]  # a folder on the NAS share
     plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
     default: bool = False
@@ -249,7 +254,7 @@ class Config(_Section):
             return data  # `nas.unc` is missing: reported as such
         return {**data, "libraries": [
             {"name": k.folder, "kind": k.value, "path": str(Path(unc) / k.folder),
-             "default": True} for k in Kind]}
+             "default": True} for k in LibraryKind]}
 
     @model_validator(mode="after")
     def _check_libraries(self) -> Config:
@@ -262,7 +267,7 @@ class Config(_Section):
             if path == share or not path.is_relative_to(share):
                 raise ValueError(f"Library {lib.name}: its folder must be inside the NAS share "
                                  f"({self.nas.unc})")
-        for kind in Kind:
+        for kind in LibraryKind:
             defaults = [lib for lib in self.libraries if lib.kind == kind and lib.default]
             if not defaults:
                 raise ValueError(f"{kind.label} has no default Library: "
@@ -274,7 +279,8 @@ class Config(_Section):
 
 
 
-def library_for(libraries: Sequence[Library], kind: Kind, picked: str | None = None) -> Library:
+def library_for(libraries: Sequence[Library], kind: LibraryKind,
+                picked: str | None = None) -> Library:
     """The Library a Job of `kind` files to: the one it picked if that still exists, else
     the kind's default (a removed pick falls back to it)."""
     ofkind = [lib for lib in libraries if lib.kind == kind]

@@ -35,7 +35,7 @@ from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
 from ama.covers import Covers
 from ama.db import Database
-from ama.config import Kind
+from ama.config import LibraryKind
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
@@ -154,7 +154,7 @@ class MovieArchiver:
                  extras: Extras, media: MediaStore, covers: Covers,
                  picked: Callable[[int], Candidate | None],
                  problems: Problems | None = None,
-                 library: Callable[[JobRecord, Kind], str | None] = lambda rec, kind: None
+                 library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
         # The Library a Job files to; asking locks its pick (job_settings). None = default.
         self._library = library
@@ -385,7 +385,7 @@ class MovieArchiver:
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
         rel = movie_folder(movie.film)
-        library = self._library(rec, Kind.FILMS)
+        library = self._library(rec, LibraryKind.FILMS)
         with filing.to_nas():
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
             extras = self._file_extras(rec, rel, library)

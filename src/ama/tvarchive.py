@@ -22,7 +22,7 @@ from typing import Any
 
 from ama import filing
 from ama.archive import Archive, kind_of_path
-from ama.config import Kind
+from ama.config import LibraryKind
 from ama.covers import Covers
 from ama.db import Database
 from ama.jobs import JobRecord, JobStatus, JobStore
@@ -159,7 +159,7 @@ class TvArchiver:
                  retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic, *,
                  tmdb: Tmdb, media: MediaStore, covers: Covers,
                  problems: Problems | None = None,
-                 library: Callable[[JobRecord, Kind], str | None] = lambda rec, kind: None
+                 library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
         # The Library a Job files to; asking locks its pick (job_settings). None = default.
         self._library = library
@@ -237,7 +237,7 @@ class TvArchiver:
         self._jobs.begin_step(rec.id, "file", "File", fresh=False)
         filing.require_nas(self._nas)
         src = encoded_path(rec, row.title_number)
-        library = self._library(rec, kind_of_path(row.path) or Kind.TV)
+        library = self._library(rec, kind_of_path(row.path) or LibraryKind.TV)
         with filing.to_nas():
             folder = self._archive.place(Path(row.path.parent), {row.path.name: src}, library)
         self.titles.set_status(rec.id, row.title_number, EncodeStatus.FILED)
@@ -249,11 +249,12 @@ class TvArchiver:
         n = sum(1 for r in rows if r.episode)
         # The show's folder, or the film's for an Extras Disc: `TV/<show>`, `Movies/<film>`
         show = self._archive.folder(Path(*rows[0].path.parts[:2]),
-                                    self._library(rec, kind_of_path(rows[0].path) or Kind.TV))
+                                    self._library(rec, kind_of_path(rows[0].path)
+                                                  or LibraryKind.TV))
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
         # An Extras Disc is filed as its film's Extras: keep the film, not the "series".
-        film = n == 0 and rows[0].path.parts[0] == Kind.FILMS.folder
+        film = n == 0 and rows[0].path.parts[0] == LibraryKind.FILMS.folder
         self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
                                         series.name, series.year,
                                         lambda text: self._jobs.log(rec.id, text)))

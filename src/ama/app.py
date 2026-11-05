@@ -26,7 +26,7 @@ from ama.cdguess import CdPicks, Guesser
 from ama.cdrip import CdRipper, CdTracks
 from ama.covers import DIR as COVERS_DIR, Covers
 from ama.app_events import AppEvents
-from ama.config import Config, Kind, secret_values
+from ama.config import Config, LibraryKind, secret_values
 from ama.db import Database
 from ama.jobs import JobRecord, JobStore
 from ama.job_settings import JobSettings
@@ -240,14 +240,15 @@ def build_services(
     return services
 
 
-def _kind_of(tv_titles: TvTitles) -> Callable[[JobRecord], Kind]:
+def _kind_of(tv_titles: TvTitles) -> Callable[[JobRecord], LibraryKind]:
     """The Library kind a Job files to, as far as is known yet: music for a CD; TV once a
     video Job's Titles are mapped to a series' Episodes; else films."""
-    def kind_of(job: JobRecord) -> Kind:
+    def kind_of(job: JobRecord) -> LibraryKind:
         if job.disc_type == DiscType.CD:
-            return Kind.MUSIC
+            return LibraryKind.MUSIC
         rows = tv_titles.for_job(job.id)
-        return Kind.TV if rows and rows[0].path.parts[0] == Kind.TV.folder else Kind.FILMS
+        tv = rows and rows[0].path.parts[0] == LibraryKind.TV.folder
+        return LibraryKind.TV if tv else LibraryKind.FILMS
     return kind_of
 
 

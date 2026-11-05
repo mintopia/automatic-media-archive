@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from ama.app import create_app
 from ama.archive import extended_path
-from ama.config import Config, Kind
+from ama.config import Config, LibraryKind
 from ama.drive import DiscType
 from ama.job_settings import Group, Locked
 from ama.jobs import JobStatus
@@ -104,7 +104,7 @@ def test_the_library_pick_locks_when_filing_starts(h):
     settings = h.services.job_settings
     settings.set(job.id, "library", "Family Films")
 
-    assert settings.library(job, Kind.FILMS) == "Family Films"
+    assert settings.library(job, LibraryKind.FILMS) == "Family Films"
     with pytest.raises(Locked) as refused:
         settings.set(job.id, "library", "Movies")
     assert refused.value.group == Group.LIBRARY
