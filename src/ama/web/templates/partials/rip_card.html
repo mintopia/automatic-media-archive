@@ -38,6 +38,7 @@
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ progress.pct }}%"></i></div><div class="eta"><span class="nw">{{ progress.eta or "Working out the time left" }}</span> · the Disc ejects when it's done</div></div>
       <div class="pct">{{ progress.pct }}%</div>
     </div>
+    {%- if on_page and jobset_of is defined %}{% with js = jobset_of(job.id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
     {%- elif job.status in ("ripped", "review", "filed") %}{#- Identification may already have moved it on -#}
     {%- if g %}
     <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · Disc {{ job.name }}</div>

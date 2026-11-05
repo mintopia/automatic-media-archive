@@ -24,6 +24,7 @@
       <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ cd.percent | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ '%.1f' | format(cd.percent) }}%"></i></div><div class="eta">{% if cd.eta_seconds is not none %}<span class="nw">{{ cd.eta_seconds | left }}</span> · {% endif %}the Disc ejects when it's done</div></div>
       <div class="pct">{{ cd.percent | int }}%</div>
     </div>
+    {%- if heading == "h1" and jobset_of is defined %}{% with js = jobset_of(cd.job_id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
     {%- else %}
     <{{ tag }} class="title">Audio CD</{{ tag }}>
     <div class="meta">Reading the track list</div>

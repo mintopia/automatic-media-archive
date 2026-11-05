@@ -138,6 +138,7 @@ def view_context(services: Services) -> dict[str, Any]:
         # Video Rip: the Disc being ripped (else the last one), and its live progress.
         "rip_job": services.video_rip.job,
         "rip_progress": services.video_rip.progress,
+        "jobset_of": lambda job: _jobset_view(services, job),  # per-Job settings panel (#30)
         "guess_of": services.film_guesses.get,  # Job id -> its Best guess (film_guess.py)
         "guessing": services.video_rip.guessing,  # TMDB is still being asked for it
         "guess_search": services.film_guesses.configured,  # a TMDB key: the guess can change
@@ -145,6 +146,11 @@ def view_context(services: Services) -> dict[str, Any]:
                             None),
         **_tools_context(services),
     }
+
+
+def _jobset_view(services: Services, job: Any) -> Any:
+    from ama.web.job_settings_pages import jobset_view  # it imports this module
+    return jobset_view(services, job)
 
 
 def filed_jobs(services: Services, limit: int = 100) -> list:

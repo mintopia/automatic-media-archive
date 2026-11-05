@@ -5,6 +5,7 @@
 {%- set on_page = true -%}
 <div class="stack">
 {% if screen %}{% include "partials/screen_card.html" %}{% else %}{% include "partials/rip_card.html" %}{% endif %}
+{%- with js = jobset_of(job.id), jobset_live = progress is not none %}{% include "partials/job_settings.html" %}{% endwith %}
 {%- if job.titles %}
 {%- set filed = became is defined and became is not none %}
 <section class="bin {{ 'rip' if job.status == 'ripping' else 'ink' }}" aria-labelledby="titles-h">

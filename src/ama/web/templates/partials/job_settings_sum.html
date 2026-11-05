@@ -1,0 +1,13 @@
+{#- The rip card's summary line: only what differs from the defaults, and the panel's toggle
+    (static/jobset.js). `js`: a JobsetView; `oob`: swapped in after a save. -#}
+{%- if js and js.groups %}
+<div class="jobset-sum" id="jobset-sum-{{ js.job.id }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <span class="ts">For this Job:</span>
+  {%- for v in js.differences %}
+  <span><b>{{ v.setting.label }} {{ v.text }}</b> <span class="ts">(default {{ v.default_text }})</span></span>
+  {%- else %}
+  <span>Default settings</span>
+  {%- endfor %}
+  <button class="open" type="button" aria-expanded="false" aria-controls="jobset-{{ js.job.id }}" data-jobset-toggle>Settings</button>
+</div>
+{%- endif %}

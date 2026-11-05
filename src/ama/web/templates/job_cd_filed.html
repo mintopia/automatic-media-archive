@@ -23,6 +23,7 @@
           <div class="status"><span class="stk fil">Filed</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips{% if rec.filed_at %} · filed {{ rec.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
         </div>
       </div>
+      {%- with js = jobset_of(rec.id), jobset_live = false %}{% include "partials/job_settings.html" %}{% endwith %}
       <section class="bin ink" aria-labelledby="tracks-h">
         <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
         <div class="box">
@@ -64,6 +65,7 @@
       {%- else %}
       <p class="ts">Details entered by hand in Review, so there are no MusicBrainz links.</p>
       {%- endif %}
+      <p class="ts">Every group of this Job's settings locks once it's Filed: these are the values this CD was ripped and filed with.</p>
       <p class="ts"><a href="/jobs/{{ rec.id }}/log">Rip log</a></p>
     </div>
   </div>

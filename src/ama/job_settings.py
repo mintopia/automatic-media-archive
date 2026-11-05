@@ -176,6 +176,10 @@ SETTINGS: tuple[Setting, ...] = (
 _BY_KEY = {s.key: s for s in SETTINGS}
 
 
+def setting(key: str) -> Setting | None:
+    return _BY_KEY.get(key)
+
+
 def settings_of(disc_type: DiscType, group: Group | None = None) -> list[Setting]:
     return [s for s in SETTINGS if s.applies(disc_type) and group in (None, s.group)]
 
@@ -219,7 +223,7 @@ class JobSettings:
 
     # -- reading -------------------------------------------------------------
 
-    def _scope(self, job: JobRecord, kind: Kind | None = None) -> Scope:
+    def scope(self, job: JobRecord, kind: Kind | None = None) -> Scope:
         return Scope(self._config(), job.disc_type, kind or self._kind_of(job))
 
     def _overrides(self, job_id: int) -> dict[str, str]:
@@ -247,7 +251,7 @@ class JobSettings:
         return out
 
     def group(self, job: JobRecord, group: Group) -> GroupState:
-        scope = self._scope(job)
+        scope = self.scope(job)
         stored = self._stored(job.id, group)
         if stored is None:
             return GroupState(group, self._open_values(job, group, scope), None)
@@ -275,7 +279,7 @@ class JobSettings:
         setting = _BY_KEY.get(key)
         if setting is None or not setting.applies(job.disc_type):
             raise ValueError(f"This Job has no setting {key}")
-        scope = self._scope(job)
+        scope = self.scope(job)
         if setting.check:
             value = setting.check(value)
         if setting.choices and value not in dict(setting.choices(scope)):
@@ -320,7 +324,7 @@ class JobSettings:
         with self._lock:
             stored = self._stored(job.id, group)
             if stored is None:
-                values = self._open_values(job, group, self._scope(job, kind))
+                values = self._open_values(job, group, self.scope(job, kind))
                 at = datetime.now()
                 self._db.execute(
                     "INSERT INTO job_locks (job_id, grp, locked_at, settings) "

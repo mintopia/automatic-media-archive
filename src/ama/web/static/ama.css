@@ -563,3 +563,46 @@ details.adv[open]>summary{border-bottom:0}
 .setfoot .ok{font-weight:600}
 .sf .ctl>.saved-kept{font-size:14px;color:var(--ink2)}
 .settings [hidden]{display:none!important}
+/* Per-Job settings: summary line on the drive panel opens the panel (docs/mockups/job-settings-*.html) */
+.jobset-sum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;margin-top:12px;padding-top:8px;border-top:1px solid var(--rule);font-size:14px}
+.jobset-sum .ts{font-size:14px}
+.jobset-sum b{font-weight:600}
+.jobset-sum .open{margin-left:auto;min-height:44px;padding:0 2px;background:none;border:0;color:var(--ink);font:600 14px Archivo,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.jobset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.jobset .col{min-width:0}
+.jobset .col+.col{border-left:1px solid var(--rule)}
+.jobset .grp{padding:18px;border-top:1px solid var(--rule);min-width:0}
+.jobset .grp:first-child{border-top:0}
+.jobset .gh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.jobset .gh h3{font:700 15px/1.2 Archivo,sans-serif}
+.jobset .saved{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fil-ink);white-space:nowrap}
+.jobset .lk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);white-space:nowrap}
+.jobset .saved .i,.jobset .lk .i{width:14px;height:14px}
+.jobset .until{margin-top:12px;font-size:13px;color:var(--ink2)}
+.jobset .fld{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,200px);gap:10px 12px;align-items:center;font-size:14px}
+.jobset .fld label{color:var(--ink2)}
+.jobset .fld .select{font-size:14px}
+.jobset .fld .select.ov{border-color:var(--ink);font-weight:600}
+.jobset .note{grid-column:2;margin-top:-6px;font-size:13px;color:var(--ink2)}
+/* Hit area grows to 44px without moving the line */
+.jobset .note a{display:inline-block;padding:13px 6px;margin:-13px -6px;color:var(--ink);text-underline-offset:2px}
+.jobset .grp.locked h3,.jobset .grp.locked dt,.jobset .grp.locked dd{color:var(--ink2)}
+.jobset .grp.locked dd{font-weight:400}
+.jobset dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;font-size:14px}
+.jobset dd{text-align:right;overflow-wrap:anywhere}
+.jobset dd small{display:block;font-size:13px}
+.jobset-notice{margin:18px 18px 0}
+@media (max-width:720px){
+  .jobset{grid-template-columns:minmax(0,1fr)}
+  .jobset .col+.col{border-left:0;border-top:1px solid var(--rule)}
+  .jobset .fld{grid-template-columns:minmax(0,1fr);gap:6px}
+  .jobset .fld .select{margin-bottom:6px}
+  .jobset .note{grid-column:1;margin:-6px 0 6px}
+  .jobset-sum .open{margin-left:0}
+  .jobset-notice{margin:14px 14px 0}
+}
+.jobset.one{grid-template-columns:minmax(0,1fr)}
+.jobset .fld .input{font-size:14px}
+.jobset .fld .input.ov{border-color:var(--ink);font-weight:600}
+.jobset .note .reset{display:inline-block;padding:13px 6px;margin:-13px -6px;background:none;border:0;color:var(--ink);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.bin[id^="jobset-"][hidden]{display:none!important}

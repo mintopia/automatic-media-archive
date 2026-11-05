@@ -54,8 +54,8 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, cd_pick_pages, jobs_pages, extras_pages, guess_pages,
-                     history_pages, movie_review_pages, pages,
+from ama.web import (STATIC_DIR, auth, cd_pick_pages, job_settings_pages, jobs_pages,
+                     extras_pages, guess_pages, history_pages, movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      restart_pages, settings_libraries, settings_pages, tv_review_pages)
 from ama.web.current_rip import current_rip
@@ -259,6 +259,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(pages.router)
     app.include_router(jobs_pages.router)
     app.include_router(guess_pages.router)
+    app.include_router(job_settings_pages.router)
     app.include_router(cd_pick_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)

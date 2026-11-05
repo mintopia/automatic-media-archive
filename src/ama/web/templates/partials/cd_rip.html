@@ -28,6 +28,7 @@
       </div>
     </div>
     {%- endif %}
+    {%- with js = jobset_of(view.job_id if live else view.record.id), jobset_live = live %}{% include "partials/job_settings.html" %}{% endwith %}
     <section class="bin {{ 'rip' if live else 'ink' }}" aria-labelledby="tracks-h">
       <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
       <div class="box">
