@@ -2,35 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Notifications · Settings · Automatic Media Archive</title>
+<title>Alerts · Settings · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
   <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
-  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html" aria-current="page"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main class="settings">
+<main class="settings" id="main">
   <h1>Settings</h1>
-  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-tools.html">Tools</a><a class="tab" href="settings-cd.html">CD</a><a class="tab" href="settings-encode.html">Encode</a><a class="tab" href="settings-libraries.html">Libraries</a><a class="tab" href="settings-nas.html">NAS</a><a class="tab" href="settings-identification.html">Identification</a><a class="tab" href="settings-notifications.html" aria-current="page">Notifications</a><a class="tab" href="settings-logs.html">Logs</a></nav>
-  <form class="box setbox" aria-label="Notifications settings" novalidate>
-      <div class="grp-h"><h2>Discord</h2></div>
-      <div class="sf"><div><div class="lb"><span>Webhook URL</span></div><div class="hn">Empty turns Discord off.</div></div><div class="ctl"><div class="secret"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace Discord webhook URL">Replace</button><button class="btn quiet" type="button" aria-label="Remove Discord webhook URL">Remove</button></div></div></div>
-      <div class="grp-h"><h2>ntfy</h2></div>
-      <div class="sf"><div><div class="lb"><label for="ntfy-url">Server</label></div></div><div class="ctl"><input class="input" id="ntfy-url" type="text" name="ntfy-url" value="https://ntfy.sh" aria-describedby="ntfy-url-h" spellcheck="false"></div></div>
-      <div class="sf"><div><div class="lb"><span>Topic</span></div><div class="hn">Anyone who knows the topic can read it, so it's kept like a password. Empty turns ntfy off.</div></div><div class="ctl"><div class="secret"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace ntfy topic">Replace</button><button class="btn quiet" type="button" aria-label="Remove ntfy topic">Remove</button></div></div></div>
-      <div class="grp-h"><h2>Plex</h2><span class="ts">Scans each folder as a Job is filed</span></div>
-      <div class="sf"><div><div class="lb"><label for="plex-url">Server URL</label></div></div><div class="ctl"><input class="input" id="plex-url" type="text" name="plex-url" value="http://nas:32400" aria-describedby="plex-url-h" spellcheck="false"></div></div>
-      <div class="sf"><div><div class="lb"><span>Token</span></div><div class="hn">Your X-Plex-Token. Without a URL and token, Plex finds filed folders on its next scheduled scan.</div></div><div class="ctl"><div class="secret"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace Plex token">Replace</button><button class="btn quiet" type="button" aria-label="Remove Plex token">Remove</button></div></div></div>
-      <div class="sf"><div><div class="lb"><label for="plex-path">Share path seen by Plex</label></div><div class="hn" id="plex-path-h">Where Plex sees the NAS share when it runs on another machine. Empty means Plex uses the same path as AMA.</div></div><div class="ctl"><input class="input" id="plex-path" type="text" name="plex-path" value="/volume1/media" placeholder="Same as the NAS share" aria-describedby="plex-path-h" spellcheck="false"></div></div>
-      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save Notifications</button></div>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-ripping.html">Ripping</a><a class="tab" href="settings-encode.html">Archive</a><a class="tab" href="settings-notifications.html" aria-current="page">Alerts</a><a class="tab" href="settings-logs.html">Logs</a></nav>
+  <form class="box setbox" aria-label="Alerts settings" novalidate>
+      <div class="grp-h"><h2>Discord</h2><span class="ts">Used from the next alert</span></div>
+      <div class="sf"><div><div class="lb"><span id="discord-url-l">Webhook URL</span></div><div class="hn" id="discord-url-h">Posts to a Discord channel when a Disc needs Review, is done or failed. Empty turns Discord off.</div></div><div class="ctl"><div class="secret" role="group" aria-labelledby="discord-url-l" aria-describedby="discord-url-h"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace Discord webhook URL">Replace</button><button class="btn quiet" type="button" aria-label="Remove Discord webhook URL">Remove</button></div></div></div>
+      <div class="grp-h"><h2>ntfy</h2><span class="ts">Used from the next alert</span></div>
+      <div class="sf"><div><div class="lb"><label for="ntfy-url">Server</label></div><div class="hn" id="ntfy-url-h">The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.</div></div><div class="ctl"><input class="input" id="ntfy-url" type="text" name="ntfy-url" value="https://ntfy.sh" aria-describedby="ntfy-url-h" spellcheck="false"></div></div>
+      <div class="sf"><div><div class="lb"><span id="ntfy-topic-l">Topic</span></div><div class="hn" id="ntfy-topic-h">Anyone who knows the topic can read your alerts, so it's kept like a password. Empty turns ntfy off.</div></div><div class="ctl"><div class="secret" role="group" aria-labelledby="ntfy-topic-l" aria-describedby="ntfy-topic-h"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace ntfy topic">Replace</button><button class="btn quiet" type="button" aria-label="Remove ntfy topic">Remove</button></div></div></div>
+      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save Alerts</button></div>
   </form>
-  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+  <p class="ts setnote">Alerts go out when a Disc needs Review, is filed (“insert the next one”) or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>
 </main>
 <script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+<script src="assets/menu.js"></script>
 </body>
 </html>

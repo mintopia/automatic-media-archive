@@ -8,12 +8,21 @@
 <link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
-  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a><a href="#">Settings</a></nav>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
+<main id="main">
   <div class="crumb"><a href="now.html">Now</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>Disc in drive</span></div>
   <div class="split">
     <div class="stack">
@@ -29,7 +38,7 @@
           </div>
           <div class="jobset-sum">
             <span class="ts">For this Job:</span>
-            <span><b>CQ 20</b> <span class="ts">(default 22)</span></span>
+            <span><b>Quality 20</b> <span class="ts">(default 22)</span></span>
             <span>Files to <b>Family Films</b> <span class="ts">(default Movies)</span></span>
             <button class="open" type="button" aria-expanded="true" aria-controls="jobset">Hide settings</button>
           </div>
@@ -41,11 +50,11 @@
           <div class="col"><div class="grp">
             <div class="gh"><h3>Encode</h3><span class="saved" role="status"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Saved</span></div>
             <div class="fld">
-              <label for="e-q">Quality</label><select class="select ov" id="e-q" aria-describedby="e-q-n"><option>CQ 18</option><option>CQ 19</option><option selected>CQ 20</option><option>CQ 21</option><option>CQ 22</option><option>CQ 23</option><option>CQ 24</option></select><span class="note" id="e-q-n">Blu-ray default CQ 22 · <a href="#">Reset</a></span>
+              <label for="e-q">Quality</label><select class="select ov" id="e-q" aria-describedby="e-q-n"><option>18</option><option>19</option><option selected>20</option><option>21</option><option>22</option><option>23</option><option>24</option></select><span class="note" id="e-q-n">Lower keeps more detail · Blu-ray default 22 · <a href="#">Reset</a></span>
               <label for="e-enc">Encoder</label><select class="select" id="e-enc"><option>HEVC (NVIDIA)</option><option>AV1 (NVIDIA)</option></select>
               <label for="e-res">Max resolution</label><select class="select" id="e-res"><option>1080p</option><option>720p</option></select>
               <label for="e-pre">Speed</label><select class="select" id="e-pre"><option>Faster, bigger</option><option>Balanced</option><option selected>Slower, smaller (default)</option><option>Slowest, smallest</option></select>
-              <label for="e-aud">Audio</label><select class="select" id="e-aud"><option>Copy all</option><option>First track + AAC stereo</option><option>Preferred languages</option></select>
+              <label for="e-aud">Audio</label><select class="select" id="e-aud"><option>Copy all</option><option>First track, plus a stereo copy</option><option>Preferred languages</option></select>
               <label for="e-sub">Subtitles</label><select class="select" id="e-sub"><option>Preferred languages</option><option>All</option><option>None</option></select>
               <label for="e-lang">Preferred languages</label><select class="select" id="e-lang"><option>English, Japanese</option></select>
             </div>
@@ -61,7 +70,7 @@
           <div class="grp">
             <div class="gh"><h3>Identification</h3></div>
             <div class="fld">
-              <label for="i-kind">Kind</label><select class="select" id="i-kind"><option>Work it out</option><option>Film</option><option>TV series</option><option>Extras Disc</option></select>
+              <label for="i-kind">Kind</label><select class="select" id="i-kind"><option>Decide automatically</option><option>Film</option><option>TV series</option><option>Extras Disc</option></select>
               <label for="i-rev">Always send to Review</label><select class="select" id="i-rev"><option>No</option><option>Yes</option></select>
               <label for="i-lang">Metadata language</label><select class="select" id="i-lang"><option>English (UK)</option><option>English (US)</option><option>Japanese</option></select>
             </div>
@@ -103,5 +112,6 @@ function set(open){p.hidden=!open;b.setAttribute("aria-expanded",open);b.textCon
 b.addEventListener("click",()=>set(p.hidden));
 if(new URLSearchParams(location.search).get("settings")==="closed")set(false);
 </script>
+<script src="assets/menu.js"></script>
 </body>
 </html>

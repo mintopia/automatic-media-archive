@@ -8,15 +8,24 @@
 <link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
   <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-cd.html" aria-current="page">Review<span class="count" aria-label="1 waiting">1</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="0" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:0.0%"></i></span><b>0 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
 
 
-<main>
+<main id="main">
   <div class="page-head gap">
     <div>
       <div class="crumb"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#back"/></svg><a href="review-cd.html">Needs Review</a></div>
@@ -59,7 +68,7 @@
                 <tr><td class="n">24</td><td>ホローグラインド<div class="ts">島翔太朗</div></td><td class="len">3:17</td></tr>
               </tbody></table>
             </details>
-          </div><span class="stk rev sel">Selected</span></label>
+          </div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
           <label class="radio"><input type="radio" name="release" value="5afc3090-044d-4f34-a188-a273b8cf6e0e:1"><div>
             <div class="edition"><div><div class="tt">SQUARE ENIX MUSIC · Pseudo-Release · English track titles</div><dl class="facts" style="margin-top:8px"><dt>Title</dt><dd>FINAL FANTASY VII REBIRTH Original Soundtrack ～Special edit version～</dd><dt>Catalogue no.</dt><dd>SQEX-11101~8</dd><dt>Discs</dt><dd>8 CDs · this is disc 1</dd><dt>Tracks</dt><dd>24</dd></dl></div></div>
             <details class="preview" open><summary>Track list · <span class="diffnote">23 titles differ from the other editions, marked</span></summary>
@@ -90,7 +99,7 @@
                 <tr><td class="n">24</td><td class="diff">Subterranean Grind<div class="ts">Shotaro Shima</div></td><td class="len">3:17</td></tr>
               </tbody></table>
             </details>
-          </div><span class="stk rev sel">Selected</span></label>
+          </div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
           <label class="radio"><input type="radio" name="release" value="b543589a-95c2-4c29-ba33-f9137ff8eb4c:1"><div>
             <div class="edition"><img class="cover" src="assets/cover-a.png" alt="" loading="lazy" onerror="this.remove()"><div><div class="tt">SQUARE ENIX MUSIC · Japan · 2024-04-10</div><dl class="facts" style="margin-top:8px"><dt>Title</dt><dd>FINAL FANTASY VII REBIRTH Original Soundtrack</dd><dt>Catalogue no.</dt><dd>SQEX-11101~8</dd><dt>Barcode</dt><dd>4988601470872</dd><dt>Discs</dt><dd>7 CDs · this is disc 1</dd><dt>Tracks</dt><dd>24</dd></dl></div></div>
             <details class="preview"><summary>Track list</summary>
@@ -121,7 +130,7 @@
                 <tr><td class="n">24</td><td>ホローグラインド<div class="ts">島翔太朗</div></td><td class="len">3:17</td></tr>
               </tbody></table>
             </details>
-          </div><span class="stk rev sel">Selected</span></label>
+          </div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
           <details class="manual">
             <summary>None of these: enter the details myself</summary>
             <div class="pad stack" style="gap:18px">
@@ -163,7 +172,7 @@ FFVIIメインテーマ Battle Edit
       <section class="bin ink" aria-labelledby="cd-h">
         <h2 class="tab" id="cd-h">This CD</h2>
         <div class="box"><div class="pad">
-          <dl class="facts"><dt>Tracks</dt><dd>24</dd><dt>Length</dt><dd>79 min 14 s</dd><dt>Ripped</dt><dd>Today, 17:44</dd><dt>Disc ID</dt><dd style="overflow-wrap:anywhere" title="kIBdaUqY_5kMBgOXehaFmL5TSbA-">kIBdaUqY_5…</dd></dl>
+          <dl class="facts"><dt>Tracks</dt><dd>24</dd><dt>Length</dt><dd>79 min 14 s</dd><dt>Ripped</dt><dd>Today, 17:44</dd><dt>Looked up by</dt><dd>Its track lengths (MusicBrainz Disc ID)</dd></dl>
           <p class="ts" style="margin-top:12px"><a href="disc-filed-cd.html">Rip details and log</a></p>
         </div></div>
       </section>
@@ -171,5 +180,6 @@ FFVIIメインテーマ Battle Edit
   </div>
 </main>
 
+<script src="assets/menu.js"></script>
 </body>
 </html>

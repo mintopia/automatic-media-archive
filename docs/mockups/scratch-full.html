@@ -5,15 +5,24 @@
 <title>Not enough space · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
-  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a><a href="#">Settings</a></nav>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter full" role="meter" aria-valuenow="212" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:82.8%"></i></span><b>212 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
+<main id="main">
   <div class="split">
     <div class="stack">
       <section aria-labelledby="sf-h">
@@ -28,22 +37,23 @@
         </div>
       </section>
       <section class="bin ink">
-        <div class="tab">Using scratch <span class="c">212 GB</span></div>
+        <h2 class="tab">Using scratch <span class="c">212 GB</span></h2>
         <div class="box">
           <div class="row"><div class="dtype">UHD</div><div><div class="tt">Blade Runner 2049</div><div class="ts">Ripping · 62% · <b>104 GB</b></div></div><span class="stk rip" style="justify-self:start">Ripping</span></div>
           <div class="row"><div class="dtype">BD</div><div><div class="tt">Blu-ray labelled “HEAT_DISC1”</div><div class="ts">Needs Review · which film? · <b>46 GB</b></div></div><a class="btn" href="review-movie.html">Review</a></div>
           <div class="row"><div class="dtype">DVD</div><div><div class="tt">The Office (UK) Series 1 — Disc 2</div><div class="ts">Needs Review · match episodes · <b>7 GB</b></div></div><a class="btn" href="review-tv.html">Review</a></div>
           <div class="row"><div class="dtype">CD</div><div><div class="tt">OK Computer — Radiohead</div><div class="ts">Needs Review · choose edition · <b>1 GB</b></div></div><a class="btn" href="review-cd.html">Review</a></div>
           <div class="row"><div class="dtype">BD</div><div><div class="tt">Arrival (2016)</div><div class="ts">Encoding · 41% · <b>46 GB</b></div></div><span class="stk enc" style="justify-self:start">Encoding</span></div>
-          <div class="row"><div class="dtype">DVD</div><div><div class="tt">Spirited Away (2001)</div><div class="ts">Waiting to encode · <b>8 GB</b></div></div><span class="stk enc" style="justify-self:start">Waiting</span></div>
+          <div class="row"><div class="dtype">DVD</div><div><div class="tt">Spirited Away (2001)</div><div class="ts">Encoding · next in line · <b>8 GB</b></div></div><span class="stk enc" style="justify-self:start">Encoding</span></div>
         </div>
       </section>
     </div>
     <div class="aside stack">
-      <section class="bin rev"><div class="tab">Needs Review <span class="c">3</span></div><div class="box"><p class="pad ts">Each finished Review lets its Disc encode and file, freeing its space.</p></div></section>
-      <section class="bin enc"><div class="tab">Encoding <span class="c">2</span></div><div class="box"><p class="pad ts">Space frees up as each Encode is filed: about 46 GB in 22 min.</p></div></section>
+      <section class="bin rev"><h2 class="tab">Needs Review <span class="c">3</span></h2><div class="box"><p class="pad ts">Each finished Review lets its Disc encode and file, freeing its space.</p></div></section>
+      <section class="bin enc"><h2 class="tab">Encoding <span class="c">2</span></h2><div class="box"><p class="pad ts">Space frees up as each Encode is filed: about 46 GB in 22 min.</p></div></section>
     </div>
   </div>
 </main>
+<script src="assets/menu.js"></script>
 </body>
 </html>

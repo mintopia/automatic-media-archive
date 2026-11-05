@@ -5,25 +5,34 @@
 <title>Review film · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 <style>
 .title-row{display:grid;grid-template-columns:22px minmax(0,1fr) 300px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--rule);cursor:pointer}
 .title-row:first-child{border-top:0}
 .title-row input{width:18px;height:18px;accent-color:var(--ink)}
-.title-row.on{background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.title-row:has(>input:checked){background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
 @media (max-width:720px){.radio .stk{display:none}.title-row{grid-template-columns:22px minmax(0,1fr)}.title-row .frames{grid-column:1/-1}}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
-  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a><a href="#">Settings</a></nav>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
-  <div class="page-head">
+<main id="main">
+  <div class="page-head gap">
     <div>
-      <div class="crumb"><svg class="i"><use href="assets/icons.svg#back"/></svg><a href="now.html">Needs Review</a></div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#back"/></svg><a href="now.html">Needs Review</a></div>
       <h1>Which film is on this Disc?</h1>
       <p class="sub">Blu-ray labelled “HEAT_DISC1” · main Title runs 2 h 50 m</p>
     </div>
@@ -31,23 +40,23 @@
   <div class="split">
     <div class="stack">
       <section class="bin rev" aria-label="Likely films">
-        <div class="tab">Likely films <span class="c">2</span></div>
+        <h2 class="tab">Likely films <span class="c">2</span></h2>
         <form class="box">
           <div class="pad search" style="border-bottom:1px solid var(--rule)"><label class="sr" for="q">Search films</label><svg class="i" style="left:36px;top:35px"><use href="assets/icons.svg#search"/></svg><input class="input" id="q" type="search" value="Heat"></div>
-          <label class="radio on"><input type="radio" name="film" checked><div><div class="tt">Heat (1995)</div><div class="ts">Michael Mann · 2 h 50 m · matches the Disc</div></div><span class="stk fil">Same length</span></label>
+          <label class="radio on"><input type="radio" name="film" checked><div><div class="tt">Heat (1995)</div><div class="ts">Michael Mann · 2 h 50 m · matches the Disc</div></div><span class="mark"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Same length</span></label>
           <label class="radio"><input type="radio" name="film"><div><div class="tt">Heat (2013)</div><div class="ts">David Ayer · 1 h 33 m · 1 h 17 m shorter than the Disc</div></div><span></span></label>
         </form>
       </section>
       <section class="bin ink" aria-labelledby="titles-h">
-        <div class="tab" id="titles-h">Which Title is the film? <span class="c">14</span></div>
+        <h2 class="tab" id="titles-h">Which Title is the film? <span class="c">14</span></h2>
         <div class="box">
           <div class="pad" style="border-bottom:1px solid var(--rule)">
-            <div class="notice" role="status"><svg class="i"><use href="assets/icons.svg#alert"/></svg><div><b>This Disc has 14 near-identical versions of the film</b>It's a copy-protection trick. Only one plays in the right order. We've picked the most likely one. Check the pictures look right.</div></div>
+            <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg><div><b>This Disc has 14 near-identical versions of the film</b>It's a copy-protection trick. Only one plays in the right order. We've picked the most likely one. Check the pictures look right.</div></div>
           </div>
           <form>
-            <label class="title-row on"><input type="radio" name="t" checked><div><div class="tt">Title 00800.mpls</div><div class="ts">2 h 50 m 14 s · likely the film</div></div><div class="frames"><div class="frame dark">10%</div><div class="frame mid">50%</div><div class="frame lite">90%</div></div></label>
-            <label class="title-row"><input type="radio" name="t"><div><div class="tt">Title 00801.mpls</div><div class="ts">2 h 50 m 14 s · scenes out of order</div></div><div class="frames"><div class="frame mid">10%</div><div class="frame dark">50%</div><div class="frame lite">90%</div></div></label>
-            <label class="title-row"><input type="radio" name="t"><div><div class="tt">Title 00802.mpls</div><div class="ts">2 h 50 m 11 s · scenes out of order</div></div><div class="frames"><div class="frame lite">10%</div><div class="frame mid">50%</div><div class="frame dark">90%</div></div></label>
+            <div class="title-row"><input type="radio" name="t" id="t1" checked><label for="t1"><span><span class="tt">Title 00800.mpls</span><span class="ts">2 h 50 m 14 s · likely the film</span></span></label><div class="frames" aria-hidden="true"><div class="frame dark">10%</div><div class="frame mid">50%</div><div class="frame lite">90%</div></div></div>
+            <div class="title-row"><input type="radio" name="t" id="t2"><label for="t2"><span><span class="tt">Title 00801.mpls</span><span class="ts">2 h 50 m 14 s · scenes out of order</span></span></label><div class="frames" aria-hidden="true"><div class="frame mid">10%</div><div class="frame dark">50%</div><div class="frame lite">90%</div></div></div>
+            <div class="title-row"><input type="radio" name="t" id="t3"><label for="t3"><span><span class="tt">Title 00802.mpls</span><span class="ts">2 h 50 m 11 s · scenes out of order</span></span></label><div class="frames" aria-hidden="true"><div class="frame lite">10%</div><div class="frame mid">50%</div><div class="frame dark">90%</div></div></div>
             <a class="more" href="#">Show 11 more versions</a>
           </form>
         </div>
@@ -55,15 +64,17 @@
     </div>
     <div class="aside stack">
       <section class="bin ink" aria-label="What happens next">
-        <div class="tab">When you confirm</div>
+        <h2 class="tab">When you confirm</h2>
         <div class="box"><div class="pad stack" style="gap:14px">
           <dl class="facts"><dt>Film</dt><dd>Heat (1995)</dd><dt>Title</dt><dd>00800.mpls · 2 h 50 m</dd><dt>Extras</dt><dd>6 bonus Titles, filed under Other</dd><dt>Filed to</dt><dd style="overflow-wrap:anywhere">Movies/Heat (1995) {tmdb-949}</dd></dl>
-          <div class="actions"><button class="btn pri" type="button"><svg class="i"><use href="assets/icons.svg#check"/></svg>Encode and file</button><a class="btn quiet" href="#">Not a film</a></div>
+          <div class="actions"><button class="btn pri" type="button"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Encode and file</button><a class="btn" href="review-tv.html">It's TV episodes</a></div>
+          <p class="ts">Not a film? If the Disc holds episodes, choose It's TV episodes to match them instead.</p>
         </div></div>
       </section>
       <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc.</p>
     </div>
   </div>
 </main>
+<script src="assets/menu.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <title>Ripping paused · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 <style>
 details summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;font-weight:600;list-style:none}
 details summary::-webkit-details-marker{display:none}
@@ -14,21 +14,31 @@ details[open] summary{border-bottom:1px solid var(--rule)}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
-  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a><a href="#">Settings</a></nav>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
+<main id="main">
   <div class="split"><div class="stack">
-    <div class="page-head"><div><div class="crumb"><a href="now.html">Now</a><svg class="i"><use href="assets/icons.svg#chevron"/></svg><span>Didn't work</span></div><h1>Ripping is paused for all Discs</h1><p class="sub">Blu-ray “MATRIX_BD” · ejected at 09:14</p></div><span class="stk fail">Stopped</span></div>
+    <div class="page-head"><div><div class="crumb"><a href="now.html">Now</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>Didn't work</span></div><h1>Ripping is paused for all Discs</h1><p class="sub">Blu-ray “MATRIX_BD” · ejected at 09:14</p></div><span class="stk fail">Stopped</span></div>
     <div class="notice" role="alert">
-      <svg class="i"><use href="assets/icons.svg#lock"/></svg>
+      <svg class="i" aria-hidden="true"><use href="assets/icons.svg#lock"/></svg>
       <div><b>MakeMKV says its licence key isn't valid.</b>DVDs and Blu-rays can't be ripped until the key is fixed. CDs still work. Open MakeMKV on the archive PC, go to Help → Register, and enter the key again.</div>
     </div>
     <p class="ts">This isn't a problem with the Disc. Once the key is fixed, insert it again.</p>
     <div class="actions"><a class="btn pri" href="now.html">I've fixed it, check again</a><a class="btn quiet" href="#">Show the log</a></div>
   </div></div>
 </main>
+<script src="assets/menu.js"></script>
 </body>
 </html>

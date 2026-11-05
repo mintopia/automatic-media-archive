@@ -8,13 +8,21 @@
 <link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
   <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
-  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" onclick="location.href='settings-menu.html'"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button></div>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html" aria-current="true"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
+<main id="main">
   <div class="crumb"><a href="logs.html">Logs</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>AMA started</span></div>
   <div class="run-head">
     <div>
@@ -45,17 +53,17 @@
           </details>
           <details class="step" open>
             <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Test encoders</div><div class="ts">3 of 4 work on this PC</div></div><span class="dur">57 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
-            <div class="step-meta"><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Finished</span><span>09:58:14 to 09:59:11</span><span>9 lines</span><span class="acts"><a class="btn quiet" href="#"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#download"/></svg>Download log</a></span></div>
+            <div class="step-meta"><span class="mark done"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Finished</span><span>09:58:14 to 09:59:11</span><span>9 lines</span><span class="acts"><button class="btn quiet" type="button" data-wrap="log-1" aria-pressed="false">Wrap lines</button><a class="btn quiet" href="#"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#download"/></svg>Download log</a></span></div>
             <div class="logwrap">
-<div class="log" tabindex="0" aria-label="Test encoders output"><span class="time">09:58:14</span>  Test encode: 5 s of a 1080p test pattern with each encoder
-<span class="time">09:58:16</span>  hevc_nvenc  works · 412 fps · HEVC (NVIDIA)
-<span class="time">09:58:18</span>  av1_nvenc   works · 388 fps · AV1 (NVIDIA)
-<span class="time">09:58:19</span>  hevc_qsv    not available · HEVC (Intel Quick Sync)
-<span class="time">09:58:19</span>    <span class="time">[hevc_qsv @ 0000019f] Error creating a MFX session: -9</span>
-<span class="time">09:59:10</span>  libx265     works ·  21 fps · HEVC (software)
-<span class="time">09:59:11</span>  Configured encoder: HEVC (NVIDIA) · works
-<span class="time">09:59:11</span>  Settings will offer: HEVC (NVIDIA), AV1 (NVIDIA), HEVC (software)
-<span class="time">09:59:11</span>  Done</div>
+<div class="log" id="log-1" tabindex="0" aria-label="Test encoders output"><a class="time" id="s1-L1" href="#s1-L1">09:58:14</a>  Test encode: 5 s of a 1080p test pattern with each encoder
+<a class="time" id="s1-L2" href="#s1-L2">09:58:16</a>  hevc_nvenc  works · 412 fps · HEVC (NVIDIA)
+<a class="time" id="s1-L3" href="#s1-L3">09:58:18</a>  av1_nvenc   works · 388 fps · AV1 (NVIDIA)
+<a class="time" id="s1-L4" href="#s1-L4">09:58:19</a>  hevc_qsv    not available · HEVC (Intel Quick Sync)
+<a class="time" id="s1-L5" href="#s1-L5">09:58:19</a>    <a class="time" id="s1-L6" href="#s1-L6">[hevc_qsv @ 0000019f] Error creating a MFX session: -9</a>
+<a class="time" id="s1-L7" href="#s1-L7">09:59:10</a>  libx265     works ·  21 fps · HEVC (software)
+<a class="time" id="s1-L8" href="#s1-L8">09:59:11</a>  Configured encoder: HEVC (NVIDIA) · works
+<a class="time" id="s1-L9" href="#s1-L9">09:59:11</a>  Settings will offer: HEVC (NVIDIA), AV1 (NVIDIA), HEVC (software)
+<a class="time" id="s1-L10" href="#s1-L10">09:59:11</a>  Done</div>
             </div>
           </details>
         </div>
@@ -75,5 +83,7 @@
     </aside>
   </div>
 </main>
+<script src="assets/logs.js"></script>
+<script src="assets/menu.js"></script>
 </body>
 </html>
