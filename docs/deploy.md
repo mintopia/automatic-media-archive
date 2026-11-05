@@ -72,6 +72,9 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
 
 3. Try it in a console first: `uv run ama` (reads `.\ama.toml`; `--config PATH`
    or `$env:AMA_CONFIG` to use another file). Open `http://<box>:8080/`. Ctrl+C to stop.
+   `ama` (same as `ama run`) is a small supervisor that runs the server
+   (`ama serve`) and starts it again when Settings' "Restart now" asks for it
+   (ADR 0009). Run `ama serve` on its own and a restart from the UI just stops it.
 4. Let the LAN reach the port (elevated PowerShell, once):
 
    ```powershell
@@ -82,7 +85,7 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    owns the MakeMKV licence):
 
    ```powershell
-   $action    = New-ScheduledTaskAction -Execute "C:\ama\.venv\Scripts\pythonw.exe" -Argument "-m ama --config C:\ama\ama.toml" -WorkingDirectory "C:\ama"
+   $action    = New-ScheduledTaskAction -Execute "C:\ama\.venv\Scripts\pythonw.exe" -Argument "-m ama run --config C:\ama\ama.toml" -WorkingDirectory "C:\ama"
    $trigger   = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
    $settings  = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
@@ -91,7 +94,9 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    ```
 
    `ExecutionTimeLimit 0` stops Windows killing it after the default 3 days;
-   the restart settings bring it back if it crashes.
+   the restart settings bring it back if it crashes. A restart from the UI is
+   handled by the supervisor itself, so the task keeps running through it; an
+   older task registered with `-m ama --config ...` keeps working (`run` is the default).
 
 ## Deploying an update
 

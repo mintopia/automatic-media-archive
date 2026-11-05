@@ -110,7 +110,9 @@ class VideoRipper:
                  scratch: ScratchGate,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
-                 guess: Callable[[str], Screen | None] | None = None) -> None:
+                 guess: Callable[[str], Screen | None] | None = None,
+                 hold: Callable[[], bool] = lambda: False) -> None:
+        self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
         self.likely: Screen | None = None  # a guessed film while ripping; only for show
         self._drive = drive
@@ -172,6 +174,8 @@ class VideoRipper:
             return
         if self._handled == self._drive.insertion:  # once per insertion: never re-rip on our own
             return
+        if self._hold():
+            return  # considered again on the next bus event, as when the hold ends
         self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)
         # A known Disc waits for the user first; one they want again still needs room.

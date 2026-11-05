@@ -41,6 +41,7 @@ from ama.notify import Notifier, channels
 from ama.plex import Plex
 from ama.proc import Runner, Streamer, run, stream
 from ama.repeat import RepeatGuard
+from ama.restart import Busy, Restarter
 from ama.scratch import DiskUsageFn, ScratchGate
 from ama.settings import Settings
 from ama.sets import DiscSets
@@ -51,7 +52,8 @@ from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
-                     settings_pages, tv_review_pages)
+                     restart_pages, settings_pages, tv_review_pages)
+from ama.web.current_rip import current_rip
 
 
 @dataclass
@@ -81,6 +83,7 @@ class Services:
     backfill: Backfill
     plex: Plex
     http: httpx.Client
+    restart: Restarter
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
@@ -97,7 +100,7 @@ class Services:
         return [self.drive.run, self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
-                self.backfill.run, *([self.settings.run] if self.settings else [])]
+                self.backfill.run, self.restart.run, *([self.settings.run] if self.settings else [])]
 
 
 def build_services(
@@ -134,7 +137,8 @@ def build_services(
     plex = Plex(cfg.plex, http, archive.root)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
-    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
+    restart = Restarter(lambda: busy(services), bus)
+    encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer, hold=restart.holding)
     movie_archive = MovieArchiver(discs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
@@ -154,11 +158,12 @@ def build_services(
         discs=discs,
         cd=CdRipper(cfg.cd, drive, discs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch, guesser=Guesser(mb, covers)),
+                    scratch=scratch, guesser=Guesser(mb, covers), hold=restart.holding),
         video_rip=VideoRipper(drive, discs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               disc_root=disc_root,
-                              guess=lambda label: film_guess(tmdb, covers, label)),
+                              guess=lambda label: film_guess(tmdb, covers, label),
+                              hold=restart.holding),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(discs, cd_tracks, nas, mb, archive, plex, bus,
@@ -180,9 +185,20 @@ def build_services(
                           tv_titles),
         plex=plex,
         http=http,
+        restart=restart,
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
     return services
+
+
+def busy(services: Services) -> Busy:
+    """The Rip and Encode a restart would cut off."""
+    rip = current_rip(services)
+    job = services.movie_archive.encoder.current  # one Encoder, shared with TV
+    etas = [e for e in (rip.cd.eta_seconds if rip and rip.cd else None,
+                        rip.progress.eta_s if rip and rip.progress else None,
+                        job.progress.eta_s if job else None) if e is not None]
+    return Busy(rip.name if rip else None, 1 if job else 0, max(etas) if etas else None)
 
 
 def create_app(services: Services) -> FastAPI:
@@ -211,4 +227,5 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(scratch_pages.router)
     app.include_router(history_pages.router)
     app.include_router(settings_pages.router)
+    app.include_router(restart_pages.router)
     return app

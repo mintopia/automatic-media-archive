@@ -16,6 +16,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,6 +39,11 @@ if TYPE_CHECKING:
     from ama.media import Album
 
 log = logging.getLogger(__name__)
+
+
+class _Stopped(Exception):
+    """Raised from a cyanrip output line to stop it: AMA is shutting down."""
+
 
 SCRATCH_SUBDIR = "cd"
 
@@ -221,8 +228,10 @@ class CdRipper:
     def __init__(self, cfg: CdConfig, drive: DriveMonitor, discs: DiscStore, tracks: CdTracks,
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
                  repeat: RepeatGuard, scratch: ScratchGate,
-                 guesser: Guesser | None = None) -> None:
+                 guesser: Guesser | None = None,
+                 hold: Callable[[], bool] = lambda: False) -> None:
         self.cfg = cfg
+        self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesser = guesser
         self.guess_retry_seconds = 60.0  # MusicBrainz trouble during the early guess
         self._repeat = repeat
@@ -270,7 +279,7 @@ class CdRipper:
         state = self._drive.state
         candidate = (isinstance(state, DiscPresent) and state.disc_type == DiscType.CD) \
             or isinstance(state, UnrecognisedDisc)
-        if not candidate or self._handled == self._drive.insertion:
+        if not candidate or self._handled == self._drive.insertion or self._hold():
             return
         try:
             self._tool("cyanrip")
@@ -299,7 +308,18 @@ class CdRipper:
                 self._discs.log(disc_id, f"Couldn't eject the Disc: {e}", error=True)
 
     async def _run_tool(self, args: list[str], on_line, cwd: Path | None = None) -> int:
-        return await asyncio.to_thread(self._stream, args, on_line, cwd)
+        stopped = threading.Event()
+
+        def line(ln: str) -> None:
+            if stopped.is_set():
+                raise _Stopped  # proc.stream kills cyanrip on the way out
+            on_line(ln)
+
+        try:
+            return await asyncio.to_thread(self._stream, args, line, cwd)
+        except asyncio.CancelledError:  # AMA is stopping: don't leave cyanrip ripping
+            stopped.set()
+            raise
 
     async def rip(self, label: str, known_cd: bool) -> None:
         device = self._drive.device() or "D:"
