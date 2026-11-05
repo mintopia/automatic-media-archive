@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{#- Pick the release of the CD being ripped (web/cd_pick_pages.py). `editions`: review_pages.Edition, likeliest first; `selected`: the one shown now. -#}
+{% block title %}Which release · {{ cd.guess.match.release.title }}{% endblock %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><a href="/jobs/{{ job_id }}">Disc in drive</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Which release</span></div>
+      <h1>Which release is this CD?</h1>
+      <p class="sub">{{ editions | length }} releases on MusicBrainz have this CD's track list. Check the back of the case and pick the one that matches. The rip card, track titles and cover follow your pick, and it's checked again after the Rip.</p>
+    </div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      <section class="bin rip" aria-labelledby="releases-h">
+        <h2 class="tab" id="releases-h">Releases <span class="c">{{ editions | length }}</span></h2>
+        <form class="box" method="post" action="/jobs/{{ job_id }}/release">
+          {%- for e in editions %}
+          <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if e.value == selected %} checked{% endif %}><div>
+            <div class="edition">{% if e.match.release.has_front is not false %}<img class="cover" src="/jobs/{{ job_id }}/release/cover/{{ e.match.release.id }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}<div><div class="tt">{{ e.heading }}</div>{% if e.value == selected %}<div class="ts">{{ "Your pick" if cd.guess.picked else "Likely" }} · shown now</div>{% endif %}<dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div></div>
+            <details class="preview"{% if e.differences %} open{% endif %}><summary>Track list{% if e.differences %} · <span class="diffnote">{{ e.differences }} title{{ "s" if e.differences != 1 }} differ from the other releases, marked</span>{% endif %}</summary>
+              <table class="tbl cdt"><thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th></tr></thead><tbody>
+              {%- for t in e.tracks %}
+                <tr><td class="n">{{ t.number }}</td><td{% if t.differs %} class="diff"{% endif %}>{{ t.title }}{% if t.artist %}<div class="ts">{{ t.artist }}</div>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td></tr>
+              {%- endfor %}
+              </tbody></table>
+            </details>
+          </div><span class="mark sel" aria-hidden="true"><svg class="i"><use href="/static/icons.svg#check"/></svg>Selected</span></label>
+          {%- endfor %}
+          <div class="pad actions" style="border-top:1px solid var(--rule)"><button class="btn pri" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Use this release</button><a class="btn quiet" href="/jobs/{{ job_id }}">Cancel</a></div>
+        </form>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="cd-h">
+        <h2 class="tab" id="cd-h">This CD</h2>
+        <div class="box"><div class="pad">
+          <dl class="facts"><dt>Tracks</dt><dd>{{ cd.tracks | selectattr("number") | list | length }}</dd><dt>Length</dt><dd>{{ cd.total_seconds | minutes }}</dd><dt>Ripping</dt><dd>{{ cd.position() }} · {{ cd.percent | int }}%</dd></dl>
+          <p class="ts" style="margin-top:12px">Picking doesn't file anything by itself: after the Rip the CD is checked again before it's filed.</p>
+        </div></div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

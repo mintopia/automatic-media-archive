@@ -86,8 +86,12 @@ def _video_item(services: Services, rec: JobRecord) -> ReviewItem:
 
 
 def cd_title(services: Services, rec: JobRecord) -> str:
-    """A CD in Review by its first matching edition, else its label."""
-    editions = cdreview.candidates(rec.scratch_dir, services.cd.job(rec.id).tracks)
+    """A CD in Review by the release picked while it ripped, else its first matching edition,
+    else its label."""
+    cd = services.cd.job(rec.id)
+    if cd.pick:
+        return cd.pick.name
+    editions = cdreview.candidates(rec.scratch_dir, cd.tracks)
     return (f"{editions[0].release.title} — {editions[0].release.artist}" if editions
             else rec.label or "Unknown CD")
 
