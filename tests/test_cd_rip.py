@@ -172,7 +172,8 @@ def test_dismissing_a_failure_clears_it_from_now(harness, client):
     assert rec.failure.kind == "drive"
     r = client.post(f"/jobs/{rec.id}/dismiss", follow_redirects=False)
     assert r.status_code == 303
-    assert "Didn't work" not in client.get("/").text
+    now = client.get("/").text
+    assert f'href="/jobs/{rec.id}"' not in now and "Didn't work <span class=\"c\">0</span>" in now
     assert "Couldn't rip this CD" in client.get(f"/jobs/{rec.id}").text  # still viewable
 
 

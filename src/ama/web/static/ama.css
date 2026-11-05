@@ -299,7 +299,7 @@ td.diff{background:var(--notice);font-weight:600}
 .src{display:inline-block;margin-left:4px;padding:0 5px;border:1px solid var(--rule);font:600 10px/16px Archivo,sans-serif;letter-spacing:.04em;color:var(--ink2);text-decoration:none;vertical-align:1px}
 .src:hover{color:var(--ink);border-color:var(--ink3)}
 
-/* Shell: skip link, top-bar menu, targets, idle Now, sign-in (DESIGN.md Navigation) */
+/* Shell: skip link, top-bar menu, targets, sign-in (DESIGN.md Navigation) */
 .skip{position:absolute;left:16px;top:-100px;z-index:20;padding:12px 18px;background:var(--ink);color:var(--sheet);font-weight:600;border-radius:3px;text-decoration:none}
 .skip:focus{top:8px}
 #content:focus{outline:none}
@@ -334,7 +334,6 @@ td.diff{background:var(--notice);font-weight:600}
 .paused .i{width:12px;height:12px}
 .top .paused{margin-left:auto}
 .pmark:has(.paused)~.scratch,.pmark:has(.paused)+.menu{margin-left:0}
-.now .idle{display:none}
 main.login{min-height:100vh;display:grid;place-items:center}
 .login form{width:min(400px,100%)}
 .login .pad{display:flex;flex-direction:column;gap:18px}
@@ -351,14 +350,6 @@ main.login{min-height:100vh;display:grid;place-items:center}
   .top .paused{display:none}
   .pmark:has(.paused)~.scratch{margin-left:auto}.pmark:has(.paused)+.menu{margin-left:-16px}
 }
-/* Idle Now (docs/mockups/now-empty.html): every bin empty -> the drive panel and one quiet line, centred */
-.now:not(:has(.bin:not(.empty))){max-width:844px}
-.now:not(:has(.bin:not(.empty))) .split{grid-template-columns:minmax(0,1fr)}
-.now:not(:has(.bin:not(.empty))) .bin.empty,.now:not(:has(.bin:not(.empty))) .aside{display:none}
-.now:not(:has(.bin:not(.empty))) .idle{display:flex}
-.now .idle{flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:var(--ink2)}
-.now .idle a{color:var(--ink);font-weight:600;display:inline-flex;align-items:center;min-height:44px;text-underline-offset:3px}
-
 /* Review, failure and History flows (fix-built-flows) */
 .filed-note{margin-bottom:24px}
 .confirm{margin-top:14px;padding:14px 16px;background:var(--sheet);border:1px solid var(--ink);border-radius:3px}
