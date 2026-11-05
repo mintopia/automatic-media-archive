@@ -1,4 +1,4 @@
-"""Filing to the Archive: putting finished files into a Plex library folder on the NAS.
+"""Filing to the Archive: putting finished files into a Library's folder on the NAS.
 
 Each file is copied under a temporary name Plex doesn't recognise as media
 (`<name>.ama-partial`), checked against its source, then renamed into place, so

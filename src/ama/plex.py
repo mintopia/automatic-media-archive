@@ -9,6 +9,7 @@ token goes in a header, never the URL.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,7 @@ class Plex:
         self.cfg = cfg
         self._http = http
         self._archive = archive
+        self._listed: tuple[tuple[str, str], float, list[dict] | None] | None = None
 
     @property
     def configured(self) -> bool:
@@ -49,12 +51,28 @@ class Plex:
         r.raise_for_status()
         return r
 
-    def libraries(self, kind: Kind, timeout: float = 3.0) -> list[str]:
-        """The names of Plex's libraries that can hold `kind`, for Settings. Raises
-        httpx.HTTPError when Plex can't be reached (or isn't set up: check `configured`)."""
-        sections = self._get("/library/sections", timeout).json()
-        return [d.get("title", "") for d in _directories(sections)
-                if d.get("type") == PLEX_TYPE[kind]]
+    def listing(self, timeout: float = 3.0, ttl: float = 10.0) -> list[dict] | None:
+        """Plex's libraries for Settings, or None when Plex isn't set up or can't be reached.
+        Remembered for `ttl` seconds, so one page view asks Plex once."""
+        if not self.configured:
+            return None
+        key = (self.cfg.url, self.cfg.token)
+        if self._listed and self._listed[0] == key and time.monotonic() - self._listed[1] < ttl:
+            return self._listed[2]
+        try:
+            found: list[dict] | None = _directories(
+                self._get("/library/sections", timeout).json())
+        except (httpx.HTTPError, ValueError):
+            found = None
+        self._listed = (key, time.monotonic(), found)
+        return found
+
+    def libraries(self, kind: Kind) -> list[str] | None:
+        """The names of Plex's libraries that can hold `kind`; None as for `listing`."""
+        found = self.listing()
+        if found is None:
+            return None
+        return [d.get("title", "") for d in found if d.get("type") == PLEX_TYPE[kind]]
 
     def scan(self, folder: Path) -> str:
         """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError."""

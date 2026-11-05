@@ -51,7 +51,7 @@ from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, discs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
-                     settings_pages, tv_review_pages)
+                     settings_libraries, settings_pages, tv_review_pages)
 
 
 @dataclass
@@ -211,5 +211,6 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     app.include_router(history_pages.router)
+    app.include_router(settings_libraries.router)  # before settings_pages' catch-all
     app.include_router(settings_pages.router)
     return app

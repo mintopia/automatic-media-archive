@@ -210,14 +210,17 @@ class SettingsFile:
 
     def save_library(self, kind: Kind, original: str | None, typed: Mapping[str, str]) -> None:
         """Add a `kind` Library (`original` None) or edit the one called `original`, from
-        `{"name", "plex", "path"}`. Raises SettingsRejected keyed by those names."""
+        `{"name", "plex", "path"}`; leaving out "plex" keeps the one it has. Raises
+        SettingsRejected keyed by those names."""
         doc, libraries = self._libraries()
-        fields = {k: typed.get(k, "").strip() for k in ("name", "plex", "path")}
         index = (len(libraries) if original is None
                  else next((i for i, lib in enumerate(libraries) if lib["name"] == original),
                            None))
         if index is None:
             raise SettingsRejected({}, [f"There's no Library called {original}"])
+        kept = libraries[index]["plex"] if original is not None else ""
+        fields = {k: str(typed.get(k, kept if k == "plex" else "")).strip()
+                  for k in ("name", "plex", "path")}
         errors: dict[str, str] = {}
         for k in ("name", "path"):
             if not fields[k]:
