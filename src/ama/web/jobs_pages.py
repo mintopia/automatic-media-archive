@@ -148,6 +148,18 @@ def job_log(request: Request, job_id: int) -> str:
     return "\n".join(map(str, services.jobs.log_lines(job_id))) + "\n"
 
 
+@router.post("/jobs/{job_id}/titles/{number}")
+async def tick_title(request: Request, job_id: int, number: int) -> Response:
+    """Tick (`rip` sent) or untick a Title of the Rip under way that hasn't started (ADR 0005):
+    unticked, it is Skipped. 409 if it can't be: it's ripping or done, or the Rip is over."""
+    services = request.app.state.services
+    _job_or_404(services, job_id)
+    rip = "rip" in (await request.form())
+    if not services.video_rip.skip(job_id, number, skipped=not rip):
+        return Response(status_code=409)
+    return Response(status_code=204)
+
+
 @router.post("/jobs/{job_id}/dismiss")
 def dismiss(request: Request, job_id: int) -> Response:
     """Take a failed Disc off Now. Inserting it again Rips it from the start."""

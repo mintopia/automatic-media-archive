@@ -121,6 +121,11 @@ def phase_now(services: Services, rec: JobRecord) -> Phase:
 def job_steps(services: Services, rec: JobRecord) -> list[Step]:
     lines = services.jobs.log_lines(rec.id)
     rip = _rip(services, rec)
+    if rec.all_skipped and rec.status == JobStatus.FILED:
+        return [rip, Step("Identification", StepState.NOT_RUN, "Every Title was skipped"),
+                Step("Encode", StepState.NOT_RUN, "Every Title was skipped"),
+                Step("File", StepState.DONE, "Nothing to file: every Title was skipped",
+                     finished=rec.filed_at)]
     ident = _identification(services, rec, rip, lines)
     encodes = [] if rec.disc_type == DiscType.CD else _encodes(services, rec, ident)
     return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.root)]
@@ -132,8 +137,9 @@ def _rip(services: Services, rec: JobRecord) -> Step:
         n = len(cd.tracks) if cd else 0
         what = f"{n} track{'s' if n != 1 else ''}"
     else:
-        n = len(rec.titles)
-        what = f"{n} Title{'s' if n != 1 else ''}, {rec.total_size}"
+        n = len(rec.to_rip)
+        what = (rec.skipped_summary or "") if rec.all_skipped \
+            else f"{n} Title{'s' if n != 1 else ''}, {rec.total_size}"
     times = {"started": rec.started_at, "finished": rec.finished_at}
     if rec.status == JobStatus.RIPPING:
         return Step("Rip", StepState.RUNNING, "Copying the Disc to scratch",
