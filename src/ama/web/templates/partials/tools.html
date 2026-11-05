@@ -12,6 +12,9 @@
 <div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Can't find {{ st.name }}</b>{{ t.needed_for }} wait until it's there; everything else carries on. ama.toml sets <code>[tools] {{ st.name }}</code> to a file that isn't there: put {{ st.name }} there, or empty the setting so AMA downloads its own.<span class="ts" style="display:block;margin-top:4px">Looked for: {{ st.path }}</span></div></div>
 {%- endif -%}
 {%- endfor -%}
+{%- if encoder_problem -%}
+<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>{{ encoder_problem.label }} {{ "stopped working" if encoder_problem.stopped else "doesn't work on this PC" }}</b>The test encode at {{ "{:%H:%M}".format(encoder_problem.at) }} failed, so Encodes will fail until it works again or you pick another encoder. Rips carry on. <a href="/settings/archive/encode">Encode settings</a></div></div>
+{%- endif -%}
 {%- if (makemkv | kind) not in ("ToolReady", "ToolPending") -%}
 <div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>DVD and Blu-ray Rips are paused</b>{{ headline(makemkv) }} CDs still work. <a href="/makemkv">What to do</a></div></div>
 {%- endif -%}

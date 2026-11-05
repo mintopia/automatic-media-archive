@@ -99,7 +99,7 @@ def test_live_keys_apply_without_a_restart(app):
                        "tmdb.api_key": "new-key", "ntfy.topic": "my-topic",
                        "discord.webhook_url": "https://discord.com/api/webhooks/1/abc"})
     assert app.cd.cfg.offset == 6 and app.cd.cfg.retries == 20
-    assert app.movie_archive.encoder.cq.bd == 19
+    assert app.movie_archive.encoder.cfg.cq.bd == 19
     assert app.tmdb.api_key == "new-key"
     assert sorted(ch.name for ch in app.notifier.channels) == ["Discord", "ntfy"]
     assert app.config.cd.offset == 6

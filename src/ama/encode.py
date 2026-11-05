@@ -1,51 +1,37 @@
 """The Encode of a Main Feature: stream selection, the ffmpeg command, its progress.
 
-Pure functions only; `moviearchive.py` runs them. Policy (ADR-0002):
-- video: the first real video stream, hevc_nvenc Main10 (p010) at the Disc Type's CQ;
-- audio, passed through untouched: every English track (commentaries too), plus the
-  film's original-language track when the film isn't English. A Disc with neither
-  keeps its first audio track, so the Encode is never silent;
-- subtitles, copied: every English track, plus forced tracks with no language tag;
+Pure functions only; `encoder.py` runs them. Policy (ADR-0002, configurable per ADR
+0010; the defaults, shown here, are v1's):
+- video: the first real video stream, 10-bit, at the Disc Type's constant quality, with
+  the configured encoder (`ENCODERS`, default hevc_nvenc) and speed step; optionally
+  scaled down to a maximum resolution;
+- audio (`TrackPolicy.audio`), passed through untouched: "languages" keeps every track
+  in a preferred language (commentaries too, default English), plus the film's
+  original-language track. "all" keeps every track; "first_plus_stereo" the first
+  track plus an AAC stereo copy of it. A Disc with none of them keeps its first
+  audio track, so the Encode is never silent;
+- subtitles (`TrackPolicy.subtitles`), copied: "languages" keeps every track in a
+  preferred language, plus forced tracks with no language tag; or "all", or "none";
 - chapters and global tags are kept.
-Default tracks: the original-language audio; an English film shows only its forced
-subtitles, a foreign film its full English subtitles.
+Default tracks: the original-language audio; a film in a preferred language shows only
+its forced subtitles, any other film the full subtitles of the most preferred
+language that has them.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import get_args
 
-from ama.config import CqConfig
+from ama.config import AudioChoice, CqConfig, EncodeConfig, EncoderName, Speed, SubtitleChoice
 from ama.drive import DiscType
-from ama.hdr import Colour, colour_args
+from ama.hdr import HdrInfo, colour_args
+from ama.languages import language_codes
 
 ENGLISH = frozenset({"eng", "en"})
-
-# ISO 639-1 (TMDB `original_language`) -> the ISO 639-2 codes a Disc may tag it with
-# (bibliographic and terminology forms both occur).
-_ISO_639_2: dict[str, tuple[str, ...]] = {
-    "en": ("eng",), "fr": ("fre", "fra"), "de": ("ger", "deu"), "es": ("spa",),
-    "it": ("ita",), "ja": ("jpn",), "ko": ("kor",), "zh": ("chi", "zho"), "cn": ("chi", "zho"),
-    "ru": ("rus",), "pt": ("por",), "nl": ("dut", "nld"), "sv": ("swe",), "da": ("dan",),
-    "no": ("nor", "nob", "nno"), "nb": ("nob", "nor"), "fi": ("fin",), "is": ("ice", "isl"),
-    "pl": ("pol",), "cs": ("cze", "ces"), "sk": ("slo", "slk"), "hu": ("hun",),
-    "ro": ("rum", "ron"), "el": ("gre", "ell"), "tr": ("tur",), "he": ("heb",),
-    "ar": ("ara",), "fa": ("per", "fas"), "hi": ("hin",), "ta": ("tam",), "te": ("tel",),
-    "bn": ("ben",), "th": ("tha",), "vi": ("vie",), "id": ("ind",), "ms": ("may", "msa"),
-    "tl": ("tgl", "fil"), "uk": ("ukr",), "sr": ("srp",), "hr": ("hrv",), "bg": ("bul",),
-    "ca": ("cat",), "eu": ("baq", "eus"), "gl": ("glg",), "ga": ("gle",), "cy": ("wel", "cym"),
-    "et": ("est",), "lv": ("lav",), "lt": ("lit",), "sl": ("slv",), "ka": ("geo", "kat"),
-    "hy": ("arm", "hye"), "ur": ("urd",), "pa": ("pan",), "ml": ("mal",), "kn": ("kan",),
-    "mr": ("mar",), "yue": ("chi", "zho", "yue"),
-}
-
-
-def language_codes(iso_639_1: str) -> frozenset[str]:
-    """Every tag a stream in this (TMDB) language may carry."""
-    code = iso_639_1.lower()
-    return frozenset({code, *_ISO_639_2.get(code, ())}) if code else frozenset()
 
 
 @dataclass(frozen=True)
@@ -142,51 +128,172 @@ class Selection:
     original_audio: Stream | None
     forced_subtitle: Stream | None
     default_subtitle: Stream | None
+    stereo: Stream | None = None  # the audio track also written as AAC stereo, after `audio`
 
     @property
     def streams(self) -> tuple[Stream, ...]:
-        return (self.video, *self.audio, *self.subtitles)
+        """Every output stream's source, in output order (`stereo` maps its track again)."""
+        return (self.video, *self.audio, *((self.stereo,) if self.stereo else ()),
+                *self.subtitles)
+
+
+@dataclass(frozen=True)
+class TrackPolicy:
+    """Which sound and subtitle tracks an Encode keeps (ADR 0010); defaults are v1's."""
+
+    audio: AudioChoice = "languages"
+    subtitles: SubtitleChoice = "languages"
+    languages: tuple[str, ...] = ("en",)  # ISO 639-1, most preferred first
+
+    @classmethod
+    def of(cls, cfg: EncodeConfig) -> TrackPolicy:
+        return cls(cfg.audio, cfg.subtitles, cfg.preferred_languages)
 
 
 class NoVideo(ValueError):
     pass
 
 
-def select_streams(probe: Probe, original_language: str) -> Selection:
+def _first(streams: list[Stream], *tests: Callable[[Stream], bool]) -> Stream | None:
+    return next((s for s in streams if all(t(s) for t in tests)), None)
+
+
+def select_streams(probe: Probe, original_language: str,
+                   policy: TrackPolicy = TrackPolicy()) -> Selection:
     """Apply the track policy (module docstring). `original_language` is ISO 639-1."""
     video = next((s for s in probe.streams if s.kind == "video" and not s.attached_pic), None)
     if video is None:
         raise NoVideo("the Main Feature has no video stream")
     audio_all = [s for s in probe.streams if s.kind == "audio"]
     original_codes = language_codes(original_language)
-    original_is_english = bool(original_codes & ENGLISH)
-    original = next((s for s in audio_all if s.language in original_codes and not s.commentary),
-                    None)
-    keep = [s for s in audio_all if s.english or s is original]
+    preferred = [language_codes(code) for code in policy.languages]
+    wanted = frozenset().union(*preferred)
+    original = _first(audio_all, lambda s: s.language in original_codes,
+                      lambda s: not s.commentary)
+    match policy.audio:
+        case "all":
+            keep = audio_all
+        case "first_plus_stereo":
+            keep = audio_all[:1]
+        case "languages":
+            keep = [s for s in audio_all if s.language in wanted or s is original]
     if not keep and audio_all:
         keep = [audio_all[0]]
-    default_audio = original or next((s for s in keep if not s.commentary), keep[0] if keep else None)
-    if default_audio is None:
+    if not keep:
         raise NoVideo("the Main Feature has no audio")
-    subs = [s for s in probe.streams if s.kind == "subtitle"
-            and (s.english or (s.is_forced and not s.language))]
-    forced = next((s for s in subs if s.is_forced), None)
+    if not any(s is original for s in keep):
+        original = None
+    stereo = keep[0] if policy.audio == "first_plus_stereo" else None
+    default_audio = stereo or original or _first(keep, lambda s: not s.commentary) or keep[0]
+    subs_all = [s for s in probe.streams if s.kind == "subtitle"]
+    match policy.subtitles:
+        case "all":
+            subs = subs_all
+        case "none":
+            subs = []
+        case "languages":
+            subs = [s for s in subs_all
+                    if s.language in wanted or (s.is_forced and not s.language)]
+    forced = _first(subs, lambda s: s.is_forced)
     full = None
-    if not original_is_english and default_audio is original:
-        full = next((s for s in subs if not s.is_forced and not s.sdh), None) or \
-            next((s for s in subs if not s.is_forced), None)
-    return Selection(video, tuple(keep), tuple(subs), default_audio, original, forced, full)
+    if original is not None and default_audio is original and not original_codes & wanted:
+        for codes in preferred:  # the most preferred language with full subtitles
+            full_subs = [s for s in subs if s.language in codes and not s.is_forced]
+            full = _first(full_subs, lambda s: not s.sdh) or _first(full_subs)
+            if full:
+                break
+    return Selection(video, tuple(keep), tuple(subs), default_audio, original, forced, full,
+                     stereo)
 
 
 def cq_for(cq: CqConfig, disc_type: DiscType) -> int:
     return {DiscType.DVD: cq.dvd, DiscType.BD: cq.bd, DiscType.UHD: cq.uhd}[disc_type]
 
 
-# hevc_nvenc settings (notes/research/ffmpeg.md §1); CQ is per Disc Type, from config.
-VIDEO_OPTS = ["-c:v", "hevc_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr",
-              "-b:v", "0", "-profile:v", "main10", "-pix_fmt", "p010le",
-              "-rc-lookahead", "32", "-spatial-aq", "1", "-bf", "4",
-              "-temporal-aq", "1", "-b_ref_mode", "middle"]  # verified on this GPU
+@dataclass(frozen=True)
+class EncoderProfile:
+    """One encoder's ffmpeg video options (ADR 0010) and how Settings names it."""
+
+    label: str
+    note: str  # under the label in Settings, when it works
+    quality: str  # its constant-quality option, given the Disc Type's CQ
+    presets: tuple[str, str, str, str]  # by speed step, fastest first (`SPEEDS`)
+    before: tuple[str, ...]  # options between -preset and the quality
+    after: tuple[str, ...]  # options after the quality
+    hwaccel: tuple[str, ...] = ()  # decode options, before -i
+    slowest: tuple[str, ...] = ()  # added for the slowest step
+
+
+SPEEDS: tuple[Speed, ...] = get_args(Speed)  # fastest first
+SPEED_LABELS: dict[Speed, str] = {"faster": "Faster, bigger", "balanced": "Balanced",
+                                  "slower": "Slower, smaller", "slowest": "Slowest, smallest"}
+
+# hevc_nvenc is v1's (notes/research/ffmpeg.md §1), verified on the RTX 3060 Ti; its
+# "slower" step (the default) is v1's p7, and "slowest" adds a full-resolution second
+# pass. The preset per step is calibrated in #17.
+_NVENC_RC = ("-tune", "hq", "-rc", "vbr")
+ENCODERS: dict[EncoderName, EncoderProfile] = {
+    "hevc_nvenc": EncoderProfile(
+        "HEVC (NVIDIA)", "Fast; the default", "-cq", ("p4", "p6", "p7", "p7"), _NVENC_RC,
+        ("-b:v", "0", "-profile:v", "main10", "-pix_fmt", "p010le", "-rc-lookahead", "32",
+         "-spatial-aq", "1", "-bf", "4", "-temporal-aq", "1", "-b_ref_mode", "middle"),
+        hwaccel=("-hwaccel", "cuda"), slowest=("-multipass", "fullres")),
+    "av1_nvenc": EncoderProfile(
+        "AV1 (NVIDIA)", "Smaller files; older Plex apps may have to convert them", "-cq",
+        ("p4", "p6", "p7", "p7"), _NVENC_RC,
+        ("-b:v", "0", "-pix_fmt", "p010le", "-rc-lookahead", "32", "-spatial-aq", "1",
+         "-temporal-aq", "1"),
+        hwaccel=("-hwaccel", "cuda"), slowest=("-multipass", "fullres")),
+    "hevc_qsv": EncoderProfile(
+        "HEVC (Intel Quick Sync)", "Fast on Intel graphics", "-global_quality",
+        ("faster", "medium", "slower", "veryslow"), (),
+        ("-profile:v", "main10", "-pix_fmt", "p010le")),
+    "libx265": EncoderProfile(
+        "HEVC (software)", "Works on any PC; very slow for UHD", "-crf",
+        ("fast", "medium", "slow", "slower"), (),
+        ("-profile:v", "main10", "-pix_fmt", "yuv420p10le")),
+}
+
+
+def _x265_params(hdr: HdrInfo | None) -> list[str]:
+    """libx265 writes HDR10's mastering display and light levels only when told."""
+    params = ["log-level=error"]  # x265 logs to stderr whatever ffmpeg's -loglevel
+    if hdr is not None:
+        params += ["hdr10=1", "repeat-headers=1"]
+        if hdr.mastering is not None:
+            rx, ry, gx, gy, bx, by, wx, wy, lo, hi = hdr.mastering.key()
+            params.append(f"master-display=G({gx},{gy})B({bx},{by})R({rx},{ry})"
+                          f"WP({wx},{wy})L({hi},{lo})")
+        if hdr.max_cll is not None:
+            params.append(f"max-cll={hdr.max_cll},{hdr.max_fall or 0}")
+    return ["-x265-params", ":".join(params)]
+
+
+def video_args(encoder: EncoderName, speed: Speed, cq: int,
+               hdr: HdrInfo | None = None) -> list[str]:
+    """The video encoder's options. `hdr` (an HDR10 source) tags the output with its
+    colour (ADR-0003); `hdr.py` checks the finished Encode kept all of it."""
+    p = ENCODERS[encoder]
+    return ["-c:v", encoder, "-preset", p.presets[SPEEDS.index(speed)], *p.before,
+            p.quality, str(cq), *p.after, *(p.slowest if speed == "slowest" else ()),
+            *(_x265_params(hdr) if encoder == "libx265" else ()),
+            *(colour_args(hdr.colour) if hdr else ())]
+
+
+# The largest picture each maximum resolution allows (a cropped film keeps its shape).
+_MAX_BOX = {"1080p": (1920, 1080), "720p": (1280, 720)}
+
+
+def scale_filter(max_resolution: str) -> str | None:
+    """The `scale` filter for a `[encode.max_resolution]` value; None for "keep"."""
+    if max_resolution not in _MAX_BOX:
+        return None
+    w, h = _MAX_BOX[max_resolution]
+    return (f"scale=w='min(iw,{w})':h='min(ih,{h})':force_original_aspect_ratio=decrease"
+            ":force_divisible_by=2")
+
+
+STEREO_BITRATE = "192k"
 
 
 def _flags(*named: tuple[str, bool]) -> str:
@@ -194,25 +301,33 @@ def _flags(*named: tuple[str, bool]) -> str:
 
 
 def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
-                title: str, colour: Colour | None = None,
-                video_filter: str | None = None) -> list[str]:
-    """`colour`: tag the video with it (HDR10 sources; `hdr.py` checks the result).
-    `video_filter`: the `-vf` chain from `picture.Picture.filters`, if any."""
+                title: str, video_filter: str | None = None, *, hdr: HdrInfo | None = None,
+                encoder: EncoderName = "hevc_nvenc", speed: Speed = "slower",
+                max_resolution: str = "keep") -> list[str]:
+    """`hdr`: an HDR10 source's metadata, kept (`video_args`). `video_filter`: the `-vf`
+    chain from `picture.Picture.filters`, if any; `max_resolution` scales after it."""
     args = [str(exe), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "warning",
-            "-progress", "pipe:1", "-y", "-hwaccel", "cuda", "-i", str(src)]
+            "-progress", "pipe:1", "-y", *ENCODERS[encoder].hwaccel, "-i", str(src)]
     for s in sel.streams:
         args += ["-map", f"0:{s.index}"]
-    if video_filter:
-        args += ["-vf", video_filter]
+    chain = ",".join(f for f in (video_filter, scale_filter(max_resolution)) if f)
+    if chain:
+        args += ["-vf", chain]
     args += ["-map_chapters", "0", "-map_metadata", "0", "-metadata", f"title={title}",
-             *VIDEO_OPTS[:8], "-cq", str(cq), *VIDEO_OPTS[8:],
-             *(colour_args(colour) if colour else []),
-             "-c:a", "copy", "-c:s", "copy"]
+             *video_args(encoder, speed, cq, hdr), "-c:a", "copy"]
+    stereo = len(sel.audio)  # the stereo copy's output audio index
+    if sel.stereo:
+        args += [f"-c:a:{stereo}", "aac", f"-ac:a:{stereo}", "2", f"-b:a:{stereo}",
+                 STEREO_BITRATE, f"-metadata:s:a:{stereo}", "title=Stereo"]
+    if sel.subtitles:
+        args += ["-c:s", "copy"]
     for i, a in enumerate(sel.audio):
         args += [f"-disposition:a:{i}", _flags(("default", a is sel.default_audio),
                                                ("original", a is sel.original_audio),
                                                ("comment", a.commentary),
                                                ("hearing_impaired", a.hearing_impaired))]
+    if sel.stereo:
+        args += [f"-disposition:a:{stereo}", "0"]
     for i, s in enumerate(sel.subtitles):
         is_default = s is sel.default_subtitle or (s is sel.forced_subtitle
                                                    and sel.default_subtitle is None)
@@ -221,6 +336,18 @@ def ffmpeg_args(exe: Path, src: Path, dest: Path, sel: Selection, cq: int,
                                                ("hearing_impaired", s.sdh))]
     return args + ["-max_muxing_queue_size", "4096", "-default_mode", "passthrough",
                    "-f", "matroska", str(dest)]
+
+
+# The test encode (ADR 0010): 5 s of a 1080p test pattern through the real video options.
+PROBE_PATTERN = "testsrc2=size=1920x1080:rate=24:duration=5"
+PROBE_CQ = 22
+
+
+def probe_args(exe: Path, encoder: EncoderName, speed: Speed) -> list[str]:
+    """A test encode with `encoder`: exit 0 means it works on this PC."""
+    return [str(exe), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "error",
+            "-f", "lavfi", "-i", PROBE_PATTERN, *video_args(encoder, speed, PROBE_CQ),
+            "-f", "null", "-"]
 
 
 def ffprobe_args(exe: Path, src: Path) -> list[str]:

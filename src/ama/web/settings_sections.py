@@ -13,12 +13,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 from markupsafe import Markup
 
+from ama.encode import ENCODERS, SPEED_LABELS, SPEEDS
+from ama.languages import name_of
+
 if TYPE_CHECKING:
     from ama.app import Services
+    from ama.config import Config
 
 # A placeholder or status can depend on the running app (e.g. the drive Windows found).
 Dynamic = Callable[["Services"], str]
@@ -45,8 +49,43 @@ class Field:
 
 
 @dataclass(frozen=True)
+class Option:
+    """One choice of a `Choice` row, or of a `PerType` select column."""
+
+    value: str  # as written to ama.toml
+    label: str
+    note: str = ""  # under the label (radios only)
+    disabled: bool = False  # shown but can't be picked ("Not available on this PC")
+    broken: bool = False  # the saved choice, and it stopped working
+
+
+# A row's options can depend on the running app and the value saved now.
+Options = tuple[Option, ...] | Callable[["Services", str], tuple[Option, ...]]
+# Why a submitted choice can't be saved (e.g. an encoder that failed its test), or "".
+Check = Callable[["Services", str, str], str]  # (services, submitted, saved) -> message
+
+
+@dataclass(frozen=True)
+class Choice:
+    """One setting picked from a list: radios (`style="radio"`) or a select."""
+
+    key: str
+    label: str
+    options: Options
+    hint: str | Markup = ""
+    tech: str | Markup = ""
+    style: str = "radio"  # "radio" | "select"
+    check: Check | None = None
+    after: str = ""  # a partial rendered under the control (e.g. "Test encoders again")
+
+    def keys(self) -> Iterator[str]:
+        yield self.key
+
+
+@dataclass(frozen=True)
 class PerType:
-    """One row holding a table with a value per Disc Type (scratch need, Encode quality)."""
+    """One row holding a table with a value per Disc Type (scratch need, Encode quality),
+    and optionally a second column of selects (`select_column`, `selects`)."""
 
     id: str
     label: str
@@ -55,13 +94,17 @@ class PerType:
     hint: str | Markup = ""
     tech: str | Markup = ""
     unit: str = ""
+    select_column: str = ""
+    selects: tuple[tuple[str, tuple[Option, ...]], ...] = ()  # (key, options) per row
 
     def keys(self) -> Iterator[str]:
         for _, key in self.rows:
             yield key
+        for key, _ in self.selects:
+            yield key
 
 
-Row = Field | PerType
+Row = Field | PerType | Choice
 
 
 @dataclass(frozen=True)
@@ -74,6 +117,10 @@ class Group:
     advanced: bool = False  # an "Advanced" disclosure, closed by default
     intro: str = ""  # a paragraph at the top of an Advanced disclosure
     status: Callable[[Services], Status] | None = None  # e.g. "Connected" by the heading
+    # A disclosure without the "Advanced" tag: its own title, and `summary` of the saved
+    # values in place of "You probably don't need to change this."
+    tagged: bool = True
+    summary: Callable[[Config], str] | None = None
     # A group showing app state, not ama.toml keys: rendered by this partial, rows empty.
     template: str = ""
 
@@ -90,6 +137,7 @@ class Section:
     groups: tuple[Group, ...]
     note: str | Markup = ""  # under the sheet; default says the file is the source
     template: str = ""  # an extra partial after the groups (later sections)
+    header: str = ""  # a partial above the groups (e.g. the Encode's broken-encoder notice)
 
     @property
     def sub(self) -> bool:
@@ -140,6 +188,62 @@ def _nas_status(services: Services) -> Status:
         case NasUnreachable():
             return Status("Can't reach the NAS", ok=False)
     return Status("Connecting", ok=False)
+
+
+def _encoder_options(services: Services, saved: str) -> tuple[Option, ...]:
+    """Every encoder; only those whose last test encode worked can be picked (ADR 0010).
+    The saved one stays pickable, so the page still saves when it has stopped working."""
+    from ama.encoder_probe import ProbeFailed, ProbeWorks
+    options = []
+    for name, p in ENCODERS.items():
+        st = services.encoders.states[name]
+        mine = name == saved
+        match st:
+            case ProbeWorks():
+                options.append(Option(name, p.label, p.note))
+            case ProbeFailed(at=at):
+                options.append(Option(name, p.label, f"Stopped working at the {at:%H:%M} test"
+                                      if mine else "Not available on this PC",
+                                      disabled=not mine, broken=mine))
+            case _:
+                options.append(Option(name, p.label, "Testing on this PC…", disabled=not mine))
+    return tuple(options)
+
+
+def _encoder_check(services: Services, submitted: str, saved: str) -> str:
+    from ama.encoder_probe import ProbeUntested, ProbeWorks
+    st = services.encoders.states.get(submitted)  # type: ignore[call-overload]
+    if submitted == saved or isinstance(st, ProbeWorks) or st is None:
+        return ""  # unknown names are the config model's to reject
+    if isinstance(st, ProbeUntested):
+        return "AMA is still testing this encoder; try again in a minute"
+    return "This encoder didn't pass its test encode on this PC"
+
+
+_NATIVE = {"dvd": "576p", "bd": "1080p", "uhd": "2160p"}
+
+
+def _resolutions(disc_type: str) -> tuple[Option, ...]:
+    from ama.config import MaxResolutionConfig
+    values = get_args(MaxResolutionConfig.model_fields[disc_type].annotation)
+    return tuple(Option(v, f"Keep ({_NATIVE[disc_type]})" if v == "keep" else v)
+                 for v in values)
+
+
+def _encode_summary(cfg: Config) -> str:
+    """'Now: quality 20 to 22 · copy all sound · subtitles in English, Japanese'."""
+    enc = cfg.encode
+    lo, hi = min(enc.cq.dvd, enc.cq.bd, enc.cq.uhd), max(enc.cq.dvd, enc.cq.bd, enc.cq.uhd)
+    langs = ", ".join(name_of(c) for c in enc.preferred_languages)
+    sound = {"all": "copy all sound", "first_plus_stereo": "first sound track plus stereo",
+             "languages": f"sound in {langs}"}[enc.audio]
+    subs = {"all": "all subtitles", "languages": f"subtitles in {langs}",
+            "none": "no subtitles"}[enc.subtitles]
+    quality = f"quality {lo}" if lo == hi else f"quality {lo} to {hi}"
+    return f"Now: {quality} · {sound} · {subs}"
+
+
+_ENCODE_NOTE = "Used for Encodes that haven't started"
 
 
 def _key(*keys: str) -> Markup:
@@ -231,15 +335,43 @@ SECTIONS: list[Section] = [
     )),
     Section("archive/encode", "archive", "Encode", (
         Group("Encoder", (
+            Choice("encode.encoder", "Encoder", _encoder_options,
+                   "Only encoders that pass a test encode on this PC can be picked. Every "
+                   "Archive is an MKV file at a steady quality, and UHD Discs keep their HDR "
+                   "picture.", "HDR10 is kept; Dolby Vision isn't.", check=_encoder_check,
+                   after="partials/encoder_retest.html"),
+            Choice("encode.speed", "Speed",
+                   tuple(Option(s, SPEED_LABELS[s]) for s in SPEEDS),
+                   "Slower makes smaller files at the same quality. The same four steps on "
+                   "every encoder.", style="select"),
+        ), live=True, note=_ENCODE_NOTE),
+        Group("Quality, sound and subtitles", (
             PerType("enc-q", "Quality and size", "Quality",
                     tuple((n, f"encode.cq.{k}") for n, k in _DISC_TYPES),
                     hint="Lower numbers keep more detail and make bigger files; 18 to 24 suits "
                          "most Discs. Archives are kept for good, so settle these before you "
                          "archive a lot.",
                     tech=Markup("Constant quality (CQ), 0 to 51. ")
-                    + _key("[encode.cq] dvd", "bd", "uhd")),
-        ), live=True, note="Used for Encodes that haven't started"),
-    ), note="Changes apply to Jobs whose Encode hasn't started."),
+                    + _key("[encode.cq] dvd", "bd", "uhd"),
+                    select_column="Max resolution",
+                    selects=tuple((f"encode.max_resolution.{k}", _resolutions(k))
+                                  for _, k in _DISC_TYPES)),
+            Choice("encode.audio", "Sound", (
+                Option("all", "Copy all tracks"),
+                Option("first_plus_stereo",
+                       "First track, plus a stereo copy that plays everywhere (AAC)"),
+                Option("languages", "Preferred languages only"),
+            ), "Copy all keeps every language and commentary. Preferred languages also keeps "
+               "the film's original language."),
+            Choice("encode.subtitles", "Subtitles", (
+                Option("all", "All"), Option("languages", "Preferred languages"),
+                Option("none", "None"),
+            ), "Preferred languages also keeps forced subtitles that have no language."),
+            Field("encode.languages", "Preferred languages",
+                  "In order of preference. Used by the sound and subtitle choices above."),
+        ), live=True, note=_ENCODE_NOTE, advanced=True, tagged=False, summary=_encode_summary),
+    ), note="Changes apply to Jobs whose Encode hasn't started.",
+        header="partials/encoder_problem.html"),
     Section("archive/libraries", "archive", "Libraries", (
         Group("Plex connection", (
             Field("plex.url", "Plex server",
@@ -310,7 +442,12 @@ def label_of(key: str) -> str:
                 if key in set(r.keys()):
                     name = r.label
                     if isinstance(r, PerType):
-                        name += f", {next(n for n, k in r.rows if k == key)}"
+                        keys = [k for _, k in r.rows]
+                        if key in keys:
+                            name += f", {r.rows[keys.index(key)][0]}"
+                        else:
+                            i = [k for k, _ in r.selects].index(key)
+                            name = f"{r.select_column}, {r.rows[i][0]}"
                     where = f"{dict(TABS)[s.tab]} › {s.name}" if s.sub else s.name
                     return f"{name} ({where})"
     return key

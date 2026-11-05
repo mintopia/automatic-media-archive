@@ -1,0 +1,5 @@
+{#- Archive › Encode: the configured encoder failed its last test encode (#28). -#}
+{%- set p = encoder_problem -%}
+{%- if p %}
+    <div class="notice setnotice" role="alert"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>{{ p.label }} {{ "stopped working" if p.stopped else "doesn't work on this PC" }}</b>The test encode at {{ "{:%H:%M}".format(p.at) }} failed, so Encodes will fail until it works again or you pick another encoder.<span class="ts" style="display:block;margin-top:4px">Error: {{ p.detail }}</span></div></div>
+{%- endif %}

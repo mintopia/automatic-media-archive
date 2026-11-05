@@ -1,8 +1,9 @@
 """The one Encode, shared by films, their Extras and TV: one at a time, whoever asks.
 
 ffprobe picks the streams (`encode.py`), the picture is sampled for bars and scan
-type (`picture.py`), HDR10 is checked on both sides (`hdr.py`), and ffmpeg
-hevc_nvenc writes `<name>.tmp.mkv`, renamed when it is good.
+type (`picture.py`), HDR10 is checked on both sides (`hdr.py`), and ffmpeg with
+the configured encoder (`[encode]`, ADR 0010) writes `<name>.tmp.mkv`, renamed when
+it is good.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from ama import encode, hdr, picture
-from ama.config import CqConfig
+from ama.config import EncodeConfig
 from ama.db import Database
 from ama.jobs import JobRecord, JobStatus, JobStore, TitleRecord
 from ama.drive import DiscType
@@ -91,13 +92,13 @@ class _Aborted(Exception):
 
 
 class Encoder:
-    def __init__(self, jobs: JobStore, bus: EventBus, cq: CqConfig, tool: ToolLookup,
+    def __init__(self, jobs: JobStore, bus: EventBus, cfg: EncodeConfig, tool: ToolLookup,
                  streamer: Streamer, clock: Callable[[], float] = time.monotonic,
                  hold: Callable[[], bool] = lambda: False) -> None:
         self._hold = hold  # start no new Encode (a restart is waiting)
         self._jobs = jobs
         self._bus = bus
-        self.cq = cq
+        self.cfg = cfg  # live: `Services.apply_live` replaces it
         self._tool = tool
         self._stream = streamer
         self._clock = clock
@@ -133,6 +134,7 @@ class Encoder:
                             extra: bool) -> int | None:
         then = (f"The Extra “{name}” is left out; the film is filed without it" if extra
                 else "The Rip is kept; the Encode will be tried again when the app restarts")
+        cfg = self.cfg  # fixed for this Encode once it starts (ADR 0010)
         src = rec.scratch_dir / title.file
         tmp = done.with_name(f"{done.stem}.tmp.mkv")
         self._abort = False
@@ -145,7 +147,8 @@ class Encoder:
                                            probe_lines.append)
             try:
                 probe = encode.parse_probe("\n".join(probe_lines))
-                sel = encode.select_streams(probe, original_language)
+                sel = encode.select_streams(probe, original_language,
+                                            encode.TrackPolicy.of(cfg))
             except ValueError as e:
                 return self._failed(rec, then, f"Couldn't read Title {title.number} ({e}; ffprobe exit "
                                          f"{code})", probe_lines[-LOG_TAIL:])
@@ -159,11 +162,17 @@ class Encoder:
             if kind != rec.disc_type and not extra:
                 self._jobs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
                                         f"its Main Feature is 4K, so it is encoded as a UHD")
-            cq = encode.cq_for(self.cq, kind)
+            cq = encode.cq_for(cfg.cq, kind)
+            max_resolution = getattr(cfg.max_resolution, kind.name.lower())
             pic = await self._analyse_picture(rec, ffmpeg, src, probe)
             self._jobs.log(rec.id, pic.describe())
-            self._jobs.log(rec.id, f"Encoding Title {title.number} as {name}: HEVC "
-                                    f"10-bit, CQ {cq}; keeping {len(sel.audio)} audio and "
+            scaled = (f", at most {max_resolution}"
+                      if encode.scale_filter(max_resolution) else "")
+            stereo = " (plus an AAC stereo copy)" if sel.stereo else ""
+            self._jobs.log(rec.id, f"Encoding Title {title.number} as {name}: "
+                                    f"{encode.ENCODERS[cfg.encoder].label} 10-bit, quality "
+                                    f"{cq}, {encode.SPEED_LABELS[cfg.speed].lower()}{scaled}; "
+                                    f"keeping {len(sel.audio)} audio{stereo} and "
                                     f"{len(sel.subtitles)} subtitle tracks, {probe.chapters} "
                                     "chapters")
             if source_hdr.is_hdr10:
@@ -188,9 +197,10 @@ class Encoder:
 
             tmp.unlink(missing_ok=True)
             started = self._clock()
-            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, name,
-                                      colour=source_hdr.colour if source_hdr.is_hdr10 else None,
-                                      video_filter=pic.filters)
+            args = encode.ffmpeg_args(ffmpeg, src, tmp, sel, cq, name, pic.filters,
+                                      hdr=source_hdr if source_hdr.is_hdr10 else None,
+                                      encoder=cfg.encoder, speed=cfg.speed,
+                                      max_resolution=max_resolution)
             try:
                 code = await asyncio.to_thread(self._stream, args, on_line)
             except asyncio.CancelledError:
