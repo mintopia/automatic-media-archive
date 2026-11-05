@@ -16,9 +16,10 @@ from ama.app import create_app
 from ama.events import EventBus
 from ama.notify import Discord, Event, Notification, Notifier, Ntfy
 from ama.problems import Problem, Problems
-from ama.jobs import JobStatus
+from ama.jobs import JobStatus, TitleRecord
 from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
+from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response
 
 WEBHOOK = "https://discord.com/api/webhooks/123/secret-token"
 DONE = "Rip done · insert the next one"
@@ -209,3 +210,30 @@ def test_a_failed_channel_is_named_in_the_problem_while_the_others_deliver(harne
     [banner] = problems.banners()
     assert banner.problem == Problem.NOTIFY and banner.detail == "Discord: OSError"
     assert len(up.sent) == 1
+
+
+def test_filing_a_job_notifies_both_channels_with_what_it_was_filed_as(notified):
+    _insert(notified, DISC_1, 24, _response(only=SPECIAL))
+    _sent(notified, 2)
+
+    rec = notified.services.jobs.list(JobStatus.FILED)[0]
+    assert _titles(notified) == ([DONE, "Filed"],) * 2
+    assert rec.title in _ntfy(notified)[1]["message"]
+    assert rec.title in _discord(notified)[1]["embeds"][0]["description"]
+    assert _ntfy(notified)[1]["tags"] == ["file_folder"]
+
+
+def test_a_job_filed_with_no_titles_in_it_sends_no_filed_alert(notified):
+    jobs = notified.services.jobs
+    empty = jobs.create(DiscType.BD, "ALL_SKIPPED", "empty")
+    jobs.set_titles(empty.id, [TitleRecord(1, 0, 3600, 1, 1, 0, "", "t1.mkv")], 0, 0)
+    jobs.mark_ripped(empty.id)
+    jobs.mark_filed(empty.id, "Nothing", notified.nas_root / "Nothing")
+    _insert(notified, DISC_1, 24, _response(only=SPECIAL))
+    eventually(lambda: "Filed" in _titles(notified)[0] and "Filed" in _titles(notified)[1])
+    time.sleep(0.3)
+
+    filed = [m["message"] for m in _ntfy(notified) if m["title"] == "Filed"]
+    filed += [m["embeds"][0]["description"] for m in _discord(notified)
+              if m["embeds"][0]["title"] == "Filed"]
+    assert len(filed) == 2 and not any("ALL_SKIPPED" in m for m in filed)

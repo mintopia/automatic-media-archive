@@ -11,6 +11,7 @@ until the next Disc is let in.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -24,6 +25,17 @@ from ama.events import EventBus, Topic
 log = logging.getLogger(__name__)
 
 GB = 1000**3
+
+
+def dir_bytes(path: Path) -> int:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                total += os.stat(os.path.join(root, name)).st_size
+            except OSError:
+                pass
+    return total
 
 
 class DiskSpace(Protocol):
@@ -91,7 +103,7 @@ class Refusal:
 class ScratchGate:
     def __init__(self, cfg: ScratchConfig, root: Path, drive: DriveMonitor, bus: EventBus,
                  disk_usage: DiskUsageFn = shutil.disk_usage) -> None:
-        self._cfg = cfg
+        self.cfg = cfg
         self._root = root
         self._drive = drive
         self._bus = bus
@@ -99,8 +111,8 @@ class ScratchGate:
         self.refused: Refusal | None = None
 
     def need_gb(self, disc_type: DiscType) -> int:
-        return {DiscType.CD: self._cfg.cd, DiscType.DVD: self._cfg.dvd,
-                DiscType.BD: self._cfg.bd, DiscType.UHD: self._cfg.uhd}[disc_type]
+        return {DiscType.CD: self.cfg.cd, DiscType.DVD: self.cfg.dvd,
+                DiscType.BD: self.cfg.bd, DiscType.UHD: self.cfg.uhd}[disc_type]
 
     def usage(self) -> ScratchUsage | None:
         try:

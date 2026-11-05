@@ -69,6 +69,13 @@ cd = 1
 dvd = 10
 bd = 50
 uhd = 100
+# Days a failed Encode's Rip is kept on scratch for a retry; 0 keeps it until you
+# remove it. Older ones are removed, oldest first, at startup, every hour and when
+# a Job finishes; each cleanup is listed in Logs.
+retention_days = 0
+# Free scratch (GB) to keep: with less free, kept Rips are removed whatever their
+# age, oldest first, until there's more; 0 turns it off.
+floor_gb = 0
 
 [rip.min_title_seconds]
 # Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
@@ -88,10 +95,11 @@ url = "http://nas:32400"
 # Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
 # filed folders on its own next scan.
 token = ""
-# Where the Plex server sees the NAS share (`nas.unc`), when Plex runs on another
-# machine, e.g. '/volume1/media' for Plex on the NAS itself. Empty = Plex sees
-# the share at the same path as AMA.
-nas_path = ""
+# Plex sees Libraries at: where the Plex server sees the Library folders, when
+# Plex runs on another machine. Each Library folder is this path plus the folder's
+# own name, e.g. '/volume1/media' for Plex on a NAS that sees
+# \\nas\media\Movies as /volume1/media/Movies. Empty = Plex sees each folder at the same path as AMA.
+libraries_path = ""
 
 [discord]
 # Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.
@@ -146,10 +154,12 @@ keep_days = 0
 # Libraries: named folders of the Archive, one entry per Library. Each kind
 # ("films", "tv" or "music") needs exactly one default = true; a Job is filed
 # to its kind's default unless it picked another Library of that kind.
-# `path` is a folder inside the NAS share (created when first filed to).
+# `path` is the Library's full folder path: a local folder, a mapped drive or a
+# UNC path (created when first filed to).
 # `plex` is the name of the Plex library that holds it, scanned after each
 # filing; empty = whichever Plex library's folder contains it.
-# Leave out every [[libraries]] entry to use Movies, TV and Music on the share.
+# Leave out every [[libraries]] entry to use Videos\Movies, Videos\TV and Music
+# in your user folder.
 [[libraries]]
 name = "Movies"
 kind = "films"

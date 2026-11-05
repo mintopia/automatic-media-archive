@@ -100,7 +100,7 @@ def _video_page(request: Request, services, job: JobRecord) -> Response:
     ctx = view_context(services) | _job_context(services, job)
     if active is not None and active.id == job.id:
         return TEMPLATES.TemplateResponse(request, "job.html", ctx | {"live": True})
-    if job.status == JobStatus.FAILED:
+    if job.status == JobStatus.FAILED and job.scratch_cleaned_at is None:
         licence = job.failure is not None and job.failure.kind == FailureKind.LICENCE
         return TEMPLATES.TemplateResponse(
             request, "job_licence.html" if licence else "job_failed.html", ctx)

@@ -313,6 +313,18 @@ SECTIONS: list[Section] = [
                     hint="With less free, an inserted Disc is ejected unripped and Now shows "
                          "what's holding scratch.", unit="GB"),
         )),
+        Group("Scratch cleanup", (
+            Field("scratch.retention_days", "Remove kept scratch after",
+                  "A failed Encode keeps its Rip on scratch to try again. After this many "
+                  "days it's removed, oldest first; the Job keeps its record. 0 never removes "
+                  "it. Checked at startup, every hour and when a Job finishes; each cleanup "
+                  "is listed in Logs.", unit="days"),
+            Field("scratch.floor_gb", "Free scratch to keep",
+                  "With less free than this, kept scratch is removed whatever its age, "
+                  "oldest first, until there's enough. 0 turns it off. It never stops a "
+                  "Rip; a Disc is still ejected unripped only by the space it needs.",
+                  unit="GB"),
+        ), live=True, note="Takes effect at once"),
         Group("Database and log file", (
             Field("paths.state_db", "Database",
                   Markup("AMA's record of every Job. A plain name is kept next to "
@@ -414,10 +426,11 @@ SECTIONS: list[Section] = [
                   "Lets AMA tell Plex to look for new files as soon as a Job is filed. "
                   "Without it, Plex finds them on its next scheduled scan.",
                   "Plex calls it the X-Plex-Token."),
-            Field("plex.nas_path", "Share path seen by Plex",
-                  "Only if Plex runs on another machine: where that machine sees the NAS share. "
-                  "Leave empty when Plex sees the same path as AMA.",
-                  placeholder="Same as the NAS share"),
+            Field("plex.libraries_path", "Plex sees Libraries at",
+                  "Only if Plex runs on another machine: the folder where that machine sees "
+                  "your Library folders, each by its own name. Leave empty when Plex sees "
+                  "them at the same paths as AMA.",
+                  placeholder="Same paths as AMA"),
         ), live=True, status=_plex_status),
     ), note=Markup("A Job goes to its kind's default unless you pick another Library in its "
                    "settings before it's filed. Each Library saves on its own, to "
@@ -449,8 +462,8 @@ SECTIONS: list[Section] = [
     Section("alerts", "alerts", "Alerts", (
         Group("Discord", (
             Field("discord.webhook_url", "Webhook URL",
-                  "Posts to a Discord channel when a Disc needs Review, is done or failed. "
-                  "Empty turns Discord off."),
+                  "Posts to a Discord channel when a Rip is done and when a Job needs Review, "
+                  "is filed or failed. Empty turns Discord off."),
         ), live=True, note="Used from the next alert"),
         Group("ntfy", (
             Field("ntfy.url", "Server",
@@ -460,8 +473,8 @@ SECTIONS: list[Section] = [
                   "Anyone who knows the topic can read your alerts, so it's kept like a "
                   "password. Empty turns ntfy off."),
         ), live=True, note="Used from the next alert"),
-    ), note=Markup("Alerts go out when a Disc needs Review, is filed (“insert the next one”) "
-                   "or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
+    ), note=Markup("Alerts go out when a Rip is done (“insert the next one”) and when a Job "
+                   "needs Review, is filed or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
                    "Archive › Libraries</a>.")),
     Section("logs", "logs", "Logs", (
         Group("Step output", (

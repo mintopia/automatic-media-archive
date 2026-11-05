@@ -24,7 +24,7 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from ama.config import EDITED, Config, ConfigError, LibraryKind, load_config
+from ama.config import EDITED, Config, ConfigError, LibraryKind, library_folder, load_config
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 # Everything else is read once at startup. A table added here needs its consumer
 # wired in `apply_live`.
 LIVE_TABLES = frozenset({"cd", "encode", "plex", "tmdb", "discord", "ntfy", "libraries",
-                         "logs", "rip"})
+                         "logs", "rip", "scratch"})
 
 
 def is_live(key: str) -> bool:
@@ -228,15 +228,16 @@ class SettingsFile:
         for k in ("name", "path"):
             if not fields[k]:
                 errors[k] = "This can't be empty"
+        if fields["path"]:
+            try:
+                library_folder(fields["path"])
+            except ValueError as e:
+                errors["path"] = str(e)
         clash = next((lib["name"] for i, lib in enumerate(libraries)
                       if i != index and lib["name"].casefold() == fields["name"].casefold()),
                      None)
         if clash and fields["name"]:
             errors["name"] = f"There's already a Library called {clash}"
-        share = Path(doc.unwrap().get("nas", {}).get("unc", ""))
-        if fields["path"] and (Path(fields["path"]) == share
-                               or not Path(fields["path"]).is_relative_to(share)):
-            errors["path"] = f"Pick a folder inside the NAS share, {share}"
         if errors:
             raise SettingsRejected(errors, [])
         if original is None:
@@ -303,6 +304,46 @@ class SettingsFile:
                 else:
                     entry[key] = _toml_value(value, str(value))
         _write_atomic(self.path, doc.as_string())
+
+
+def upgrade(path: Path) -> bool:
+    """Rewrite a v1/v2 file once for plain Library paths (ADR 0011): each Library's folder
+    is resolved against `nas.unc` (the share's Movies, TV and Music when it lists none) and
+    `plex.nas_path` becomes `plex.libraries_path`. True if the file changed (its previous
+    text is the `.bak`); a file already rewritten, missing or unparsable is left alone."""
+    try:
+        doc = tomlkit.parse(path.read_text(encoding="utf-8", newline=""))
+    except (FileNotFoundError, tomlkit.exceptions.ParseError):
+        return False
+    changed = False
+    plex = doc.get("plex")
+    if plex is not None and "nas_path" in plex:
+        if "libraries_path" not in plex:
+            plex["libraries_path"] = plex["nas_path"]
+        del plex["nas_path"]
+        changed = True
+    unc = doc.get("nas", {}).get("unc")
+    if isinstance(unc, str) and unc:
+        if "libraries" not in doc:
+            doc.add(tomlkit.nl())
+            aot = tomlkit.aot()
+            for kind in LibraryKind:
+                entry = tomlkit.table()
+                folder = str(Path(unc) / kind.folder)
+                entry.update({"name": kind.folder, "kind": kind.value,
+                              "path": _toml_value(folder, folder), "default": True})
+                aot.append(entry)
+            doc["libraries"] = aot
+            changed = True
+        for entry in doc["libraries"]:
+            folder = entry.get("path")
+            if isinstance(folder, str) and not Path(folder).is_absolute():
+                resolved = str(Path(unc) / folder)
+                entry["path"] = _toml_value(resolved, resolved)
+                changed = True
+    if changed:
+        _write_atomic(path, doc.as_string())
+    return changed
 
 
 class Settings:
