@@ -77,6 +77,34 @@ def test_an_existing_config_with_only_cq_gets_todays_encode_defaults(tmp_path):
         "keep", "keep", "keep")
 
 
+def _v1_config(tmp_path, letter: str, plex: str, webhook: str, ntfy: str) -> Path:
+    text = EXAMPLE.read_text(encoding="utf-8")
+    for old, new in [('letter = ""', f"letter = '{letter}'"),
+                     ('url = "http://nas:32400"', f"url = '{plex}'"),
+                     ('webhook_url = ""', f"webhook_url = '{webhook}'"),
+                     ('url = "https://ntfy.sh"', f"url = '{ntfy}'")]:
+        assert old in text, old
+        text = text.replace(old, new)
+    p = tmp_path / "ama.toml"
+    p.write_text(text, encoding="utf-8")
+    return p
+
+
+@pytest.mark.parametrize("letter, want", [("D:\\", "D:"), ("D:", "D:"), ("d", "D:"),
+                                          ("E:/", "E:"), ("", "")])
+def test_startup_loads_a_v1_drive_letter_with_or_without_its_backslash(tmp_path, letter, want):
+    cfg = load_config(_v1_config(tmp_path, letter, "http://nas:32400", "", "https://ntfy.sh"))
+    assert cfg.drive.letter == want
+
+
+def test_startup_loads_v1_addresses_without_a_scheme_or_a_discord_host(tmp_path):
+    cfg = load_config(_v1_config(tmp_path, "", "192.168.1.10:32400",
+                                 "https://hooks.example.net/notify/abc", "ntfy.example.org"))
+    assert cfg.plex.url == "http://192.168.1.10:32400"  # Plex serves plain http locally
+    assert cfg.ntfy.url == "https://ntfy.example.org"
+    assert cfg.discord.webhook_url == "https://hooks.example.net/notify/abc"  # as v1 loaded it
+
+
 def test_preferred_languages_take_names_or_codes_in_order():
     from ama.config import EncodeConfig
     cq = {"dvd": 20, "bd": 22, "uhd": 22}

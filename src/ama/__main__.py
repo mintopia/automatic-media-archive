@@ -44,6 +44,16 @@ def _setup_logging(log_file: Path) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+def _message_box(title: str, text: str) -> None:
+    """Show `text` in a Windows message box (elsewhere, nothing): pythonw has no console."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+    mb_iconerror, mb_setforeground, mb_topmost = 0x10, 0x10000, 0x40000
+    ctypes.windll.user32.MessageBoxW(None, text, title,
+                                     mb_iconerror | mb_setforeground | mb_topmost)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="ama", description="Automatic Media Archive")
     parser.add_argument("command", nargs="?", choices=("run", "serve"), default="run",
@@ -66,10 +76,10 @@ def serve(config: Path) -> None:
     except ConfigError as e:
         if sys.stderr is not None:
             print(f"ama: {e}", file=sys.stderr)
-        else:  # no console under pythonw: leave the reason next to the config
-            config.resolve().with_name("ama-startup-error.log").write_text(
-                f"{e}\n", encoding="utf-8"
-            )
+        else:  # no console under pythonw: leave the reason next to the config, and say so
+            log = config.resolve().with_name("ama-startup-error.log")
+            log.write_text(f"{e}\n", encoding="utf-8")
+            _message_box("AMA couldn't start", f"{e}\n\nThis is also in {log}.")
         sys.exit(2)
     _setup_logging(cfg.paths.log_file)
     logging.getLogger("ama").info("starting; config %s", config.resolve())

@@ -24,7 +24,7 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from ama.config import Config, ConfigError, Kind, load_config
+from ama.config import EDITED, Config, ConfigError, Kind, load_config
 
 log = logging.getLogger(__name__)
 
@@ -177,8 +177,9 @@ class SettingsFile:
         candidate = copy.deepcopy(data)
         for key, typed in changes.items():
             _set(candidate, key, typed)
+        edited = {k for k in changes if raw_at(candidate, k) != raw_at(data, k)}
         try:
-            new = Config.model_validate(candidate)
+            new = Config.model_validate(candidate, context={EDITED: edited})
         except ValidationError as e:
             errors: dict[str, str] = {}
             general: list[str] = []

@@ -47,6 +47,19 @@ def test_invalid_input_is_rejected_per_field_and_the_file_is_unchanged(toml):
     assert not toml.with_name("ama.toml.bak").exists()
 
 
+def test_a_v1_value_startup_accepts_doesnt_block_other_edits_but_is_checked_when_edited(toml):
+    text = toml.read_text(encoding="utf-8")
+    toml.write_text(text.replace('webhook_url = ""', "webhook_url = 'https://hooks.example.net/x'")
+                    .replace('letter = ""', "letter = 'D:\\'"), encoding="utf-8")
+    assert SettingsFile(toml).save({"web.port": "8081"}) == ["web.port"]
+    assert SettingsFile(toml).save({"web.port": "8082",  # its form sends it back unchanged
+                                    "discord.webhook_url": "https://hooks.example.net/x"})
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(toml).save({"discord.webhook_url": "https://hooks.example.net/y",
+                                 "drive.letter": "D:\\"})
+    assert set(e.value.errors) == {"discord.webhook_url"}  # D:\ is a fine way to type D:
+
+
 def test_a_ui_edit_equals_the_same_hand_edit(toml, tmp_path):
     hand = tmp_path / "hand" / "ama.toml"
     hand.parent.mkdir()
