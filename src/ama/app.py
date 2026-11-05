@@ -51,7 +51,7 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, history_pages,
+from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, guess_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      settings_pages, tv_review_pages)
@@ -216,6 +216,7 @@ def create_app(services: Services) -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(jobs_pages.router)
+    app.include_router(guess_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
     app.include_router(extras_pages.router)
