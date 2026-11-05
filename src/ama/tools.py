@@ -33,6 +33,7 @@ from typing import Literal
 
 from ama.config import ToolsConfig
 from ama.events import EventBus, Topic
+from ama.makemkv import parse_scan
 from ama.proc import Runner, run
 
 log = logging.getLogger(__name__)
@@ -276,6 +277,7 @@ class Tools:
         self._makemkv_candidates = (default_makemkv_candidates() if makemkv_candidates is None
                                     else tuple(makemkv_candidates))
         self._status: dict[str, ToolStatus] = {n: ToolPending() for n in TOOL_NAMES}
+        self.drive_names: dict[str, str] = {}  # device -> name, from MakeMKV's drive listing
         self._loop: asyncio.AbstractEventLoop | None = None
         self._last_progress = 0.0
 
@@ -423,6 +425,8 @@ class Tools:
         except (OSError, subprocess.SubprocessError) as e:
             return MakemkvBroken(f"{exe} wouldn't start: {e}")
         lines = [ln.strip() for ln in result.output.splitlines() if ln.strip()]
+        self.drive_names |= {d.device: " ".join(d.name.split())
+                             for d in parse_scan(lines).drives if d.exists and d.device}
         codes = {int(m.group(1)) for ln in lines if (m := _MSG.match(ln))}
         banner = next((m.group(1) for ln in lines if (m := _BANNER.search(ln))), None)
         version = banner or "?"

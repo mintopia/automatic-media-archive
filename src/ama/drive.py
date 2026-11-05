@@ -104,6 +104,10 @@ class DriveProbe(Protocol):
         """The drive as ripping tools address it (e.g. "D:"), or None if there is none."""
         ...
 
+    def drives(self) -> tuple[str, ...]:
+        """Every optical drive the OS reports, named as `device()` names them."""
+        ...
+
 
 class WindowsDriveProbe:
     """The optical drive through Win32; classification is cached per volume so a Disc's files are
@@ -119,12 +123,13 @@ class WindowsDriveProbe:
         self._letter = letter.rstrip(":\\").upper() + ":" if letter else None
         self._cache: tuple[tuple[int, str], DriveState] | None = None
 
-    def _find_letter(self) -> str | None:
+    def drives(self) -> tuple[str, ...]:
         DRIVE_CDROM = 5
-        for c in string.ascii_uppercase:
-            if self._k32.GetDriveTypeW(f"{c}:\\") == DRIVE_CDROM:
-                return f"{c}:"
-        return None
+        return tuple(f"{c}:" for c in string.ascii_uppercase
+                     if self._k32.GetDriveTypeW(f"{c}:\\") == DRIVE_CDROM)
+
+    def _find_letter(self) -> str | None:
+        return next(iter(self.drives()), None)
 
     def device(self) -> str | None:
         return self._letter or self._find_letter()
@@ -224,6 +229,9 @@ class DriveMonitor:
 
     def device(self) -> str | None:
         return self._probe.device()
+
+    def drives(self) -> tuple[str, ...]:
+        return self._probe.drives()
 
     async def eject(self) -> None:
         """Eject the Disc and re-read the drive; raises OSError if the drive refuses."""

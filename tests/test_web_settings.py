@@ -1,5 +1,6 @@
 """The Settings page: edits ama.toml section by section (#26, ADR 0008)."""
 
+import asyncio
 import html
 from collections import Counter
 
@@ -9,7 +10,7 @@ from fastapi.testclient import TestClient
 from ama.app import create_app
 from ama.settings import is_live, keys
 from ama.web.settings_sections import SECTIONS
-from tests.conftest import make_harness, write_config
+from tests.conftest import MAKEMKV_OK, make_harness, write_config
 
 SECRETS = {"password": "pa55word-secret", "tmdb": "tmdb-secret-key", "plex": "plex-secret-token",
            "discord": "https://discord.com/api/webhooks/99/discord-secret",
@@ -167,6 +168,49 @@ def test_save_and_go_lands_on_the_next_section_only(setup):
     r = client.post("/settings/general", data={"web.port": "8080", "next": "https://evil"},
                     follow_redirects=False)
     assert r.headers["location"].startswith("/settings/general?saved=")
+
+
+def _drive_select(page: str) -> str:
+    start = page.index('name="drive.letter"')
+    return page[start:page.index("</select>", start)]
+
+
+def test_the_drive_is_picked_from_the_optical_drives_windows_reports(tmp_path):
+    h = make_harness(tmp_path, config_file=write_config(tmp_path))
+    h.drive.optical = ("D:", "E:")
+    with TestClient(create_app(h.services)) as client:
+        select = _drive_select(_page(client, "/settings/ripping"))
+    assert '<option value="" selected>Automatic (first drive found)</option>' in select
+    assert '<option value="D:">D:</option>' in select
+    assert '<option value="E:">E:</option>' in select
+
+
+def test_a_saved_drive_that_is_gone_stays_selected_and_saves_as_a_letter(tmp_path):
+    toml = write_config(tmp_path)
+    toml.write_text(toml.read_text(encoding="utf-8").replace('letter = ""', 'letter = "f"'),
+                    encoding="utf-8")
+    h = make_harness(tmp_path, config_file=toml)
+    with TestClient(create_app(h.services)) as client:
+        select = _drive_select(_page(client, "/settings/ripping"))
+        assert '<option value="F:" selected>F: (not found)</option>' in select
+        assert '<option value="D:">D:</option>' in select
+        client.post("/settings/ripping", data={"drive.letter": "D:", "drive.poll_seconds": "0.01",
+                                               "cd.offset": "667", "cd.retries": "10"})
+    assert 'letter = "D:"\n' in toml.read_text(encoding="utf-8")
+
+
+def test_a_drive_makemkv_has_seen_shows_its_name(tmp_path):
+    h = make_harness(tmp_path, config_file=write_config(tmp_path))
+    h.drive.optical = ("D:", "E:")
+    h.makemkv_check["output"] = MAKEMKV_OK + (
+        'DRV:0,0,999,0,"BD-RE PIONEER BD-RW  BDR-S11JX 1.53 NFDL016192WL","","D:"\n'
+        'DRV:1,256,999,0,"","",""\n')
+    asyncio.run(h.services.tools.check_makemkv())
+    with TestClient(create_app(h.services)) as client:
+        select = _drive_select(_page(client, "/settings/ripping"))
+    assert '<option value="D:">D: · BD-RE PIONEER BD-RW BDR-S11JX 1.53 NFDL016192WL</option>' \
+        in select
+    assert '<option value="E:">E:</option>' in select
 
 
 def test_unknown_section_is_404(setup):
