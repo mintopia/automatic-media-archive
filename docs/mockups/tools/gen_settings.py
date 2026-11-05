@@ -58,7 +58,6 @@ TABS = [("general", "General", "settings-general.html"),
 
 SUBS = [("encode", "Encode", "settings-encode.html"),
         ("libraries", "Libraries", "settings-libraries.html"),
-        ("nas", "NAS", "settings-nas.html"),
         ("identification", "Identification", "settings-identification.html")]
 
 
@@ -363,7 +362,7 @@ def libedit(title, name, plex_opts, folder, button, kind_word, plex_off=False, n
     return (f'<div class="libpanel{" new" if new else ""}">{h}<div class="libedit" role="group" aria-label="{title}">\n'
             f'  <div class="field"><label for="lib-name">Name</label><input class="input" id="lib-name" value="{name}"></div>\n'
             f'  <div class="field"><label for="lib-plex">Plex library</label>{plex}</div>\n'
-            f'  <div class="field full"><label for="lib-path">Folder</label><input class="input" id="lib-path" value="{folder}" aria-describedby="lib-path-h"><span class="hint" id="lib-path-h">On the NAS share. AMA creates it if it\'s missing, so check the spelling.</span></div>\n'
+            f'  <div class="field full"><label for="lib-path">Folder</label><input class="input" id="lib-path" value="{folder}" aria-describedby="lib-path-h"><span class="hint" id="lib-path-h">The full path: a local folder, a mapped drive or a network share. AMA creates it if it\'s missing, so check the spelling.</span></div>\n'
             f'  <div class="actions"><button class="btn quiet" type="button">Cancel</button><button class="btn pri" type="submit">{button}</button></div>\n</div></div>')
 
 
@@ -380,7 +379,7 @@ def libraries(fname, mode=None):
         films.append(librow("Family Films", *fam))
     if mode == "remove":
         films.append(librow("Movies 4K", r"\\nas\media\Movies 4K", "Movies 4K", cls="rm"))
-        films.append('<div class="libpanel"><div class="libconfirm" role="alertdialog" aria-labelledby="rm-h" aria-describedby="rm-d" tabindex="-1"><div><b id="rm-h">Remove Movies 4K?</b><span id="rm-d">Its folder and the Jobs already filed there stay on the NAS and in Plex. Jobs that picked it and aren\'t filed yet go to Movies, the Films default.</span></div><div class="actions"><button class="btn quiet" type="button">Cancel</button><button class="btn danger" type="button">Remove Library</button></div></div></div>')
+        films.append('<div class="libpanel"><div class="libconfirm" role="alertdialog" aria-labelledby="rm-h" aria-describedby="rm-d" tabindex="-1"><div><b id="rm-h">Remove Movies 4K?</b><span id="rm-d">Its folder and the Jobs already filed there stay where they are and in Plex. Jobs that picked it and aren\'t filed yet go to Movies, the Films default.</span></div><div class="actions"><button class="btn quiet" type="button">Cancel</button><button class="btn danger" type="button">Remove Library</button></div></div></div>')
     else:
         films.append(librow("Movies 4K", r"\\nas\media\Movies 4K", "Movies 4K"))
     tv = [librow("TV", r"\\nas\media\TV", "TV Shows", default=True, kind="TV")]
@@ -395,8 +394,8 @@ def libraries(fname, mode=None):
         sf("plex-token", "Plex sign-in token", secret_set("plex-token", "Plex sign-in token"), secret=True,
            hint="Lets AMA tell Plex to look for new files as soon as a Job is filed. Without it, Plex finds them on its next scheduled scan.",
            tech="Plex calls it the X-Plex-Token."),
-        sf("plex-path", "Share path seen by Plex", inp("plex-path", "/volume1/media", placeholder="Same as the NAS share"),
-           hint="Only if Plex runs on another machine: where that machine sees the NAS share. Leave empty when Plex sees the same path as AMA."),
+        sf("plex-path", "Plex sees Libraries at", inp("plex-path", "/volume1/media", placeholder="Same paths as AMA"),
+           hint="Only if Plex runs on another machine: the folder where that machine sees your Library folders, each by its own name. Leave empty when Plex sees them at the same paths as AMA."),
         foot("Plex connection").replace('class="setfoot"', 'class="setfoot sub"'),
         grp("Films", '<span class="ts">Default: Movies</span>'),
         '<div class="libs" role="list" aria-label="Films Libraries">' + "".join(films) + "</div>",
@@ -422,23 +421,7 @@ libraries("settings-libraries-remove.html", "remove")
 libraries("settings-libraries-plex-off.html", "plex-off")
 
 
-# ---------- Archive: NAS, Identification ----------
-
-rows = [
-    subnav("nas"),
-    grp("NAS share", f'<span class="ts grpst"><span class="tstat">{ico("check")}Connected</span><span class="rnote">{ico("redo")}Used after a restart</span></span>'),
-    sf("nas-unc", "Share", inp("nas-unc", r"\\nas\media"),
-       hint=r"The shared folder on your NAS that holds your Libraries, like \\nas\media. AMA connects when it starts and keeps trying while it can't.",
-       tech="Connected with Windows' <code>net use</code>."),
-    sf("nas-user", "Username", inp("nas-user", placeholder="Logged-on Windows user"),
-       hint="Leave empty to connect as the Windows user AMA runs as."),
-    sf("nas-pass", "Password", inp("nas-pass", typ="password", placeholder="Not set"),
-       hint="Once saved it's never shown again."),
-    sf("nas-retry", "Try again every", inp("nas-retry", "60", typ="number", unit="seconds"),
-       hint="How often AMA tries again while it can't reach the NAS."),
-    foot("NAS"),
-]
-page("settings-nas.html", "Archive", "archive", form("NAS settings", rows), sub="NAS")
+# ---------- Archive: Identification ----------
 
 rows = [
     subnav("identification"),
@@ -462,14 +445,14 @@ def alerts(fname, error=False):
                      '<input class="input bad" id="discord-url" type="password" name="discord-url" value="api/webhooks/1234" aria-describedby="discord-url-h discord-url-e" aria-invalid="true" spellcheck="false">'
                      f'<div class="ferr" id="discord-url-e">{ico("alert")}<span>Paste the whole webhook URL, starting with https://discord.com/api/webhooks/</span></div>'
                      '<button class="btn quiet" type="button">Keep the saved one</button>',
-                     hint="Posts to a Discord channel when a Disc needs Review, is done or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server",
                   '<input class="input bad" id="ntfy-url" type="text" name="ntfy-url" value="ntfy.sh" aria-describedby="ntfy-url-h ntfy-url-e" aria-invalid="true" spellcheck="false">'
                   f'<div class="ferr" id="ntfy-url-e">{ico("alert")}<span>Enter a full address starting with https:// or http://</span></div>',
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     else:
         discord = sf("discord-url", "Webhook URL", secret_set("discord-url", "Discord webhook URL"), secret=True,
-                     hint="Posts to a Discord channel when a Disc needs Review, is done or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server", inp("ntfy-url", "https://ntfy.sh"),
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     rows += [
@@ -482,7 +465,7 @@ def alerts(fname, error=False):
         foot("Alerts", "error" if error else "clean"),
     ]
     page(fname, "Alerts", "alerts", form("Alerts settings", rows),
-         note='<p class="ts setnote">Alerts go out when a Disc needs Review, is filed (“insert the next one”) or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
+         note='<p class="ts setnote">Alerts go out when a Rip is done (“insert the next one”) and when a Job needs Review, is filed or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
 
 
 alerts("settings-notifications.html")

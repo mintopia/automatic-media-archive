@@ -305,7 +305,7 @@ The spacing rhythm is 4 / 8 / 12 / 16 / 18 / 24 / 28 / 32px.
 
 **Responsive:**
 - **≤1100px:** the split collapses to one column. The aside loses its left rule and sits 28px below.
-- **Idle Now (every width):** when every bin is empty, the empty bins and the aside collapse: one centred 780px column with the drive panel, then a hairline-topped line "Nothing ripping, encoding or waiting for you. You'll get a notification when a Disc needs a decision." with a bold History link at its right (`docs/mockups/now-empty.html`).
+- **Now with nothing happening (every width):** the layout never collapses. The drive panel and every bin (Needs Review, Ripping, Encoding, History, Didn't work) stay in place, each showing its empty state: the box holds one `ink-2` line saying the bin is empty (`docs/mockups/now-empty.html`).
 - **≤720px:** the top bar wraps. The nav moves to a full-bleed, horizontally scrolling row with 48px targets, the scratch label hides and the meter shrinks to 48px. Page padding drops to 20px / 16px. The drive panel stacks, with its dark cell becoming a horizontal strip and the title dropping to 26px. Rows become two columns and their trailing action spans the full width (buttons stretch). Compact rows keep three columns. Buttons in action groups share the width equally. The selected-edition mark and the track list's Length column drop only under 480px. Long paths break after their separators (`| path` filter).
 
 ## Elevation & Depth
@@ -351,6 +351,7 @@ Plain, firm and printed.
 - **Active link:** `ink` text with a 3px `ink` underline (`aria-current`). The scratch link gets the same active state on `/scratch`.
 - **Review count:** a tomato badge (700, 12px, 3px corners). It is its own `sse-swap` span with `aria-live="polite"`, announcing "N waiting".
 - **Scratch meter:** a 160px × 8px `well` track with a rule border and an `ink` fill that turns `review-tomato` when full. When space in use isn't all Rips, `/scratch` says "N GB is other files on this drive".
+- **Scratch page:** `/scratch`, opened from the meter, is only about scratch: one `.solo` column with the drive panel (space in use, or "Ejected: not enough space" for a refused Disc) above an `ink` "Using scratch" bin listing each Job holding scratch with its size and state, live (`docs/mockups/scratch-full.html`). The Needs Review and Encoding bins belong on Now, not here.
 - **Breadcrumb:** 14px `ink-2` text, underlined on hover; each link is a 24px target (44px on phones).
 
 ### Divider Tab + Bin (signature)
@@ -406,16 +407,16 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 
 | Tab | Holds | TOML tables |
 |---|---|---|
-| General | Web UI (Address, Port), New Discs (read-only), Storage; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
+| General | Web UI (Address, Port), Storage, Scratch cleanup; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
 | Ripping | Drive; Advanced "Reading CDs" and "Tools" | `[drive]`, `[cd]`, `[tools]` |
-| Archive | sub-nav: Encode, Libraries, NAS, Identification | `[encode.*]`; `[plex]` and the Libraries; `[nas]`; `[tmdb]` |
-| Alerts | Discord, ntfy | `[discord]`, `[ntfy]` |
+| Archive | sub-nav: Encode, Libraries, Identification | `[encode.*]`; `[plex]` and the Libraries; `[tmdb]` |
+| Alerts | Discord, ntfy, Webhook (with "Send test") | `[discord]`, `[ntfy]`, `[webhook]` |
 | Logs | Step output retention | the log settings |
 
 - **Divider file:** the five tabs are divider tabs in a row, 32px below the h1. Each tab's hit area reaches 10px upward into that gap; on phones the tabs are 44px tall (48px when open). Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each tab is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
 - **Sub-nav (Archive):** a row of 48px links under the tab, `ink-2` 500 / 15px, the current one `ink` 600 with a 3px `ink` underline.
 - **Group:** a 700 / 16px heading with an optional 13px `ink-2` note at the right (for example "Takes effect at once").
-- **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px. A read-only value (New Discs in General) is plain text with a "Change in the menu" button.
+- **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px.
 - **Wording:** the plain explanation comes first and the technical term second (`.tech`, under the hint). TOML keys ("Key `[cd] offset`") appear only in Advanced rows and the Encode disclosure.
 - **Advanced:** expert sections sit in a closed `<details>`: a 64px summary with the name, an "Advanced" tag (20px, rule-bordered, 600 / 11px), "You probably don't need to change this." in `ink-2`, the group's restart note at the right and a chevron that turns open. Encode's "Quality, sound and subtitles" uses the same disclosure with a "Now: …" summary.
 - **Restart notes:** per group, in the group's note ("Used after a restart", "Checked when AMA starts · used after a restart", "Used from the next CD Rip"). A per-field restart tag (20px, rule-bordered, redo icon) appears only in a mixed group. Once such a key is saved it reads "Waiting for restart" with an `ink` border.
@@ -432,7 +433,7 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 ### Logs
 Every run's steps and their output, laid out like a CI run log (`docs/mockups/logs*.html`, `now-output.html`). Reached from the top-bar menu.
 - **Run list:** an h1, then filters: a search box (up to 380px, full width on phones) that filters runs by Disc, Job or kind, with a "No runs match" state and a match count; an All / Jobs / App segmented control (44px segments) and a "Problems only" toggle (rule-bordered, `failed-oxide` alert icon; filled `ink` when pressed), with the output-keeping note and a Change link at the right. Runs sit in `ink` bins, one per day (Today, Yesterday, then dates), newest first, with "Older runs" at the foot.
-- **Run row:** the whole row links to the run and fills `well` on hover. A Job row is a normal row: disc-type cell, title, a meta line (current step or step count, start time, duration, error lines in `failed-oxide`), the step strip, and the Job's one sticker. An app-event row (startup, NAS, tool downloads) gets a disc-type cell holding an icon and its kind (App, NAS, Tools), and a Done (`filed-ink` check) or Failed (`failed-oxide` alert) mark instead of a sticker, since stickers belong to Jobs.
+- **Run row:** the whole row links to the run and fills `well` on hover. A Job row is a normal row: disc-type cell, title, a meta line (current step or step count, start time, duration, error lines in `failed-oxide`), the step strip, and the Job's one sticker. An app-event row (startup, tool downloads, Scratch cleanup, and NAS Runs kept from before ADR 0011) gets a disc-type cell holding an icon and its kind (App, Tools, Scratch, NAS), and a Done (`filed-ink` check) or Failed (`failed-oxide` alert) mark instead of a sticker, since stickers belong to Jobs.
 - **Step strip:** one 24 × 6px segment per step, 3px apart: done `ink-3`, running in its Phase colour (cobalt for the Rip, mustard for an Encode, `ink` otherwise), failed `failed-oxide`, waiting an empty `well` box, not run dashed. It is `aria-hidden`; the meta line says the same in words.
 - **Run page:** a breadcrumb back to Logs, the h1 and a meta line, with the sticker (or the app mark) and a quiet "Job page" button at the right. The split layout holds an `ink` Steps bin on the left and, in the aside, "This run" as a definition list (Job, Disc, Phase, times, steps, how long output is kept) and "Settings used": the Job's locked groups with their lock line. A failed run puts an attention notice above the Steps bin.
 - **Step:** a `<details>` row: a 20px state icon (`filed-ink` check, a turning loader in the Phase's `-ink` colour, `failed-oxide` alert, `ink-3` circle for waiting, `ink-3` dash for "Didn't run"; each `role="img"` with its state as the label), the step name in 600 / 16px with its subject in `ink-2` ("Encode · Main Feature, Title 1"), the tool and a short result in 13px `ink-2`, the duration at the right and a chevron that turns when open. A running step adds a 6px Phase-colour bar, percentage and time left. The header carries the tool and a short result; the exit code is in the open step's meta strip, and the Job and Phase are in the aside. Waiting and not-run steps are plain rows, not disclosures, since they have no output. A step whose output was pruned keeps its header and opens to "Output removed after N days" in place of the log, on a `well` band with an `ink-3` log icon and a "Keep output longer" link to Settings › Logs; its run row says the same, and the aside's Output line gives the date it went. On phones the duration drops under the tool line.

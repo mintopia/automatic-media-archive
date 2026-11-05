@@ -1,3 +1,0 @@
-{%- if (nas | kind) == "NasUnreachable" -%}
-<div class="notice" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Can't reach the NAS ({{ nas.unc }})</b>Check it's switched on. Retrying every {% if nas_retry_seconds == 60 %}minute{% else %}{{ nas_retry_seconds | round | int }} seconds{% endif %}; finished Discs wait safely until it's back.<span class="ts" style="display:block;margin-top:4px">Windows said: {{ nas.detail }}</span></div></div>
-{%- endif -%}

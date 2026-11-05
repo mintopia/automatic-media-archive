@@ -41,17 +41,6 @@ offset = 667
 # How many times cyanrip re-reads a frame before counting it as an error.
 retries = 10
 
-[nas]
-# UNC path of the NAS share that holds the Libraries ([[libraries]] below).
-# Connected with `net use` at startup; retried while it fails.
-unc = '\\nas\media'
-# Credentials for the share. SECRET (password). Empty username = connect as the
-# logged-on Windows user.
-username = ""
-password = ""
-# How often to retry connecting while the NAS is unreachable (seconds).
-retry_seconds = 60
-
 [paths]
 # Local scratch folder for Rips awaiting Identification, Review and Encode.
 # Needs at least 256 GB free (ADR-0005). Created if missing.
@@ -69,6 +58,20 @@ cd = 1
 dvd = 10
 bd = 50
 uhd = 100
+# Days a failed Encode's Rip is kept on scratch for a retry; 0 keeps it until you
+# remove it. Older ones are removed, oldest first, at startup, every hour and when
+# a Job finishes; each cleanup is listed in Logs.
+retention_days = 0
+# Free scratch (GB) to keep: with less free, kept Rips are removed whatever their
+# age, oldest first, until there's more; 0 turns it off.
+floor_gb = 0
+
+[rip.min_title_seconds]
+# Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
+# are menus, logos and warnings. Each Job records the minimum its Rip used.
+dvd = 30
+bd = 30
+uhd = 30
 
 [tmdb]
 # TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
@@ -81,10 +84,11 @@ url = "http://nas:32400"
 # Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
 # filed folders on its own next scan.
 token = ""
-# Where the Plex server sees the NAS share (`nas.unc`), when Plex runs on another
-# machine, e.g. '/volume1/media' for Plex on the NAS itself. Empty = Plex sees
-# the share at the same path as AMA.
-nas_path = ""
+# Plex sees Libraries at: where the Plex server sees the Library folders, when
+# Plex runs on another machine. Each Library folder is this path plus the folder's
+# own name, e.g. '/volume1/media' for Plex on a NAS that sees
+# \\nas\media\Movies as /volume1/media/Movies. Empty = Plex sees each folder at the same path as AMA.
+libraries_path = ""
 
 [discord]
 # Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.
@@ -95,6 +99,18 @@ webhook_url = ""
 # read it, so treat the topic as a SECRET. Empty topic = ntfy notifications off.
 url = "https://ntfy.sh"
 topic = ""
+
+[webhook]
+# Any URL that takes a JSON POST per alert, e.g. Home Assistant or your own script.
+# SECRET. Empty = webhook alerts off. The body is versioned JSON:
+#   {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
+#    "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+# event: rip_done, review_needed, job_filed, job_failed, or test ("Send test"; job is null).
+url = ""
+# An optional header sent with every POST, e.g. a token the receiver checks.
+# The value is a SECRET. Both must be set for the header to be sent.
+header_name = ""
+header_value = ""
 
 [encode]
 # How video Discs are Encoded (ADR 0010). Applies to Jobs whose Encode hasn't
@@ -139,10 +155,13 @@ keep_days = 0
 # Libraries: named folders of the Archive, one entry per Library. Each kind
 # ("films", "tv" or "music") needs exactly one default = true; a Job is filed
 # to its kind's default unless it picked another Library of that kind.
-# `path` is a folder inside the NAS share (created when first filed to).
+# `path` is the Library's full folder path: a local folder, a mapped drive or a
+# UNC path (created when first filed to). AMA doesn't connect or mount anything:
+# when a folder isn't reachable, its Jobs wait and filing is retried every minute.
 # `plex` is the name of the Plex library that holds it, scanned after each
 # filing; empty = whichever Plex library's folder contains it.
-# Leave out every [[libraries]] entry to use Movies, TV and Music on the share.
+# Leave out every [[libraries]] entry to use Videos\Movies, Videos\TV and Music
+# in your user folder.
 [[libraries]]
 name = "Movies"
 kind = "films"

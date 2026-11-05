@@ -5,7 +5,8 @@ from typing import get_args, get_origin
 import pytest
 from pydantic import BaseModel
 
-from ama.config import Config, ConfigError, load_config
+from ama.config import Config, ConfigError, MinTitleConfig, load_config
+from ama.drive import DiscType
 
 EXAMPLE = Path(__file__).parent.parent / "ama.example.toml"
 
@@ -32,8 +33,9 @@ def test_example_config_documents_every_setting():
 def test_example_config_mentions_each_secret_and_required_setting():
     text = EXAMPLE.read_text(encoding="utf-8").lower()
     for needle in ["tmdb", "plex", "token", "discord", "webhook", "ntfy", "topic",
-                   "unc", "username", "password", "scratch", "cq"]:
+                   "password", "scratch", "cq", "[[libraries]]"]:
         assert needle in text, needle
+    assert "[nas]" not in text and "unc =" not in text and "net use" not in text
 
 
 def test_example_config_loads(tmp_path):
@@ -167,11 +169,19 @@ def test_two_defaults_of_one_kind_are_rejected(tmp_path):
         load_config(p)
 
 
-def test_a_library_outside_the_nas_share_is_rejected(tmp_path):
-    p = _with_libraries(tmp_path, [("Movies", "films", "D:\\Movies", True),
-                                   ("TV", "tv", SHARE + "TV", True),
-                                   ("Music", "music", SHARE + "Music", True)])
-    with pytest.raises(ConfigError, match="NAS share"):
+def test_a_library_can_be_any_folder_not_just_one_on_the_nas_share(tmp_path):
+    folders = ["D:\\Movies", "\\\\other\\tv", "M:\\"]
+    p = _with_libraries(tmp_path, [("Movies", "films", folders[0], True),
+                                   ("TV", "tv", folders[1], True),
+                                   ("Music", "music", folders[2], True)])
+    assert [lib.path for lib in load_config(p).libraries] == folders
+
+
+def test_a_library_folder_must_be_a_full_path(tmp_path):
+    p = _with_libraries(tmp_path, [("Movies", "films", "Movies", True),
+                                   ("TV", "tv", "D:\\TV", True),
+                                   ("Music", "music", "D:\\Music", True)])
+    with pytest.raises(ConfigError, match="full folder path"):
         load_config(p)
 
 
@@ -183,9 +193,15 @@ def test_library_names_are_unique(tmp_path):
         load_config(p)
 
 
-def test_without_libraries_each_kind_defaults_to_its_folder_on_the_share(tmp_path):
+def test_without_libraries_each_kind_defaults_to_a_folder_in_the_users_home(tmp_path):
+    home = Path.home()
     cfg = load_config(_with_libraries(tmp_path, []))
     assert {(lib.kind.value, lib.name, lib.path, lib.default) for lib in cfg.libraries} == {
-        ("films", "Movies", SHARE + "Movies", True),
-        ("tv", "TV", SHARE + "TV", True),
-        ("music", "Music", SHARE + "Music", True)}
+        ("films", "Movies", str(home / "Videos" / "Movies"), True),
+        ("tv", "TV", str(home / "Videos" / "TV"), True),
+        ("music", "Music", str(home / "Music"), True)}
+
+
+def test_each_video_disc_type_has_its_own_minimum_title_length():
+    mins = MinTitleConfig(dvd=10, bd=20, uhd=40)
+    assert [mins.seconds(t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [10, 20, 40]

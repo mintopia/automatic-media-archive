@@ -49,6 +49,9 @@
             {%- for t in titles[shown:] %}{% include "partials/title_row.html" %}{% endfor %}
           </details>
           {%- endif %}
+          {%- if record.skipped_note %}
+          <p class="skipped">{{ record.skipped_note }}</p>
+          {%- endif %}
         </div>
       </section>
     </div>

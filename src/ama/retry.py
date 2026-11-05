@@ -1,4 +1,4 @@
-"""Waiting for things outside AMA (network, NAS, tools), shared by the archivers."""
+"""Waiting for things outside AMA (network, Library folders, tools), shared by the archivers."""
 
 from __future__ import annotations
 
@@ -11,11 +11,13 @@ from ama.problems import Problem, Problems
 
 class RetryLater(Exception):
     """Something outside AMA isn't available yet; try this step again later.
-    `problem` names an app-wide cause (a Now page banner), if it is one."""
+    `problem` names an app-wide cause (a Now page banner), if it is one; `detail` is what
+    its banner names (which Library folder)."""
 
-    def __init__(self, reason: str, problem: Problem | None = None) -> None:
+    def __init__(self, reason: str, problem: Problem | None = None, detail: str = "") -> None:
         super().__init__(reason)
         self.problem = problem
+        self.detail = detail
 
 
 class Backoff:
@@ -37,14 +39,15 @@ class Backoff:
     def due(self, key: Hashable) -> bool:
         return self._clock() >= self._not_before.get(key, 0.0)
 
-    def later(self, key: Hashable, why: str = "", problem: Problem | None = None) -> bool:
+    def later(self, key: Hashable, why: str = "", problem: Problem | None = None,
+              detail: str = "") -> bool:
         """Put `key` off because of `why`; True if this starts a run of failures (so say
         why, once)."""
         self._not_before[key] = self._clock() + self.retry_seconds
         first = key not in self._failing
         self._failing.add(key)
         if self._problems is not None and why:
-            self._problems.waiting(self._job(key), why, self.retry_seconds, problem)
+            self._problems.waiting(self._job(key), why, self.retry_seconds, problem, detail)
         return first
 
     def done(self, key: Hashable) -> None:

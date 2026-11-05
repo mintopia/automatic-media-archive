@@ -75,8 +75,7 @@ def job_page(request: Request, job_id: int) -> Response:
 def _cd_page(request: Request, services, rec: JobRecord) -> Response:
     ctx = view_context(services) | _job_context(services, rec) | {"record": rec}
     if rec.status == JobStatus.FAILED:
-        tracks = services.cd.job(rec.id).tracks
-        ctx |= {"log": services.jobs.log_lines(rec.id), "track_count": len(tracks)}
+        ctx["track_count"] = len(services.cd.job(rec.id).tracks)
         return TEMPLATES.TemplateResponse(request, "cd_failed.html", ctx)
     cd = services.cd.current
     live = cd is not None and cd.job_id == rec.id
@@ -101,10 +100,8 @@ def _video_page(request: Request, services, job: JobRecord) -> Response:
     ctx = view_context(services) | _job_context(services, job)
     if active is not None and active.id == job.id:
         return TEMPLATES.TemplateResponse(request, "job.html", ctx | {"live": True})
-    if job.status == JobStatus.FAILED:
-        ctx["log_lines"] = services.jobs.log_lines(job.id)
+    if job.status == JobStatus.FAILED and job.scratch_cleaned_at is None:
         licence = job.failure is not None and job.failure.kind == FailureKind.LICENCE
-        ctx["log_open"] = not licence
         return TEMPLATES.TemplateResponse(
             request, "job_licence.html" if licence else "job_failed.html", ctx)
     filed = job.status == JobStatus.FILED
@@ -149,6 +146,18 @@ def job_log(request: Request, job_id: int) -> str:
     services = request.app.state.services
     _job_or_404(services, job_id)
     return "\n".join(map(str, services.jobs.log_lines(job_id))) + "\n"
+
+
+@router.post("/jobs/{job_id}/titles/{number}")
+async def tick_title(request: Request, job_id: int, number: int) -> Response:
+    """Tick (`rip` sent) or untick a Title of the Rip under way that hasn't started (ADR 0005):
+    unticked, it is Skipped. 409 if it can't be: it's ripping or done, or the Rip is over."""
+    services = request.app.state.services
+    _job_or_404(services, job_id)
+    rip = "rip" in (await request.form())
+    if not services.video_rip.skip(job_id, number, skipped=not rip):
+        return Response(status_code=409)
+    return Response(status_code=204)
 
 
 @router.post("/jobs/{job_id}/dismiss")

@@ -1,6 +1,6 @@
 """Logs (#32): every Job's Run with its Steps and their output, and app events as Runs.
 The real app with fakes: a film ripped, identified, Encoded and filed; a CD that fails;
-startup, a NAS drop and tool downloads."""
+startup, tool downloads and an old NAS Run."""
 
 from __future__ import annotations
 
@@ -136,16 +136,16 @@ def test_a_running_steps_output_is_streamed_from_its_ring(client, harness):
     assert stale.headers.get("HX-Refresh") == "true"
 
 
-def test_startup_is_a_run_with_a_step_for_settings_the_nas_and_each_tool(client, harness):
+def test_startup_is_a_run_with_a_step_for_settings_and_each_tool(client, harness):
     eventually(lambda: any(r.title == "AMA started" and r.finished_at
                            for r in harness.services.runs.list_runs()))
     run = next(r for r in harness.services.runs.list_runs() if r.title == "AMA started")
     assert run.kind == RunKind.APP and run.failed is False
     names = [s.name for s in harness.services.runs.steps(run.id)]
-    assert names == ["Read settings", "Connect to the NAS", "Check MakeMKV", "Get ffmpeg",
-                     "Get cyanrip", "Test encoders"]
+    assert names == ["Read settings", "Check MakeMKV", "Get ffmpeg", "Get cyanrip",
+                     "Test encoders"]
     page = _text(client.get(f"/logs/runs/{run.id}").text)
-    assert "App event: startup" in page and "Connected to" in page
+    assert "App event: startup" in page and "NAS" not in page
     assert "hevc_nvenc works" in page and "Configured encoder: HEVC (NVIDIA)" in page
 
 
@@ -157,17 +157,17 @@ def test_testing_the_encoders_again_is_a_run_of_its_own(client, harness):
                            for r in harness.services.runs.list_runs()))
 
 
-def test_a_nas_drop_and_reconnect_is_a_run_of_its_own(client, harness):
-    eventually(lambda: any(r.title == "AMA started" and r.finished_at
-                           for r in harness.services.runs.list_runs()))
-    harness.share["reachable"] = False
-    eventually(lambda: any(r.kind == RunKind.NAS for r in harness.services.runs.list_runs()))
-    harness.share["reachable"] = True
-    eventually(lambda: any(r.kind == RunKind.NAS and r.finished_at
-                           for r in harness.services.runs.list_runs()))
-    run = next(r for r in harness.services.runs.list_runs() if r.kind == RunKind.NAS)
-    assert run.title == "Lost the NAS, then reconnected" and run.failed is False
-    assert [s.name for s in harness.services.runs.steps(run.id)] == ["Hold filing", "Reconnect"]
+def test_a_nas_run_from_before_still_shows_in_logs(client, harness):
+    runs = harness.services.runs
+    run = runs.start_run(RunKind.NAS, "Lost the NAS", item="nas")
+    step = runs.begin(run, "hold", "Hold filing")
+    runs.line(step, "Filing waits until the NAS is back")
+    runs.end(step)
+    runs.finish_run(run, failed=False, title="Lost the NAS, then reconnected")
+    assert "Lost the NAS, then reconnected" in _text(client.get("/logs").text)
+    page = _text(client.get(f"/logs/runs/{run}").text)
+    assert "Hold filing" in page and "Filing waits until the NAS is back" in page
+    assert "/settings/nas" not in page
 
 
 def test_a_failed_download_is_a_failed_startup_and_the_retry_that_fixed_it_is_linked(tmp_path):
@@ -193,8 +193,6 @@ def test_no_command_line_or_secret_reaches_any_step_output(tmp_path):
     h = make_harness(tmp_path, password="hunter2-pass")
     with TestClient(create_app(h.services)):
         _film(h)
-        h.share["reachable"] = False
-        eventually(lambda: any(r.kind == RunKind.NAS for r in h.services.runs.list_runs()))
         job = h.services.jobs.list(JobStatus.FILED)[0]
         h.services.jobs.log(job.id, "oops: hunter2-pass")  # even if something says it
         out = []

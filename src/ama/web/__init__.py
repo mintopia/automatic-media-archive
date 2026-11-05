@@ -63,7 +63,6 @@ MENU: list[tuple[str, str, str]] = [("Settings", "/settings", "settings"), ("Log
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
-    "nas": "partials/nas.html",
     "tools": "partials/tools.html",
     "rip": "partials/rip.html",
     "ripping": "partials/ripping_bin.html",
@@ -83,14 +82,13 @@ FRAGMENTS: dict[str, str] = {
     "scratch-encode": "partials/scratch.html",
     "pause": "partials/paused_mark.html",
     "pause-menu": "partials/pause_menu.html",
-    "pause-settings": "partials/settings_pause_now.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
 FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
                                    "scratch-rip": "rip", "scratch-encode": "encode",
                                    "review-count": "review", "drive-status": "drive",
-                                   "pause-menu": "pause", "pause-settings": "pause"}
+                                   "pause-menu": "pause"}
 
 
 def fragments_for(topic: str) -> list[str]:
@@ -148,9 +146,7 @@ def view_context(services: Services) -> dict[str, Any]:
         **services.tv_archive.queue_view(),  # TV Episodes not yet filed
         "drive": services.drive.state,
         "repeat": services.repeat.pending,  # an archived Disc waiting for the user
-        "nas": services.nas.status,
         "encoder_problem": services.encoders.problem(),  # the configured encoder failed its test
-        "nas_retry_seconds": services.config.nas.retry_seconds,
         "scratch": scratch,
         "scratch_refused": services.scratch.refused,
         "scratch_view": lambda: scratch_context(services),  # walks scratch: call only if shown

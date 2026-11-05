@@ -1,33 +1,48 @@
-"""The steps every archiver takes around filing to the Archive on the NAS."""
+"""The steps every archiver takes around filing into a Library folder."""
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
 import httpx
 
-from ama.archive import FilingError
+from ama.archive import Archive, FilingError
 from ama.jobs import JobStore
-from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
+from ama.problems import Problem
 from ama.retry import RetryLater
 
 
-def require_nas(nas: NasMonitor) -> None:
-    """RetryLater unless the NAS is connected."""
-    if not isinstance(nas.status, NasConnected):
-        raise RetryLater("The NAS isn't connected")
-
-
 @contextmanager
-def to_nas() -> Iterator[None]:
-    """Copying to the NAS: any failure means try again later."""
+def to_library(archive: Archive, rel: Path, library: str | None) -> Iterator[None]:
+    """Copying into `rel`'s Library folder: its failures wait as a Problem naming the folder."""
+    where = archive.folder(Path(rel.parts[0]), library)
     try:
         yield
-    except (OSError, FilingError) as e:
-        raise RetryLater(f"Couldn't file to the NAS ({e})") from e
+    except FilingError as e:
+        raise RetryLater(f"Couldn't file to {where} ({e})") from e
+    except OSError as e:
+        if isinstance(e, FileNotFoundError) and not _within(e.filename, where):
+            raise  # a source gone from Scratch: no wait for the Library folder fixes that
+        if not os.path.isdir(where):
+            raise RetryLater(f"Can't reach the Library folder {where}", Problem.LIBRARY_FOLDER,
+                             f"Can't reach {where}") from e
+        cause = e.strerror or str(e)
+        raise RetryLater(f"Couldn't file to the Library folder {where}: {cause}",
+                         Problem.LIBRARY_FOLDER, f"{where}: {cause}") from e
+
+
+def _within(filename: object, folder: Path) -> bool:
+    if not isinstance(filename, str):
+        return True
+    for prefix, plain in (("\\\\?\\UNC\\", "\\\\"), ("\\\\?\\", "")):
+        if filename.startswith(prefix):
+            filename = plain + filename[len(prefix):]
+            break
+    return Path(filename).is_relative_to(folder)
 
 
 def scan(plex: Plex, jobs: JobStore, job_id: int, folder: Path) -> None:

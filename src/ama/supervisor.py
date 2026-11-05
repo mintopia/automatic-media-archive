@@ -25,6 +25,7 @@ from pathlib import Path
 import httpx
 
 from ama.config import ConfigError, load_config
+from ama.settings import upgrade
 from ama.start_at_login import StartAtLogin, WindowsRunKey, command_line
 from ama.tray import CONTROL_ENV, ServerControl, Tray, local_urls, make_icon
 
@@ -104,6 +105,7 @@ def run(config: Path, platform: str = sys.platform,
 
     def launch() -> int:
         try:  # the file the child is about to read, so the address it will listen on
+            upgrade(config)
             web = load_config(config).web
         except ConfigError:
             pass  # the child reports it and exits

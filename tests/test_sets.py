@@ -1,4 +1,4 @@
-"""Video multi-disc sets (#14), end to end: the real app with fakes for ffmpeg, the NAS
+"""Video multi-disc sets (#14), end to end: the real app with fakes for ffmpeg, the Library
 folder and the web (TMDB, Plex).
 
 A later Disc of a set (the next Disc of a TV season, a film's Extras Disc) is attached
@@ -33,7 +33,7 @@ def _file_first_office_disc(harness, client):
 
 
 def _season_files(harness) -> list[str]:
-    root = extended_path(harness.nas_root / SHOW / "Season 01")
+    root = extended_path(harness.libraries_root / SHOW / "Season 01")
     return sorted(p.name for p in root.glob("*.mkv"))
 
 
@@ -104,7 +104,7 @@ def test_an_extras_disc_files_its_titles_as_extras_in_the_films_folder(harness, 
     assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
     filed = _filed(harness, rec)
     assert filed.title == "Example Movie (2016) · 3 Extras"
-    root = extended_path(harness.nas_root / FILM)
+    root = extended_path(harness.libraries_root / FILM)
     files = {p.relative_to(root).as_posix() for p in root.rglob("*.mkv")}
     assert "Example Movie (2016) {tmdb-1234} - 1080p.mkv" in files  # Disc 1, untouched
     assert {f for f in files if "BONUS" in f} == {

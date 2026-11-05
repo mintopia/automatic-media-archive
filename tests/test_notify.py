@@ -6,14 +6,20 @@ import json
 import threading
 import time
 from collections.abc import Iterator
+from datetime import datetime
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
-from ama.jobs import JobStatus
+from ama.events import EventBus
+from ama.notify import Discord, Event, Notification, Notifier, Ntfy
+from ama.problems import Problem, Problems
+from ama.jobs import Failure, FailureKind, JobStatus, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
+from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response
 
 WEBHOOK = "https://discord.com/api/webhooks/123/secret-token"
 DONE = "Rip done · insert the next one"
@@ -98,6 +104,18 @@ def test_discarding_a_rip_in_review_is_not_a_failure_to_report(app):
     assert _titles(h) == ([DONE, "Review needed"],) * 2
 
 
+def test_a_job_whose_scratch_was_cleaned_up_is_a_failure_to_report(notified):
+    jobs = notified.services.jobs
+    old = jobs.create(DiscType.BD, "OLD_FILM", "video")
+    jobs.mark_ripped(old.id)
+    jobs.mark_scratch_cleaned(old.id, Failure(FailureKind.SCRATCH_CLEANED, "Scratch cleaned up",
+                                              "Insert the Disc again to rip it again."))
+    notified.drive.insert(DiscType.CD, "KID_A")  # any bus event makes the notifier look
+
+    eventually(lambda: "Job failed" in _titles(notified)[1])
+    assert any("OLD_FILM" in m["message"] for m in _ntfy(notified) if m["title"] == "Job failed")
+
+
 def test_the_messages_are_safe_well_formed_requests(notified):
     notified.drive.insert(DiscType.CD, "@everyone")
     _sent(notified, 1)
@@ -153,3 +171,82 @@ def test_a_channel_that_hangs_never_holds_up_the_next_rip(notified, monkeypatch)
     notified.drive.insert(DiscType.CD, "SECOND")
     eventually(lambda: len(notified.services.jobs.list(JobStatus.RIPPED)) == 2)
     gate.set()
+
+
+def test_each_channel_gives_up_after_10_seconds_on_its_own():
+    timeouts = []
+
+    def answer(request):
+        timeouts.append(request.extensions["timeout"])
+        return httpx.Response(200, json={})
+
+    http = httpx.Client(transport=httpx.MockTransport(answer), timeout=30)
+    note = Notification(Event.RIP_DONE, DONE, "Insert the next Disc.")
+    Discord(http, WEBHOOK).send(note)
+    Ntfy(http, "https://ntfy.sh", "ama-test-topic").send(note)
+    assert [set(t.values()) for t in timeouts] == [{10}, {10}]
+
+
+def test_a_hanging_channel_never_delays_the_others(notified, monkeypatch):
+    gate = threading.Event()
+    monkeypatch.setattr(notified.services.notifier.channels[0], "send",
+                        lambda note: gate.wait(10))
+    notified.drive.insert(DiscType.CD, "KID_A")
+    try:
+        eventually(lambda: len(notified.web.ntfy) == 1, timeout=5)
+    finally:
+        gate.set()
+    assert notified.web.discord == []
+
+
+def test_a_failed_channel_is_named_in_the_problem_while_the_others_deliver(harness):
+    class Down:
+        name = "Discord"
+
+        def send(self, note):
+            raise OSError("no network")
+
+    class Up:
+        name = "ntfy"
+
+        def __init__(self):
+            self.sent = []
+
+        def send(self, note):
+            self.sent.append(note)
+
+    problems = Problems(EventBus(), now=lambda: datetime(2026, 11, 5, 21, 40))
+    up = Up()
+    Notifier(harness.services.jobs, EventBus(), [Down(), up], problems).send(
+        [Notification(Event.RIP_DONE, DONE, "Insert the next Disc.")])
+    [banner] = problems.banners()
+    assert banner.problem == Problem.NOTIFY and banner.detail == "Discord: OSError"
+    assert len(up.sent) == 1
+
+
+def test_filing_a_job_notifies_both_channels_with_what_it_was_filed_as(notified):
+    _insert(notified, DISC_1, 24, _response(only=SPECIAL))
+    _sent(notified, 2)
+
+    rec = notified.services.jobs.list(JobStatus.FILED)[0]
+    assert _titles(notified) == ([DONE, "Filed"],) * 2
+    assert rec.title in _ntfy(notified)[1]["message"]
+    assert rec.title in _discord(notified)[1]["embeds"][0]["description"]
+    assert _ntfy(notified)[1]["tags"] == ["file_folder"]
+
+
+def test_a_job_filed_with_no_titles_in_it_sends_no_filed_alert(notified):
+    jobs = notified.services.jobs
+    empty = jobs.create(DiscType.BD, "ALL_SKIPPED", "empty")
+    jobs.set_titles(empty.id, [TitleRecord(1, 0, 3600, 1, 1, 0, "", "t1.mkv",
+                                           status=TitleStatus.SKIPPED)], 0, 0)
+    jobs.mark_ripped(empty.id)
+    jobs.mark_filed(empty.id, "Nothing", notified.libraries_root / "Nothing")
+    _insert(notified, DISC_1, 24, _response(only=SPECIAL))
+    eventually(lambda: "Filed" in _titles(notified)[0] and "Filed" in _titles(notified)[1])
+    time.sleep(0.3)
+
+    filed = [m["message"] for m in _ntfy(notified) if m["title"] == "Filed"]
+    filed += [m["embeds"][0]["description"] for m in _discord(notified)
+              if m["embeds"][0]["title"] == "Filed"]
+    assert len(filed) == 2 and not any("ALL_SKIPPED" in m for m in filed)

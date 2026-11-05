@@ -9,6 +9,7 @@ posts its key only to replace it, and `remove=<key>` to empty it.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, get_origin
@@ -17,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ama.config import ConfigError
+from ama.notify import webhook
 from ama.tools import ToolUnavailable
 from ama.settings import SettingsRejected, field_info, is_secret, raw_at, value_at
 from ama.web import TEMPLATES, view_context
@@ -129,14 +131,15 @@ def _page(services: Services, section: Section, posted: dict[str, str] | None = 
     errors = rejected.errors if rejected else {}
     view = PageView(section, general=list(rejected.general) if rejected else [])
 
-    def field_view(key: str, label: str) -> FieldView:
+    def field_view(key: str, label: str, choice: bool = False) -> FieldView:
+        """A typed box shows the file as written; a choice shows the value it means ("f" is F:)."""
         kind, step = _kind(key)
         if kind == "secret":
             value = ""
         elif posted is not None and key in posted:
             value = posted[key]
         else:
-            in_file = raw_at(raw, key)
+            in_file = None if choice else raw_at(raw, key)
             value = _shown(value_at(cfg, key) if in_file is None else in_file)
         return FieldView(key, _id(key), label, kind, step, value,
                          is_set=kind == "secret" and bool(value_at(cfg, key)),
@@ -152,7 +155,7 @@ def _page(services: Services, section: Section, posted: dict[str, str] | None = 
                 selects = [(field_view(k, f"{r.select_column}, {name}"), opts)
                            for (name, _), (k, opts) in zip(r.rows, r.selects, strict=False)]
             else:
-                fields = [field_view(r.key, r.label)]
+                fields = [field_view(r.key, r.label, choice=isinstance(r, Choice))]
             placeholder = ""
             status = None
             if isinstance(r, Field):
@@ -265,6 +268,22 @@ async def test_encoders(request: Request) -> Response:
     except ToolUnavailable:
         pass  # ffmpeg isn't ready; the background test runs once it is
     return RedirectResponse("/settings/archive/encode", status_code=303)
+
+
+@router.post("/settings/alerts/webhook-test", response_class=HTMLResponse)
+async def webhook_test(request: Request) -> Response:
+    """"Send test": post a test event to the saved webhook and say how it went."""
+    services: Services = request.app.state.services
+    if services.settings is None or services.settings.file is None:
+        raise HTTPException(409, "AMA wasn't started from a config file")
+    hook = webhook(services.config, services.http)
+    if hook is None:
+        result = Status("Save a webhook URL first, then send a test.", ok=False)
+    elif (why := await asyncio.to_thread(hook.send_test)) is None:
+        result = Status("Test alert sent")
+    else:
+        result = Status(f"Couldn't send the test alert: {why}", ok=False)
+    return render_section(request, services, "alerts", webhook_test=result)
 
 
 @router.post("/settings/{slug:path}", response_class=HTMLResponse)

@@ -3,7 +3,7 @@
 A CD in Review has its Rip and MusicBrainz answer (`musicbrainz.json`) in scratch.
 The user's `Decision` is saved next to them (`review.json`) and the Disc goes back
 to `ripped`; `CdArchiver` then files it exactly as it files automatically, with
-the same retries while the network or NAS is away. Any decision accepts the Rip
+the same retries while the network or its Library folder is away. Any decision accepts the Rip
 as it is, so AccurateRip problems don't send it back to Review.
 """
 

@@ -1,4 +1,4 @@
-"""Filing to the Archive: putting finished files into a Library's folder on the NAS.
+"""Filing to the Archive: putting finished files into a Library's folder.
 
 Each file is copied under a temporary name Plex doesn't recognise as media
 (`<name>.ama-partial`), checked against its source, then renamed into place, so
@@ -78,16 +78,15 @@ def kind_of_path(rel: Path) -> LibraryKind | None:
 
 
 class Archive:
-    """The Archive root (the NAS share) and its Libraries. `copy` is replaceable so tests can
-    break a copy.
+    """The Libraries, each its own folder wherever it is (ADR 0011). `copy` is replaceable
+    so tests can break a copy.
 
     Archivers name folders by kind, as Plex lays them out (`Movies/<film>`, `TV/<show>`,
     `Music/<artist>/<album>`); `folder` puts that under the kind's Library, so a stored
     path keeps meaning the same thing whichever Library holds it."""
 
-    def __init__(self, root: Path, libraries: Sequence[Library] = (),
+    def __init__(self, libraries: Sequence[Library],
                  copy: Callable[[Path, Path], object] = shutil.copyfile) -> None:
-        self.root = root
         self.libraries = tuple(libraries)  # live: replaced when Settings change them
         self.copy = copy
 
@@ -95,14 +94,27 @@ class Archive:
         """Where `rel` (`Movies/…`, `TV/…`, `Music/…`) is: in the Library the Job picked, else
         its kind's default."""
         kind = kind_of_path(rel)
-        if kind is None or not self.libraries:
-            return self.root / rel
+        if kind is None:
+            raise ValueError(f"{rel} isn't under Movies, TV or Music")
         return Path(library_for(self.libraries, kind, library).path, *rel.parts[1:])
 
     def library_of(self, folder: Path) -> Library | None:
         """The Library holding `folder` (the innermost, if Libraries nest)."""
         holding = [lib for lib in self.libraries if Path(folder).is_relative_to(lib.path)]
         return max(holding, key=lambda lib: len(Path(lib.path).parts), default=None)
+
+    def within(self, folder: Path) -> Path | None:
+        """`folder` from its Library folder's name down (`Films HD/<film>`); None outside
+        every Library."""
+        library = self.library_of(folder)
+        if library is None:
+            return None
+        return Path(folder).relative_to(Path(library.path).parent)
+
+    def shown(self, folder: Path) -> str:
+        """`folder` as the UI names it: from its Library folder's name down."""
+        rel = self.within(folder)
+        return str(folder) if rel is None else rel.as_posix()
 
     def place(self, folder: Path, files: Mapping[str, Path], library: str | None = None) -> Path:
         """Copy `files` ({name: source}) into `folder` (see `folder`), verified byte-identical;

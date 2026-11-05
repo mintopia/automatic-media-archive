@@ -17,7 +17,7 @@ from ama.app import create_app
 from ama.archive import Archive
 from ama.jobs import JobStatus
 from ama.drive import DiscType
-from ama.config import PlexConfig
+from ama.config import Library, LibraryKind, PlexConfig
 from ama.events import EventBus, Topic
 from ama.notify import Event, Notification, Notifier
 from ama.plex import Plex
@@ -43,9 +43,9 @@ def test_a_jobs_blocking_reason_is_kept_until_it_moves_on():
     bus = EventBus()
     problems = Problems(bus, now=lambda: NOW)
 
-    seen = _published(bus, lambda: problems.waiting(3, "The NAS isn't connected", 120))
+    seen = _published(bus, lambda: problems.waiting(3, "The Movies folder isn't reachable", 120))
     waiting = problems.why(3)
-    assert waiting is not None and waiting.reason == "The NAS isn't connected"
+    assert waiting is not None and waiting.reason == "The Movies folder isn't reachable"
     assert waiting.retry_at == datetime(2026, 11, 5, 21, 42, 0)
     assert {Topic.RIP, Topic.ENCODE, Topic.PROBLEMS} <= seen  # cards and banners re-render
     assert problems.why(4) is None
@@ -61,7 +61,7 @@ def test_a_job_waiting_on_an_app_wide_cause_raises_one_banner_until_every_job_mo
     key = "No TMDB API key is set in ama.toml ([tmdb] api_key)"
     problems.waiting(1, key, 60, Problem.TMDB_KEY)
     problems.waiting(2, key, 60, Problem.TMDB_KEY)
-    problems.waiting(3, "The NAS isn't connected", 60)
+    problems.waiting(3, "The Movies folder isn't reachable", 60)
 
     [banner] = problems.banners()
     assert banner.problem == Problem.TMDB_KEY and banner.jobs == 2
@@ -133,18 +133,27 @@ def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_p
         t.join(5)
 
 
-def test_a_job_waiting_for_the_nas_says_so_until_the_nas_is_back(tmp_path):
-    h = make_harness(tmp_path, nas_reachable=False)
+def test_a_job_waiting_for_an_unreachable_library_folder_says_which_until_it_files(tmp_path):
+    h = make_harness(tmp_path)
+    folder = h.drop_library(LibraryKind.FILMS)
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with TestClient(create_app(h.services)) as c:
         _rip(h)
-        eventually(lambda: "Waiting: The NAS isn't connected" in _now(c))
-        encoding = _now(c)[_now(c).index('id="encoding-h"'):]
-        assert "Waiting: The NAS isn't connected" in encoding  # Encoded, waiting to file
-        assert "Can't reach the NAS" in _now(c)  # the app-wide NAS banner
-        h.share["reachable"] = True
+        eventually(lambda: f"Waiting: Can't reach the Library folder {folder}" in _now(c))
+        page = _now(c)
+        encoding = page[page.index('id="encoding-h"'):]
+        assert f"Waiting: Can't reach the Library folder {folder}" in encoding
+        assert "Encoded · filing" in encoding
+        banner = page[page.index('sse-swap="problems"'):page.index('class="split"')]
+        assert "Jobs can't be filed to a Library folder" in banner
+        assert f"Can't reach {folder}" in html.unescape(banner)
+        rec = h.services.jobs.get(1)
+        assert rec.status == JobStatus.RIPPED and (rec.scratch_dir / "encode.mkv").exists()
+
+        h.restore_library(LibraryKind.FILMS)
         eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
-        eventually(lambda: "Waiting:" not in _now(c))
+        eventually(lambda: "Waiting:" not in _now(c) and str(folder) not in _now(c))
+        assert h.services.problems.banners() == []
 
 
 def test_a_job_queued_behind_another_encode_is_not_shown_as_a_problem(client, harness):
@@ -171,8 +180,10 @@ def test_a_failing_plex_scan_shows_a_banner_until_a_scan_works(tmp_path):
         status["code"], json={"MediaContainer": {"Directory": [
             {"key": "1", "Location": [{"path": "/media/Movies"}]}]}})))
     problems = Problems(EventBus(), now=lambda: NOW)
-    plex = Plex(PlexConfig(url="http://plex:32400", token="t", nas_path="/media"), web,
-                Archive(tmp_path), problems)
+    libraries = [Library(name=k.folder, kind=k, path=str(tmp_path / k.folder), default=True)
+                 for k in LibraryKind]
+    plex = Plex(PlexConfig(url="http://plex:32400", token="t", libraries_path="/media"), web,
+                Archive(libraries), problems)
     with pytest.raises(httpx.HTTPError):
         plex.scan(tmp_path / "Movies" / "Film")
     [banner] = problems.banners()

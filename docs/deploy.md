@@ -67,8 +67,15 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    git clone https://git.mintopia.net/mintopia/automatic-media-archive.git C:\ama
    cd C:\ama
    uv sync --frozen --no-dev
-   copy ama.example.toml ama.toml   # then edit ama.toml: NAS, secrets, scratch...
+   copy ama.example.toml ama.toml   # then edit ama.toml: Libraries, secrets, scratch...
    ```
+
+   Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
+   if a Library is on a network share, make sure the Windows user AMA runs as can
+   reach it (a mapped drive, or credentials saved in Windows). While a folder
+   isn't reachable, its Jobs wait at "Encoded · filing" and filing is retried
+   every minute. An `ama.toml` from v1/v2 is rewritten once at startup (its
+   `[nas]` table is dropped and each Library gets its full path; a `.bak` is kept).
 
 3. Try it in a console first: `uv run ama` (reads `.\ama.toml`; `--config PATH`
    or `$env:AMA_CONFIG` to use another file). Open `http://<box>:8080/`. Ctrl+C to stop.
@@ -109,6 +116,20 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    the restart settings bring it back if it crashes. A restart from the UI is
    handled by the supervisor itself, so the task keeps running through it; an
    older task registered with `-m ama --config ...` keeps working (`run` is the default).
+
+## Webhook alerts
+
+With `[webhook] url` set, every alert is one POST of versioned JSON:
+
+```json
+{"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
+ "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+```
+
+`event` is `rip_done`, `review_needed`, `job_filed` or `job_failed`, or `test` from
+Settings' "Send test", whose `job` is null. `at` is UTC. `title` is what the Job was
+filed as, else its Disc label; `url` is the Job's page. Ignore keys you don't know; a
+change to existing keys gets a new `version`.
 
 ## Deploying an update
 

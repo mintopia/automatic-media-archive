@@ -34,7 +34,7 @@
     const log = w.querySelector('.log'), btn = w.querySelector('.jump');
     const st = w.closest('details').querySelector('[data-follow-state]');
     const f = { log, following: true };
-    const sync = () => {
+    const sync = f.sync = () => {
       f.following = log.scrollHeight - log.scrollTop - log.clientHeight < 8;
       btn.hidden = f.following;
       if (st) st.textContent = f.following ? 'Following live output' : 'Scrolled up, not following';
@@ -57,6 +57,7 @@
       e.detail.parameters[`after_${log.dataset.step}`] = n;
     });
   });
+  document.addEventListener('htmx:oobBeforeSwap', () => follows.forEach(f => f.sync()));
   document.addEventListener('htmx:oobAfterSwap', () => {
     follows.forEach(f => { if (f.following) f.log.scrollTop = f.log.scrollHeight; });
   });

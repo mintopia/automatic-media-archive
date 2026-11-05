@@ -42,7 +42,6 @@ from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, enc
 from ama.events import EventBus
 from ama.extras import Category, Extras, ExtraStatus
 from ama.media import MediaStore, screen
-from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.proc import Streamer
 from ama.problems import Problem, Problems
@@ -146,7 +145,7 @@ def plex_version(disc_type: DiscType, video_height: int) -> str | None:
 
 
 class MovieArchiver:
-    def __init__(self, jobs: JobStore, movies: Movies, tmdb: Tmdb, nas: NasMonitor,
+    def __init__(self, jobs: JobStore, movies: Movies, tmdb: Tmdb,
                  archive: Archive, plex: Plex, bus: EventBus, encoder: Encoder,
                  streamer: Streamer, interval: float, retry_seconds: float = 60.0,
                  clock: Callable[[], float] = time.monotonic,
@@ -165,7 +164,6 @@ class MovieArchiver:
         self.movies = movies
         self.extras = extras
         self._tmdb = tmdb
-        self._nas = nas
         self._archive = archive
         self._plex = plex
         self._bus = bus
@@ -192,8 +190,9 @@ class MovieArchiver:
             self._jobs.log(job_id, "Encode queued again after a restart")
         self.extras.requeue_unfinished()
 
-    def _later(self, key: tuple[str, int], why: str, problem: Problem | None = None) -> None:
-        if self.backoff.later(key, why, problem):
+    def _later(self, key: tuple[str, int], why: str, problem: Problem | None = None,
+               detail: str = "") -> None:
+        if self.backoff.later(key, why, problem, detail):
             self._jobs.log(key[1], f"{why}; trying again in a while", error=True)
 
     # -- Identification -----------------------------------------------------
@@ -209,7 +208,7 @@ class MovieArchiver:
             try:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
-                self._later(key, str(e), e.problem)
+                self._later(key, str(e), e.problem, e.detail)
             except Exception:
                 log.exception("Movie Identification of Job %s crashed", rec.id)
                 self._later(key, "Identification went wrong (see the app's log file)")
@@ -307,7 +306,7 @@ class MovieArchiver:
                 await self._encode_extras(rec, movie)
                 await asyncio.to_thread(self.file, rec, self.movies.get(movie.job_id) or movie)
             except RetryLater as e:
-                self._later(key, str(e), e.problem)
+                self._later(key, str(e), e.problem, e.detail)
                 continue
             except Exception:
                 log.exception("Encode/filing of Job %s crashed", rec.id)
@@ -329,6 +328,7 @@ class MovieArchiver:
                                          rec.scratch_dir / ENCODED, ffmpeg, ffprobe)
         if height is None:
             self.movies.set_status(rec.id, EncodeStatus.FAILED)
+            self._jobs.encode_failed(rec.id)
             return False
         self.movies.set_status(rec.id, EncodeStatus.ENCODED, video_height=height)
         return True
@@ -381,12 +381,11 @@ class MovieArchiver:
     def file(self, rec: JobRecord, movie: Movie) -> None:
         """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
         self._jobs.begin_step(rec.id, "file", "File")
-        filing.require_nas(self._nas)
         version = plex_version(rec.disc_type, movie.video_height)
         name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
         rel = movie_folder(movie.film)
         library = self._library(rec, LibraryKind.FILMS)
-        with filing.to_nas():
+        with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
             extras = self._file_extras(rec, rel, library)
         film = movie.film
@@ -422,7 +421,6 @@ class MovieArchiver:
     def sort_extras(self, rec: JobRecord, changes: dict[int, tuple[str, Category]]) -> int:
         """Move each Extra the user re-sorted ({Title: (name, category)}) to its Plex folder
         and mark the Disc's Extras sorted; how many moved. Blocking: call in a thread."""
-        filing.require_nas(self._nas)
         if rec.archive_dir is None:
             raise RetryLater("The Disc has no folder in the Archive")
         film = rec.archive_dir
@@ -441,7 +439,7 @@ class MovieArchiver:
             try:
                 archive_move(film / e.file, film / file)
             except OSError as err:
-                raise RetryLater(f"Couldn't move “{e.name}” on the NAS ({err})") from err
+                raise RetryLater(f"Couldn't move “{e.name}” in {film} ({err})") from err
             self.extras.place(rec.id, number, name, category, file)
             taken.add(file.casefold())
             self._jobs.log(rec.id, f"Extra “{e.name}” moved to {file}")

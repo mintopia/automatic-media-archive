@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from ama.config import LibraryKind, load_config
-from ama.settings import SettingsFile, SettingsRejected
+from ama.config import ConfigError, LibraryKind, load_config
+from ama.settings import SettingsFile, SettingsRejected, upgrade
 from tests.conftest import make_harness, write_config
 
 EXAMPLE = Path(__file__).parent.parent / "ama.example.toml"
@@ -77,13 +77,12 @@ def test_a_ui_edit_equals_the_same_hand_edit(toml, tmp_path):
 
 def test_a_key_missing_from_the_file_is_added_to_its_table(tmp_path):
     p = tmp_path / "ama.toml"
-    p.write_text("# mine\n[nas]\nunc = '\\\\nas\\media'  # the share\n\n[paths]\nscratch = 's'\n\n"
+    p.write_text("# mine\n[cd]\noffset = 6  # my drive\n\n[paths]\nscratch = 's'\n\n"
                  "[encode.cq]\ndvd = 20\nbd = 22\nuhd = 22\n", encoding="utf-8")
-    SettingsFile(p).save({"nas.retry_seconds": "30", "tmdb.api_key": "k3y"})
+    SettingsFile(p).save({"cd.retries": "30", "tmdb.api_key": "k3y"})
     cfg = load_config(p)
-    assert cfg.nas.retry_seconds == 30 and cfg.tmdb.api_key == "k3y"
-    assert p.read_text(encoding="utf-8").startswith(
-        "# mine\n[nas]\nunc = '\\\\nas\\media'  # the share\n")
+    assert cfg.cd.retries == 30 and cfg.tmdb.api_key == "k3y"
+    assert p.read_text(encoding="utf-8").startswith("# mine\n[cd]\noffset = 6  # my drive\n")
 
 
 def test_a_comment_after_the_edited_value_stays(tmp_path):
@@ -135,10 +134,17 @@ def test_a_file_without_libraries_gets_the_defaults_it_was_using_written_out(tmp
                  encoding="utf-8")
     SettingsFile(p).save_library(LibraryKind.FILMS, None, {"name": "Movies 4K", "plex": "",
                                                     "path": SHARE + "Movies 4K"})
-    assert _libraries(p) == [("films", "Movies", SHARE + "Movies", "", True),
-                             ("tv", "TV", SHARE + "TV", "", True),
-                             ("music", "Music", SHARE + "Music", "", True),
+    home = Path.home()
+    assert _libraries(p) == [("films", "Movies", str(home / "Videos" / "Movies"), "", True),
+                             ("tv", "TV", str(home / "Videos" / "TV"), "", True),
+                             ("music", "Music", str(home / "Music"), "", True),
                              ("films", "Movies 4K", SHARE + "Movies 4K", "", False)]
+
+
+def test_a_library_can_be_any_folder(toml):
+    SettingsFile(toml).save_library(LibraryKind.FILMS, None, {"name": "Films", "plex": "",
+                                                       "path": "D:\Films"})
+    assert _libraries(toml)[-1] == ("films", "Films", "D:\Films", "", False)
 
 
 def test_make_default_moves_the_kinds_default(toml):
@@ -163,12 +169,104 @@ def test_a_library_that_doesnt_validate_names_its_fields_and_the_file_is_unchang
     f = SettingsFile(toml)
     with pytest.raises(SettingsRejected) as e:
         f.save_library(LibraryKind.FILMS, None, {"name": "tv", "plex": "", "path": "D:\\Films"})
-    assert set(e.value.errors) == {"name", "path"}
-    assert "TV" in e.value.errors["name"] and "NAS share" in e.value.errors["path"]
+    assert set(e.value.errors) == {"name"} and "TV" in e.value.errors["name"]
     with pytest.raises(SettingsRejected) as e:
         f.save_library(LibraryKind.FILMS, None, {"name": " ", "plex": "", "path": ""})
     assert e.value.errors == {"name": "This can't be empty", "path": "This can't be empty"}
+    with pytest.raises(SettingsRejected) as e:
+        f.save_library(LibraryKind.FILMS, None, {"name": "Films", "plex": "", "path": "Films"})
+    assert set(e.value.errors) == {"path"} and "full folder path" in e.value.errors["path"]
     assert toml.read_bytes() == original
+
+
+# --- the one-time rewrite to plain Library paths (ADR 0011) -------------------------------
+
+V2 = r"""[nas]
+unc = '\\nas\media'
+
+[paths]
+scratch = 'scratch'
+
+[plex]
+url = "http://nas:32400"
+# Where Plex sees the share.
+nas_path = "/volume1/media"
+
+[encode.cq]
+dvd = 20
+bd = 22
+uhd = 22
+"""
+
+
+def test_a_file_without_libraries_gets_them_on_the_nas_share_and_a_bak(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2, encoding="utf-8")
+    assert upgrade(p)
+    assert p.with_name("ama.toml.bak").read_text(encoding="utf-8") == V2
+    assert _libraries(p) == [("films", "Movies", SHARE + "Movies", "", True),
+                             ("tv", "TV", SHARE + "TV", "", True),
+                             ("music", "Music", SHARE + "Music", "", True)]
+    after = p.read_text(encoding="utf-8")
+    assert 'libraries_path = "/volume1/media"' in after and "nas_path" not in after
+    assert "[nas]" not in after and "unc" not in after
+    assert load_config(p).plex.libraries_path == "/volume1/media"
+
+
+def test_the_nas_table_is_dropped_with_its_comments_and_credentials(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text("[cd]\noffset = 6\n\n[nas]\n# The share.\nunc = '\\\\nas\\media'\n"
+                 "username = \"me\"\npassword = \"hunter2\"\nretry_seconds = 30\n\n"
+                 "[paths]\nscratch = 'scratch'\n\n[encode.cq]\ndvd = 20\nbd = 22\nuhd = 22\n"
+                 + "".join(f"\n[[libraries]]\nname = \"{k.folder}\"\nkind = \"{k.value}\"\n"
+                           f"path = 'D:\\{k.folder}'\ndefault = true\n" for k in LibraryKind),
+                 encoding="utf-8")
+    assert upgrade(p)
+    after = p.read_text(encoding="utf-8")
+    assert after.startswith("[cd]\noffset = 6\n\n[paths]\n")
+    assert "nas" not in after and "hunter2" not in after
+    assert "hunter2" in p.with_name("ama.toml.bak").read_text(encoding="utf-8")
+    assert load_config(p).cd.offset == 6
+
+
+def test_each_library_points_at_the_same_folder_as_before(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2 + "".join(
+        f"\n[[libraries]]\nname = \"{n}\"\nkind = \"{k}\"\npath = '{path}'\ndefault = true\n"
+        for n, k, path in (("Movies", "films", "Films"), ("TV", "tv", SHARE + "TV"),
+                           ("Music", "music", "Audio\Music"))), encoding="utf-8")
+    upgrade(p)
+    assert [path for _, _, path, _, _ in _libraries(p)] == [
+        SHARE + "Films", SHARE + "TV", SHARE + "Audio\Music"]
+
+
+def test_running_the_rewrite_again_changes_nothing(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2, encoding="utf-8")
+    upgrade(p)
+    once, bak = p.read_bytes(), p.with_name("ama.toml.bak").read_bytes()
+    assert not upgrade(p)
+    assert p.read_bytes() == once and p.with_name("ama.toml.bak").read_bytes() == bak
+
+
+@pytest.mark.parametrize("unc", ["", "unc = ''\n"])
+def test_relative_libraries_without_a_share_are_left_alone_with_a_clear_error(tmp_path, unc):
+    p = tmp_path / "ama.toml"
+    before = (f"[nas]\n{unc}\n[paths]\nscratch = 'scratch'\n\n"
+              "[[libraries]]\nname = \"Movies\"\nkind = \"films\"\npath = 'Films'\n"
+              "default = true\n")
+    p.write_text(before, encoding="utf-8")
+    for _ in range(2):  # nothing is stranded: it says the same until the file is fixed
+        with pytest.raises(ConfigError, match=r"Films.*nas\.unc"):
+            upgrade(p)
+        assert p.read_text(encoding="utf-8") == before
+    assert not p.with_name("ama.toml.bak").exists()
+
+
+def test_the_example_needs_no_rewrite(toml):
+    before = toml.read_bytes()
+    assert not upgrade(toml)
+    assert toml.read_bytes() == before
 
 
 # --- the running app: live keys apply at once, the rest wait for a restart ---------------
@@ -192,18 +290,18 @@ def test_live_keys_apply_without_a_restart(app):
 
 def test_library_changes_apply_from_the_next_filing(app, tmp_path):
     app.settings.save_library(LibraryKind.MUSIC, None, {"name": "Lossless", "plex": "",
-                                                 "path": str(tmp_path / "nas" / "Lossless")})
+                                                 "path": str(tmp_path / "libraries" / "Lossless")})
     app.settings.make_default("Lossless")
-    assert app.archive.folder(Path("Music/Artist")) == tmp_path / "nas" / "Lossless" / "Artist"
+    assert app.archive.folder(Path("Music/Artist")) == tmp_path / "libraries" / "Lossless" / "Artist"
     assert app.settings.pending() == []
 
 
 def test_other_keys_save_and_wait_for_a_restart(app):
-    app.settings.save({"web.port": "8081", "nas.retry_seconds": "30"})
-    assert app.config.web.port == 8080 and app.config.nas.retry_seconds == 0.05
-    assert app.settings.pending() == ["web.port", "nas.retry_seconds"]
+    app.settings.save({"web.port": "8081", "drive.poll_seconds": "3"})
+    assert app.config.web.port == 8080 and app.config.drive.poll_seconds == 0.01
+    assert app.settings.pending() == ["web.port", "drive.poll_seconds"]
     app.settings.save({"web.port": "8080"})
-    assert app.settings.pending() == ["nas.retry_seconds"]
+    assert app.settings.pending() == ["drive.poll_seconds"]
 
 
 def test_a_hand_edit_is_picked_up_like_a_ui_edit(app):

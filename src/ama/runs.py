@@ -1,8 +1,9 @@
 """Runs and Steps (GLOSSARY): the record Logs shows of every tool run.
 
-A Run is a Job's record of its Steps (one per Job), or an app event (startup, NAS,
-tools) with Steps of its own. Each Step keeps its output: stored line by line, and
-held in a ring of recent lines while it runs, so a page can follow it live (topic
+A Run is a Job's record of its Steps (one per Job), or an app event (startup,
+tools, scratch cleanup; NAS Runs from before ADR 0011 stay readable) with Steps of
+its own. Each Step keeps its output: stored line by line, and held in a ring of
+recent lines while it runs, so a page can follow it live (topic
 `logs`, at most twice a second). Callers pass only output text, never command lines;
 known secrets are masked on the way in all the same.
 
@@ -44,8 +45,9 @@ RESUMED = "AMA restarted while this ran: output from just before the restart may
 class RunKind(StrEnum):
     JOB = "job"
     APP = "app"      # startup
-    NAS = "nas"      # the NAS dropped, or came back
+    NAS = "nas"      # the NAS dropped or came back (before ADR 0011; none are new)
     TOOLS = "tools"  # a tool download or check after startup
+    SCRATCH = "scratch"  # a Scratch cleanup that removed something
 
 
 class StepState(StrEnum):

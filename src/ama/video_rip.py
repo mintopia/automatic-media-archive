@@ -1,9 +1,11 @@
 """Video Rip to scratch: a DVD/BD/UHD in the drive is ripped with makemkvcon, then ejected.
 
-Every Title >= 30 s is ripped (exact duplicates dropped) into
+Every Title at or above its Disc Type's minimum length (`[rip.min_title_seconds]`,
+recorded on the Job) is ripped (exact duplicates dropped) into
 `scratch/video/<Job id>/`, one `makemkvcon mkv` run per Title, regardless of
-Identification (ADR-0005). On any failure the Disc is ejected, marked failed
-with its log, and its partial files are deleted. Nothing is retried on its own:
+Identification (ADR-0005), except those the user Skips (unticks) before their turn;
+with every Title Skipped the Job is Filed with nothing in it. On any failure the
+Disc is ejected, marked failed with its log, and its partial files are deleted. Nothing is retried on its own:
 a Disc is ripped once per insertion.
 """
 
@@ -18,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ama import makemkv
+from ama.config import RipConfig
 from ama.jobs import (
     JobRecord,
     JobStatus,
@@ -40,7 +43,6 @@ from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
 
-MIN_TITLE_SECONDS = 30  # ADR-0005
 VIDEO_DISC_TYPES = frozenset({DiscType.DVD, DiscType.BD, DiscType.UHD})
 PUBLISH_EVERY_SECONDS = 0.5
 
@@ -112,7 +114,9 @@ class VideoRipper:
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
                  guesses: FilmGuesses | None = None,
-                 hold: Callable[[], bool] = lambda: False) -> None:
+                 hold: Callable[[], bool] = lambda: False,
+                 cfg: RipConfig = RipConfig()) -> None:
+        self.cfg = cfg
         self._pause = pause
         self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesses = guesses  # the Job's Best guess (film_guess.py)
@@ -198,7 +202,9 @@ class VideoRipper:
     async def rip(self, inserted: DiscPresent, fingerprint: str | None = None) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
-        job = self._store.create(inserted.disc_type, inserted.label, "video")
+        job = self._store.create(
+            inserted.disc_type, inserted.label, "video",
+            self.cfg.min_title_seconds.seconds(inserted.disc_type))
         self._repeat.remember(job.id, fingerprint)
         shutil.rmtree(job.scratch_dir, ignore_errors=True)
         job.scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -222,6 +228,10 @@ class VideoRipper:
             self._store.log(job.id, failure.headline, error=True)
             self._store.log(job.id, "Removing partial files from scratch")
             self._store.mark_failed(job.id, failure)
+        elif (ripped := self._store.get(job.id)) is not None and ripped.all_skipped:
+            self._store.log(job.id, ripped.skipped_summary or "Every Title skipped")
+            self._store.mark_filed_empty(job.id)
+            shutil.rmtree(job.scratch_dir, ignore_errors=True)
         else:
             self._store.log(job.id, "Rip complete")
             self._store.mark_ripped(job.id)
@@ -293,9 +303,10 @@ class VideoRipper:
             await self._save_hints(job, scan)
             if not scan.titles:
                 return Failure(FailureKind.DISC, "MakeMKV couldn't read this Disc.", _DISC_ADVICE)
-            sel = makemkv.select_titles(scan.titles, MIN_TITLE_SECONDS)
+            sel = makemkv.select_titles(scan.titles, job.min_title_seconds)
             if not sel.keep:
-                return Failure(FailureKind.DISC, "There are no Titles of 30 seconds or more.",
+                return Failure(FailureKind.DISC, f"There are no Titles of "
+                               f"{job.min_title_seconds} seconds or more.",
                                "Nothing on this Disc looks worth archiving.")
             titles = title_records(sel.keep)
             self._store.set_titles(job.id, titles,
@@ -310,13 +321,16 @@ class VideoRipper:
             self._longest_s = max(t.duration_s for t in titles)
             if self._guesses and self._films:  # else _guess ranks them once TMDB answers
                 self._reranking = asyncio.create_task(self._rerank(job.id))
-            total = sum(t.size_bytes for t in titles) or 1
             done = 0
             started: float | None = None
             for t in titles:
-                self._store.set_title_status(job.id, t.number, TitleStatus.RIPPING)
+                if not self._store.move_title(job.id, t.number, TitleStatus.WAITING,
+                                              TitleStatus.RIPPING):
+                    self._store.log(job.id, f"Title {t.number} skipped by you")
+                    continue
                 self._refresh(job.id)
-                self.progress = RipProgress(t.number, 0.0, done / total, self._eta(started, done / total))
+                overall = done / self._to_rip_bytes()
+                self.progress = RipProgress(t.number, 0.0, overall, self._eta(started, overall))
                 self._publish()
                 saving = False
 
@@ -326,14 +340,14 @@ class VideoRipper:
                         saving = True
                         started = started if started is not None else self._clock()
                     elif isinstance(rec, Progress) and saving:
-                        overall = (done + rec.fraction * t.size_bytes) / total
+                        overall = (done + rec.fraction * t.size_bytes) / self._to_rip_bytes()
                         self.progress = RipProgress(t.number, rec.fraction, overall,
                                                     self._eta(started, overall))
                         self._publish_soon()
 
                 code, out = await self._makemkv(
                     job, makemkv.mkv_args(exe, source, t.makemkv_id, job.scratch_dir,
-                                           MIN_TITLE_SECONDS), on_progress)
+                                           job.min_title_seconds), on_progress)
                 summary = makemkv.rip_summary(out)
                 ok = (code == 0 and (job.scratch_dir / t.file).exists()
                       and (summary is None or (summary[0] >= 1 and summary[1] == 0)))
@@ -348,8 +362,26 @@ class VideoRipper:
         except _Fail as f:
             return f.failure
 
+    def _to_rip_bytes(self) -> int:
+        """The size of the Titles not Skipped (the Rip's 100%), as of the latest skip."""
+        job = self.job
+        return (sum(t.size_bytes for t in job.to_rip) if job else 0) or 1
+
+    def skip(self, job_id: int, number: int, skipped: bool) -> bool:
+        """Untick (`skipped`) or tick again a Title of the Rip under way that hasn't started.
+        False if it can't be: not this Rip, or the Title is ripping or done."""
+        if self.active is None or self.active.id != job_id:
+            return False
+        before, after = ((TitleStatus.WAITING, TitleStatus.SKIPPED) if skipped
+                         else (TitleStatus.SKIPPED, TitleStatus.WAITING))
+        if not self._store.move_title(job_id, number, before, after):
+            return False
+        self._refresh(job_id)
+        self._publish()
+        return True
+
     async def _scan(self, job: JobRecord, exe: Path, source: str) -> makemkv.Scan:
-        _, out = await self._makemkv(job, makemkv.info_args(exe, source, MIN_TITLE_SECONDS))
+        _, out = await self._makemkv(job, makemkv.info_args(exe, source, job.min_title_seconds))
         return makemkv.parse_scan_records(out)
 
     async def _save_hints(self, job: JobRecord, scan: makemkv.Scan) -> None:

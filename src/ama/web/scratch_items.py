@@ -7,7 +7,6 @@ only templates that show it (the scratch page and its live fragments) walk scrat
 from __future__ import annotations
 
 import math
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,7 +14,7 @@ from typing import TYPE_CHECKING
 from ama.jobs import JobRecord, JobStatus
 from ama.moviearchive import EncodeStatus
 from ama.phase import Phase
-from ama.scratch import GB
+from ama.scratch import GB, dir_bytes
 from ama.web.review_items import review_items
 
 if TYPE_CHECKING:
@@ -32,17 +31,6 @@ class ScratchItem:
     gb: int              # whole GB, rounded up
     sticker: Phase | None = None  # its status chip
     href: str = ""       # its Review, when it waits for one
-
-
-def dir_bytes(path: Path) -> int:
-    total = 0
-    for root, _dirs, files in os.walk(path):
-        for name in files:
-            try:
-                total += os.stat(os.path.join(root, name)).st_size
-            except OSError:
-                pass
-    return total
 
 
 def scratch_items(services: Services) -> list[ScratchItem]:
@@ -71,7 +59,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
             waiting.append(_item(rec, movie.film.name, "The Encode didn't work",
                                  Phase.FAILED))
         elif movie.status == EncodeStatus.ENCODED:
-            waiting.append(_item(rec, movie.film.name, "Encoded · filing to the NAS"))
+            waiting.append(_item(rec, movie.film.name, "Encoded · filing"))
         else:
             waiting.append(_item(rec, movie.film.name, "Waiting to encode", Phase.ENCODING))
     return [*ripping, *review, *waiting]
@@ -94,7 +82,4 @@ def _rip_pct(services: Services, rec: JobRecord) -> int:
 
 def scratch_context(services: Services) -> dict:
     items = scratch_items(services)
-    encode = services.movie_archive.encoder.current
-    freeing = next((i for i in items if encode and i.record.id == encode.job.id), None)
-    return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items),
-            "encode_freeing": (freeing.gb, encode.progress.eta_s) if freeing and encode else None}
+    return {"scratch_items": items, "scratch_items_gb": sum(i.gb for i in items)}

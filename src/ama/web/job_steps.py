@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 from ama import extras as extras_mod
@@ -121,9 +121,14 @@ def phase_now(services: Services, rec: JobRecord) -> Phase:
 def job_steps(services: Services, rec: JobRecord) -> list[Step]:
     lines = services.jobs.log_lines(rec.id)
     rip = _rip(services, rec)
+    if rec.all_skipped and rec.status == JobStatus.FILED:
+        return [rip, Step("Identification", StepState.NOT_RUN, "Every Title was skipped"),
+                Step("Encode", StepState.NOT_RUN, "Every Title was skipped"),
+                Step("File", StepState.DONE, "Nothing to file: every Title was skipped",
+                     finished=rec.filed_at)]
     ident = _identification(services, rec, rip, lines)
     encodes = [] if rec.disc_type == DiscType.CD else _encodes(services, rec, ident)
-    return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.root)]
+    return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.shown)]
 
 
 def _rip(services: Services, rec: JobRecord) -> Step:
@@ -132,14 +137,15 @@ def _rip(services: Services, rec: JobRecord) -> Step:
         n = len(cd.tracks) if cd else 0
         what = f"{n} track{'s' if n != 1 else ''}"
     else:
-        n = len(rec.titles)
-        what = f"{n} Title{'s' if n != 1 else ''}, {rec.total_size}"
+        n = len(rec.to_rip)
+        what = (rec.skipped_summary or "") if rec.all_skipped \
+            else f"{n} Title{'s' if n != 1 else ''}, {rec.total_size}"
     times = {"started": rec.started_at, "finished": rec.finished_at}
     if rec.status == JobStatus.RIPPING:
         return Step("Rip", StepState.RUNNING, "Copying the Disc to scratch",
                     started=rec.started_at, colour="rip")
     if rec.status == JobStatus.FAILED and rec.failure is not None \
-            and rec.failure.kind != FailureKind.DISCARDED:
+            and rec.failure.kind not in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
         return Step("Rip", StepState.FAILED, rec.failure.headline, **times)
     return Step("Rip", StepState.DONE, what, **times)
 
@@ -164,7 +170,7 @@ def _identification(services: Services, rec: JobRecord, rip: Step,
                     else StepState.NOT_RUN, "After the Rip")
     why = _why(lines)
     started = rec.finished_at
-    if rec.status == JobStatus.FAILED:  # the Rip was discarded in Review
+    if rec.status == JobStatus.FAILED and rec.scratch_cleaned_at is None:  # discarded in Review
         return Step(name, StepState.FAILED, "The Rip was discarded in Review", started=started)
     if rec.status == JobStatus.REVIEW:
         reason = reason_summary(rec.review_reason) if rec.review_reason else "Needs a decision"
@@ -235,22 +241,20 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
         state = StepState.RUNNING if live else _STATE[status]
         if rec.status == JobStatus.FILED and state == StepState.WAITING:
             state = StepState.NOT_RUN
-        steps.append(Step("Encode", state, note or _DETAIL[EncodeStatus.ENCODING if live
-                                                           else status], subject,
+        detail = note or _DETAIL[EncodeStatus.ENCODING if live else status]
+        if rec.status == JobStatus.FAILED and status == EncodeStatus.FAILED:
+            detail = "The Encode didn't work"  # no retry: its Rip is gone
+        steps.append(Step("Encode", state, detail, subject,
                           started=started, finished=finished if state != StepState.RUNNING
                           else None, progress=encode.progress if live else None, colour="enc",
                           number=number))
     return steps
 
 
-def _file(rec: JobRecord, ident: Step, encodes: list[Step], root: Path) -> Step:
+def _file(rec: JobRecord, ident: Step, encodes: list[Step],
+          shown: Callable[[Path], str]) -> Step:
     if rec.status == JobStatus.FILED:
-        where = "the Archive"
-        if rec.archive_dir is not None:
-            try:
-                where = rec.archive_dir.relative_to(root).as_posix()
-            except ValueError:
-                where = str(rec.archive_dir)
+        where = "the Archive" if rec.archive_dir is None else shown(rec.archive_dir)
         before = [s.finished for s in (ident, *encodes) if s.finished]
         return Step("File", StepState.DONE, f"Filed to {where}",
                     started=max(before) if before else None, finished=rec.filed_at)
@@ -259,5 +263,5 @@ def _file(rec: JobRecord, ident: Step, encodes: list[Step], root: Path) -> Step:
     ready = ident.state == StepState.DONE and all(
         s.state in (StepState.DONE, StepState.FAILED, StepState.NOT_RUN) for s in encodes)
     if ready:
-        return Step("File", StepState.RUNNING, "Filing to the NAS, then a Plex scan")
-    return Step("File", StepState.WAITING, "To the NAS, then a Plex scan")
+        return Step("File", StepState.RUNNING, "Filing to the Library, then a Plex scan")
+    return Step("File", StepState.WAITING, "To the Library, then a Plex scan")

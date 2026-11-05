@@ -54,12 +54,14 @@ class EncodeQueue:
         self._column = column  # its status column
 
     def requeue(self, *statuses: EncodeStatus) -> list[int]:
-        """Put rows in `statuses` back in the queue; the Jobs affected."""
+        """Put rows in `statuses` of Jobs still on their way (`ripped`) back in the queue;
+        the Jobs affected."""
         marks = ", ".join("?" * len(statuses))
-        rows = self._db.execute(f"SELECT DISTINCT job_id FROM {self._table} "
-                                f"WHERE {self._column} IN ({marks})", statuses).fetchall()
-        self._db.execute(f"UPDATE {self._table} SET {self._column} = ? "
-                         f"WHERE {self._column} IN ({marks})",
+        where = (f"WHERE {self._column} IN ({marks}) "
+                 "AND job_id IN (SELECT id FROM jobs WHERE status = 'ripped')")
+        rows = self._db.execute(f"SELECT DISTINCT job_id FROM {self._table} {where}",
+                                statuses).fetchall()
+        self._db.execute(f"UPDATE {self._table} SET {self._column} = ? {where}",
                          (EncodeStatus.QUEUED, *statuses))
         return [r[0] for r in rows]
 

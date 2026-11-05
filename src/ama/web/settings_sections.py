@@ -11,6 +11,7 @@ no field, or appears twice.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, get_args
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
 
     from ama.app import Services
     from ama.config import Config
+
+log = logging.getLogger(__name__)
 
 # A placeholder or status can depend on the running app (e.g. the drive Windows found).
 Dynamic = Callable[["Services"], str]
@@ -46,6 +49,7 @@ class Field:
     unit: str = ""
     placeholder: str | Dynamic = ""
     status: Callable[[Services], Status] | None = None  # e.g. a tool's state
+    after: str = ""  # a partial rendered under the control (e.g. "Send test")
 
     def keys(self) -> Iterator[str]:
         yield self.key
@@ -136,7 +140,7 @@ class Group:
 class Section:
     slug: str  # URL under /settings/
     tab: str  # TABS key
-    name: str  # "General", or the sub-section name ("NAS")
+    name: str  # "General", or the sub-section name ("Libraries")
     groups: tuple[Group, ...]
     note: str | Markup = ""  # under the sheet; default says the file is the source
     # A section with its own UI beyond field rows: a partial rendered after the groups'
@@ -164,12 +168,19 @@ class Section:
 
 # --- dynamic bits --------------------------------------------------------------
 
-def _drive_placeholder(services: Services) -> str:
+def _drive_options(services: Services, saved: str) -> tuple[Option, ...]:
+    """Automatic, then each optical drive; a saved one that's gone stays, marked."""
     try:
-        device = services.drive.device()
-    except Exception:  # noqa: BLE001 - only a hint
-        device = None
-    return f"Automatic ({device})" if device else "Automatic"
+        found = services.drive.drives()
+    except Exception:  # noqa: BLE001 - the list is a convenience; the saved value still shows
+        log.exception("listing optical drives failed")
+        found = ()
+    options = [Option("", "Automatic (first drive found)")]
+    names = services.tools.drive_names
+    options += [Option(d, f"{d} · {names[d]}" if d in names else d) for d in found]
+    if saved and saved not in found:
+        options.append(Option(saved, f"{saved} (not found)", broken=True))
+    return tuple(options)
 
 
 def _tool_status(name: str) -> Callable[[Services], Status]:
@@ -192,16 +203,6 @@ def _tool_status(name: str) -> Callable[[Services], Status]:
                 return Status("Download failed", ok=False)
         return Status(makemkv_headline(st), ok=False)
     return status
-
-
-def _nas_status(services: Services) -> Status:
-    from ama.nas import NasConnected, NasUnreachable
-    match services.nas.status:
-        case NasConnected():
-            return Status("Connected")
-        case NasUnreachable():
-            return Status("Can't reach the NAS", ok=False)
-    return Status("Connecting", ok=False)
 
 
 def _encoder_options(services: Services, saved: str) -> tuple[Option, ...]:
@@ -293,9 +294,6 @@ SECTIONS: list[Section] = [
                   "Without a password, anyone on your home network can use AMA. Once saved it's "
                   "never shown again."),
         )),
-        # Paused (#36) is the app's state, toggled in the top-bar menu, not an ama.toml key.
-        Group("New Discs", (), live=True, note="Changes at once",
-              template="partials/settings_pause.html"),
         Group("Storage", (
             Field("paths.scratch", "Scratch folder",
                   "Rips wait here for Identification, Review and Encode. Needs at least 256 GB "
@@ -306,6 +304,18 @@ SECTIONS: list[Section] = [
                     hint="With less free, an inserted Disc is ejected unripped and Now shows "
                          "what's holding scratch.", unit="GB"),
         )),
+        Group("Scratch cleanup", (
+            Field("scratch.retention_days", "Remove kept scratch after",
+                  "A failed Encode keeps its Rip on scratch to try again. After this many "
+                  "days it's removed, oldest first; the Job keeps its record. 0 never removes "
+                  "it. Checked at startup, every hour and when a Job finishes; each cleanup "
+                  "is listed in Logs.", unit="days"),
+            Field("scratch.floor_gb", "Free scratch to keep",
+                  "With less free than this, kept scratch is removed whatever its age, "
+                  "oldest first, until there's enough. 0 turns it off. It never stops a "
+                  "Rip; a Disc is still ejected unripped only by the space it needs.",
+                  unit="GB"),
+        ), live=True, note="Takes effect at once"),
         Group("Database and log file", (
             Field("paths.state_db", "Database",
                   Markup("AMA's record of every Job. A plain name is kept next to "
@@ -316,13 +326,19 @@ SECTIONS: list[Section] = [
     )),
     Section("ripping", "ripping", "Ripping", (
         Group("Drive", (
-            Field("drive.letter", "Drive letter",
-                  "Leave empty to use the first optical drive Windows finds.",
-                  placeholder=_drive_placeholder),
+            Choice("drive.letter", "Drive", _drive_options,
+                   "Automatic uses the first optical drive Windows finds.", style="select"),
             Field("drive.poll_seconds", "Check for a Disc every",
                   "How soon AMA notices a Disc going in or coming out. 3 seconds suits most "
                   "drives.", unit="seconds"),
         )),
+        Group("Video Titles", (
+            PerType("min-title", "Shortest Title ripped", "Minimum length",
+                    tuple((n, f"rip.min_title_seconds.{k}") for n, k in _DISC_TYPES),
+                    hint="Shorter Titles are menus, logos and warnings, and aren't ripped. "
+                         "Lower it to keep short Extras.",
+                    tech=_key("[rip.min_title_seconds] dvd", "bd", "uhd"), unit="seconds"),
+        ), live=True, note="Used from the next Rip"),
         Group("Reading CDs", (
             Field("cd.offset", "Read offset",
                   "Lines up your drive's reading so each CD Rip can be checked against "
@@ -401,30 +417,17 @@ SECTIONS: list[Section] = [
                   "Lets AMA tell Plex to look for new files as soon as a Job is filed. "
                   "Without it, Plex finds them on its next scheduled scan.",
                   "Plex calls it the X-Plex-Token."),
-            Field("plex.nas_path", "Share path seen by Plex",
-                  "Only if Plex runs on another machine: where that machine sees the NAS share. "
-                  "Leave empty when Plex sees the same path as AMA.",
-                  placeholder="Same as the NAS share"),
+            Field("plex.libraries_path", "Plex sees Libraries at",
+                  "Only if Plex runs on another machine: the folder where that machine sees "
+                  "your Library folders, each by its own name. Leave empty when Plex sees "
+                  "them at the same paths as AMA.",
+                  placeholder="Same paths as AMA"),
         ), live=True, status=_plex_status),
     ), note=Markup("A Job goes to its kind's default unless you pick another Library in its "
                    "settings before it's filed. Each Library saves on its own, to "
                    "<code>ama.toml</code>."), note_only=True,
         template="partials/settings_libraries.html", context=settings_libraries.context,
         owns=("libraries",), foot="Plex connection"),
-    Section("archive/nas", "archive", "NAS", (
-        Group("NAS share", (
-            Field("nas.unc", "Share",
-                  r"The shared folder on your NAS that holds your Libraries, like \\nas\media. "
-                  "AMA connects when it starts and keeps trying while it can't.",
-                  Markup("Connected with Windows' <code>net use</code>.")),
-            Field("nas.username", "Username",
-                  "Leave empty to connect as the Windows user AMA runs as.",
-                  placeholder="Logged-on Windows user"),
-            Field("nas.password", "Password", "Once saved it's never shown again."),
-            Field("nas.retry_seconds", "Try again every",
-                  "How often AMA tries again while it can't reach the NAS.", unit="seconds"),
-        ), status=_nas_status),
-    )),
     Section("archive/identification", "archive", "Identification", (
         Group("TMDB", (
             Field("tmdb.api_key", "TMDB API key",
@@ -436,8 +439,8 @@ SECTIONS: list[Section] = [
     Section("alerts", "alerts", "Alerts", (
         Group("Discord", (
             Field("discord.webhook_url", "Webhook URL",
-                  "Posts to a Discord channel when a Disc needs Review, is done or failed. "
-                  "Empty turns Discord off."),
+                  "Posts to a Discord channel when a Rip is done and when a Job needs Review, "
+                  "is filed or failed. Empty turns Discord off."),
         ), live=True, note="Used from the next alert"),
         Group("ntfy", (
             Field("ntfy.url", "Server",
@@ -447,8 +450,20 @@ SECTIONS: list[Section] = [
                   "Anyone who knows the topic can read your alerts, so it's kept like a "
                   "password. Empty turns ntfy off."),
         ), live=True, note="Used from the next alert"),
-    ), note=Markup("Alerts go out when a Disc needs Review, is filed (“insert the next one”) "
-                   "or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
+        Group("Webhook", (
+            Field("webhook.url", "URL",
+                  "Gets every alert as one JSON POST, for Home Assistant or your own "
+                  "script. Empty turns the webhook off.",
+                  Markup("The JSON is described under <code>[webhook]</code> in "
+                         "<code>ama.example.toml</code>."),
+                  after="partials/webhook_test.html"),
+            Field("webhook.header_name", "Header name",
+                  "An optional header sent with every POST, like a token your receiver "
+                  "checks. Leave empty to send none.", placeholder="X-Ama-Token"),
+            Field("webhook.header_value", "Header value", "Once saved it's never shown again."),
+        ), live=True, note="Used from the next alert"),
+    ), note=Markup("Alerts go out when a Rip is done (“insert the next one”) and when a Job "
+                   "needs Review, is filed or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
                    "Archive › Libraries</a>.")),
     Section("logs", "logs", "Logs", (
         Group("Step output", (

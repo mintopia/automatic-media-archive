@@ -1,4 +1,4 @@
-"""CD Review, end to end: the real app with a fake drive, cyanrip, NAS folder and web.
+"""CD Review, end to end: the real app with a fake drive, cyanrip, Library folders and web.
 
 The FFVII Rebirth OST disc 1 capture has 3 MusicBrainz releases, so it lands in
 Review; the user picks one (or enters the details) and it is filed.
@@ -11,6 +11,7 @@ import html
 from mutagen.flac import FLAC
 
 from ama.archive import extended_path
+from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
@@ -105,7 +106,7 @@ def test_picking_an_edition_files_the_cd(harness, client):
     assert r.status_code == 303
 
     filed = _wait_for(harness, JobStatus.FILED)
-    album = extended_path(harness.nas_root / "Music" / "Various Artists"
+    album = extended_path(harness.libraries_root / "Music" / "Various Artists"
                           / "FINAL FANTASY VII REBIRTH Original Soundtrack")
     flacs = sorted(p.name for p in album.iterdir() if p.name.endswith(".flac"))
     assert len(flacs) == 24
@@ -117,14 +118,15 @@ def test_picking_an_edition_files_the_cd(harness, client):
     assert "Nothing needs you right now" in _page(client, "/review")
 
 
-def test_picking_an_edition_waits_for_the_nas_like_automatic_filing(harness, client):
-    harness.share["reachable"] = False
+def test_picking_an_edition_waits_for_the_library_folder_like_automatic_filing(harness, client):
+    harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response())
     rec = _wait_for(harness, JobStatus.REVIEW)
     client.post(f"/review/{rec.id}/release", data={"release": f"{SPECIAL}:1"})
-    eventually(lambda: any("NAS" in ln.text for ln in harness.services.jobs.log_lines(rec.id)))
+    eventually(lambda: any("Library folder" in ln.text
+                           for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
-    harness.share["reachable"] = True
+    harness.restore_library(LibraryKind.MUSIC)
     _wait_for(harness, JobStatus.FILED)
     assert (_album(harness)).exists()
 
@@ -153,7 +155,7 @@ def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(ha
     assert r.status_code == 303
 
     filed = _wait_for(harness, JobStatus.FILED)
-    album = extended_path(harness.nas_root / "Music" / "Radiohead" / "Kid A")
+    album = extended_path(harness.libraries_root / "Music" / "Radiohead" / "Kid A")
     names = sorted(p.name for p in album.iterdir())
     assert names == ["01 - Everything in Its Right Place.flac", "02 - Kid A.flac",
                      "03 - The National Anthem.flac", "Kid A.cue", "Kid A.log"]
@@ -244,9 +246,9 @@ def test_discarding_an_unverified_rip_deletes_it(harness, client):
     after = harness.services.jobs.get(rec.id)
     assert after.status == JobStatus.FAILED and after.dismissed
     assert not rec.scratch_dir.exists()
-    assert not (harness.nas_root / "Music").exists()
+    assert not (harness.libraries_root / "Music").exists()
     page = _page(client, "/")
-    assert "Didn't work" not in page or f"/jobs/{rec.id}" not in page
+    assert f"/jobs/{rec.id}" not in page
     assert 'Needs Review <span class="c">0</span>' in page
 
 

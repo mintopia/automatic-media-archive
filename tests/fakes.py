@@ -23,6 +23,7 @@ class FakeDrive:
         self.ejected = 0
         self.stuck = False  # eject() fails and the Disc stays in
         self.root: Path | None = None  # the Disc's filesystem (e.g. BDMV/META), if a test makes one
+        self.optical: tuple[str, ...] = ("D:",)  # every optical drive Windows reports
 
     def insert(self, disc_type: DiscType, label: str = "") -> None:
         self.state = DiscPresent(disc_type, label)
@@ -39,6 +40,9 @@ class FakeDrive:
 
     def device(self) -> str:
         return "D:"
+
+    def drives(self) -> tuple[str, ...]:
+        return self.optical
 
     def fail_with(self, error: Exception) -> None:
         self._error = error
@@ -347,6 +351,7 @@ class FakeWeb:
         # Notifications (#15): what Discord and ntfy were sent; `notify_status` = their answer.
         self.discord: list[httpx.Request] = []
         self.ntfy: list[httpx.Request] = []
+        self.webhook: list[httpx.Request] = []  # the Webhook channel, at hooks.example
         self.notify_status = 200
         # TMDB TV: search results per (case-folded) query, /tv/{id}, /tv/{id}/season/{n}.
         self.tmdb_tv_search: dict[str, list[dict]] = {}
@@ -434,8 +439,9 @@ class FakeWeb:
             self.tmdb_requests.append(request)
             image = None if self.tmdb_offline else                 self.tmdb_images.get("/" + url.path.rsplit("/", 1)[-1])
             return httpx.Response(200, content=image, headers={"content-type": "image/jpeg"})                 if image else httpx.Response(404)
-        if url.host in ("discord.com", "ntfy.sh"):
-            (self.discord if url.host == "discord.com" else self.ntfy).append(request)
+        if url.host in ("discord.com", "ntfy.sh", "hooks.example"):
+            {"discord.com": self.discord, "ntfy.sh": self.ntfy,
+             "hooks.example": self.webhook}[url.host].append(request)
             if self.notify_status == 0:
                 raise httpx.ConnectError("no network", request=request)
             return httpx.Response(self.notify_status, json={})

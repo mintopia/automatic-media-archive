@@ -1,5 +1,5 @@
 """CD Identification and filing to the Archive, end to end: the real app with a fake
-drive, cyanrip, NAS folder and web (MusicBrainz, Cover Art Archive, Plex).
+drive, cyanrip, Library folders and web (MusicBrainz, Cover Art Archive, Plex).
 
 The MusicBrainz answers are the real capture for FFVII Rebirth OST disc 1
 (tests/data/README.md), cut down to one release where a test needs a single match.
@@ -15,6 +15,7 @@ from mutagen.flac import FLAC
 from ama import musicbrainz
 from ama.archive import extended_path
 from ama.cdarchive import track_tags
+from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
@@ -50,7 +51,7 @@ def _wait_for(harness, status: JobStatus, count: int = 1):
 
 def _album(harness):
     # Extended-length: with pytest's long tmp path the files are past MAX_PATH.
-    return extended_path(harness.nas_root / "Music" / "Various Artists" / ALBUM)
+    return extended_path(harness.libraries_root / "Music" / "Various Artists" / ALBUM)
 
 
 def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(harness, client):
@@ -140,7 +141,7 @@ def test_several_matching_releases_are_left_for_review(harness, client):
 
     rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.MULTIPLE_RELEASES
-    assert not (harness.nas_root / "Music").exists()
+    assert not (harness.libraries_root / "Music").exists()
     assert sorted(p.name for p in rec.scratch_dir.glob("*.flac"))[0] == "01.flac"
     saved = json.loads((rec.scratch_dir / "musicbrainz.json").read_text(encoding="utf-8"))
     assert len(saved["releases"]) == 3  # what Review will choose from
@@ -161,7 +162,7 @@ def test_a_rip_accuraterip_didnt_verify_is_left_for_review(harness, client):
     harness.drive.insert(DiscType.CD)
     rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.NOT_ACCURATE
-    assert not (harness.nas_root / "Music").exists()
+    assert not (harness.libraries_root / "Music").exists()
 
 
 def test_a_cd_not_in_accuraterip_is_left_for_review(harness, client):
@@ -180,14 +181,16 @@ def test_identification_waits_for_musicbrainz_to_be_reachable(harness, client):
     _wait_for(harness, JobStatus.FILED)
 
 
-def test_filing_waits_for_the_nas(harness, client):
-    harness.share["reachable"] = False
+def test_filing_waits_for_an_unreachable_library_folder(harness, client):
+    folder = harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.RIPPED)
-    eventually(lambda: any("NAS" in ln.text for ln in harness.services.jobs.log_lines(rec.id)))
-    assert not (harness.nas_root / "Music").exists()
-    harness.share["reachable"] = True
+    eventually(lambda: any(f"Can't reach the Library folder {folder}" in ln.text
+                           for ln in harness.services.jobs.log_lines(rec.id)))
+    assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
+    harness.restore_library(LibraryKind.MUSIC)
     _wait_for(harness, JobStatus.FILED)
+    assert _album(harness).exists()
 
 
 def test_labels_listed_once_per_disc_are_tagged_once():

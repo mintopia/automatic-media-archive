@@ -1,6 +1,6 @@
 {#- A ripped track's AccurateRip result. `t`: a cdrip.Track. -#}
 {%- set s = t.ar.status if t.ar else "unavailable" -%}
-{%- if s == "accurate" -%}<span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Verified</span> <span class="ts nw">matches {{ t.ar.confidence }} other rip{{ "s" if t.ar.confidence != 1 }}</span>
+{%- if s == "accurate" -%}<span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Verified <span class="ts">· matches {{ t.ar.confidence }} other rip{{ "s" if t.ar.confidence != 1 }}</span></span>
 {%- elif s == "mismatch" -%}<span class="warn">Doesn't match other rips</span>
 {%- elif s == "not_in_db" -%}<span class="wait">Ripped · no other rips to compare</span>
 {%- else -%}<span class="wait">Ripped · online check unavailable</span>

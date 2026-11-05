@@ -137,7 +137,7 @@ def test_data_disc_is_left_alone(harness, client):
     assert harness.drive.ejected == 0
 
 
-def test_unreadable_track_fails_ejects_deletes_partial_files_and_shows_log(harness, client):
+def test_unreadable_track_fails_ejects_deletes_partial_files_and_links_its_run(harness, client):
     harness.cyanrip.read_errors_in = 2
     harness.drive.insert(DiscType.CD)
     rec = _only_disc(harness, JobStatus.FAILED)
@@ -148,9 +148,10 @@ def test_unreadable_track_fails_ejects_deletes_partial_files_and_shows_log(harne
     page = client.get(f"/jobs/{rec.id}").text
     assert "Couldn't read this CD" in page
     assert "Unknown CD · 3 tracks" in page
-    assert "Ripping errors: 3" in page                      # cyanrip's own log
-    assert '<span class="e">' in page                         # errors highlighted
-    assert "Disc ejected" in page
+    assert f'<a class="view-log" href="/logs/jobs/{rec.id}">' in page
+    assert "full log" not in page and "Ripping errors: 3" not in page
+    run = client.get(f"/logs/jobs/{rec.id}", follow_redirects=True).text
+    assert "Ripping errors: 3" in run                       # cyanrip's own output
     now = client.get("/").text
     assert "Didn't work" in now and f'href="/jobs/{rec.id}"' in now
 
@@ -162,7 +163,8 @@ def test_failed_rip_is_not_retried(harness, client):
     rec = _only_disc(harness, JobStatus.FAILED)
     time.sleep(0.3)  # many drive polls
     assert len(_rip_calls(harness)) == 1
-    assert "eject the Disc: The tray is stuck" in client.get(f"/jobs/{rec.id}").text
+    run = client.get(f"/logs/jobs/{rec.id}", follow_redirects=True).text
+    assert "eject the Disc: The tray is stuck" in run
 
 
 def test_dismissing_a_failure_clears_it_from_now(harness, client):
@@ -172,7 +174,8 @@ def test_dismissing_a_failure_clears_it_from_now(harness, client):
     assert rec.failure.kind == "drive"
     r = client.post(f"/jobs/{rec.id}/dismiss", follow_redirects=False)
     assert r.status_code == 303
-    assert "Didn't work" not in client.get("/").text
+    now = client.get("/").text
+    assert f'href="/jobs/{rec.id}"' not in now and "Didn't work <span class=\"c\">0</span>" in now
     assert "Couldn't rip this CD" in client.get(f"/jobs/{rec.id}").text  # still viewable
 
 
@@ -205,7 +208,6 @@ def test_cd_tool_path_comes_from_the_tool_lookup(tmp_path):
     drive = FakeDrive()
     fake = FakeCyanrip(drive)
     services = build_services(make_config(tmp_path), probe=drive, streamer=fake,
-                              nas_exists=lambda p: True,
                               tool=lambda name: tmp_path / "tools" / f"{name}.exe")
     import asyncio
     drive.insert(DiscType.CD)
@@ -248,3 +250,46 @@ def test_a_rip_starting_and_finishing_is_logged(harness, client, caplog):
     assert f"Rip started: Audio CD “OK_COMPUTER” (Job {rec.id})" in _info(caplog)
     eventually(lambda: f"Rip finished: Audio CD “OK_COMPUTER” (Job {rec.id}): ripped"
                in _info(caplog))
+
+
+def _top_level_texts(html: str) -> list[str]:
+    from html.parser import HTMLParser
+
+    class Top(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.depth, self.texts = 0, []
+
+        def handle_starttag(self, tag, attrs):
+            if self.depth == 0:
+                self.texts.append("")
+            self.depth += 1
+
+        def handle_endtag(self, tag):
+            self.depth -= 1
+
+        def handle_data(self, data):
+            if self.depth:
+                self.texts[-1] += data
+            elif data.strip():
+                self.texts.append(data)
+
+    top = Top()
+    top.feed(html)
+    return [" ".join(t.split()) for t in top.texts]
+
+
+def test_each_track_result_is_one_inline_phrase():
+    from ama.cdrip import Track
+    from ama.cyanrip import ArResult, ArStatus
+    from ama.web import TEMPLATES
+
+    def cell(ar):
+        return _top_level_texts(TEMPLATES.get_template("partials/cd_track_ar.html").render(
+            t=Track(number=1, seconds=60, ripped=True, ar=ar)))
+
+    assert cell(ArResult(ArStatus.ACCURATE, 12)) == ["Verified · matches 12 other rips"]
+    assert cell(ArResult(ArStatus.ACCURATE, 1)) == ["Verified · matches 1 other rip"]
+    assert cell(ArResult(ArStatus.MISMATCH)) == ["Doesn't match other rips"]
+    assert cell(ArResult(ArStatus.NOT_IN_DB)) == ["Ripped · no other rips to compare"]
+    assert cell(None) == ["Ripped · online check unavailable"]

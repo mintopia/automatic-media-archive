@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
+from ama.config import LibraryKind
 from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually, make_harness
@@ -58,12 +59,13 @@ def test_a_rip_under_way_finishes_when_paused(client, harness):
 def test_filing_carries_on_while_paused(tmp_path):
     from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
 
-    harness = make_harness(tmp_path, nas_reachable=False)
+    harness = make_harness(tmp_path)
+    harness.drop_library(LibraryKind.MUSIC)
     with TestClient(create_app(harness.services)) as client:
         _insert(harness, DISC_1, 24, _response(only=SPECIAL))
         _wait_for(harness, JobStatus.RIPPED)
         _pause(client)
-        harness.share["reachable"] = True
+        harness.restore_library(LibraryKind.MUSIC)
         _wait_for(harness, JobStatus.FILED)
 
 
@@ -100,14 +102,18 @@ def test_the_top_bar_shows_paused_and_the_menu_says_which(client):
     assert 'class="paused"' not in client.get("/").text
 
 
-def test_settings_general_says_whether_new_discs_are_taken(tmp_path):
+def test_settings_leaves_pausing_to_the_menu(tmp_path):
+    from ama.web import FRAGMENTS
+    from ama.web.settings_sections import SECTIONS
     from tests.conftest import write_config
 
+    assert "New Discs" not in [g.title for s in SECTIONS for g in s.groups]
+    assert "pause-settings" not in FRAGMENTS
     h = make_harness(tmp_path, config_file=write_config(tmp_path))
     with TestClient(create_app(h.services)) as client:
         page = html.unescape(client.get("/settings/general").text)
-        assert "New Discs" in page and "Right now" in page
-        assert "<b>Accepting</b>" in page and "Change in the menu" in page
-        _pause(client)
-        page = html.unescape(client.get("/settings/general").text)
-        assert "<b>Paused</b>" in page and "until you resume" in page
+        assert "Right now" not in page and "Change in the menu" not in page
+        assert 'formaction="/pause" aria-pressed="false"' in page
+        r = client.post("/pause", headers={"referer": "/settings/general"}, follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/settings/general"
+        assert 'formaction="/pause" aria-pressed="true"' in client.get("/settings/general").text

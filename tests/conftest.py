@@ -19,7 +19,6 @@ from ama.config import (
     DiscordConfig,
     DriveConfig,
     EncodeConfig,
-    NasConfig,
     NtfyConfig,
     PathsConfig,
     PlexConfig,
@@ -27,9 +26,10 @@ from ama.config import (
     ToolsConfig,
     WebConfig,
 )
-from ama.config import load_config
+from ama.config import Library, LibraryKind, load_config
 from ama.events import EventBus
 from ama.proc import ProcResult
+from ama.settings import upgrade
 from ama.tools import Tools
 from tests.fakes import (
     FakeCyanrip,
@@ -54,9 +54,10 @@ def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str
         ntfy=NtfyConfig(topic=ntfy_topic),
         web=WebConfig(password=password),
         drive=DriveConfig(poll_seconds=0.01),
-        # The "NAS share" is a local folder; reachability is faked by `nas_exists`.
-        nas=NasConfig(unc=str(tmp_path / "nas"), retry_seconds=0.05),
-        plex=PlexConfig(url="http://plex:32400", token="plex-token", nas_path="/volume1/media"),
+        plex=PlexConfig(url="http://plex:32400", token="plex-token",
+                        libraries_path="/volume1/media"),
+        libraries=tuple(Library(name=k.folder, kind=k, path=str(tmp_path / "libraries" / k.folder),
+                                default=True) for k in LibraryKind),
         paths=PathsConfig(scratch=tmp_path / "scratch", state_db=tmp_path / "ama.sqlite3",
                           log_file=tmp_path / "ama.log"),
         encode=EncodeConfig(cq=CqConfig(dvd=20, bd=22, uhd=24)),
@@ -66,25 +67,46 @@ def make_config(tmp_path, password: str = "", discord: str = "", ntfy_topic: str
 
 @dataclass
 class Harness:
-    """The app wired to fakes: a controllable drive, NAS share and makemkvcon."""
+    """The app wired to fakes: a controllable drive, Library folders and makemkvcon."""
 
     services: Services
     drive: FakeDrive
-    share: dict  # {"reachable": bool}
     runner: FakeRunner
     makemkv: FakeMakemkv  # the makemkvcon that Video Rips run
     cyanrip: FakeCyanrip
     makemkv_check: dict  # {"key", "output"}: what the MakeMKV preflight sees next
     web: FakeWeb  # MusicBrainz, Cover Art Archive, Plex, TMDB
-    nas_root: Path
+    libraries_root: Path  # each default Library is a folder in here
     ffmpeg: FakeFfmpeg  # ffprobe + the Encode
     disk: FakeDisk  # the scratch volume's size and use
+
+    def drop_library(self, kind: LibraryKind) -> Path:
+        """Make the kind's default Library folder unreachable, like a dropped mapped drive:
+        a file stands where the folder was. Its path."""
+        path = Path(next(lib.path for lib in self.services.archive.libraries
+                         if lib.kind == kind and lib.default))
+        if path.is_dir():
+            path.rename(path.with_name(path.name + ".away"))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"")
+        return path
+
+    def restore_library(self, kind: LibraryKind) -> None:
+        path = Path(next(lib.path for lib in self.services.archive.libraries
+                         if lib.kind == kind and lib.default))
+        path.unlink()
+        away = path.with_name(path.name + ".away")
+        if away.is_dir():
+            away.rename(path)
 
 
 def write_config(tmp_path, extra: str = "") -> Path:
     """An ama.toml like `make_config`'s, with comments, for the Settings tests."""
     p = tmp_path / "ama.toml"
-    nas = tmp_path / "nas"
+    root = tmp_path / "libraries"
+    libraries = "" if "[[libraries]]" in extra else "".join(
+        f"\n[[libraries]]\nname = \"{k.folder}\"\nkind = \"{k.value}\"\n"
+        f"path = '{root / k.folder}'\ndefault = true\n" for k in LibraryKind)
     p.write_text(f"""# AMA test config
 [web]
 # Who can open AMA.
@@ -100,10 +122,6 @@ poll_seconds = 0.01
 offset = 667
 retries = 10
 
-[nas]
-unc = '{nas}'
-retry_seconds = 0.05
-
 [paths]
 scratch = 'scratch'
 state_db = "ama.sqlite3"
@@ -115,30 +133,30 @@ api_key = "tmdb-key"
 [plex]
 url = "http://plex:32400"
 token = "plex-token"
-nas_path = "/volume1/media"
+libraries_path = "/volume1/media"
 
 [encode.cq]
 # CQ per Disc Type.
 dvd = 20
 bd = 22
 uhd = 24
-{extra}""", encoding="utf-8")
+{extra}{libraries}""", encoding="utf-8")
     return p
 
 
-def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
+def make_harness(tmp_path, password: str = "",
                  fetch: FakeFetch | None = None, pins: tuple | None = None,
                  discord: str = "", ntfy_topic: str = "",
                  config_file: Path | None = None, tmdb_key: str = "tmdb-key") -> Harness:
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
     MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead.
     `config_file` (from `write_config`) runs from a real ama.toml, as Settings edits it."""
+    if config_file:
+        upgrade(config_file)
     cfg = load_config(config_file) if config_file else make_config(
         tmp_path, password, discord, ntfy_topic, tmdb_key)
     drive = FakeDrive()
-    share = {"reachable": nas_reachable}
-    runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
-                                                "The network path was not found."))
+    runner = FakeRunner(lambda a: ProcResult(1, ""))
     makemkv = FakeMakemkv(drive)
     cyanrip = FakeCyanrip(drive)
     web = FakeWeb()
@@ -160,7 +178,6 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
     ffmpeg = FakeFfmpeg()
     disk = FakeDisk()
     services = build_services(cfg, probe=drive, runner=runner,
-                              nas_exists=lambda p: share["reachable"],
                               streamer=FakeTools(makemkv, cyanrip, ffmpeg),
                               make_tools=make_tools,
                               http=httpx.Client(transport=web.transport()),
@@ -168,10 +185,11 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                               config_path=config_file)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
-    services.cd_archive.backoff.retry_seconds = 0.05
+    for archiver in (services.cd_archive, services.movie_archive, services.tv_archive):
+        archiver.backoff.retry_seconds = 0.05
     services.musicbrainz.min_interval = 0  # no MusicBrainz rate limit against the fake
-    return Harness(services, drive, share, runner, makemkv, cyanrip, makemkv_check, web,
-                   Path(cfg.nas.unc), ffmpeg, disk)
+    return Harness(services, drive, runner, makemkv, cyanrip, makemkv_check, web,
+                   tmp_path / "libraries", ffmpeg, disk)
 
 
 def eventually(check: Callable[[], bool], timeout: float = 15.0) -> None:

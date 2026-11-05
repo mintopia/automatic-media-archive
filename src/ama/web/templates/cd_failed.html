@@ -2,7 +2,7 @@
 {% block title %}Rip failed{% endblock %}
 {% block main %}
 <main id="disc">
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Didn't work</span></div>
+  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>Didn't work</span>{% include "partials/job_log_link.html" %}</div>
   <div class="solo">
     <div class="stack">
       <div class="page-head failed"><div><h1>Couldn't {{ "read" if record.failure.kind == "unreadable_track" else "rip" }} this {{ "CD" if record.disc_type == "CD" else "Disc" }}</h1><p class="sub">{{ record.label or ("Unknown CD" if record.disc_type == "CD" else record.disc_type.long_name) }}{% if track_count %} · {{ track_count }} tracks{% endif %}{% if record.finished_at %} · ejected at {{ record.finished_at.strftime("%H:%M") }}{% endif %}</p></div><span class="stk fail">Failed</span></div>
@@ -18,16 +18,6 @@
       <p class="ts after-actions">This takes it off Now. Nothing is retried on its own: put the CD back in when you're ready and it's ripped from the start.</p>
       {%- endif %}
       {% include "partials/job_steps.html" %}
-      <section class="bin ink" aria-labelledby="log-h">
-        <h2 class="tab" id="log-h">Log</h2>
-        <div class="box">
-          <details open>
-            <summary><svg class="i" aria-hidden="true"><use href="/static/icons.svg#log"/></svg>Show the full log</summary>
-<div class="log">{% for ln in log %}{% if ln.error %}<span class="e">{{ ln.at.strftime("%H:%M:%S") }}  {{ ln.text }}</span>{% else %}{{ ln.at.strftime("%H:%M:%S") }}  {{ ln.text }}{% endif %}
-{% endfor %}</div>
-          </details>
-        </div>
-      </section>
     </div>
   </div>
 </main>

@@ -8,13 +8,13 @@ with its reason. The MusicBrainz answer is kept in scratch
 (`musicbrainz.json`) for Review to choose from.
 
 Filing: tag the scratch FLACs (incl. MusicBrainz IDs), fetch the cover, and
-place FLACs + cue + log + cover into `Music/<album artist>/<album>/` on the
-NAS (temp name -> rename, verified; see `archive.py`). Discs of a multi-disc
+place FLACs + cue + log + cover into `<album artist>/<album>/` in its Library
+(temp name -> rename, verified; see `archive.py`). Discs of a multi-disc
 release share the album folder: track files are `<disc><track:02> - <title>.flac`
 and the cue/log are named per disc. Then the Job is marked filed, its scratch
 deleted, and Plex asked to scan the folder.
 
-Network or NAS trouble leaves the Job `ripped`; it is retried every
+Network trouble or an unreachable Library folder leaves the Job `ripped`; it is retried every
 `retry_seconds`. Every step is idempotent, so a retry or restart just redoes it.
 """
 
@@ -42,7 +42,6 @@ from ama.drive import DiscType
 from ama.events import EventBus, Topic
 from ama.media import Album, MediaStore
 from ama.musicbrainz import Match, MusicBrainz
-from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
@@ -167,7 +166,7 @@ def rename_cue_files(cue: str, names: dict[str, str]) -> str:
 # ---- the worker ---------------------------------------------------------------
 
 class CdArchiver:
-    def __init__(self, jobs: JobStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
+    def __init__(self, jobs: JobStore, tracks: CdTracks, mb: MusicBrainz,
                  archive: Archive, plex: Plex, bus: EventBus, interval: float,
                  covers: Covers, media: MediaStore, *,
                  picked: Callable[[int], CdPick | None], retry_seconds: float = 60.0,
@@ -181,7 +180,6 @@ class CdArchiver:
         self._media = media
         self._jobs = jobs
         self._tracks = tracks
-        self._nas = nas
         self._mb = mb
         self._archive = archive
         self._plex = plex
@@ -203,7 +201,7 @@ class CdArchiver:
             try:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
-                if self.backoff.later(rec.id, str(e), e.problem):
+                if self.backoff.later(rec.id, str(e), e.problem, e.detail):
                     self._jobs.log(rec.id, f"{e}; trying again in a while", error=True)
             except Exception:
                 log.exception("CD Identification/filing of Job %s crashed", rec.id)
@@ -267,7 +265,6 @@ class CdArchiver:
     def file(self, rec: JobRecord, match: Match, mb_disc_id: str) -> None:
         """Tag, file and verify this Disc as `match`, then delete its scratch and tell Plex."""
         self._jobs.begin_step(rec.id, "file", "File")
-        filing.require_nas(self._nas)
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}
         renamed: dict[str, str] = {}
@@ -300,9 +297,9 @@ class CdArchiver:
             cached = self._covers.path(art)
             assert cached is not None
             files[f"cover{cached.suffix}"] = cached
-        with filing.to_nas():
-            folder = self._archive.place(album_folder(match), files,
-                                         self._library(rec, LibraryKind.MUSIC))
+        rel, library = album_folder(match), self._library(rec, LibraryKind.MUSIC)
+        with filing.to_library(self._archive, rel, library):
+            folder = self._archive.place(rel, files, library)
         title = f"{match.release.title} — {match.release.artist}"
         self._media.save(rec.id, Album.of(match, mb_disc_id, art))
         self._jobs.mark_filed(rec.id, title, folder)

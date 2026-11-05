@@ -6,6 +6,7 @@
     until the Job is identified; while it rips, "Change" searches TMDB for another
     (`guess_search`: a TMDB key is set). -#}
 {%- set n = job.titles | length -%}
+{%- set k = job.to_rip | length -%}
 {%- set failed = job.status == JobStatus.FAILED -%}
 {%- set p = Phase.FAILED if failed else (phase if progress and phase is defined and phase else phase_of_job(job)) -%}
 {%- set g = guess_of(job.id) if p in (Phase.RIPPING, Phase.REVIEW) else none -%}
@@ -33,7 +34,7 @@
     {%- include "partials/guess_change.html" %}
     {%- endif %}
     {%- if progress.title_number %}
-    <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ job.total_size }}</span></div>
+    <div class="meta">{{ source }} · {{ k }} Title{{ "s" if k != 1 }} to rip · <span class="nw">{{ job.total_size }}</span></div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
     {%- else %}
     <div class="meta">{{ source }}</div>
@@ -55,7 +56,7 @@
     <div class="meta">{{ source }}</div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Reading the Disc</span></div>
     {%- else %}{#- ripped, review or filed: Identification may already have moved it on -#}
-    <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ job.total_size }}</span></div>
+    <div class="meta">{% if job.all_skipped %}{{ job.skipped_summary }}{% else %}{{ k }} Title{{ "s" if k != 1 }} ripped · <span class="nw">{{ job.total_size }}</span>{% endif %}</div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if job.finished_at %}Disc ejected at {{ job.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
     {%- if on_page and job.status == JobStatus.RIPPED %}{% with job_id = job.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
     {%- endif %}

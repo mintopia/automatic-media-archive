@@ -30,13 +30,14 @@ def test_now_has_an_h1_and_its_bins_are_headings(client):
     assert 'aria-live="polite">' not in page.split('sse-swap="drive"')[1].split(">")[0]
 
 
-def test_an_idle_now_marks_every_bin_empty_and_has_the_quiet_line(client):
+def test_now_with_no_jobs_shows_all_five_bins_empty_and_no_idle_line(client):
     page = client.get("/").text
-    assert page.count(' empty" aria-labelledby') == 4
-    idle = page.split('class="idle')[1].split("</p>")[0]
-    assert ("Nothing ripping, encoding or waiting for you. "
-            "You'll get a notification when a Disc needs a decision.") in idle.replace("&#39;", "'")
-    assert '<a href="/history">History</a>' in idle
+    assert page.count(' empty" aria-labelledby') == 5
+    for h in ("rev-h", "ripping-h", "encoding-h", "filed-h", "failed-h"):
+        assert f'id="{h}"' in page
+    assert "Didn't work <span class=\"c\">0</span>" in page
+    assert 'class="idle' not in page
+    assert 'sse-swap="drive"' in page
 
 
 def test_the_review_count_and_drive_status_are_their_own_live_fragments(live_server, harness):
@@ -85,7 +86,7 @@ def test_a_menu_page_is_marked_current_on_itself_and_its_subpages(harness, monke
     monkeypatch.setattr(web, "MENU", [("Settings", "/settings", "settings")])
     base = TEMPLATES.env.get_template("base.html")
     ctx = web.view_context(harness.services)
-    assert 'href="/settings" aria-current="page"' in base.render(ctx | {"current": "/settings/nas"})
+    assert 'href="/settings" aria-current="page"' in base.render(ctx | {"current": "/settings/general"})
     assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/"})
     assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/settingsx"})
 

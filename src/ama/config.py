@@ -21,6 +21,7 @@ from typing import Annotated, Any, Literal
 from pydantic import (AfterValidator, BaseModel, ConfigDict, Field, ValidationError,
                       ValidationInfo, model_validator)
 
+from ama.drive import DiscType
 from ama.languages import parse_languages
 
 
@@ -98,13 +99,6 @@ class CdConfig(_Section):
     retries: int = Field(default=10, ge=1)
 
 
-class NasConfig(_Section):
-    unc: str
-    username: str = ""
-    password: str = _secret()
-    retry_seconds: float = Field(default=60.0, gt=0)
-
-
 class PathsConfig(_Section):
     scratch: Path
     state_db: Path = Path("ama.sqlite3")
@@ -112,12 +106,30 @@ class PathsConfig(_Section):
 
 
 class ScratchConfig(_Section):
-    """Free scratch (GB) a Disc of each Type needs before its Rip starts; less = refused."""
+    """Free Scratch (GB) each Disc Type needs before its Rip starts; less = refused."""
 
     cd: int = Field(default=1, ge=0)
     dvd: int = Field(default=10, ge=0)
     bd: int = Field(default=50, ge=0)
     uhd: int = Field(default=100, ge=0)
+    retention_days: int = Field(default=0, ge=0)  # remove kept Scratch older than this; 0 = never
+    floor_gb: int = Field(default=0, ge=0)  # below this free, remove kept Scratch of any age
+
+
+class MinTitleConfig(_Section):
+    dvd: int = Field(default=30, ge=0)
+    bd: int = Field(default=30, ge=0)
+    uhd: int = Field(default=30, ge=0)
+
+    def seconds(self, disc_type: DiscType) -> int:
+        """A video Disc Type's minimum; a CD has no Titles, so none."""
+        return {DiscType.DVD: self.dvd, DiscType.BD: self.bd, DiscType.UHD: self.uhd}[disc_type]
+
+
+class RipConfig(_Section):
+    """A video Title shorter than its Disc Type's `min_title_seconds` isn't ripped (ADR 0005)."""
+
+    min_title_seconds: MinTitleConfig = MinTitleConfig()
 
 
 class TmdbConfig(_Section):
@@ -127,7 +139,7 @@ class TmdbConfig(_Section):
 class PlexConfig(_Section):
     url: Annotated[str, AfterValidator(_web_address("plex.url", "http"))] = ""
     token: str = _secret()
-    nas_path: str = ""  # where the Plex server sees `nas.unc`; empty = the same path
+    libraries_path: str = ""  # where Plex sees the Libraries; empty = the same path as AMA
 
 
 class DiscordConfig(_Section):
@@ -137,6 +149,23 @@ class DiscordConfig(_Section):
 class NtfyConfig(_Section):
     url: Annotated[str, AfterValidator(_web_address("ntfy.url", "https"))] = "https://ntfy.sh"
     topic: str = _secret()
+
+
+def _header_name(value: str, info: ValidationInfo) -> str:
+    value = value.strip()
+    if value and _edited(info, "webhook.header_name") and not re.fullmatch(
+            r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", value):
+        raise ValueError("Use letters, digits and dashes only, like X-Ama-Token")
+    return value
+
+
+class WebhookConfig(_Section):
+    """Alerts as versioned JSON POSTed to `url`; `header_name`/`header_value`, when both
+    are set, go with every request (e.g. a token the receiver checks)."""
+
+    url: Annotated[str, AfterValidator(_web_address("webhook.url", "https"))] = _secret()
+    header_name: Annotated[str, AfterValidator(_header_name)] = ""
+    header_value: str = _secret()
 
 
 class LogsConfig(_Section):
@@ -200,13 +229,19 @@ class LibraryKind(StrEnum):
 
     @property
     def folder(self) -> str:
-        """The kind's folder on the share when no Libraries are configured."""
+        """The kind's folder name, as Plex lays it out: its default Library's name and the
+        first part of an archiver's logical path."""
         return _KINDS[self][1]
 
+    def default_path(self) -> Path:
+        """The kind's default Library folder when none are configured."""
+        return Path.home().joinpath(*_KINDS[self][2])
 
-# kind -> (label, default folder on the share)
-_KINDS = {LibraryKind.FILMS: ("Films", "Movies"), LibraryKind.TV: ("TV", "TV"),
-          LibraryKind.MUSIC: ("Music", "Music")}
+
+# kind -> (label, folder name, default Library folder under the user's home)
+_KINDS = {LibraryKind.FILMS: ("Films", "Movies", ("Videos", "Movies")),
+          LibraryKind.TV: ("TV", "TV", ("Videos", "TV")),
+          LibraryKind.MUSIC: ("Music", "Music", ("Music",))}
 
 
 def _not_blank(value: str) -> str:
@@ -216,12 +251,20 @@ def _not_blank(value: str) -> str:
     return value
 
 
+def library_folder(value: str) -> str:
+    """A Library's folder: a full path, wherever it is (ADR 0011)."""
+    value = _not_blank(value)
+    if not Path(value).is_absolute():
+        raise ValueError(r"Enter the full folder path, like D:\Movies or \\nas\media\Movies")
+    return value
+
+
 class Library(_Section):
     """A named folder of the Archive for one kind of media, matching one Plex library."""
 
     name: Annotated[str, AfterValidator(_not_blank)]
     kind: LibraryKind
-    path: Annotated[str, AfterValidator(_not_blank)]  # a folder on the NAS share
+    path: Annotated[str, AfterValidator(library_folder)]
     plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
     default: bool = False
 
@@ -231,16 +274,17 @@ class Config(_Section):
     drive: DriveConfig = DriveConfig()
     cd: CdConfig = CdConfig()
     tools: ToolsConfig = ToolsConfig()
-    nas: NasConfig
     paths: PathsConfig
     scratch: ScratchConfig = ScratchConfig()
+    rip: RipConfig = RipConfig()
     tmdb: TmdbConfig = TmdbConfig()
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
+    webhook: WebhookConfig = WebhookConfig()
     encode: EncodeConfig
     logs: LogsConfig = LogsConfig()
-    # Empty in the file = one default per kind at the share's Movies, TV and Music folders.
+    # Empty in the file = one default per kind under the user's home (`LibraryKind.default_path`).
     libraries: tuple[Library, ...] = ()
 
     @model_validator(mode="before")
@@ -248,25 +292,16 @@ class Config(_Section):
     def _default_libraries(cls, data: Any) -> Any:
         if not isinstance(data, dict) or data.get("libraries"):
             return data
-        nas = data.get("nas")
-        unc = nas.unc if isinstance(nas, NasConfig) else (nas or {}).get("unc")
-        if not isinstance(unc, str):
-            return data  # `nas.unc` is missing: reported as such
         return {**data, "libraries": [
-            {"name": k.folder, "kind": k.value, "path": str(Path(unc) / k.folder),
-             "default": True} for k in LibraryKind]}
+            {"name": k.folder, "kind": k.value, "path": str(k.default_path()), "default": True}
+            for k in LibraryKind]}
 
     @model_validator(mode="after")
     def _check_libraries(self) -> Config:
-        share = Path(self.nas.unc)
         names = [lib.name.casefold() for lib in self.libraries]
         for lib in self.libraries:
             if names.count(lib.name.casefold()) > 1:
                 raise ValueError(f"Two Libraries are called {lib.name}; give each its own name")
-            path = Path(lib.path)
-            if path == share or not path.is_relative_to(share):
-                raise ValueError(f"Library {lib.name}: its folder must be inside the NAS share "
-                                 f"({self.nas.unc})")
         for kind in LibraryKind:
             defaults = [lib for lib in self.libraries if lib.kind == kind and lib.default]
             if not defaults:

@@ -6,8 +6,9 @@ again; sub-detail inside its Phase, never a Phase of its own), and app-wide
 an app-wide cause (`Waiting.problem`, e.g. no TMDB key) or from a component that
 `report`s one (Plex, notifications) until it `resolved`s it.
 
-NAS and tool readiness have their own live state and banners (`nas.html`,
-`tools.html`); they aren't repeated here.
+Tool readiness has its own live state and banner (`tools.html`); it isn't
+repeated here. A waiting cause's `detail` (which Library
+folder) shows on its banner.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ class Problem(StrEnum):
     TMDB_KEY = "tmdb_key"  # [tmdb] api_key empty while video Jobs wait to be identified
     PLEX = "plex"          # the last Plex scan request failed
     NOTIFY = "notify"      # the last notification couldn't be sent
+    LIBRARY_FOLDER = "library_folder"  # a Library folder a Job files to isn't reachable
 
 
 @dataclass(frozen=True)
@@ -36,13 +38,14 @@ class Waiting:
     reason: str
     retry_at: datetime
     problem: Problem | None = None
+    detail: str = ""
 
 
 @dataclass(frozen=True)
 class Banner:
     problem: Problem
     jobs: int = 0     # Jobs waiting on it (0 for a reported problem)
-    detail: str = ""  # what the component said, for a reported problem
+    detail: str = ""  # what the component said, or the waiting Jobs' details
 
 
 # A Job's Waiting line shows on its card (Ripping/Encoding bins) and page; banners on Now.
@@ -66,10 +69,10 @@ class Problems:
     # -- per Job --
 
     def waiting(self, job_id: int, reason: str, retry_seconds: float,
-                problem: Problem | None = None) -> None:
+                problem: Problem | None = None, detail: str = "") -> None:
         """The Job can't move on because of `reason`; it's tried again in `retry_seconds`."""
         self._waiting[job_id] = Waiting(reason, self._now() + timedelta(seconds=retry_seconds),
-                                        problem)
+                                        problem, detail)
         self._publish(*_JOB_TOPICS)
 
     def moved_on(self, job_id: int) -> None:
@@ -92,7 +95,9 @@ class Problems:
 
     def banners(self) -> list[Banner]:
         jobs = Counter(w.problem for w in self._waiting.values() if w.problem is not None)
-        out = [Banner(p, jobs=n) for p, n in jobs.items()]
+        out = [Banner(p, jobs=n, detail=", ".join(sorted(
+                   {w.detail for w in self._waiting.values() if w.problem == p and w.detail})))
+               for p, n in jobs.items()]
         out += [Banner(p, detail=d) for p, d in self._reported.items() if p not in jobs]
         return sorted(out, key=lambda b: list(Problem).index(b.problem))
 
