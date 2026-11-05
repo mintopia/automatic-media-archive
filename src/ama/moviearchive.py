@@ -383,7 +383,7 @@ class MovieArchiver:
     def _file_extras(self, rec: JobRecord, rel: Path) -> int:
         """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are filed.
         Each name is saved before copying so a retry reuses it."""
-        film = self._archive.root / rel
+        film = self._archive.folder(rel)
         taken = {e.file.casefold() for e in self.extras.of(rec.id) if e.file}
         for e in self.extras.of(rec.id):
             if e.status == ExtraStatus.ENCODED and not e.file:

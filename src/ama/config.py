@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import re
 import tomllib
+from collections.abc import Sequence
+from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
+from pydantic import (AfterValidator, BaseModel, ConfigDict, Field, ValidationError,
+                      model_validator)
 
 from ama.languages import parse_languages
 
@@ -156,6 +159,40 @@ class EncodeConfig(_Section):
         return parse_languages(self.languages)
 
 
+class Kind(StrEnum):
+    """What a Library holds; each kind has one default Library."""
+
+    FILMS = "films"
+    TV = "tv"
+    MUSIC = "music"
+
+    @property
+    def label(self) -> str:
+        return {"films": "Films", "tv": "TV", "music": "Music"}[self.value]
+
+    @property
+    def folder(self) -> str:
+        """The kind's folder on the share when no Libraries are configured."""
+        return {"films": "Movies", "tv": "TV", "music": "Music"}[self.value]
+
+
+def _not_blank(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("This can't be empty")
+    return value
+
+
+class Library(_Section):
+    """A named folder of the Archive for one kind of media, matching one Plex library."""
+
+    name: Annotated[str, AfterValidator(_not_blank)]
+    kind: Kind
+    path: Annotated[str, AfterValidator(_not_blank)]  # a folder on the NAS share
+    plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
+    default: bool = False
+
+
 class Config(_Section):
     web: WebConfig = WebConfig()
     drive: DriveConfig = DriveConfig()
@@ -169,6 +206,51 @@ class Config(_Section):
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
     encode: EncodeConfig
+    # Empty in the file = one default per kind at the share's Movies, TV and Music folders.
+    libraries: tuple[Library, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _default_libraries(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or data.get("libraries"):
+            return data
+        nas = data.get("nas")
+        unc = nas.unc if isinstance(nas, NasConfig) else (nas or {}).get("unc")
+        if not isinstance(unc, str):
+            return data  # `nas.unc` is missing: reported as such
+        return {**data, "libraries": [
+            {"name": k.folder, "kind": k.value, "path": str(Path(unc) / k.folder),
+             "default": True} for k in Kind]}
+
+    @model_validator(mode="after")
+    def _check_libraries(self) -> Config:
+        share = Path(self.nas.unc)
+        names = [lib.name.casefold() for lib in self.libraries]
+        for lib in self.libraries:
+            if names.count(lib.name.casefold()) > 1:
+                raise ValueError(f"Two Libraries are called {lib.name}; give each its own name")
+            path = Path(lib.path)
+            if path == share or not path.is_relative_to(share):
+                raise ValueError(f"Library {lib.name}: its folder must be inside the NAS share "
+                                 f"({self.nas.unc})")
+        for kind in Kind:
+            defaults = [lib for lib in self.libraries if lib.kind == kind and lib.default]
+            if not defaults:
+                raise ValueError(f"{kind.label} has no default Library: "
+                                 "mark one of them default = true")
+            if len(defaults) > 1:
+                raise ValueError(f"{kind.label} can only have one default Library, not "
+                                 + " and ".join(lib.name for lib in defaults))
+        return self
+
+
+
+def library_for(libraries: Sequence[Library], kind: Kind, picked: str | None = None) -> Library:
+    """The Library a Job of `kind` files to: the one it picked if that still exists, else
+    the kind's default (a removed pick falls back to it)."""
+    ofkind = [lib for lib in libraries if lib.kind == kind]
+    return (next((lib for lib in ofkind if picked and lib.name == picked), None)
+            or next(lib for lib in ofkind if lib.default))
 
 
 class ConfigError(Exception):
@@ -189,7 +271,9 @@ def load_config(path: Path) -> Config:
         cfg = Config.model_validate(data)
     except ValidationError as e:
         problems = "; ".join(
-            f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors()
+            ": ".join(filter(None, [".".join(map(str, err["loc"])),
+                                    err["msg"].removeprefix("Value error, ")]))
+            for err in e.errors()
         )
         raise ConfigError(f"{path}: {problems}") from None
     base = path.parent

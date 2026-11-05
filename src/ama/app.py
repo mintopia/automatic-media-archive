@@ -55,7 +55,7 @@ from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
-                     restart_pages, settings_pages, tv_review_pages)
+                     restart_pages, settings_libraries, settings_pages, tv_review_pages)
 from ama.web.current_rip import current_rip
 
 
@@ -101,6 +101,7 @@ class Services:
         self.movie_archive.encoder.cfg = cfg.encode
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
+        self.archive.libraries = cfg.libraries
         self.notifier.channels = channels(cfg, self.http)
 
     def background_tasks(self) -> list[Callable[[], object]]:
@@ -140,12 +141,12 @@ def build_services(
     http.headers["User-Agent"] = USER_AGENT
     nas = NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists)
     cd_tracks = CdTracks(db)
-    archive = Archive(Path(cfg.nas.unc))
+    archive = Archive(Path(cfg.nas.unc), cfg.libraries)
     mb = MusicBrainz(http)
     covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
-    plex = Plex(cfg.plex, http, archive.root, problems)
+    plex = Plex(cfg.plex, http, archive, problems)
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
     tv_titles = TvTitles(db)
@@ -243,6 +244,7 @@ def create_app(services: Services) -> FastAPI:
     app.include_router(repeat_pages.router)
     app.include_router(scratch_pages.router)
     app.include_router(history_pages.router)
+    app.include_router(settings_libraries.router)  # before settings_pages' catch-all
     app.include_router(settings_pages.router)
     app.include_router(restart_pages.router)
     return app

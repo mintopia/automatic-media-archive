@@ -1,0 +1,40 @@
+{#- Settings › Archive › Libraries (settings_libraries.py). Included inside the section's form;
+    its buttons post to their own routes with formaction. -#}
+{%- set lv = libraries %}
+{%- macro lerr(form, key) %}{% if form.errors[key] %}<div class="ferr" id="lib-{{ key }}-e">{{ icon("alert") }}<span>{{ form.errors[key] }}</span></div>{% endif %}{% endmacro %}
+{%- macro described(form, key, hint=True) -%}
+{%- set ids = [] -%}{%- if hint %}{% set _ = ids.append("lib-" ~ key ~ "-h") %}{% endif -%}{%- if form.errors[key] %}{% set _ = ids.append("lib-" ~ key ~ "-e") %}{% endif -%}
+{%- if ids %} aria-describedby="{{ ids | join(' ') }}"{% endif %}{% if form.errors[key] %} aria-invalid="true"{% endif -%}
+{%- endmacro %}
+{%- macro editor(form, label) -%}
+<div class="libedit" role="group" aria-label="{{ label }}"><input type="hidden" name="lib.kind" value="{{ form.kind.value }}">{% if form.original %}<input type="hidden" name="lib.original" value="{{ form.original }}">{% endif %}
+  <div class="field"><label for="lib-name">Name</label><input class="input{% if form.errors.name %} bad{% endif %}" id="lib-name" name="lib.name" value="{{ form.name }}"{{ described(form, "name", False) }} data-focus spellcheck="false">{{ lerr(form, "name") }}</div>
+  {%- set options = lv.options(form) %}
+  <div class="field"><label for="lib-plex">Plex library</label>
+  {%- if lv.plex is none %}<select class="select" id="lib-plex" disabled aria-describedby="lib-plex-h"><option>{{ "Plex isn't reachable" if lv.plex_url else "Plex isn't set up" }}</option></select>
+  {%- else %}<select class="select" id="lib-plex" name="lib.plex"{{ described(form, "plex") }}>{% for o in options %}<option{% if o == form.plex %} selected{% endif %}>{{ o }}</option>{% else %}<option value="">No {{ form.kind.label }} libraries in Plex</option>{% endfor %}</select>{% endif %}<span class="hint" id="lib-plex-h">{{ lv.plex_hint(form) }}</span>{{ lerr(form, "plex") }}</div>
+  <div class="field full"><label for="lib-path">Folder</label><input class="input{% if form.errors.path %} bad{% endif %}" id="lib-path" name="lib.path" value="{{ form.path }}"{{ described(form, "path") }} spellcheck="false"><span class="hint" id="lib-path-h">On the NAS share. AMA creates it if it's missing, so check the spelling.</span>{{ lerr(form, "path") }}</div>
+  <div class="actions"><a class="btn quiet" href="{{ "?focus=" ~ (form.original | urlencode) if form.original else "?" }}">Cancel</a><button class="btn pri" type="submit" formaction="/settings/archive/libraries/save">{{ "Save Library" if form.original else "Add " ~ form.kind.label ~ " Library" }}</button></div>
+</div>
+{%- endmacro %}
+{%- if lv.problems %}
+<div class="notice setnotice" role="alert" tabindex="-1" data-focus>{{ icon("alert") }}<div><b>That Library change wasn't saved</b><code>ama.toml</code> hasn't changed.<ul class="errlist">{% for p in lv.problems %}<li>{{ p }}</li>{% endfor %}</ul></div></div>
+{%- endif %}
+{%- for g in lv.groups %}
+<div class="grp-h"><h2>{{ g.kind.label }}</h2><span class="ts">Default: {{ g.default.name }}</span></div>
+<div class="libs" role="list" aria-label="{{ g.kind.label }} Libraries">
+  {%- for r in g.rows %}{% set lib = r.lib %}{% set q = lib.name | urlencode %}
+  <div class="librow{% if r.form or r.removing %} open{% endif %}" role="listitem" id="{{ r.id }}"><div class="lc nm">{{ lib.name }}</div><div class="lc"><span class="k">Folder</span><span class="path">{{ lib.path }}</span></div><div class="lc"><span class="k">Plex library</span>{{ lib.plex or "Whichever holds the folder" }}</div><div class="act">
+    {%- if lib.default %}<span class="lockd">{{ icon("lock") }}Default, can't be removed</span>{% endif -%}
+    <a class="btn quiet" href="?edit={{ q }}#{{ r.id }}" aria-label="Edit {{ lib.name }}"{% if r.focus and lib.default %} data-focus{% endif %}>Edit</a>
+    {%- if not lib.default %}<button class="btn quiet" type="submit" formaction="/settings/archive/libraries/default" name="library" value="{{ lib.name }}" aria-label="Make {{ lib.name }} the {{ g.kind.label }} default">Make default</button><a class="btn danger" href="?remove={{ q }}#{{ r.id }}" aria-label="Remove {{ lib.name }}"{% if r.removing %} aria-expanded="true"{% endif %}{% if r.focus %} data-focus{% endif %}>Remove</a>{% endif -%}
+  </div></div>
+  {%- if r.form %}<div class="libpanel">{{ editor(r.form, "Edit " ~ lib.name) }}</div>{% endif %}
+  {%- if r.removing %}<div class="libpanel"><div class="libconfirm" role="alertdialog" aria-labelledby="rm-h" aria-describedby="rm-d" tabindex="-1" data-focus><div><b id="rm-h">Remove {{ lib.name }}?</b><span id="rm-d">Its folder and the Jobs already filed there stay on the NAS and in Plex. Jobs that picked it and aren't filed yet go to {{ g.default.name }}, the {{ g.kind.label }} default.</span></div><div class="actions"><a class="btn quiet" href="?focus={{ q }}#{{ r.id }}">Cancel</a><button class="btn danger" type="submit" formaction="/settings/archive/libraries/remove" name="library" value="{{ lib.name }}">Remove Library</button></div></div></div>{% endif %}
+  {%- endfor %}
+  {%- if g.adding %}<div class="libpanel new"><b class="newh">New {{ g.kind.label }} Library</b>{{ editor(g.adding, "New " ~ g.kind.label ~ " Library") }}</div>{% endif %}
+</div>
+{%- if not g.adding %}
+<div class="libadd"><a class="btn quiet" href="?add={{ g.kind.value }}#lib-add-{{ g.kind.value }}" id="lib-add-{{ g.kind.value }}">{{ icon("plus") }}Add {{ g.kind.label }} Library</a></div>
+{%- endif %}
+{%- endfor %}

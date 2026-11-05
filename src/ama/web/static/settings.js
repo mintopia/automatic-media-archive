@@ -24,8 +24,20 @@
     save.disabled = false;
     undo.hidden = false;
   }
-  form.addEventListener('input', (e) => markDirty(e.target));
-  form.addEventListener('change', (e) => markDirty(e.target));
+  // A Library form saves on its own (its own buttons), so it doesn't dirty the section.
+  const own = (el) => el.closest && el.closest('.libpanel');
+  form.addEventListener('input', (e) => { if (!own(e.target)) markDirty(e.target); });
+  form.addEventListener('change', (e) => { if (!own(e.target)) markDirty(e.target); });
+  // Enter in a Library form presses that form's own button, not the section's Save.
+  form.addEventListener('keydown', (e) => {
+    const panel = own(e.target);
+    if (e.key !== 'Enter' || !panel || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    panel.querySelector('button[formaction]').click();
+  });
+  // An opened Library form or confirm, or the row Cancel returns to, takes focus.
+  const focus = form.querySelector('[data-focus]');
+  if (focus) focus.focus();
   undo.addEventListener('click', () => { location.href = location.pathname; });
 
   form.querySelectorAll('.secret').forEach((box) => {

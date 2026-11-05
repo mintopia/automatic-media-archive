@@ -104,7 +104,7 @@
       {%- for r in gv.rows %}{{ row(r) }}{% endfor %}</details>
     {%- else %}
     <div class="grp-h"><h2>{{ g.title }}</h2>
-      {%- if gv.status %}<span class="ts grpst">{{ tstat(gv.status) }}{% if g.live %}<span>{{ g.note }}</span>{% else %}<span class="rnote">{{ restart_note() }}</span>{% endif %}</span>
+      {%- if gv.status %}<span class="ts grpst">{{ tstat(gv.status) }}{% if g.live %}{% if g.note %}<span>{{ g.note }}</span>{% endif %}{% else %}<span class="rnote">{{ restart_note() }}</span>{% endif %}</span>
       {%- elif g.live %}<span class="ts">{{ g.note }}</span>
       {%- else %}<span class="ts rnote">{{ icon("redo") }}{{ g.note or "Used after a restart" }}</span>{% endif %}</div>
     {%- if g.template %}{% include g.template %}{% endif %}
@@ -113,11 +113,11 @@
     {%- endfor %}
     {%- endif %}
     {%- endfor %}
+    <div class="setfoot{% if section.template %} sub{% endif %}"><span class="st{% if rejected %} dirty{% endif %}" data-st>{% if rejected %}Not saved: fix the fields marked above{% elif saved %}<span class="ok" role="status">{{ icon("check") }}Saved at {{ saved }}</span>{% else %}No unsaved changes{% endif %}</span><button class="btn quiet" type="button" data-undo{% if not rejected %} hidden{% endif %}>Undo changes</button><button class="btn pri" type="submit" data-save{% if not rejected %} disabled{% endif %}>Save {{ section.foot or section.name }}</button></div>
     {%- if section.template %}{% include section.template %}{% endif %}
-    <div class="setfoot"><span class="st{% if rejected %} dirty{% endif %}" data-st>{% if rejected %}Not saved: fix the fields marked above{% elif saved %}<span class="ok" role="status">{{ icon("check") }}Saved at {{ saved }}</span>{% else %}No unsaved changes{% endif %}</span><button class="btn quiet" type="button" data-undo{% if not rejected %} hidden{% endif %}>Undo changes</button><button class="btn pri" type="submit"{% if not rejected %} disabled{% endif %}>Save {{ section.name }}</button></div>
   </form>
   {%- endif %}
-  <p class="ts setnote">{% if section.note %}{{ section.note }} {% endif %}Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+  <p class="ts setnote">{% if section.note %}{{ section.note }}{% if not section.note_only %} {% endif %}{% endif %}{% if not section.note_only %}Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.{% endif %}</p>
 </main>
 <script src="/static/settings.js" defer></script>
 {% endblock %}
