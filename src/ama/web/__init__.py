@@ -45,7 +45,7 @@ TEMPLATES.env.filters["phase"] = phase_of
 NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]
 # Top-bar menu links (label, href, icons.svg id), shown between Theme and Log out.
 # Settings and Logs live here, not in NAV; a page is current on its href and below it.
-MENU: list[tuple[str, str, str]] = []
+MENU: list[tuple[str, str, str]] = [("Settings", "/settings", "settings")]
 
 FRAGMENTS: dict[str, str] = {
     "drive": "partials/drive.html",
