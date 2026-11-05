@@ -15,7 +15,7 @@ from urllib.parse import parse_qs
 import pytest
 
 from ama.archive import extended_path
-from ama.config import Config
+from ama.config import Config, LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from ama.moviearchive import EncodeStatus
@@ -257,18 +257,27 @@ def test_a_failed_encode_keeps_the_rip_and_is_retried_after_a_restart(tmp_path):
         _wait_for(h2, JobStatus.FILED)
 
 
-def test_an_encode_waits_for_the_nas_then_files(tmp_path):
-    h = make_harness(tmp_path, nas_reachable=False)
+def test_an_encode_waits_for_its_library_folder_across_a_restart_then_files(tmp_path):
+    h = make_harness(tmp_path)
+    folder = h.drop_library(LibraryKind.FILMS)
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with _client(h):
         _rip(h)
-        eventually(lambda: (m := h.services.movie_archive.movies.get(1)) is not None
-                   and m.status == EncodeStatus.ENCODED)
+        eventually(lambda: any(f"Can't reach the Library folder {folder}" in ln.text
+                               for ln in h.services.jobs.log_lines(1)))
+        assert h.services.movie_archive.movies.get(1).status == EncodeStatus.ENCODED
         assert h.services.jobs.get(1).status == JobStatus.RIPPED
-        h.share["reachable"] = True
-        _wait_for(h, JobStatus.FILED)
-    # filed from the finished Encodes (Main Feature + Extra), not re-encoded
-    assert len(h.ffmpeg.encodes()) == 2
+    assert len(h.ffmpeg.encodes()) == 2  # Main Feature + Extra
+
+    h2 = make_harness(tmp_path, nas_reachable=False)  # filing doesn't wait on the NAS
+    h2.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with _client(h2):
+        eventually(lambda: (w := h2.services.problems.why(1)) is not None
+                   and str(folder) in w.reason)
+        h2.restore_library(LibraryKind.FILMS)
+        _wait_for(h2, JobStatus.FILED)
+    assert _filed(h2).exists()
+    assert h2.ffmpeg.encodes() == []  # filed from the kept Encodes, not re-encoded
 
 
 def _picture_sample(name: str) -> list[str]:

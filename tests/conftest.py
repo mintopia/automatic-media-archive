@@ -84,6 +84,25 @@ class Harness:
     ffmpeg: FakeFfmpeg  # ffprobe + the Encode
     disk: FakeDisk  # the scratch volume's size and use
 
+    def drop_library(self, kind: LibraryKind) -> Path:
+        """Make the kind's default Library folder unreachable, like a dropped mapped drive:
+        a file stands where the folder was. Its path."""
+        path = Path(next(lib.path for lib in self.services.archive.libraries
+                         if lib.kind == kind and lib.default))
+        if path.is_dir():
+            path.rename(path.with_name(path.name + ".away"))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"")
+        return path
+
+    def restore_library(self, kind: LibraryKind) -> None:
+        path = Path(next(lib.path for lib in self.services.archive.libraries
+                         if lib.kind == kind and lib.default))
+        path.unlink()
+        away = path.with_name(path.name + ".away")
+        if away.is_dir():
+            away.rename(path)
+
 
 def write_config(tmp_path, extra: str = "") -> Path:
     """An ama.toml like `make_config`'s, with comments, for the Settings tests."""
