@@ -15,6 +15,7 @@ from mutagen.flac import FLAC
 from ama import musicbrainz
 from ama.archive import extended_path
 from ama.cdarchive import track_tags
+from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
@@ -180,14 +181,17 @@ def test_identification_waits_for_musicbrainz_to_be_reachable(harness, client):
     _wait_for(harness, JobStatus.FILED)
 
 
-def test_filing_waits_for_the_nas(harness, client):
+def test_filing_waits_for_an_unreachable_library_folder_not_the_nas(harness, client):
     harness.share["reachable"] = False
+    folder = harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.RIPPED)
-    eventually(lambda: any("NAS" in ln.text for ln in harness.services.jobs.log_lines(rec.id)))
-    assert not (harness.nas_root / "Music").exists()
-    harness.share["reachable"] = True
+    eventually(lambda: any(f"Can't reach the Library folder {folder}" in ln.text
+                           for ln in harness.services.jobs.log_lines(rec.id)))
+    assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
+    harness.restore_library(LibraryKind.MUSIC)
     _wait_for(harness, JobStatus.FILED)
+    assert _album(harness).exists()
 
 
 def test_labels_listed_once_per_disc_are_tagged_once():

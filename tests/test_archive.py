@@ -73,7 +73,7 @@ def test_a_disc_whose_filing_cant_be_verified_keeps_its_scratch(harness, client)
     harness.services.archive.copy = lambda src, dest: dest.write_bytes(b"garbage")
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.RIPPED)
-    eventually(lambda: any("Couldn't file to the NAS" in ln.text
+    eventually(lambda: any("Couldn't file to" in ln.text
                            for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     assert len(list(rec.scratch_dir.glob("*.flac"))) == 24

@@ -30,7 +30,6 @@ from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus
 from ama.events import EventBus
 from ama.extras import default_names
 from ama.media import MediaStore, screen
-from ama.nas import NasMonitor
 from ama.plex import Plex
 from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
@@ -155,7 +154,7 @@ def encoded_path(rec: JobRecord, number: int) -> Path:
 
 class TvArchiver:
     def __init__(self, jobs: JobStore, titles: TvTitles, encoder: Encoder,
-                 nas: NasMonitor, archive: Archive, plex: Plex, bus: EventBus, interval: float,
+                 archive: Archive, plex: Plex, bus: EventBus, interval: float,
                  retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic, *,
                  tmdb: Tmdb, media: MediaStore, covers: Covers,
                  problems: Problems | None = None,
@@ -169,7 +168,6 @@ class TvArchiver:
         self._jobs = jobs
         self.titles = titles
         self._encoder = encoder
-        self._nas = nas
         self._archive = archive
         self._plex = plex
         self._bus = bus
@@ -196,7 +194,7 @@ class TvArchiver:
             try:
                 await self._advance(rec)
             except RetryLater as e:
-                if self.backoff.later(job_id, str(e), e.problem):
+                if self.backoff.later(job_id, str(e), e.problem, e.detail):
                     self._jobs.log(job_id, f"{e}; trying again in a while", error=True)
             except Exception:
                 log.exception("TV Encode/filing of Job %s crashed", job_id)
@@ -236,10 +234,9 @@ class TvArchiver:
 
     def _file_one(self, rec: JobRecord, row: TvTitle) -> None:
         self._jobs.begin_step(rec.id, "file", "File", fresh=False)
-        filing.require_nas(self._nas)
         src = encoded_path(rec, row.title_number)
         library = self._library(rec, kind_of_path(row.path) or LibraryKind.TV)
-        with filing.to_nas():
+        with filing.to_library(self._archive, row.path, library):
             folder = self._archive.place(Path(row.path.parent), {row.path.name: src}, library)
         self.titles.set_status(rec.id, row.title_number, EncodeStatus.FILED)
         src.unlink(missing_ok=True)

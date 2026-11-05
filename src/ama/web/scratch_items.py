@@ -59,7 +59,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
             waiting.append(_item(rec, movie.film.name, "The Encode didn't work",
                                  Phase.FAILED))
         elif movie.status == EncodeStatus.ENCODED:
-            waiting.append(_item(rec, movie.film.name, "Encoded · filing to the NAS"))
+            waiting.append(_item(rec, movie.film.name, "Encoded · filing"))
         else:
             waiting.append(_item(rec, movie.film.name, "Waiting to encode", Phase.ENCODING))
     return [*ripping, *review, *waiting]

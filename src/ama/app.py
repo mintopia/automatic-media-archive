@@ -181,7 +181,7 @@ def build_services(
     restart = Restarter(lambda: busy(services), bus)
     encoder = Encoder(jobs, bus, cfg.encode, tool, streamer, hold=restart.holding,
                       job_config=job_settings.encode_config)
-    movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
+    movie_archive = MovieArchiver(jobs, Movies(db), tmdb, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
@@ -210,7 +210,7 @@ def build_services(
                               guesses=film_guesses, hold=restart.holding, cfg=cfg.rip),
         archive=archive,
         musicbrainz=mb,
-        cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
+        cd_archive=CdArchiver(jobs, cd_tracks, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds, covers=covers, media=media,
                               picked=cd_picks.get, problems=problems,
                               library=job_settings.library),
@@ -219,7 +219,7 @@ def build_services(
         thumbnails=Thumbnailer(jobs, tool, streamer, interval=cfg.drive.poll_seconds),
         repeat=repeat,
         scratch=scratch,
-        tv_archive=TvArchiver(jobs, tv_titles, encoder, nas, archive, plex, bus,
+        tv_archive=TvArchiver(jobs, tv_titles, encoder, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
                               retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
                               covers=covers, problems=problems,

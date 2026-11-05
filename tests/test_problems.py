@@ -133,18 +133,26 @@ def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_p
         t.join(5)
 
 
-def test_a_job_waiting_for_the_nas_says_so_until_the_nas_is_back(tmp_path):
-    h = make_harness(tmp_path, nas_reachable=False)
+def test_a_job_waiting_for_an_unreachable_library_folder_says_which_until_it_files(tmp_path):
+    h = make_harness(tmp_path, nas_reachable=False)  # filing doesn't wait on the NAS
+    folder = h.drop_library(LibraryKind.FILMS)
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with TestClient(create_app(h.services)) as c:
         _rip(h)
-        eventually(lambda: "Waiting: The NAS isn't connected" in _now(c))
-        encoding = _now(c)[_now(c).index('id="encoding-h"'):]
-        assert "Waiting: The NAS isn't connected" in encoding  # Encoded, waiting to file
-        assert "Can't reach the NAS" in _now(c)  # the app-wide NAS banner
-        h.share["reachable"] = True
+        eventually(lambda: f"Waiting: Can't reach the Library folder {folder}" in _now(c))
+        page = _now(c)
+        encoding = page[page.index('id="encoding-h"'):]
+        assert f"Waiting: Can't reach the Library folder {folder}" in encoding
+        assert "Encoded · filing" in encoding
+        banner = page[page.index('sse-swap="problems"'):page.index('class="split"')]
+        assert "A Library folder isn't reachable" in banner and str(folder) in banner
+        rec = h.services.jobs.get(1)
+        assert rec.status == JobStatus.RIPPED and (rec.scratch_dir / "encode.mkv").exists()
+
+        h.restore_library(LibraryKind.FILMS)
         eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
-        eventually(lambda: "Waiting:" not in _now(c))
+        eventually(lambda: "Waiting:" not in _now(c) and str(folder) not in _now(c))
+        assert h.services.problems.banners() == []
 
 
 def test_a_job_queued_behind_another_encode_is_not_shown_as_a_problem(client, harness):

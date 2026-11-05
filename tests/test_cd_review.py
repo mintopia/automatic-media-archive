@@ -11,6 +11,7 @@ import html
 from mutagen.flac import FLAC
 
 from ama.archive import extended_path
+from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
 from tests.conftest import eventually
@@ -117,14 +118,15 @@ def test_picking_an_edition_files_the_cd(harness, client):
     assert "Nothing needs you right now" in _page(client, "/review")
 
 
-def test_picking_an_edition_waits_for_the_nas_like_automatic_filing(harness, client):
-    harness.share["reachable"] = False
+def test_picking_an_edition_waits_for_the_library_folder_like_automatic_filing(harness, client):
+    harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response())
     rec = _wait_for(harness, JobStatus.REVIEW)
     client.post(f"/review/{rec.id}/release", data={"release": f"{SPECIAL}:1"})
-    eventually(lambda: any("NAS" in ln.text for ln in harness.services.jobs.log_lines(rec.id)))
+    eventually(lambda: any("Library folder" in ln.text
+                           for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
-    harness.share["reachable"] = True
+    harness.restore_library(LibraryKind.MUSIC)
     _wait_for(harness, JobStatus.FILED)
     assert (_album(harness)).exists()
 

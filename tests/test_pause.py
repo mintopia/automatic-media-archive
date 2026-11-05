@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
+from ama.config import LibraryKind
 from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually, make_harness
@@ -58,12 +59,13 @@ def test_a_rip_under_way_finishes_when_paused(client, harness):
 def test_filing_carries_on_while_paused(tmp_path):
     from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
 
-    harness = make_harness(tmp_path, nas_reachable=False)
+    harness = make_harness(tmp_path)
+    harness.drop_library(LibraryKind.MUSIC)
     with TestClient(create_app(harness.services)) as client:
         _insert(harness, DISC_1, 24, _response(only=SPECIAL))
         _wait_for(harness, JobStatus.RIPPED)
         _pause(client)
-        harness.share["reachable"] = True
+        harness.restore_library(LibraryKind.MUSIC)
         _wait_for(harness, JobStatus.FILED)
 
 
