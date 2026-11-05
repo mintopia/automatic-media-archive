@@ -365,11 +365,11 @@ class Runs:
             "WHERE s.state = 'running'").fetchall()
         for step_id, kind, job_id in rows:
             if kind == RunKind.JOB:
+                kept = self.output(step_id)
                 with self._lock:
                     self._open[job_id] = step_id
-                    self._ring[step_id] = collections.deque(
-                        (ln for ln in self.output(step_id)[-self.RING:]), maxlen=self.RING)
-                    self._count[step_id] = len(self.output(step_id))
+                    self._ring[step_id] = collections.deque(kept[-self.RING:], maxlen=self.RING)
+                    self._count[step_id] = len(kept)
             else:
                 self._db.execute("UPDATE steps SET state = 'failed', result = ?, "
                                  "finished_at = COALESCE(finished_at, started_at) WHERE id = ?",

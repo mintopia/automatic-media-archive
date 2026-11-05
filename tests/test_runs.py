@@ -82,6 +82,22 @@ def test_a_restart_ends_whatever_was_running(tmp_path):
     assert step == s.id
 
 
+def test_a_restart_lets_a_jobs_running_step_carry_on(tmp_path):
+    runs = make_runs(tmp_path)
+    runs._db.execute("INSERT INTO jobs (id, disc_type, status, scratch_dir, started_at) "
+                     "VALUES (3, 'BD', 'ripped', '', '2026-11-05T10:00:00')")
+    runs.job_begin(3, "encode:1", "Encode")
+    runs.job_note(3, "before the restart")
+    runs.flush()  # as the app does within a second, and when it stops
+
+    again = make_runs(tmp_path)
+    again.recover()
+    again.job_note(3, "after it")
+    [s] = again.steps(again.job_run(3))
+    assert s.state == StepState.RUNNING
+    assert [ln.text for ln in again.tail(s.id)] == ["before the restart", "after it"]
+
+
 def test_a_job_has_one_run_whose_steps_follow_one_another(tmp_path):
     runs = make_runs(tmp_path)
     db = runs._db
