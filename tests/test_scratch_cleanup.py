@@ -86,7 +86,7 @@ def test_a_failed_encode_older_than_the_retention_age_is_removed_and_logged(tmp_
     rec = w.jobs.get(old)
     assert rec.status == JobStatus.FAILED and rec.failure.kind == FailureKind.SCRATCH_CLEANED
     assert rec.scratch_cleaned_at == w.at
-    assert rec.dismissed
+    assert not rec.dismissed  # it stays on Now, failed, until the user dismisses it
     [run] = w.runs.list_runs([RunKind.SCRATCH])
     assert run.failed is False and run.finished_at is not None
     assert _steps(w) == [("OLD_FILM (Job 1)", "3.0 GB · older than 14 days")]
@@ -199,8 +199,8 @@ def test_below_the_floor_the_oldest_kept_scratch_goes_until_free_space_is_above_
     w.cleaner.clean()
     assert not w.scratch(oldest).exists() and not w.scratch(middle).exists()
     assert w.scratch(newest).exists()
-    assert _steps(w) == [(f"OLDEST (Job {oldest})", "10.0 GB · scratch below the 20 GB floor"),
-                         (f"MIDDLE (Job {middle})", "10.0 GB · scratch below the 20 GB floor")]
+    assert _steps(w) == [(f"OLDEST (Job {oldest})", "10.0 GB · Scratch below the 20 GB floor"),
+                         (f"MIDDLE (Job {middle})", "10.0 GB · Scratch below the 20 GB floor")]
     rec = w.jobs.get(oldest)
     assert rec.failure.kind == FailureKind.SCRATCH_CLEANED
     [run] = w.runs.list_runs([RunKind.SCRATCH])
@@ -291,7 +291,9 @@ def test_saving_a_retention_age_removes_old_kept_scratch_at_once(tmp_path):
         eventually(lambda: not scratch.exists())
 
         rec = h.services.jobs.get(job)
-        assert rec.status == JobStatus.FAILED and rec.dismissed
+        assert rec.status == JobStatus.FAILED and not rec.dismissed
+        now_page = _text(client.get("/").text)
+        assert "EXAMPLE_MOVIE" in now_page and "The Encode didn't work" in now_page
         today = datetime.now()
         job_page = _text(client.get(f"/jobs/{job}").text)
         assert f"Scratch cleaned up {today.day} {today:%b %Y}" in job_page
@@ -299,7 +301,7 @@ def test_saving_a_retention_age_removes_old_kept_scratch_at_once(tmp_path):
         assert "retried when the app restarts" not in job_page
 
         [run] = h.services.runs.list_runs([RunKind.SCRATCH])
-        assert "Cleaned up scratch" in _text(client.get("/logs?kind=app").text)
+        assert "Cleaned up Scratch" in _text(client.get("/logs?kind=app").text)
         run_page = client.get(f"/logs/runs/{run.id}").text
         assert "EXAMPLE_MOVIE (Job 1)" in _text(run_page)
         assert "older than 14 days" in _text(run_page)
@@ -343,4 +345,4 @@ def test_saving_a_floor_with_scratch_low_removes_kept_scratch_at_once(tmp_path):
         assert "floor_gb = 20" in toml.read_text(encoding="utf-8")
         eventually(lambda: not scratch.exists())
         [run] = h.services.runs.list_runs([RunKind.SCRATCH])
-        assert "scratch below the 20 GB floor" in _text(client.get(f"/logs/runs/{run.id}").text)
+        assert "Scratch below the 20 GB floor" in _text(client.get(f"/logs/runs/{run.id}").text)

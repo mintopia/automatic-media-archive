@@ -1,4 +1,4 @@
--- Phase 3 (#56): a Title the user unticked during the Rip is `skipped` (ADR 0005).
+-- A Title the user unticked during the Rip is `skipped` (ADR 0005).
 CREATE TABLE titles_new (
     job_id     INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     number     INTEGER NOT NULL,          -- 1-based, as shown to people

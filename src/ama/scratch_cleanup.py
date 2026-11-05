@@ -1,18 +1,4 @@
-"""Scratch cleanup (GLOSSARY): removing kept Scratch of finished Jobs, oldest first.
-
-A failed Encode keeps its Job's Rip on Scratch for a retry. Once the Job last changed
-status more than `scratch.retention_days` ago (0 = never), cleanup takes it: the Job
-fails for good (`FailureKind.SCRATCH_CLEANED`), keeping its record, and its Scratch is
-removed. While free space on Scratch is below `scratch.floor_gb` (0 = off), cleanup also
-takes kept Scratch of any age, oldest first, until it's back above the floor. It runs at
-startup, hourly, when a Job finishes and when the setting is saved.
-
-Taking the Jobs (`claim`) is quick database work on the event loop, done first thing at
-startup so a failed Encode it takes is never queued again; removing the files (`remove`)
-runs in a thread, so it never delays a Rip. Each cleanup that removes anything is a Run
-in Logs, one Step per Job with its size and the rule that applied. Jobs taken but not
-yet removed when AMA stopped are removed by the next cleanup.
-"""
+"""Scratch cleanup (GLOSSARY): removing kept Scratch of finished Jobs, oldest first."""
 
 from __future__ import annotations
 
@@ -52,7 +38,7 @@ class Cleanup:
 
 def _failure(kept: str) -> Failure:
     return Failure(FailureKind.SCRATCH_CLEANED,
-                   "The Encode didn't work, and its Rip was removed from scratch.",
+                   "The Encode didn't work, and its Rip was removed from Scratch.",
                    f"It was kept {kept} for a retry. Put the Disc back in to rip it again.")
 
 
@@ -91,11 +77,11 @@ class ScratchCleaner:
         if free is None:
             return Cleanup(out)
         free += sum(self._size(r.job.scratch_dir) for r in out)
-        rule = f"scratch below the {floor_gb} GB floor"
+        rule = f"Scratch below the {floor_gb} GB floor"
         for job in self._jobs.kept_scratch(datetime.max):
             if free >= floor_gb * GB:
                 break
-            if self._jobs.mark_scratch_cleaned(job.id, _failure("until scratch ran low")):
+            if self._jobs.mark_scratch_cleaned(job.id, _failure("until Scratch ran low")):
                 out.append(Removal(job, rule))
                 free += self._size(job.scratch_dir)
         return Cleanup(out, floor_gb if free < floor_gb * GB else None)
@@ -108,11 +94,11 @@ class ScratchCleaner:
                 log.warning("scratch: below the %d GB floor, nothing to remove",
                             cleanup.short_of_floor_gb)
             return
-        run = self._runs.start_run(RunKind.SCRATCH, "Cleaned up scratch", item="scratch")
+        run = self._runs.start_run(RunKind.SCRATCH, "Cleaned up Scratch", item="scratch")
         total = 0
         for r in removals:
             job = r.job
-            step = self._runs.begin(run, f"job:{job.id}", "Remove scratch",
+            step = self._runs.begin(run, f"job:{job.id}", "Remove Scratch",
                                     subject=f"{job.name} (Job {job.id})")
             size = self._size(job.scratch_dir)
             self._runs.line(step, f"Removing {job.scratch_dir} ({r.rule})")

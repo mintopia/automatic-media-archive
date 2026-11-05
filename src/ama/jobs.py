@@ -163,7 +163,7 @@ class JobRecord:
         return tuple(t for t in self.titles if t.status != TitleStatus.SKIPPED)
 
     @property
-    def skipped_by_you(self) -> tuple[TitleRecord, ...]:
+    def skipped_titles(self) -> tuple[TitleRecord, ...]:
         return tuple(t for t in self.titles if t.status == TitleStatus.SKIPPED)
 
     @property
@@ -178,7 +178,7 @@ class JobRecord:
     @property
     def skipped_note(self) -> str | None:
         """'Skipped by you: Title 2. It wasn't ripped, so it can't be kept.' for Review."""
-        skipped = self.skipped_by_you
+        skipped = self.skipped_titles
         if not skipped:
             return None
         it = "It wasn't ripped, so it" if len(skipped) == 1 else "They weren't ripped, so they"
@@ -193,8 +193,8 @@ class JobRecord:
             lead = f"All {n} Titles skipped by you." if n != 1 else "Its one Title skipped by you."
             rest = self._left_out()
             return f"{lead} Also not ripped: {' and '.join(rest)}." if rest else lead
-        if self.skipped_by_you:
-            parts.append(f"{_numbers(self.skipped_by_you)} skipped by you")
+        if self.skipped_titles:
+            parts.append(f"{_numbers(self.skipped_titles)} skipped by you")
         parts += self._left_out()
         return f"Not ripped: {' and '.join(parts)}." if parts else None
 
@@ -240,12 +240,21 @@ class JobStore:
         self._now = now
         # Logs (runs.py): each Job's Run follows its records here; None keeps no Run.
         self.runs = runs
-        # Called when a Job may have finished (filed, failed, an Encode failed): Scratch
-        # cleanup looks again. Set by build_services; called from any thread.
+        # A Job may have finished (filed, failed, an Encode failed): Scratch cleanup looks again.
         self.finished: Callable[[], None] = lambda: None
 
     def _ts(self) -> str:
         return self._now().isoformat(timespec="seconds")
+
+    def _set_status(self, job_id: int, status: JobStatus, sets: str = "",
+                    params: tuple = (), only_if: str = "") -> bool:
+        """Every status write goes through here, so it always stamps `changed_at`."""
+        extra = f"{sets}, " if sets else ""
+        cond = f" AND {only_if}" if only_if else ""
+        cur = self._db.execute(
+            f"UPDATE jobs SET status = ?, {extra}changed_at = ? WHERE id = ?{cond}",
+            (status.value, *params, self._ts(), job_id))
+        return cur.rowcount == 1
 
     def _record(self, row) -> JobRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
@@ -331,8 +340,7 @@ class JobStore:
                          (str(status), job_id, number))
 
     def mark_ripped(self, job_id: int) -> None:
-        self._db.execute("UPDATE jobs SET status = 'ripped', finished_at = ?, changed_at = ? "
-                         "WHERE id = ?", (self._ts(), self._ts(), job_id))
+        self._set_status(job_id, JobStatus.RIPPED, "finished_at = ?", (self._ts(),))
         if rec := self.get(job_id):
             log.info("Rip finished: %s: ripped", _rip_name(rec))
         # The Rip Step carries on (the eject is still to come) until Identification begins.
@@ -347,12 +355,10 @@ class JobStore:
         shutil.rmtree(rec.scratch_dir, ignore_errors=True)
         if self.runs:
             self.runs.flush()  # its Step's last lines (why it failed) before the Job reads failed
-        self._db.execute(
-            "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
-            "failure_advice = ?, finished_at = COALESCE(finished_at, ?), changed_at = ? "
-            "WHERE id = ?",
-            (failure.kind.value, failure.headline, failure.advice, self._ts(), self._ts(),
-             job_id))
+        self._set_status(
+            job_id, JobStatus.FAILED, "failure_kind = ?, failure_headline = ?, "
+            "failure_advice = ?, finished_at = COALESCE(finished_at, ?)",
+            (failure.kind.value, failure.headline, failure.advice, self._ts()))
         self._db.execute("UPDATE titles SET status = 'failed' WHERE job_id = ? "
                          "AND status = 'ripping'", (job_id,))
         if self.runs:
@@ -360,25 +366,21 @@ class JobStore:
         self.finished()
 
     def mark_review(self, job_id: int, reason: ReviewReason) -> None:
-        self._db.execute("UPDATE jobs SET status = 'review', review_reason = ?, changed_at = ? "
-                         "WHERE id = ?", (reason.value, self._ts(), job_id))
+        self._set_status(job_id, JobStatus.REVIEW, "review_reason = ?", (reason.value,))
         if self.runs:
             self.runs.job_end(job_id, result="Needs Review")
 
     def requeue(self, job_id: int) -> bool:
         """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
-        cur = self._db.execute("UPDATE jobs SET status = 'ripped', review_reason = NULL, "
-                               "changed_at = ? WHERE id = ? AND status = 'review'",
-                               (self._ts(), job_id))
-        return cur.rowcount == 1
+        return self._set_status(job_id, JobStatus.RIPPED, "review_reason = NULL",
+                                only_if="status = 'review'")
 
     def mark_filed(self, job_id: int, title: str, archive_dir: Path) -> None:
         """Record the Disc as filed, then delete its scratch (`clean_filed_scratch` finishes a
         cut-off delete)."""
-        self._db.execute(
-            "UPDATE jobs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
-            "filed_at = COALESCE(filed_at, ?), changed_at = ? WHERE id = ?",
-            (title, str(archive_dir), self._ts(), self._ts(), job_id))
+        self._set_status(
+            job_id, JobStatus.FILED, "review_reason = NULL, title = ?, archive_dir = ?, "
+            "filed_at = COALESCE(filed_at, ?)", (title, str(archive_dir), self._ts()))
         rec = self.get(job_id)
         if rec is not None:
             shutil.rmtree(rec.scratch_dir, ignore_errors=True)
@@ -408,16 +410,12 @@ class JobStore:
         return [self._record(r) for r in rows]
 
     def mark_scratch_cleaned(self, job_id: int, failure: Failure) -> bool:
-        """Scratch cleanup takes the Job: it fails for good and leaves Now; its files are
-        the cleaner's to remove (`scratch_left` finds them after a restart). False if
-        another pass took it first."""
-        ts = self._ts()
-        cur = self._db.execute(
-            "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
-            "failure_advice = ?, scratch_cleaned_at = ?, changed_at = ?, dismissed = 1 "
-            "WHERE id = ? AND status = 'ripped' AND scratch_cleaned_at IS NULL",
-            (failure.kind.value, failure.headline, failure.advice, ts, ts, job_id))
-        if cur.rowcount != 1:
+        """Scratch cleanup fails the Job for good; False if another pass took it first."""
+        if not self._set_status(
+                job_id, JobStatus.FAILED, "failure_kind = ?, failure_headline = ?, "
+                "failure_advice = ?, scratch_cleaned_at = ?",
+                (failure.kind.value, failure.headline, failure.advice, self._ts()),
+                only_if="status = 'ripped' AND scratch_cleaned_at IS NULL"):
             return False
         if self.runs:
             self.runs.job_end(job_id, failed=True, finish=True)
@@ -430,15 +428,14 @@ class JobStore:
         return [rec for r in rows if (rec := self._record(r)).scratch_dir.exists()]
 
     def mark_filed_empty(self, job_id: int) -> None:
-        """Every Title was Skipped: Filed with nothing in it, its scratch deleted."""
-        self._db.execute(
-            "UPDATE jobs SET status = 'filed', review_reason = NULL, "
-            "finished_at = COALESCE(finished_at, ?), filed_at = COALESCE(filed_at, ?) "
-            "WHERE id = ?", (self._ts(), self._ts(), job_id))
+        """Every Title was Skipped: Filed with nothing in it (its Scratch is the caller's)."""
+        self._set_status(
+            job_id, JobStatus.FILED, "review_reason = NULL, "
+            "finished_at = COALESCE(finished_at, ?), filed_at = COALESCE(filed_at, ?)",
+            (self._ts(), self._ts()))
         rec = self.get(job_id)
         if rec is None:
             return
-        shutil.rmtree(rec.scratch_dir, ignore_errors=True)
         log.info("Rip finished: %s: every Title skipped", _rip_name(rec))
         if self.runs:
             self.runs.job_end(job_id, result=rec.skipped_summary, finish=True)

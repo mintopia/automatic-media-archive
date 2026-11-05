@@ -204,7 +204,7 @@ class VideoRipper:
         self._abort = False
         job = self._store.create(
             inserted.disc_type, inserted.label, "video",
-            getattr(self.cfg.min_title_seconds, inserted.disc_type.name.lower()))
+            self.cfg.min_title_seconds.seconds(inserted.disc_type))
         self._repeat.remember(job.id, fingerprint)
         shutil.rmtree(job.scratch_dir, ignore_errors=True)
         job.scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -231,6 +231,7 @@ class VideoRipper:
         elif (ripped := self._store.get(job.id)) is not None and ripped.all_skipped:
             self._store.log(job.id, ripped.skipped_summary or "Every Title skipped")
             self._store.mark_filed_empty(job.id)
+            shutil.rmtree(job.scratch_dir, ignore_errors=True)
         else:
             self._store.log(job.id, "Rip complete")
             self._store.mark_ripped(job.id)

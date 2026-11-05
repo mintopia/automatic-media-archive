@@ -97,7 +97,7 @@ class Services:
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
     app_events: AppEvents  # startup and tool events as Runs
     log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
-    scratch_cleaner: ScratchCleaner  # removes failed Encodes' Rips past retention_days
+    scratch_cleaner: ScratchCleaner
     job_settings: JobSettings | None = None  # set by build_services; per-Job overrides + locks
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 

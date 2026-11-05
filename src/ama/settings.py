@@ -307,11 +307,7 @@ class SettingsFile:
 
 
 def upgrade(path: Path) -> bool:
-    """Rewrite a v1/v2 file once for plain Library paths (ADR 0011): each Library's folder
-    is resolved against `nas.unc` (the share's Movies, TV and Music when it lists none) and
-    `plex.nas_path` becomes `plex.libraries_path`, then `[nas]` is dropped. True if the
-    file changed (its previous
-    text is the `.bak`); a file already rewritten, missing or unparsable is left alone."""
+    """Rewrite a v1/v2 file for plain Library paths (ADR 0011); True if it changed."""
     try:
         doc = tomlkit.parse(path.read_text(encoding="utf-8", newline=""))
     except (FileNotFoundError, tomlkit.exceptions.ParseError):
@@ -324,7 +320,16 @@ def upgrade(path: Path) -> bool:
         del plex["nas_path"]
         changed = True
     unc = doc.get("nas", {}).get("unc")
-    if isinstance(unc, str) and unc:
+    has_unc = isinstance(unc, str) and bool(unc)
+    if "nas" in doc and not has_unc:
+        relative = [p for e in doc.get("libraries", [])
+                    if isinstance(p := e.get("path"), str) and not Path(p).is_absolute()]
+        if relative:
+            raise ConfigError(
+                f"{path}: these Library folders are relative to nas.unc, which is empty: "
+                f"{', '.join(relative)}. Give each Library its full folder path, or set "
+                "nas.unc, then start AMA again.")
+    if has_unc:
         if "libraries" not in doc:
             doc.add(tomlkit.nl())
             aot = tomlkit.aot()

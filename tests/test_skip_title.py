@@ -91,6 +91,8 @@ def test_skipping_every_title_files_the_job_with_nothing_in_it(client, harness, 
         set_titles(job_id, titles, **kw)
         for t in titles:
             assert ripper.skip(job_id, t.number, skipped=True)
+        harness.services.db.execute("UPDATE jobs SET changed_at = '2000-01-01T00:00:00' "
+                                    "WHERE id = ?", (job_id,))  # test setup: an old change
 
     monkeypatch.setattr(jobs, "set_titles", untick_all_before_the_first_turn)
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
@@ -106,6 +108,9 @@ def test_skipping_every_title_files_the_job_with_nothing_in_it(client, harness, 
     assert "Filed to" not in page and "once it is identified" not in page
     assert "Couldn't rip" not in page_text(client, "/")
     assert not rec.scratch_dir.exists()
+    changed_at, = harness.services.db.execute(
+        "SELECT changed_at FROM jobs WHERE id = 1").fetchone()
+    assert changed_at > "2000-01-01T00:00:00"  # filing it is a status change
 
 
 def test_skipping_every_title_sends_no_alert(tmp_path, monkeypatch):
