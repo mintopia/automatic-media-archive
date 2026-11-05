@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
@@ -63,6 +64,25 @@ def logout() -> Response:
     r = RedirectResponse("/login", status_code=303)
     r.delete_cookie(auth.COOKIE)
     return r
+
+
+def _back(request: Request) -> Response:
+    """Back to the page the menu was used on (its path only: never off-site)."""
+    path = urlsplit(request.headers.get("referer", "")).path
+    return RedirectResponse(path if path.startswith("/") and not path.startswith("//") else "/",
+                            status_code=303)
+
+
+@router.post("/pause")
+async def pause(request: Request) -> Response:
+    _services(request).pause.set(True)
+    return _back(request)
+
+
+@router.post("/resume")
+async def resume(request: Request) -> Response:
+    _services(request).pause.set(False)
+    return _back(request)
 
 
 def _sse(event: str, data: str) -> str:

@@ -105,6 +105,15 @@ def _what_titles_became(services, disc_id: int) -> dict[int, str]:
     return out
 
 
+@router.get("/discs/{disc_id}/waiting", response_class=HTMLResponse)
+def disc_waiting(request: Request, disc_id: int) -> Response:
+    """The Job's Waiting line (or nothing); its page re-fetches it on every `problems` event."""
+    services = request.app.state.services
+    _disc_or_404(services, disc_id)
+    return TEMPLATES.TemplateResponse(request, "partials/job_waiting.html",
+                                      {"disc_id": disc_id, "waiting_for": services.problems.why})
+
+
 @router.get("/discs/{disc_id}/log", response_class=PlainTextResponse)
 def disc_log(request: Request, disc_id: int) -> str:
     services = request.app.state.services

@@ -31,6 +31,7 @@ from ama.extras import default_names
 from ama.media import MediaStore, screen
 from ama.nas import NasMonitor
 from ama.plex import Plex
+from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
 from ama.tmdb import Episode, Series, Tmdb, load_hints
 from ama.tv import episode_path, extra_path
@@ -155,7 +156,8 @@ class TvArchiver:
     def __init__(self, discs: DiscStore, titles: TvTitles, encoder: Encoder,
                  nas: NasMonitor, archive: Archive, plex: Plex, bus: EventBus, interval: float,
                  retry_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic, *,
-                 tmdb: Tmdb, media: MediaStore, covers: Covers) -> None:
+                 tmdb: Tmdb, media: MediaStore, covers: Covers,
+                 problems: Problems | None = None) -> None:
         self._tmdb = tmdb
         self._media = media
         self._covers = covers
@@ -167,7 +169,7 @@ class TvArchiver:
         self._plex = plex
         self._bus = bus
         self._interval = interval
-        self.backoff = Backoff(retry_seconds, clock)
+        self.backoff = Backoff(retry_seconds, clock, problems)
 
     async def run(self) -> None:
         self.recover()
@@ -189,13 +191,13 @@ class TvArchiver:
             try:
                 await self._advance(rec)
             except RetryLater as e:
-                if self.backoff.later(disc_id):
+                if self.backoff.later(disc_id, str(e), e.problem):
                     self._discs.log(disc_id, f"{e}; trying again in a while", error=True)
             except Exception:
                 log.exception("TV Encode/filing of Disc %s crashed", disc_id)
                 self._discs.log(disc_id, "The Encode or filing went wrong (see the app's log "
                                          "file); trying again in a while", error=True)
-                self.backoff.later(disc_id)
+                self.backoff.later(disc_id, "The Encode or filing went wrong (see the app's log file)")
             else:
                 self.backoff.done(disc_id)
             finally:

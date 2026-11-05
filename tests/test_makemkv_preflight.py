@@ -128,7 +128,10 @@ def test_provisioning_does_not_wait_for_the_makemkv_check(exe, tmp_path):
         gate.wait(5)
         return ProcResult(0, V2)
 
-    tools = Tools(ToolsConfig(dir=str(tmp_path / "t"), ffmpeg="x", ffprobe="y", cyanrip="z"),
+    overrides = {n: tmp_path / f"{n}.exe" for n in ("ffmpeg", "ffprobe", "cyanrip")}
+    for path in overrides.values():
+        path.write_bytes(b"")
+    tools = Tools(ToolsConfig(dir=str(tmp_path / "t"), **{n: str(p) for n, p in overrides.items()}),
                   EventBus(), runner=FakeRunner(slow), read_key=lambda: "k", pins=(),
                   makemkv_candidates=[exe])
 
