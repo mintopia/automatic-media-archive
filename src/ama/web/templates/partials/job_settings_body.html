@@ -1,0 +1,63 @@
+{#- The panel's body; what POST /jobs/{id}/settings answers with. `jobset` (JobsetView), `saved`
+    (the Group just saved), `refused` (job_settings.Locked: it locked first), `error` (a value it
+    couldn't take), `changed` (the setting's label), `summary` (the panel is on the rip card: its saves ask for the summary line too, which
+    the answer swaps in out of band as `oob_summary`). -#}
+{%- set id = jobset.job.id %}
+{%- set post = "hx-post=\"/jobs/%d/settings\" hx-target=\"#jobset-body-%d\" hx-swap=\"outerHTML\""|format(id, id) %}
+{%- set extra = ', "summary": "1"' if summary else '' %}
+<div class="box" id="jobset-body-{{ id }}">
+  {%- if refused %}
+  {%- set started = {"rip": "Ripping", "encode": "Encoding"}.get(refused.group.value, "Filing") %}
+  <div class="notice jobset-notice" role="alert">
+    <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+    <div><b>{{ refused.group.label }} wasn't changed</b>{{ started }} started at {{ refused.at.strftime("%H:%M") }}, so this Job's {{ refused.group.label }} settings were already locked. Your change to {{ changed }} wasn't saved.</div>
+  </div>
+  {%- elif error %}
+  <div class="notice jobset-notice" role="alert">
+    <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+    <div><b>{{ changed }} wasn't changed</b>{{ error }}</div>
+  </div>
+  {%- endif %}
+  <div class="jobset{% if jobset.groups | length == 1 %} one{% endif %}">
+  {%- for g in jobset.groups %}
+    {%- if loop.index <= 2 %}{% if loop.index == 2 %}</div>{% endif %}<div class="col">{% endif %}
+    {%- if g.locked %}
+    <div class="grp locked">
+      <div class="gh"><h3>{{ g.group.label }}</h3><span class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>{{ g.group.locked_line }}</span></div>
+      {%- if g.unrecorded %}
+      <p class="ts">Not recorded: this Job was filed before AMA kept each Job's settings.</p>
+      {%- else %}
+      <dl>
+        {%- for f in g.fields %}
+        <dt>{{ f.v.setting.label }}</dt><dd>{{ f.v.text }}{% if f.v.overridden %}<small>{{ f.changed_phrase }}</small>{% endif %}</dd>
+        {%- endfor %}
+      </dl>
+      {%- endif %}
+    </div>
+    {%- else %}
+    <div class="grp">
+      <div class="gh"><h3>{{ g.group.label }}</h3>{% if saved == g.group %}<span class="saved" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Saved</span>{% endif %}</div>
+      <div class="fld">
+        {%- for f in g.fields %}
+        {%- set vals = '{"key": "%s"%s}'|format(f.v.setting.key, extra) %}
+        <label for="{{ f.id }}">{{ f.v.setting.label }}</label>
+        {%- if f.options is none %}
+        <input class="input{% if f.v.overridden %} ov{% endif %}" id="{{ f.id }}" name="value" value="{{ f.v.value }}" {{ post | safe }} hx-trigger="change" hx-vals='{{ vals }}'{% if f.v.overridden %} aria-describedby="{{ f.id }}-n"{% endif %}>
+        {%- else %}
+        <select class="select{% if f.v.overridden %} ov{% endif %}" id="{{ f.id }}" name="value" {{ post | safe }} hx-trigger="change" hx-vals='{{ vals }}'{% if f.v.overridden %} aria-describedby="{{ f.id }}-n"{% endif %}>
+          {%- for o in f.options %}<option value="{{ o.value }}"{% if o.selected %} selected{% endif %}{% if o.disabled %} disabled{% endif %}>{{ o.label }}</option>{% endfor %}
+        </select>
+        {%- endif %}
+        {%- if f.v.overridden %}
+        <span class="note" id="{{ f.id }}-n">{% if f.v.setting.note %}{{ f.v.setting.note }} · {% endif %}{{ f.default_phrase }} · <button type="button" class="reset" {{ post | safe }} hx-vals='{{ '{"reset": "%s"%s}'|format(f.v.setting.key, extra) }}'>Reset<span class="sr"> {{ f.v.setting.label }}</span></button></span>
+        {%- endif %}
+        {%- endfor %}
+      </div>
+      <p class="until">{{ g.group.until }}</p>
+    </div>
+    {%- endif %}
+    {%- if loop.last %}</div>{% endif %}
+  {%- endfor %}
+  </div>
+</div>
+{%- if oob_summary is defined and oob_summary %}{% with js=jobset, oob=true %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}

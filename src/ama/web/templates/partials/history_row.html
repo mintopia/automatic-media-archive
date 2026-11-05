@@ -1,0 +1,29 @@
+{#- One filed Disc in History (the Now bin and /history). `d`: a CdJob, FiledMovie or FiledTv; `dated`: show the day it was filed, else the time.
+    `set_pos` (History only): Job id -> (Disc number, highest filed) for video sets. What the Disc holds opens below the meta line. -#}
+{%- set m = media_of(d.record.id) -%}
+{%- set art = (m.cover if m.kind == "album" else m.poster) if m else none -%}
+{%- set names = contents_of(d) -%}
+{%- set src = m.source if m else none -%}
+{%- set pos = (m.disc_number, m.disc_total) if m and m.kind == "album" and m.disc_total > 1 else (set_pos.get(d.record.id) if set_pos is defined else none) -%}
+{%- if d.movie is defined -%}
+  {%- set kind, held = "Movies", "Extra" -%}
+{%- elif d.episodes is defined -%}
+  {%- set n = d.episodes | selectattr("episode") | list | length -%}
+  {%- set kind, held = ("TV", "Episode") if n else ("Movies", "Extra") -%}
+{%- else -%}
+  {%- set kind, held = "Music", "track" -%}
+{%- endif -%}
+{%- set count = d.extras if d.movie is defined else (n or d.episodes | length) if d.episodes is defined else d.tracks | length -%}
+<div class="row compact hist">
+  {%- if art %}<div class="dtype art"><img src="/covers/{{ art }}" alt="" loading="lazy"></div>{% else %}<div class="dtype">{{ d.record.disc_type }}</div>{% endif %}
+  <div><div class="tt"><a href="/jobs/{{ d.record.id }}">{{ d.record.title }}</a></div>
+    <div class="ts meta">{{ kind }}
+      {%- if d.movie is defined and d.movie.resolution %} · {{ d.movie.resolution }}{% endif %}
+      {%- if pos %} · <span class="nw">Disc {{ pos[0] }} of {{ pos[1] }}</span>{% endif %}
+      {%- if d.movie is defined and d.extras %} · <a href="/jobs/{{ d.record.id }}/extras">{{ count }} Extra{{ "s" if count != 1 }}</a>
+      {%- elif count %} · {{ count }} {{ held }}{{ "s" if count != 1 }}{% endif %}
+      {%- if d.tracks is defined %} · {{ d.accuraterip }}{% endif %}
+      {%- if src %} <a class="src" href="{{ src[2] }}" rel="noreferrer" target="_blank">{{ "MusicBrainz" if src[1] == "MB" else src[1] }}</a>{% endif %}</div>
+    {%- if names %}<details class="names"><summary class="ts">Show {{ held }}s<svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></summary><ol class="ts">{% for n in names %}<li>{{ n }}</li>{% endfor %}</ol></details>{% endif %}</div>
+  {%- if d.record.filed_at %}<span class="ts nw when">{{ d.record.filed_at.strftime("%d %b %Y" if dated else "%H:%M") }}</span>{% else %}<span></span>{% endif %}
+</div>

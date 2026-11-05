@@ -1,0 +1,58 @@
+{#- The scratch page body. Topics "scratch", "rip", "encode". `scratch_refused`: the Disc
+    last ejected for lack of space (ama.scratch.Refusal), else None; `scratch_view()` walks
+    scratch for the Discs holding it. -#}
+{%- set s = scratch_view() %}
+{%- set r = scratch_refused %}
+{%- set other = [scratch.used_gb - s.scratch_items_gb, 0] | max if scratch else 0 %}
+<div class="split">
+  <div class="stack">
+    <section aria-labelledby="sf-h">
+    {%- if r %}
+      <div class="drive">
+        <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><span>{{ r.disc_type.long_name }}</span></div>
+        <div class="body">
+          <h1 id="sf-h" class="title">Ejected: not enough space</h1>
+          <div class="meta">{% if r.label %}{{ r.label }} · {{ r.disc_type.long_name }}{% else %}The {{ r.disc_type.long_name }}{% endif %} was not ripped. {{ r.usage.used_gb }} of {{ r.usage.total_gb }} GB of scratch is in use; {{ r.needs }}.</div>
+          {%- if review %}
+          <p style="margin-top:12px"><b>Finish a Review to free space,</b> then put the Disc back in.</p>
+          <div class="actions" style="margin-top:20px"><a class="btn pri" href="{{ review[0].href }}">Go to Review</a></div>
+          {%- elif encoding %}
+          <p style="margin-top:12px"><b>Space frees up as each Encode is filed;</b> then put the Disc back in.</p>
+          {%- else %}
+          <p style="margin-top:12px"><b>Free some space on the scratch drive,</b> then put the Disc back in.</p>
+          {%- endif %}
+        </div>
+      </div>
+    {%- else %}
+      <div class="drive empty">
+        <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Scratch</span></div>
+        <div class="body">
+          <h1 id="sf-h" class="title">{% if scratch %}{{ scratch.used_gb }} of {{ scratch.total_gb }} GB in use{% else %}Scratch{% endif %}</h1>
+          <div class="meta">{% if other and s.scratch_items_gb %}{{ s.scratch_items_gb }} GB of that is Rips; the other {{ other }} GB is other files on this drive. {% elif other %}None of it is Rips: it's other files on this drive. {% endif %}Each Rip stays on scratch until it's filed. A Disc that wouldn't fit is ejected unripped.</div>
+        </div>
+      </div>
+    {%- endif %}
+    </section>
+    <section class="bin ink" aria-labelledby="su-h">
+      <h2 class="tab" id="su-h">Using scratch <span class="c">{{ s.scratch_items_gb }} GB</span></h2>
+      <div class="box">
+      {%- for i in s.scratch_items %}
+        <div class="row"><div class="dtype">{{ i.record.disc_type }}</div><div><div class="tt">{{ i.title }}</div><div class="ts">{{ i.state }} · <b>{{ i.gb }} GB</b></div></div>
+          {%- if i.href %}<a class="btn" href="{{ i.href }}">Review</a>
+          {%- elif i.sticker %}<span class="stk {{ i.sticker.css }}" style="justify-self:start">{{ i.sticker }}</span>
+          {%- else %}<span></span>{% endif %}</div>
+      {%- endfor %}
+      {%- if not s.scratch_items %}
+        <p class="pad ts">No Rips are on scratch.{% if other %} The {{ other }} GB in use is other files on this drive.{% endif %}</p>
+      {%- endif %}
+      </div>
+    </section>
+  </div>
+  <div class="aside stack">
+    <section class="bin rev" aria-labelledby="sr-h"><h2 class="tab" id="sr-h">Needs Review <span class="c">{{ review | length }}</span></h2><div class="box"><p class="pad ts">{% if review %}Each finished Review lets its Job encode and file, freeing its space.{% else %}Nothing needs you right now.{% endif %}</p></div></section>
+    <section class="bin enc" aria-labelledby="se-h"><h2 class="tab" id="se-h">Encoding <span class="c">{{ encoding | length }}</span></h2><div class="box"><p class="pad ts">
+      {%- if s.encode_freeing %}Space frees up as each Encode is filed: about {{ s.encode_freeing[0] }} GB{% if s.encode_freeing[1] is not none %} in {{ s.encode_freeing[1] | minutes }}{% endif %}.
+      {%- elif encoding %}Space frees up as each Encode is filed.
+      {%- else %}Nothing waiting to encode.{% endif %}</p></div></section>
+  </div>
+</div>

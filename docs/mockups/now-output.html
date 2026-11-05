@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Now, output open · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html" aria-current="page">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
+</header>
+<main id="main">
+  <h1 class="sr">Now</h1>
+  <div class="split">
+    <div class="stack">
+      <section aria-labelledby="drive-h">
+        <h2 id="drive-h" class="sr">Disc in drive</h2>
+        <div class="drive">
+          <div class="cell"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#disc"/></svg><span>UHD Blu-ray</span></div>
+          <div class="body">
+            <div class="title">Blade Runner 2049</div>
+            <div class="meta">In the drive · 7 Titles found · Main Feature <span class="nw">2 h 43 m</span></div>
+            <div class="status"><span class="stk rip">Ripping</span><span class="ts">Title 3 of 7</span></div>
+            <div class="prog">
+              <div style="flex:1"><div class="bar" role="progressbar" aria-label="Rip progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="62"><i style="width:62%"></i></div><div class="eta"><span class="nw">14 min left</span> · the Disc ejects when it's done</div></div>
+              <div class="pct">62%</div>
+            </div>
+            <div class="out-sum">
+              <span class="ts">makemkvcon · Title 3 of 7</span>
+              <button class="linkbtn" type="button" aria-expanded="true" aria-controls="rip-tail">Hide output</button>
+              <button class="linkbtn" type="button" data-wrap="rip-tail" aria-pressed="false">Wrap lines</button>
+              <a class="linkbtn" href="logs.html">Open in Logs<svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></a>
+            </div>
+<div class="log tail" id="rip-tail" role="log" tabindex="0" aria-label="Latest Rip output"><span class="time">18:40:00</span>  AMA: Rip started for the UHD Blu-ray in drive D:
+<span class="time">18:40:01</span>  Scratch: 168 GB used of 256 GB, 88 GB free
+<span class="time">18:40:02</span>  MakeMKV v1.17.8 win(x64-release) started
+<span class="time">18:40:04</span>  Using direct disc access mode
+<span class="time">18:40:31</span>  Title #00800.mpls has length of 12 seconds, less than 30 seconds: skipped
+<span class="time">18:40:31</span>  Title #00801.mpls is equal to title #00800.mpls and was skipped
+<span class="time">18:40:33</span>  Found 7 titles
+<span class="time">18:40:34</span>  Saving 7 titles into directory scratch\job-0112
+<span class="time">18:40:35</span>  Title 1: 2:43:46, 9 chapters, 61.2 GB
+<span class="time">18:52:58</span>  Title 1 saved
+<span class="time">18:52:59</span>  Title 2: 0:02:27, 1 chapter, 0.9 GB
+<span class="time">18:53:11</span>  Title 2 saved
+<span class="time">18:53:12</span>  Title 3: 0:14:05, 3 chapters, 5.3 GB
+<span class="time">18:55:30</span>  Title 3: 20%
+<span class="time">18:58:02</span>  Title 3: 40%
+<span class="time">19:01:40</span>  Hash check passed for title_t02.m2ts (2 of 2 segments)
+<span class="time">19:04:21</span>  Title 3: 60%
+<span class="time">19:06:09</span>  Title 3: 62%</div>
+          </div>
+        </div>
+      </section>
+      <section class="bin rev" aria-labelledby="rev-h">
+        <h2 class="tab-h"><a class="tab" id="rev-h" href="review-movie.html">Needs Review <span class="c">3</span></a></h2>
+        <div class="box">
+          <div class="row"><div class="dtype">DVD</div><div><div class="tt">The Office (UK) Series 1 — Disc 2</div><div class="ts">6 Titles ripped · which episode is which?</div></div><a class="btn pri" href="review-tv.html">Match episodes</a></div>
+          <div class="row"><div class="dtype">CD</div><div><div class="tt">OK Computer — Radiohead</div><div class="ts">4 editions match this CD · pick yours</div></div><a class="btn" href="review-cd.html">Choose edition</a></div>
+          <div class="row"><div class="dtype">BD</div><div><div class="tt">Blu-ray labelled “HEAT_DISC1”</div><div class="ts">Not sure which film · 2 likely matches</div></div><a class="btn" href="review-movie.html">Confirm film</a></div>
+        </div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin rip">
+        <h2 class="tab">Ripping <span class="c">1</span></h2>
+        <div class="box"><div class="row compact"><div class="dtype">UHD</div><div><div class="tt">Blade Runner 2049</div><div class="ts">Title 3 of 7 · 62%</div></div><span class="stk rip">Ripping</span></div></div>
+      </section>
+      <section class="bin enc">
+        <h2 class="tab">Encoding <span class="c">2</span></h2>
+        <div class="box">
+          <div class="row compact"><div class="dtype">BD</div><div><div class="tt">Arrival (2016)</div><div class="bar thin enc" role="progressbar" aria-label="Encode progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="41"><i style="width:41%"></i></div></div><span class="ts">41% · 22 min</span></div>
+          <div class="rowout"><button class="linkbtn" type="button" aria-expanded="true" aria-controls="enc-tail">Hide output</button><button class="linkbtn" type="button" data-wrap="enc-tail" aria-pressed="false">Wrap lines</button><a class="linkbtn" href="logs-run-running.html#step-encode-1">Open in Logs<svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></a></div>
+<div class="log tail" id="enc-tail" role="log" tabindex="0" aria-label="Latest Encode output"><span class="time">18:02:12</span>  Keeping all 3 audio tracks (Audio: Copy all)
+<span class="time">18:02:12</span>  Keeping subtitles 4, 5 (English, English forced)
+<span class="time">18:02:12</span>  Stream mapping:
+<span class="time">18:02:12</span>    Stream #0:0 -> #0:0 (h264 (native) -> hevc (hevc_nvenc))
+<span class="time">18:02:12</span>    Stream #0:1 -> #0:1 (copy)
+<span class="time">18:02:12</span>    Stream #0:2 -> #0:2 (copy)
+<span class="time">18:02:12</span>    Stream #0:3 -> #0:3 (copy)
+<span class="time">18:02:12</span>    Stream #0:4 -> #0:4 (copy)
+<span class="time">18:02:12</span>    Stream #0:5 -> #0:5 (copy)
+<span class="time">18:02:12</span>  Output #0, matroska, to 'Arrival (2016).part.mkv':
+<span class="time">18:02:12</span>    Stream #0:0: Video: hevc (Main 10), p010le, 1920x800, q=2-31, 23.98 fps
+<span class="time">18:02:12</span>      encoder         : Lavc61.19.100 hevc_nvenc
+<span class="time">18:02:12</span>    Stream #0:1(eng): Audio: dts (DTS-HD MA), 48000 Hz, 7.1, s32p (24 bit)
+<span class="time">18:02:12</span>    Stream #0:2(eng): Audio: ac3, 48000 Hz, stereo, fltp, 192 kb/s (Commentary)
+<span class="time">18:02:12</span>    Stream #0:3(fra): Audio: ac3, 48000 Hz, 5.1(side), fltp, 640 kb/s
+<span class="time">18:02:12</span>    Stream #0:4(eng): Subtitle: hdmv_pgs_subtitle
+<span class="time">18:02:12</span>    Stream #0:5(eng): Subtitle: hdmv_pgs_subtitle (forced)
+<span class="time">18:24:37</span>  [matroska @ 000001d3] Starting new cluster due to timestamp
+<span class="time">18:39:05</span>  [hevc_nvenc @ 000001c8] Lookahead queue full, waiting
+<span class="time">18:46:20</span>  Chapter 7 of 16</div>
+          <div class="row compact"><div class="dtype">DVD</div><div><div class="tt">Spirited Away (2001)</div><div class="ts">Next in line</div></div><span class="stk enc">Encoding</span></div>
+        </div>
+      </section>
+      <section class="bin fil">
+        <h2 class="tab-h"><a class="tab" href="history.html">History <span class="c">5</span></a></h2>
+        <div class="box">
+          <div class="row compact"><div class="dtype art"><img src="assets/cover-a.png" alt=""></div><div><div class="tt">Kid A — Radiohead</div><div class="ts">Music · 10 tracks · verified</div></div><span class="stk fil">Filed</span></div>
+          <div class="row compact"><div class="dtype art"><img src="assets/poster-a.png" alt=""></div><div><div class="tt">Dune (2021)</div><div class="ts">Movies · 1080p</div></div><span class="stk fil">Filed</span></div>
+          <div class="row compact"><div class="dtype art"><img src="assets/cover-b.png" alt=""></div><div><div class="tt">Blue Lines — Massive Attack</div><div class="ts">Music · 9 tracks · verified</div></div><span class="stk fil">Filed</span></div>
+          <a class="more" href="#">2 more filed today</a>
+        </div>
+      </section>
+      <section class="bin ink">
+        <h2 class="tab">Didn't work <span class="c">1</span></h2>
+        <div class="box"><div class="row compact"><div class="dtype">CD</div><div><div class="tt">Unknown CD · 12 tracks</div><div class="ts">Couldn't read track 7 · clean the Disc and try again</div></div><a class="stk fail" href="disc-failed.html">Failed</a></div></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="assets/logs.js"></script>
+<script>
+// Mockup: Show/Hide output toggles; tails stay scrolled to the newest line. ?output=closed shows the default collapsed state.
+const closed = new URLSearchParams(location.search).get('output') === 'closed';
+document.querySelectorAll('button[aria-controls$="-tail"]').forEach(b => {
+  const t = document.getElementById(b.getAttribute('aria-controls'));
+  const set = open => { t.hidden = !open; b.setAttribute('aria-expanded', open); b.textContent = open ? 'Hide output' : 'Show output'; if (open) t.scrollTop = t.scrollHeight; };
+  b.addEventListener('click', () => set(t.hidden)); set(!closed);
+});
+</script>
+<script src="assets/menu.js"></script>
+</body>
+</html>

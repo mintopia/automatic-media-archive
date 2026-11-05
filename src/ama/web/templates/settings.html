@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% macro icon(name, cls="i") %}<svg class="{{ cls }}" aria-hidden="true"><use href="/static/icons.svg#{{ name }}"/></svg>{% endmacro %}
+{% macro restart_note() %}{{ icon("redo") }}Used after a restart{% endmacro %}
+{% macro tstat(st) %}<span class="tstat{% if not st.ok %} off{% endif %}">{{ icon("check" if st.ok else "alert") }}{{ st.text }}</span>{% endmacro %}
+{% macro ferr(f) %}{% if f.error %}<div class="ferr" id="{{ f.id }}-e">{{ icon("alert") }}<span>{{ f.error }}</span></div>{% endif %}{% endmacro %}
+{% macro described(f, r) -%}
+{%- set ids = [] -%}
+{%- if r.row.hint or r.row.tech %}{% set _ = ids.append(r.id ~ "-h") %}{% endif -%}
+{%- if f.error %}{% set _ = ids.append(f.id ~ "-e") %}{% endif -%}
+{%- if ids %} aria-describedby="{{ ids | join(' ') }}"{% endif -%}
+{%- endmacro %}
+{% macro input(f, r, typ, placeholder="", hidden=False) -%}
+<input {% if hidden %}hidden disabled {% endif %}class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="{{ typ }}" name="{{ f.key }}"{% if f.value != "" %} value="{{ f.value }}"{% endif %}{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if f.step %} step="{{ f.step }}"{% endif %}{{ described(f, r) }}{% if f.error %} aria-invalid="true"{% endif %}{% if typ == "password" %} autocomplete="new-password"{% endif %} spellcheck="false">
+{%- endmacro %}
+{% macro choice(r) -%}
+{%- set f = r.fields[0] -%}
+{%- if r.row.style == "select" -%}
+<select class="select{% if f.error %} bad{% endif %}" id="{{ f.id }}" name="{{ f.key }}"{{ described(f, r) }}{% if f.error %} aria-invalid="true"{% endif %}>
+  {%- for o in r.options %}<option value="{{ o.value }}"{% if o.value == f.value %} selected{% endif %}{% if o.disabled %} disabled{% endif %}>{{ o.label }}</option>{% endfor -%}
+</select>
+{%- else -%}
+<div class="choices" role="radiogroup" aria-labelledby="{{ f.id }}-l"{{ described(f, r) }}>
+  {%- for o in r.options %}<label class="radio{% if o.disabled %} na{% endif %}{% if o.broken %} broken{% endif %}"><input type="radio" name="{{ f.key }}" value="{{ o.value }}"{% if o.value == f.value %} checked{% endif %}{% if o.disabled %} disabled{% endif %}><span>{{ o.label }}{% if o.note %}<span class="ts">{{ o.note }}</span>{% endif %}</span></label>{% endfor -%}
+</div>
+{%- endif %}{{ ferr(f) }}
+{%- if r.row.after %}{% include r.row.after %}{% endif -%}
+{%- endmacro %}
+{% macro control(r) -%}
+{%- set f = r.fields[0] -%}
+{%- if r.status %}{{ tstat(r.status) }}{% endif -%}
+{%- if f.kind == "secret" -%}
+  {%- if f.is_set and not f.error -%}
+  <div class="secret" role="group" aria-labelledby="{{ f.id }}-l"{{ described(f, r) }}><span class="state">{{ icon("check") }}Set</span><button class="btn quiet" type="button" data-secret-replace aria-label="Replace {{ r.row.label }}">Replace</button><button class="btn quiet" type="button" data-secret-remove aria-label="Remove {{ r.row.label }}">Remove</button></div>
+  {{- input(f, r, "password", "New " ~ r.row.label, hidden=True) }}<input type="hidden" name="remove" value="{{ f.key }}" disabled>
+  {%- else -%}
+  {{ input(f, r, "password", "New " ~ r.row.label if f.is_set else "Not set") }}{{ ferr(f) }}
+  {%- if f.is_set %}<button class="btn quiet" type="button" data-secret-keep>Keep the saved one</button>{% endif -%}
+  {%- endif -%}
+{%- else -%}
+  {%- set box = input(f, r, f.kind, r.placeholder) -%}
+  {%- if r.row.unit %}<div class="unit">{{ box }}<span>{{ r.row.unit }}</span></div>{% else %}{{ box }}{% endif %}{{ ferr(f) }}
+{%- endif -%}
+{%- endmacro %}
+{% macro row(r) -%}
+<div class="sf"><div><div class="lb">
+  {%- if r.pertype or (r.choice and r.row.style == "radio") or (r.fields[0].kind == "secret" and r.fields[0].is_set and not r.fields[0].error) %}<span id="{{ r.id }}-l">{{ r.row.label }}</span>{% else %}<label for="{{ r.id }}">{{ r.row.label }}</label>{% endif -%}
+  {%- if r.pending %}<span class="rs pending">{{ icon("redo") }}Waiting for restart</span>{% endif -%}
+  </div>
+  {%- if r.row.hint or r.row.tech %}<div class="hn" id="{{ r.id }}-h">{{ r.row.hint }}{% if r.row.tech %}<span class="tech">{{ r.row.tech }}</span>{% endif %}</div>{% endif -%}
+  </div><div class="ctl">
+  {%- if r.pertype -%}
+  <table class="pertype" aria-labelledby="{{ r.id }}-l"{% if r.row.hint or r.row.tech %} aria-describedby="{{ r.id }}-h"{% endif %}><thead><tr><th scope="col">Disc Type</th><th scope="col">{{ r.row.column }}</th>{% if r.row.select_column %}<th scope="col">{{ r.row.select_column }}</th>{% endif %}</tr></thead><tbody>
+    {%- for name, f, sel in r.cells %}<tr><td>{{ name }}</td><td>
+      {%- set box %}<input class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="number" name="{{ f.key }}" value="{{ f.value }}"{% if f.step %} step="{{ f.step }}"{% endif %} aria-label="{{ name }} {{ r.row.column | lower }}"{% if f.error %} aria-invalid="true" aria-describedby="{{ f.id }}-e"{% endif %}>{% endset -%}
+      {%- if r.row.unit %}<div class="unit">{{ box }}<span>{{ r.row.unit }}</span></div>{% else %}{{ box }}{% endif %}{{ ferr(f) }}</td>
+      {%- if sel %}{% set s, opts = sel %}<td><select class="select{% if s.error %} bad{% endif %}" id="{{ s.id }}" name="{{ s.key }}" aria-label="{{ name }} {{ r.row.select_column | lower }}"{% if s.error %} aria-invalid="true" aria-describedby="{{ s.id }}-e"{% endif %}>{% for o in opts %}<option value="{{ o.value }}"{% if o.value == s.value %} selected{% endif %}>{{ o.label }}</option>{% endfor %}</select>{{ ferr(s) }}</td>{% endif %}</tr>
+    {%- endfor %}</tbody></table>
+  {%- elif r.choice %}{{ choice(r) }}
+  {%- else %}{{ control(r) }}{% endif -%}
+  </div></div>
+{%- endmacro %}
+{% block title %}{% if section.sub %}{{ section.name }} · {% for label, href, on in tabs if on %}{{ label }}{% endfor %}{% else %}{{ section.name }}{% endif %} · Settings{% endblock %}
+{% block main %}
+<main class="settings" id="main">
+  <h1>Settings</h1>
+  {%- set moved %}{% if new_address %}<p class="rmeta">After the restart AMA is at <a href="{{ new_address }}">{{ new_address }}</a>; this address stops working.</p>{% endif %}{% endset %}
+  {%- set changes %}<ul>{% for p in pending %}<li>{{ p }}</li>{% endfor %}</ul>{% endset %}
+  {%- set rip_part %}<b>{{ busy.rip }}</b>{% endset %}
+  {%- if restart_waiting %}
+  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>AMA restarts when nothing is Ripping or Encoding</b>{{ changes }}
+    <p class="rmeta">{% if busy %}Waiting for {% if busy.rip is not none %}{{ rip_part }} to finish Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}for {{ busy.encodes }} Encode{% endif %}{% if busy.eta_s %}, about {{ busy.eta_s | minutes }}{% endif %}. No new Rip starts meanwhile.{% else %}Restarting now.{% endif %}</p>{{ moved }}</div>
+    <form method="post" action="/restart/cancel"><input type="hidden" name="back" value="{{ back }}"><button class="btn quiet" type="submit">Don't restart</button></form></div></div>
+  {%- elif pending %}
+  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>Restart AMA to use {{ pending | length }} saved change{{ "s" if pending | length != 1 }}</b>{{ changes }}
+    {%- if busy and not confirm %}<p class="rmeta">{% if busy.rip is not none %}{{ rip_part }} is Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}{{ busy.encodes }} Encode is running{% endif %}. Restarting now {{ busy.stops }}.</p>{% endif %}{{ moved }}</div>
+    {%- if not (busy and confirm) %}
+    <form method="post" action="/restart"><input type="hidden" name="back" value="{{ back }}"><button class="btn pri" type="submit">{% if busy %}Restart…{% else %}Restart now{% endif %}</button></form>
+    {%- endif %}</div>
+    {%- if busy and confirm %}
+    <div class="rconfirm" id="rconfirm" role="alertdialog" aria-labelledby="rc-h" aria-describedby="rc-d" tabindex="-1"><div><b id="rc-h">{{ busy.headline }}</b><span id="rc-d">Restart when idle waits for {% if busy.rip is not none %}{{ rip_part }} to finish Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}for the Encode to finish{% endif %}{% if busy.eta_s %} (about {{ busy.eta_s | minutes }}){% endif %}, and starts no new Rip meanwhile. Restart now {{ busy.stops }}.</span></div>
+      <form class="actions" method="post" action="/restart/when-idle"><input type="hidden" name="back" value="{{ back }}"><a class="btn quiet" href="{{ back }}">Cancel</a><button class="btn danger" type="submit" formaction="/restart" name="force" value="1">Restart now</button><button class="btn pri" type="submit" autofocus>Restart when idle</button></form></div>
+    {%- endif %}</div>
+  {%- endif %}
+  <nav class="files" aria-label="Settings sections">{% for label, href, on in tabs %}<a class="tab" href="{{ href }}"{% if on %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+  {%- if problem or not page %}
+  <div class="box setbox"><div class="notice setnotice" role="alert">{{ icon("alert") }}<div><b><code>ama.toml</code> can't be edited here right now</b>{{ problem }} Fix the file by hand; AMA keeps running with the values it started with.</div></div></div>
+  {%- else %}
+  <form class="box setbox" method="post" action="/settings/{{ section.slug }}" aria-label="{{ section.name }} settings" novalidate data-settings>
+    {%- if subs %}
+    <nav class="subnav" aria-label="{% for label, href, on in tabs if on %}{{ label }}{% endfor %} settings">{% for s in subs %}<a href="/settings/{{ s.slug }}"{% if s.slug == section.slug %} aria-current="page"{% endif %}>{{ s.name }}</a>{% endfor %}</nav>
+    {%- endif %}
+    <div class="leave" role="alertdialog" aria-labelledby="leave-h" aria-describedby="leave-d" tabindex="-1" hidden data-leave><div><b id="leave-h">Leave {{ section.name }} without saving?</b><span id="leave-d"></span></div><div class="actions"><button class="btn quiet" type="button" data-stay>Stay on {{ section.name }}</button><button class="btn danger" type="button" data-discard>Discard and go</button><button class="btn pri" type="submit" data-save-go>Save and go</button></div></div>
+    <input type="hidden" name="next" value="">
+    {%- if section.header %}{% include section.header %}{% endif %}
+    {%- if rejected %}
+    <div class="notice setnotice" role="alert" tabindex="-1" id="errsum">{{ icon("alert") }}<div><b>{{ section.name }} {{ "weren't" if section.name.endswith("s") else "wasn't" }} saved</b><code>ama.toml</code> hasn't changed.
+      {%- if page.errors %} Fix {{ "this field" if page.errors | length == 1 else "these " ~ (page.errors | length) ~ " fields" }}:<ul class="errlist">{% for f in page.errors %}<li><a href="#{{ f.id }}">{{ f.label }}: {{ f.error }}</a></li>{% endfor %}</ul>{% endif %}
+      {%- if page.general %}<ul class="errlist">{% for g in page.general %}<li>{{ g }}</li>{% endfor %}</ul>{% endif %}</div></div>
+    {%- endif %}
+    {%- for gv in page.groups %}{% set g = gv.group %}
+    {%- if g.advanced %}
+    <details class="adv"{% if gv.open %} open{% endif %}><summary><span class="advh">{% if g.tagged %}<span class="advtag">Advanced</span>{% endif %}<span class="advt">{{ g.title }}</span>{{ icon("chevron", "i chev") }}</span><span class="advsub">{{ gv.summary or "You probably don't need to change this." }}</span>{% if g.tagged %}<span class="advnote">{% if g.live %}{{ g.note }}{% else %}{{ icon("redo") }}{{ g.note or "Used after a restart" }}{% endif %}</span>{% endif %}</summary>
+      {%- if g.intro %}<p class="advp">{{ g.intro }}</p>{% endif %}
+      {%- for r in gv.rows %}{{ row(r) }}{% endfor %}</details>
+    {%- else %}
+    <div class="grp-h"><h2>{{ g.title }}</h2>
+      {%- if gv.status %}<span class="ts grpst">{{ tstat(gv.status) }}{% if g.live %}{% if g.note %}<span>{{ g.note }}</span>{% endif %}{% else %}<span class="rnote">{{ restart_note() }}</span>{% endif %}</span>
+      {%- elif g.live %}<span class="ts">{{ g.note }}</span>
+      {%- else %}<span class="ts rnote">{{ icon("redo") }}{{ g.note or "Used after a restart" }}</span>{% endif %}</div>
+    {%- if g.template %}{% include g.template %}{% endif %}
+    {%- for r in gv.rows %}
+    {{ row(r) }}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    <div class="setfoot{% if section.template %} sub{% endif %}"><span class="st{% if rejected %} dirty{% endif %}" data-st>{% if rejected %}Not saved: fix the fields marked above{% elif saved %}<span class="ok" role="status">{{ icon("check") }}Saved at {{ saved }}</span>{% else %}No unsaved changes{% endif %}</span><button class="btn quiet" type="button" data-undo{% if not rejected %} hidden{% endif %}>Undo changes</button><button class="btn pri" type="submit" data-save{% if not rejected %} disabled{% endif %}>Save {{ section.foot or section.name }}</button></div>
+    {%- if section.template %}{% include section.template %}{% endif %}
+  </form>
+  {%- endif %}
+  <p class="ts setnote">{% if section.note %}{{ section.note }}{% if not section.note_only %} {% endif %}{% endif %}{% if not section.note_only %}Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.{% endif %}</p>
+</main>
+<script src="/static/settings.js" defer></script>
+{% endblock %}

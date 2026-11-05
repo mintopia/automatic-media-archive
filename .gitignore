@@ -1,3 +1,12 @@
 __pycache__/
 .impeccable/mocks/
 .impeccable/review/
+.venv/
+# Local config (holds secrets) and runtime state
+ama.toml
+ama-startup-error.log
+*.sqlite3
+*.sqlite3-*
+logs/
+.claude
+.visual-companion/

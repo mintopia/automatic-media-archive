@@ -1,0 +1,120 @@
+{
+    "frames": [
+        {
+            "media_type": "video",
+            "stream_index": 0,
+            "key_frame": 1,
+            "pts": 0,
+            "pts_time": "0.000000",
+            "best_effort_timestamp": 0,
+            "best_effort_timestamp_time": "0.000000",
+            "duration": 41,
+            "duration_time": "0.041000",
+            "pkt_pos": "3151",
+            "pkt_size": "157494",
+            "width": 3840,
+            "height": 2160,
+            "crop_top": 0,
+            "crop_bottom": 0,
+            "crop_left": 0,
+            "crop_right": 0,
+            "pix_fmt": "yuv420p10le",
+            "sample_aspect_ratio": "1:1",
+            "pict_type": "I",
+            "interlaced_frame": 0,
+            "top_field_first": 0,
+            "lossless": 0,
+            "repeat_pict": 0,
+            "color_range": "tv",
+            "color_space": "bt2020nc",
+            "color_primaries": "bt2020",
+            "color_transfer": "smpte2084",
+            "chroma_location": "left",
+            "side_data_list": [
+                {
+                    "side_data_type": "H.26[45] User Data Unregistered SEI message"
+                },
+                {
+                    "side_data_type": "H.26[45] User Data Unregistered SEI message"
+                },
+                {
+                    "side_data_type": "Mastering display metadata",
+                    "red_x": "34000/50000",
+                    "red_y": "16000/50000",
+                    "green_x": "13250/50000",
+                    "green_y": "34500/50000",
+                    "blue_x": "7500/50000",
+                    "blue_y": "3000/50000",
+                    "white_point_x": "15635/50000",
+                    "white_point_y": "16450/50000",
+                    "min_luminance": "50/10000",
+                    "max_luminance": "10000000/10000"
+                },
+                {
+                    "side_data_type": "Content light level metadata",
+                    "max_content": 1000,
+                    "max_average": 400
+                }
+            ]
+        }
+    ],
+    "streams": [
+        {
+            "index": 0,
+            "codec_name": "hevc",
+            "codec_long_name": "H.265 / HEVC (High Efficiency Video Coding)",
+            "profile": "Main 10",
+            "codec_type": "video",
+            "codec_tag_string": "[0][0][0][0]",
+            "codec_tag": "0x0000",
+            "width": 3840,
+            "height": 2160,
+            "coded_width": 3840,
+            "coded_height": 2160,
+            "has_b_frames": 2,
+            "sample_aspect_ratio": "1:1",
+            "display_aspect_ratio": "16:9",
+            "pix_fmt": "yuv420p10le",
+            "level": 150,
+            "color_range": "tv",
+            "color_space": "bt2020nc",
+            "chroma_location": "left",
+            "field_order": "progressive",
+            "refs": 1,
+            "view_ids_available": "",
+            "view_pos_available": "",
+            "r_frame_rate": "24000/1001",
+            "avg_frame_rate": "24000/1001",
+            "time_base": "1/1000",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "nb_read_frames": "1",
+            "extradata_size": 2584,
+            "disposition": {
+                "default": 0,
+                "dub": 0,
+                "original": 0,
+                "comment": 0,
+                "lyrics": 0,
+                "karaoke": 0,
+                "forced": 0,
+                "hearing_impaired": 0,
+                "visual_impaired": 0,
+                "clean_effects": 0,
+                "attached_pic": 0,
+                "timed_thumbnails": 0,
+                "non_diegetic": 0,
+                "captions": 0,
+                "descriptions": 0,
+                "metadata": 0,
+                "dependent": 0,
+                "still_image": 0,
+                "multilayer": 0
+            },
+            "tags": {
+                "ENCODER": "Lavc63.1.102 libx265",
+                "DURATION": "00:00:03.003000000"
+            }
+        }
+    ]
+}

@@ -5,20 +5,29 @@
 <title>Review CD · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
-<style>@media (max-width:720px){.radio .stk{display:none}}
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+<style>
 .manual{border-top:1px solid var(--rule)}.manual summary{padding:16px 18px;font-weight:600;cursor:pointer;min-height:44px}.manual summary:hover{background:var(--well)}</style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <a class="brand" href="now.html">Automatic Media Archive</a>
-  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="#">Archive</a><a href="#">Settings</a></nav>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html" aria-current="page">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
   <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
 </header>
-<main>
-  <div class="page-head">
+<main id="main">
+  <div class="page-head gap">
     <div>
-      <div class="crumb"><svg class="i"><use href="assets/icons.svg#back"/></svg><a href="now.html">Needs Review</a></div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#back"/></svg><a href="now.html">Needs Review</a></div>
       <h1>Which edition of OK Computer is this?</h1>
       <p class="sub">4 editions match this CD. Check the back of the case and pick the one that matches.</p>
     </div>
@@ -26,18 +35,23 @@
   <div class="split">
     <div class="stack">
       <div class="notice" role="status">
-        <svg class="i"><use href="assets/icons.svg#alert"/></svg>
-        <div><b>2 tracks couldn't be verified</b>Tracks 4 and 9 don't match the online check (AccurateRip). They may play fine, or the CD may be scratched.
-          <div class="actions" style="margin-top:14px"><button class="btn" type="button">Accept anyway</button><button class="btn danger" type="button">Discard and re-rip</button></div>
+        <svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg>
+        <div><b>2 tracks don't match other people's copies of this CD</b>Tracks 4 and 9 sound different from copies others have ripped (checked with AccurateRip). They may play fine, or the CD may be scratched.
+          <div class="actions" style="margin-top:14px"><button class="btn" type="button">Keep these tracks</button><button class="btn danger" type="button" id="discard" aria-haspopup="dialog" aria-expanded="false" aria-controls="discard-confirm">Discard and re-rip</button></div>
+          <div class="confirm" id="discard-confirm" role="alertdialog" aria-labelledby="discard-h" aria-describedby="discard-d" tabindex="-1" hidden>
+            <b id="discard-h">Discard this Rip?</b>
+            <p id="discard-d">All 12 ripped tracks are deleted from scratch. Clean the CD and insert it again to rip it from the start. This can't be undone.</p>
+            <div class="actions"><button class="btn danger" type="button">Discard the Rip</button><button class="btn quiet" type="button" id="discard-cancel">Cancel</button></div>
+          </div>
         </div>
       </div>
       <section class="bin rev" id="editions" aria-label="Matching editions">
-        <div class="tab">Matching editions <span class="c">4</span></div>
+        <h2 class="tab">Matching editions <span class="c">4</span></h2>
         <form class="box">
-          <label class="radio on"><input type="radio" name="rel" checked><div><div class="tt">Parlophone · UK · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>NODATA 02</dd><dt>Barcode</dt><dd>7243 8 55229 2 5</dd><dt>Tracks</dt><dd>12</dd></dl></div><span class="stk rev">Selected</span></label>
-          <label class="radio"><input type="radio" name="rel"><div><div class="tt">Capitol · US · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>CDP 7243 8 55229 2 5</dd><dt>Barcode</dt><dd>7 2438-55229-2 5</dd><dt>Tracks</dt><dd>12</dd></dl></div><span></span></label>
-          <label class="radio"><input type="radio" name="rel"><div><div class="tt">EMI · Japan · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>TOCP-50201</dd><dt>Barcode</dt><dd>4988006751201</dd><dt>Tracks</dt><dd>13 · bonus track</dd></dl></div><span></span></label>
-          <label class="radio"><input type="radio" name="rel"><div><div class="tt">XL Recordings · Europe · 2009 reissue</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>XLCD 779</dd><dt>Barcode</dt><dd>634904077924</dd><dt>Tracks</dt><dd>12</dd></dl></div><span></span></label>
+          <label class="radio on"><input type="radio" name="rel" checked><div><div class="tt">Parlophone · UK · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>NODATA 02</dd><dt>Barcode</dt><dd>7243 8 55229 2 5</dd><dt>Tracks</dt><dd>12</dd></dl></div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
+          <label class="radio"><input type="radio" name="rel"><div><div class="tt">Capitol · US · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>CDP 7243 8 55229 2 5</dd><dt>Barcode</dt><dd>7 2438-55229-2 5</dd><dt>Tracks</dt><dd>12</dd></dl></div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
+          <label class="radio"><input type="radio" name="rel"><div><div class="tt">EMI · Japan · 1997</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>TOCP-50201</dd><dt>Barcode</dt><dd>4988006751201</dd><dt>Tracks</dt><dd>13 · bonus track</dd></dl></div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
+          <label class="radio"><input type="radio" name="rel"><div><div class="tt">XL Recordings · Europe · 2009 reissue</div><dl class="facts" style="margin-top:8px"><dt>Catalogue no.</dt><dd>XLCD 779</dd><dt>Barcode</dt><dd>634904077924</dd><dt>Tracks</dt><dd>12</dd></dl></div><span class="mark sel"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Selected</span></label>
           <details class="manual">
             <summary>None of these: enter the details myself</summary>
             <div class="pad stack" style="gap:18px;padding-top:4px">
@@ -51,19 +65,29 @@ Exit Music (For a Film)</textarea></div>
               <div class="actions"><button class="btn" type="button">File with these details</button></div>
             </div>
           </details>
-          <div class="pad actions" style="border-top:1px solid var(--rule)"><button class="btn pri" type="button"><svg class="i"><use href="assets/icons.svg#check"/></svg>File this edition</button></div>
+          <div class="pad actions" style="border-top:1px solid var(--rule)"><button class="btn pri" type="button"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>File this edition</button></div>
         </form>
       </section>
     </div>
     <div class="aside stack">
       <section class="bin ink" aria-label="This CD">
-        <div class="tab">This CD</div>
+        <h2 class="tab">This CD</h2>
         <div class="box"><div class="pad">
-          <dl class="facts"><dt>Tracks</dt><dd>12</dd><dt>Length</dt><dd>53 min 21 s</dd><dt>Ripped</dt><dd>Today, 14:02</dd><dt>Disc ID</dt><dd style="overflow-wrap:anywhere">G9QQ3s8cCq…</dd></dl>
+          <dl class="facts"><dt>Tracks</dt><dd>12</dd><dt>Length</dt><dd>53 min 21 s</dd><dt>Ripped</dt><dd>Today, 14:02</dd><dt>Looked up by</dt><dd>Its track lengths (MusicBrainz Disc ID)</dd></dl>
         </div></div>
       </section>
     </div>
   </div>
 </main>
+<script>
+// Mockup: inline confirm for Discard; ?confirm=open shows it open.
+const d = document.getElementById('discard'), c = document.getElementById('discard-confirm');
+const show = open => { c.hidden = !open; d.setAttribute('aria-expanded', open); if (open) c.focus(); };
+d.addEventListener('click', () => show(true));
+document.getElementById('discard-cancel').addEventListener('click', () => { show(false); d.focus(); });
+c.addEventListener('keydown', e => { if (e.key === 'Escape') { show(false); d.focus(); } });
+if (new URLSearchParams(location.search).get('confirm') === 'open') show(true);
+</script>
+<script src="assets/menu.js"></script>
 </body>
 </html>

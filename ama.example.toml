@@ -1,0 +1,165 @@
+# Automatic Media Archive configuration.
+#
+# Copy this file to `ama.toml` next to it (that copy is git-ignored, because it
+# holds secrets) and fill it in. Every setting is listed here. Unknown or
+# misspelt settings stop the app at startup with an error naming them.
+# Relative paths are relative to this file's folder.
+# In TOML, single-quoted strings are literal, so Windows paths need no escaping.
+
+[web]
+# Address and port of the LAN web UI. 0.0.0.0 = reachable from the whole LAN.
+host = "0.0.0.0"
+port = 8080
+# Shared password for the web UI. SECRET.
+# Empty = no sign-in (anyone on the LAN can use it). Set = the UI asks for it.
+password = ""
+
+[drive]
+# Optical drive letter, e.g. "D:". Empty = the first optical drive Windows reports.
+letter = ""
+# How often to check the drive for a Disc being inserted or removed (seconds).
+poll_seconds = 3
+
+[tools]
+# External programs (ADR-0006). AMA downloads its own pinned, hash-checked
+# ffmpeg/ffprobe (Encodes) and cyanrip (CD Rips) at startup into `dir`
+# (empty = %LOCALAPPDATA%\ama\tools). The first start needs internet and ~0.5 GB.
+dir = ""
+# Full path to use instead of AMA's own copy. Used as-is: no download, no
+# version or hash check. Empty = AMA's pinned copy.
+ffmpeg = ""
+ffprobe = ""
+cyanrip = ""
+# MakeMKV is yours to install and register; AMA never does either (docs/deploy.md).
+# Empty = look in C:\Program Files (x86)\MakeMKV and C:\Program Files\MakeMKV.
+makemkvcon = ""
+
+[cd]
+# Drive read offset in samples (EAC convention). +667 is the AccurateRip value
+# for the PIONEER BDR-S11JX; confirm once with `cyanrip -f`.
+offset = 667
+# How many times cyanrip re-reads a frame before counting it as an error.
+retries = 10
+
+[nas]
+# UNC path of the NAS share that holds the Libraries ([[libraries]] below).
+# Connected with `net use` at startup; retried while it fails.
+unc = '\\nas\media'
+# Credentials for the share. SECRET (password). Empty username = connect as the
+# logged-on Windows user.
+username = ""
+password = ""
+# How often to retry connecting while the NAS is unreachable (seconds).
+retry_seconds = 60
+
+[paths]
+# Local scratch folder for Rips awaiting Identification, Review and Encode.
+# Needs at least 256 GB free (ADR-0005). Created if missing.
+scratch = 'D:\ama-scratch'
+# SQLite state database.
+state_db = "ama.sqlite3"
+# Log file (rotated). The app also logs to the console when it has one.
+log_file = 'logs\ama.log'
+
+[scratch]
+# Free scratch space (GB) each Disc Type needs before its Rip starts. With less
+# free, an inserted Disc is ejected unripped and the UI shows what is holding
+# scratch (finishing a Review, or an Encode being filed, frees space).
+cd = 1
+dvd = 10
+bd = 50
+uhd = 100
+
+[tmdb]
+# TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
+api_key = ""
+
+[plex]
+# Plex Media Server URL, used to trigger a partial scan of each filed folder
+# and to list Plex's libraries in Settings > Archive > Libraries.
+url = "http://nas:32400"
+# Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
+# filed folders on its own next scan.
+token = ""
+# Where the Plex server sees the NAS share (`nas.unc`), when Plex runs on another
+# machine, e.g. '/volume1/media' for Plex on the NAS itself. Empty = Plex sees
+# the share at the same path as AMA.
+nas_path = ""
+
+[discord]
+# Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.
+webhook_url = ""
+
+[ntfy]
+# ntfy server and topic for push notifications. Anyone who knows the topic can
+# read it, so treat the topic as a SECRET. Empty topic = ntfy notifications off.
+url = "https://ntfy.sh"
+topic = ""
+
+[encode]
+# How video Discs are Encoded (ADR 0010). Applies to Jobs whose Encode hasn't
+# started. Archives are always MKV at a constant quality.
+# Encoder: hevc_nvenc (NVIDIA HEVC), av1_nvenc (NVIDIA AV1), hevc_qsv (Intel Quick
+# Sync HEVC) or libx265 (software HEVC, very slow for UHD). AMA test-encodes each
+# at startup and on save; one that fails can't be picked in Settings.
+encoder = "hevc_nvenc"
+# Speed, the same four steps on every encoder: faster, balanced, slower, slowest.
+# Slower makes smaller files at the same quality.
+speed = "slower"
+# Sound: all (copy every track), first_plus_stereo (the first track plus an AAC
+# stereo copy that plays everywhere) or languages (tracks in the preferred
+# languages, commentaries too, plus the film's original language).
+audio = "languages"
+# Subtitles: all, languages (the preferred languages, plus untagged forced ones)
+# or none.
+subtitles = "languages"
+# Preferred languages, most preferred first: names (English, Japanese) or codes (en, ja).
+languages = "English"
+
+[encode.cq]
+# Constant-quality level (CQ, or CRF for libx265; 0-51, lower = better and
+# bigger) per Disc Type. CDs are never Encoded. Encodes are the permanent
+# Archive (ADR-0002), so lock these in during the pilot calibration (ticket #17).
+dvd = 20
+bd = 22
+uhd = 22
+
+[encode.max_resolution]
+# The tallest picture kept per Disc Type: keep (the Disc's own), or 720p for
+# Blu-ray, 1080p for UHD Blu-ray (scaled down, HDR kept).
+dvd = "keep"
+bd = "keep"
+uhd = "keep"
+
+[logs]
+# Days to keep each step's output in Logs; 0 keeps it forever. Older output is
+# removed at startup and once a day. Jobs, History and run summaries are kept.
+keep_days = 0
+
+# Libraries: named folders of the Archive, one entry per Library. Each kind
+# ("films", "tv" or "music") needs exactly one default = true; a Job is filed
+# to its kind's default unless it picked another Library of that kind.
+# `path` is a folder inside the NAS share (created when first filed to).
+# `plex` is the name of the Plex library that holds it, scanned after each
+# filing; empty = whichever Plex library's folder contains it.
+# Leave out every [[libraries]] entry to use Movies, TV and Music on the share.
+[[libraries]]
+name = "Movies"
+kind = "films"
+path = '\\nas\media\Movies'
+plex = "Movies"
+default = true
+
+[[libraries]]
+name = "TV"
+kind = "tv"
+path = '\\nas\media\TV'
+plex = "TV Shows"
+default = true
+
+[[libraries]]
+name = "Music"
+kind = "music"
+path = '\\nas\media\Music'
+plex = "Music"
+default = true

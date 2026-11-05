@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ job_name }} · {{ section.label }}{% endblock %}
+{% block main %}
+<main>
+  {% include "partials/job_crumb.html" %}
+  <div class="split">
+    <div class="stack">
+      {% if live %}<div sse-swap="rip">{% include "partials/rip.html" %}</div>{% else %}<div>{% include "partials/rip.html" %}</div>{% endif %}
+    </div>
+    <div class="aside stack">
+      {#- Beside the drive card, so the Step running now (an Encode's progress) is in view. #}
+      {% include "partials/job_steps.html" %}
+      {%- if live %}
+      <p class="ts">This Job's settings start from the ones on the Settings page. Change them here for this Disc only; each group locks when its Phase starts.</p>
+      {%- elif job.status != JobStatus.FAILED %}
+      <p class="ts">Settings locked so far are stored on the Job and listed in its log. Changing a default on the Settings page doesn't touch them.</p>
+      {%- endif %}
+      {%- if extras_href %}
+      <p class="ts">Its Extras are filed under Other. <a href="{{ extras_href }}">Sort the Extras</a> if you like.</p>
+      {%- endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,44 @@
+{#- One Step on a run page (DESIGN.md "Step"). `s`: a StepView, `lines`: its output (when it
+    has any), `v`: the RunView. Waiting and not-run Steps are plain rows. -#}
+{%- set icons = {"done": ("check", "Done"), "running": ("loader", "Running"), "waiting": ("circle", "Waiting"), "failed": ("alert", "Failed"), "notrun": ("minus", "Didn't run")} %}
+{%- set icon, label = icons[s.state] %}
+{%- macro head(s) -%}
+<span class="st {{ s.state }}{% if s.state == 'running' and s.colour %} {{ s.colour }}{% endif %}"><svg class="i" role="img" aria-label="{{ label }}"><use href="/static/icons.svg#{{ icon }}"/></svg></span><div><div class="nm">{{ s.name }}{% if s.subject %} <span class="subj">· {{ s.subject }}</span>{% endif %}</div>{% if s.detail %}<div class="ts">{{ s.detail }}</div>{% endif %}
+{%- if s.stored and s.state == "running" %}<div id="s{{ s.stored.id }}-prog">{% include "partials/step_progress.html" %}</div>{% endif %}</div>
+{%- endmacro %}
+{%- macro dur(s) -%}
+{% if s.state == "running" %}{% if s.duration %}<b>{{ s.duration }}</b> so far{% else %}Running{% endif %}{% elif s.state == "waiting" %}Waiting{% elif s.state == "notrun" %}Didn't run{% else %}{{ s.duration }}{% endif %}
+{%- endmacro %}
+{%- if s.removed %}
+{#- Output pruned (#34): the header stays; the first such Step says what's kept. -#}
+{%- set full = gone is not defined or gone.first %}
+<details class="step" id="{{ s.anchor }}"{% if full %} open{% endif %}>
+  <summary>{{ head(s) }}<span class="dur">{{ dur(s) }}</span><svg class="i chev" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></summary>
+  <div class="gone"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#log"/></svg><p><b>Output removed after {{ s.removed.days }} day{{ "s" if s.removed.days != 1 }}.</b>
+  {%- if full %} The step's result above{% if v.job %}, the Job and its History entry are{% else %} is{% endif %} kept. <a href="/settings/logs">Keep output longer</a>{% endif %}</p></div>
+</details>
+{%- if gone is defined %}{% set gone.first = false %}{% endif %}
+{%- elif s.has_output %}
+{%- set st = s.stored %}{% set sid = st.id %}
+{%- set first = lines | selectattr("error") | first %}{% set first_err = first.n if first else 0 %}
+<details class="step" id="{{ s.anchor }}"{% if s.state in ("running", "failed") %} open{% endif %}>
+  <summary>{{ head(s) }}<span class="dur" id="s{{ sid }}-dur">{{ dur(s) }}</span><svg class="i chev" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></summary>
+  <div class="step-meta">
+    {%- if s.state == "running" %}<span class="livedot{% if s.colour %} {{ s.colour }}{% endif %}" data-follow-state role="status">Following live output</span><span>Started {{ st.started_at.strftime("%H:%M:%S") }}</span>
+    {%- else %}<span class="mark {{ 'failed' if s.state == 'failed' else 'done' }}"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#{{ 'alert' if s.state == 'failed' else 'check' }}"/></svg>{{ "Failed" if s.state == "failed" else "Finished" }}{% if st.exit_code is not none %}, exit code {{ st.exit_code }}{% endif %}</span><span>{{ st.started_at.strftime("%H:%M:%S") }}{% if st.finished_at %} to {{ st.finished_at.strftime("%H:%M:%S") }}{% endif %}</span>{% endif %}
+    <span id="s{{ sid }}-count">{{ st.lines }} line{{ "s" if st.lines != 1 }}</span>
+    {%- if st.errors %}<span class="errs">{{ st.errors }} error line{{ "s" if st.errors != 1 }}</span>{% endif %}
+    <span class="acts"><button class="btn quiet" type="button" data-wrap="log-{{ sid }}" aria-pressed="false">Wrap lines</button>
+    {%- if first_err %}<a class="btn quiet" href="#s{{ sid }}-err"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#arrow-down"/></svg>First error</a>{% endif %}
+    <a class="btn quiet" href="/logs/steps/{{ sid }}/download" download><svg class="i" aria-hidden="true"><use href="/static/icons.svg#download"/></svg>Download log</a></span>
+  </div>
+  <div class="logwrap"{% if s.state == "running" %} data-follow{% endif %}>
+<div class="log" id="log-{{ sid }}"{% if s.state == "running" %} role="log" data-step="{{ sid }}"{% endif %} tabindex="0" aria-label="{{ s.name }} output">{% if lines %}{% include "partials/step_log.html" %}{% elif s.state != "running" %}<span class="time">No output</span>{% endif %}</div>
+    {%- if s.state == "running" %}
+    <button class="btn jump" type="button" hidden><svg class="i" aria-hidden="true"><use href="/static/icons.svg#arrow-down"/></svg>Jump to latest</button>
+    {%- endif %}
+  </div>
+</details>
+{%- else %}
+<div class="step" id="{{ s.anchor }}"><div class="sum">{{ head(s) }}<span class="dur">{{ dur(s) }}</span><span></span></div></div>
+{%- endif %}

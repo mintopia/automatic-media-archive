@@ -1,0 +1,1 @@
+<dl class="facts"><dt>Film</dt><dd>{{ summary.film or "Pick a film" }}</dd><dt>Title</dt><dd>{{ summary.title or "Pick a Title" }}</dd>{% if summary.extras %}<dt>Extras</dt><dd>{{ summary.extras }}</dd>{% endif %}{% if summary.folder %}<dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ summary.folder }}</dd>{% endif %}</dl>

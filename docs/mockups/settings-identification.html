@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Identification · Archive · Settings · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="2 waiting">2</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="102" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:39.8%"></i></span><b>102 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html" aria-current="page"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
+</header>
+<main class="settings" id="main">
+  <h1>Settings</h1>
+  <nav class="files" aria-label="Settings sections"><a class="tab" href="settings-general.html">General</a><a class="tab" href="settings-ripping.html">Ripping</a><a class="tab" href="settings-encode.html" aria-current="page">Archive</a><a class="tab" href="settings-notifications.html">Alerts</a><a class="tab" href="settings-logs.html">Logs</a></nav>
+  <form class="box setbox" aria-label="Identification settings" novalidate>
+      <nav class="subnav" aria-label="Archive settings"><a href="settings-encode.html">Encode</a><a href="settings-libraries.html">Libraries</a><a href="settings-nas.html">NAS</a><a href="settings-identification.html" aria-current="page">Identification</a></nav>
+      <div class="grp-h"><h2>TMDB</h2><span class="ts">Used from the next Identification</span></div>
+      <div class="sf"><div><div class="lb"><span id="tmdb-key-l">TMDB API key</span></div><div class="hn" id="tmdb-key-h">Lets AMA recognise films and TV series using The Movie Database. Without it every video Job goes to Review with no suggestions.<span class="tech">The v3 "API Key" from your TMDB account settings.</span></div></div><div class="ctl"><div class="secret" role="group" aria-labelledby="tmdb-key-l" aria-describedby="tmdb-key-h"><span class="state"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>Set</span><button class="btn quiet" type="button" aria-label="Replace TMDB API key">Replace</button><button class="btn quiet" type="button" aria-label="Remove TMDB API key">Remove</button></div></div></div>
+      <div class="setfoot"><span class="st">No unsaved changes</span><button class="btn pri" type="submit" disabled>Save Identification</button></div>
+  </form>
+  <p class="ts setnote">Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script>document.querySelector('.files [aria-current]').scrollIntoView({inline:'center',block:'nearest'})</script>
+<script src="assets/menu.js"></script>
+</body>
+</html>

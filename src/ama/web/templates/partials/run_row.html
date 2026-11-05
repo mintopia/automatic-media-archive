@@ -1,0 +1,11 @@
+{#- One row of the run list (logs.html). `v`: a RunView. -#}
+{%- set strip = {"done": "done", "failed": "failed", "notrun": "notrun", "waiting": ""} %}
+<a class="row runrow" href="/logs/runs/{{ v.run.id }}">
+  {%- if v.job %}<div class="dtype">{{ v.job.disc_type.value }}</div>
+  {%- else %}{% set icon, label, _ = v.kind_icon %}<div class="dtype app"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#{{ icon }}"/></svg>{{ label }}</div>{% endif %}
+  <div><div class="tt">{{ v.title }}</div><div class="ts">{{ v.meta }}{% if v.removed %} · <span class="pruned">output removed after {{ v.removed.days }} day{{ "s" if v.removed.days != 1 }}</span>{% endif %}{% if v.errors %} · <span class="errs">{{ v.errors }} error line{{ "s" if v.errors != 1 }}</span>{% endif %}</div><div class="strip" aria-hidden="true">{% for s in v.steps %}<i{% if s.state == "running" %} class="{{ s.colour or 'run' }}"{% elif strip[s.state] %} class="{{ strip[s.state] }}"{% endif %}></i>{% endfor %}</div></div>
+  {%- if v.job %}<span class="stk {{ v.phase.css }}">{{ v.phase }}</span>
+  {%- elif v.state == "running" %}<span class="mark running"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#loader"/></svg>Running</span>
+  {%- elif v.state == "failed" %}<span class="mark failed"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>Failed</span>
+  {%- else %}<span class="mark done"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Done</span>{% endif %}
+</a>

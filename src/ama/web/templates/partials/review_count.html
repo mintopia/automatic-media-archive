@@ -1,0 +1,2 @@
+{#- The top bar's Review count. Topic "review". -#}
+{%- if review %}<span class="count" aria-hidden="true">{{ review | length }}</span><span class="sr">, {{ review | length }} waiting</span>{% endif -%}

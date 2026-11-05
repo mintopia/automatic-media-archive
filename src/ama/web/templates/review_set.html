@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Part of a set?{% endblock %}
+{%- macro path(p) %}{{ p.parts | join(" / ") }}{% endmacro %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
+      <h1>Is this Disc part of a set?</h1>
+      <p class="sub">{{ record.disc_type.long_name }}{% if record.label %} labelled “{{ record.label }}”{% endif %} · {{ record.disc_type }} · {{ titles }} Title{{ "s" if titles != 1 }} ripped</p>
+    </div>
+    <div class="actions">
+      <a class="btn quiet" href="/review">Not now</a>
+      <button class="btn pri" type="submit" form="set">Continue</button>
+    </div>
+  </div>
+  {% include "partials/review_done.html" %}
+  <form id="set" method="post" action="/review/{{ record.id }}/set" class="{{ 'solo' if tv else 'split' }}">
+    <div class="stack">
+      {%- if errors %}
+      <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+      {%- endif %}
+      <section class="bin rev" aria-labelledby="disc-h"><h2 class="tab" id="disc-h">This Disc</h2><div class="box">
+        <div class="radio"><input type="radio" id="part-yes" name="part" value="yes"{% if part == "yes" %} checked{% endif %}{% if not sets %} disabled{% endif %}><div>
+          <label for="part-yes"><div class="tt">{% if tv %}Part of an existing set{% else %}Extras Disc for a film already filed{% endif %}</div><div class="ts">{% if tv %}Episodes and Extras go into the same Plex folder as the other Discs.{% else %}Its Titles are filed as Extras in the film's folder.{% endif %}</div></label>
+          {%- if sets %}
+          <div class="box set-list">
+            {%- for s in sets %}
+            <label class="radio"><input type="radio" name="set" value="{{ s.key }}"{% if s.key | string == picked %} checked{% endif %}><div><div class="tt">{{ s.name }}</div><div class="ts">{{ s.filed_text }} · {{ path(s.folder) }}</div></div><span></span></label>
+            {%- endfor %}
+          </div>
+          <div class="field set-disc"><label for="disc">This is Disc</label><input class="input" id="disc" name="disc" type="number" min="1" value="{{ disc }}"><span class="hint">of the set</span></div>
+          {%- else %}
+          <p class="ts" style="margin-top:8px">Nothing is filed that this Disc could belong to yet.</p>
+          {%- endif %}
+        </div><span></span></div>
+        <label class="radio"><input type="radio" name="part" value="no"{% if part == "no" %} checked{% endif %}><div><div class="tt">Not part of a set</div><div class="ts">Identify it on its own.</div></div><span></span></label>
+      </div></section>
+    </div>
+    {%- if not tv and sets %}
+    <div class="aside stack">
+      <section class="bin fil" aria-labelledby="where-h"><h2 class="tab" id="where-h">Where it goes</h2><div class="box"><div class="pad">
+        {%- for s in sets %}
+        <dl class="facts set-where" data-set="{{ s.key }}"><dt>Extras to</dt><dd style="overflow-wrap:anywhere">{{ path(s.folder / "Other") }}</dd><dt>Then</dt><dd>Every ripped Title is encoded and filed there as an Extra.</dd></dl>
+        {%- endfor %}
+      </div></div></section>
+    </div>
+    <style>{% for s in sets %}#set:has(input[name=set][value="{{ s.key }}"]:checked) .set-where[data-set="{{ s.key }}"]{display:grid}{% endfor %}</style>
+    {%- endif %}
+  </form>
+</main>
+{% endblock %}

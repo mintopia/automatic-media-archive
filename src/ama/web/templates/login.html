@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body_attrs %}{% endblock %}
+{% block header %}{% endblock %}
+{% block main %}
+<main class="login">
+  <form class="bin ink" method="post" action="/login">
+    <div class="tab"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>Automatic Media Archive</div>
+    <div class="box"><div class="pad">
+      <h1>Sign in</h1>
+      <div class="field"><label for="pw">Password</label><input class="input" id="pw" name="password" type="password" autofocus autocomplete="current-password"{% if error %} aria-invalid="true" aria-describedby="pw-err"{% endif %}>
+      {%- if error %}<span class="hint err" id="pw-err">That password didn't work. Try again.</span>{% endif %}</div>
+      <button class="btn pri" type="submit">Sign in</button>
+    </div></div>
+  </form>
+</main>
+{% endblock %}

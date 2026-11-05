@@ -1,0 +1,55 @@
+{%- set kind = drive | kind -%}
+{%- if repeat -%}
+{% include "partials/repeat_disc.html" %}
+{%- elif current_rip and current_rip.disc_type == DiscType.CD -%}{#- the same view as the Ripping bin -#}
+{%- with heading=None, link=True, cd=current_rip.cd, phase=current_rip.phase %}{% include "partials/cd_drive.html" %}{% endwith -%}
+{%- elif current_rip -%}
+{%- with job = current_rip.job, progress = current_rip.progress, on_page = false, phase = current_rip.phase -%}
+{% include "partials/rip_card.html" %}
+{%- endwith -%}
+{%- elif kind == "DiscPresent" -%}
+<div class="drive">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ drive.disc_type.long_name }}</span></div>
+  <div class="body">
+    <div class="title">{{ drive.label or drive.disc_type.long_name }}</div>
+    <div class="meta">In the drive</div>
+  </div>
+</div>
+{%- elif kind == "UnrecognisedDisc" -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><span>Unknown Disc</span></div>
+  <div class="body">
+    <div class="title">{{ drive.label or "Not a CD, DVD or Blu-ray" }}</div>
+    <div class="meta">This isn't an Audio CD, DVD, Blu-ray or UHD Blu-ray, so we can't archive this Disc. Eject it and insert another.</div>
+  </div>
+</div>
+{%- elif kind == "DriveMissing" -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><span>No drive</span></div>
+  <div class="body">
+    <div class="title">Can't find the drive</div>
+    <div class="meta">{{ drive.reason }}. Check the drive is connected; this updates on its own.</div>
+  </div>
+</div>
+{%- else -%}
+<div class="drive empty">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><span>Drive empty</span></div>
+  <div class="body">
+    <div class="title">Insert a Disc</div>
+    <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
+  </div>
+</div>
+{%- endif -%}
+{%- if scratch_refused and kind == "DriveEmpty" %}
+<div class="notice" role="alert" style="margin-top:16px">
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg><div><b>Not enough space for “{{ scratch_refused.name }}”.</b>It was ejected without ripping; scratch is full. <a href="/scratch">See what's using it</a></div>
+</div>
+{%- elif rip_failure and not current_rip %}
+<div class="notice" role="alert" style="margin-top:16px">
+  {%- if rip_failure.failure.kind == "licence" %}
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ rip_failure.failure.headline }} “{{ rip_failure.name }}” wasn't ripped.</b>Fix MakeMKV, then insert the Disc again. <a href="/jobs/{{ rip_failure.id }}">What to do</a></div>
+  {%- else %}
+  <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Couldn't rip “{{ rip_failure.name }}”.</b>{{ rip_failure.failure.headline }} <a href="/jobs/{{ rip_failure.id }}">See what went wrong</a></div>
+  {%- endif %}
+</div>
+{%- endif -%}

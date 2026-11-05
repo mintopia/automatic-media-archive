@@ -1,0 +1,63 @@
+{#- The drive card for a video Job being ripped (or just ripped).
+    Needs `job` (JobRecord), `progress` (RipProgress or None), `on_page` (h1 vs link);
+    optional `phase` (the live Rip's Phase) and `job_name` (what the Job page calls it).
+    `phase_of_job(job)` is the Job's Phase from its Steps (job_steps.job_phase).
+    `guess_of(job.id)` (film_guess.FilmGuess), the Job's Best guess, fills in the film and poster
+    until the Job is identified; while it rips, "Change" searches TMDB for another
+    (`guess_search`: a TMDB key is set). -#}
+{%- set n = job.titles | length -%}
+{%- set failed = job.status == JobStatus.FAILED -%}
+{%- set p = Phase.FAILED if failed else (phase if progress and phase is defined and phase else phase_of_job(job)) -%}
+{%- set g = guess_of(job.id) if p in (Phase.RIPPING, Phase.REVIEW) else none -%}
+{%- set name = g.name if g else job_name | default(job.name) -%}
+{%- set source = ("Disc " ~ job.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
+<div class="drive">
+  {%- if g and g.poster %}
+  <div class="cell art poster"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ job.disc_type.long_name }}</span></div>
+  {%- else %}
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ job.disc_type.long_name }}</span></div>
+  {%- endif %}
+  <div class="body">
+    {%- if on_page %}
+    <h1 class="title">{{ name }}</h1>
+    {%- else %}
+    <div class="title"><a href="/jobs/{{ job.id }}">{{ name }}</a></div>
+    {%- endif %}
+    {%- if g %}
+    <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · {{ "checked again after the Rip" if progress else "Disc " ~ job.name }}</div>
+    {%- endif %}
+    {%- if progress %}
+    {%- if g and guess_search %}{% include "partials/guess_change.html" %}
+    {%- elif not g and guess_search and not guessing %}
+    <div class="guess"><b>Pick a title</b>, the Disc label doesn't say which film this is</div>
+    {%- include "partials/guess_change.html" %}
+    {%- endif %}
+    {%- if progress.title_number %}
+    <div class="meta">{{ source }} · {{ n }} Titles to rip · <span class="nw">{{ job.total_size }}</span></div>
+    <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>
+    {%- else %}
+    <div class="meta">{{ source }}</div>
+    <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Reading the Disc</span></div>
+    {%- endif %}
+    <div class="prog">
+      <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ progress.pct }}%"></i></div><div class="eta"><span class="nw">{{ progress.eta or "Working out the time left" }}</span> · the Disc ejects when it's done</div></div>
+      <div class="pct">{{ progress.pct }}%</div>
+    </div>
+    {%- if on_page and jobset_of is defined %}{% with js = jobset_of(job.id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
+    {%- set out = output_of(job.id, "rip") if not on_page else none %}
+    {%- if out %}{% from "partials/now_output.html" import foot %}
+    {{- foot(out, "makemkvcon · " ~ ("Title " ~ progress.title_number ~ " of " ~ n if progress.title_number else "Reading the Disc")) }}
+    {%- endif %}
+    {%- elif failed %}
+    <div class="meta">{{ job.failure.headline if job.failure else "" }}</div>
+    <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><a class="ts" href="/jobs/{{ job.id }}">See what went wrong</a></div>
+    {%- elif job.status == JobStatus.RIPPING %}{#- no progress from MakeMKV yet -#}
+    <div class="meta">{{ source }}</div>
+    <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Reading the Disc</span></div>
+    {%- else %}{#- ripped, review or filed: Identification may already have moved it on -#}
+    <div class="meta">{{ n }} Titles ripped · <span class="nw">{{ job.total_size }}</span></div>
+    <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if job.finished_at %}Disc ejected at {{ job.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
+    {%- if on_page and job.status == JobStatus.RIPPED %}{% with job_id = job.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
+    {%- endif %}
+  </div>
+</div>

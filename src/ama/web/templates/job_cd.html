@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ job_name }} · {{ section.label }}{% endblock %}
+{% block main %}
+<main id="disc">
+  {% include "partials/job_crumb.html" %}
+  {%- if live %}
+  <div sse-swap="cd-rip">{% include "partials/cd_rip_live.html" %}</div>
+  {%- else %}
+  {% include "partials/cd_rip.html" %}
+  {%- endif %}
+  {% include "partials/job_steps.html" %}
+</main>
+{% endblock %}

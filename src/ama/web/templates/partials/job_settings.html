@@ -1,0 +1,9 @@
+{#- "This Job's settings" (#30, docs/mockups/job-settings-*.html). `js` = jobset_of(job): a JobsetView.
+    `jobset_live`: on the rip card, where it opens from the summary line, starts closed and is
+    kept across the card's live re-renders (hx-preserve). -#}
+{%- if js and js.groups %}
+<section class="bin ink" id="jobset-{{ js.job.id }}" aria-labelledby="jobset-h"{% if jobset_live %} hidden hx-preserve{% endif %}>
+  <h2 class="tab" id="jobset-h">This Job's settings</h2>
+  {%- with jobset=js, saved=none, refused=none, error=none, summary=jobset_live %}{% include "partials/job_settings_body.html" %}{% endwith %}
+</section>
+{%- endif %}

@@ -1,6 +1,6 @@
 # Decision: Video Archive is a lossy Encode; no lossless master kept
 
-Status: accepted
+Status: accepted (encoder wording superseded by 0010)
 Date: 2026-11-04
 
 ## Context

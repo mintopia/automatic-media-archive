@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OK Computer · Logs · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="now.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="now.html">Now</a><a href="review-movie.html">Review<span class="count" aria-label="3 waiting">3</span></a><a href="history.html">History</a></nav>
+  <a class="scratch" href="scratch-full.html" title="Local scratch space"><span class="lbl">Scratch</span><span class="meter" role="meter" aria-valuenow="168" aria-valuemin="0" aria-valuemax="256" aria-label="Scratch used"><i style="width:65.6%"></i></span><b>168 / 256 GB</b></a>
+  <div class="menu"><button class="mbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" onclick="const m=document.getElementById('menu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#menu"/></svg></button>
+    <div class="mpanel" id="menu" hidden>
+      <div class="mg"><div class="ml" id="m-drive">New Discs</div><div class="segs" role="group" aria-labelledby="m-drive"><button type="button" aria-pressed="true">Accepting</button><button type="button" aria-pressed="false">Paused</button></div></div>
+      <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme"><button type="button" aria-pressed="true">System</button><button type="button" aria-pressed="false">Light</button><button type="button" aria-pressed="false">Dark</button></div></div>
+      <a class="mi" href="settings-general.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg>Settings</a>
+      <a class="mi" href="logs.html" aria-current="true"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg>Logs</a>
+      <a class="mi" href="login.html"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#logout"/></svg>Log out</a>
+    </div></div>
+</header>
+<main id="main">
+  <div class="crumb"><a href="logs.html">Logs</a><svg class="i" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg><span>OK Computer</span></div>
+  <div class="run-head">
+    <div>
+      <h1>OK Computer — Radiohead</h1>
+      <p class="sub">CD Job · Tue 20 Oct, 20:14 to 20:27 · took 13 min</p>
+    </div>
+    <div class="acts"><span class="stk fil">Filed</span><a class="btn quiet" href="disc-filed-cd.html">Job page</a></div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      <section class="bin ink" aria-labelledby="steps-h">
+        <h2 class="tab" id="steps-h">Steps <span class="c">3</span></h2>
+        <div class="box">
+          <details class="step" open>
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Rip</div><div class="ts">cyanrip 0.9.2 · 12 tracks, AccurateRip matched</div></div><span class="dur">11 min</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+            <div class="gone"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg><p><b>Output removed after 14 days.</b> The step's result above, the Job and its History entry are kept. <a href="settings-logs.html">Keep output longer</a></p></div>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">Identification</div><div class="ts">MusicBrainz · one release, track lengths match</div></div><span class="dur">2 s</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+            <div class="gone"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg><p><b>Output removed after 14 days.</b></p></div>
+          </details>
+          <details class="step">
+            <summary><span class="st done"><svg class="i" role="img" aria-label="Done"><use href="assets/icons.svg#check"/></svg></span><div><div class="nm">File</div><div class="ts">To Music on the NAS · 12 FLAC files, 412 MB</div></div><span class="dur">1 min</span><svg class="i chev" aria-hidden="true"><use href="assets/icons.svg#chevron"/></svg></summary>
+            <div class="gone"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#log"/></svg><p><b>Output removed after 14 days.</b></p></div>
+          </details>
+        </div>
+      </section>
+    </div>
+    <aside class="aside run-aside" aria-label="About this run">
+      <div class="grp">
+        <h2>This run</h2>
+        <dl class="facts">
+          <dt>Job</dt><dd><a href="disc-filed-cd.html">OK Computer — Radiohead</a></dd>
+          <dt>Disc</dt><dd>CD · 12 tracks</dd>
+          <dt>Phase</dt><dd>Filed</dd>
+          <dt>Ran</dt><dd>Tue 20 Oct, 20:14 to 20:27</dd>
+          <dt>Steps</dt><dd>3 of 3 done</dd>
+          <dt>Output</dt><dd>Removed 3 Nov · <a href="settings-logs.html">Change</a></dd>
+        </dl>
+      </div>
+      <div class="grp">
+        <h2>Settings used</h2>
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#lock"/></svg>All locked when Filed</p>
+        <dl class="facts">
+          <dt>Drive read offset</dt><dd>+667 samples</dd>
+          <dt>Re-reads before an error</dt><dd>10</dd>
+          <dt>Files to</dt><dd>Music</dd>
+        </dl>
+      </div>
+    </aside>
+  </div>
+</main>
+<script src="assets/menu.js"></script>
+</body>
+</html>

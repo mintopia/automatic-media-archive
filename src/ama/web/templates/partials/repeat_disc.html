@@ -1,0 +1,14 @@
+{#- Now page drive card: the Disc in the drive is already in the Archive, or ripped and on its way there. -#}
+<div class="drive">
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg><span>{{ repeat.disc_type.long_name }}</span></div>
+  <div class="body">
+    <h2 class="title">{{ "You've archived this Disc before" if repeat.filed else "You've ripped this Disc already" }}</h2>
+    <div class="meta">{{ repeat.name }} · {{ repeat.disc_type.long_name }}{% if repeat.waiting %} · {{ repeat.waiting }}{% elif repeat.previous.filed_at %} · filed {{ repeat.previous.filed_at.day }} {{ repeat.previous.filed_at.strftime("%b %Y") }}{% endif %}</div>
+    <dl class="facts" style="margin-top:12px">{% if repeat.folder %}<dt>Filed to</dt><dd>{{ repeat.folder }}</dd>{% endif %}<dt>Ripping</dt><dd>Paused until you choose</dd></dl>
+    <p class="ts" style="margin-top:12px">{{ repeat.note }}</p>
+    <div class="actions" style="margin-top:20px">
+      <form method="post" action="/repeat/skip" class="contents"><button class="btn pri" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#eject"/></svg>Eject, don't archive</button></form>
+      <form method="post" action="/repeat/again" class="contents"><button class="btn" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg>Archive again</button></form>
+    </div>
+  </div>
+</div>

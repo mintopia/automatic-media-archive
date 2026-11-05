@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Review CD{% endblock %}
+{% block main %}
+<main>
+  <div class="page-head gap">
+    <div>
+      <div class="crumb"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#back"/></svg><a href="/review">Needs Review</a></div>
+      <h1>{{ heading }}</h1>
+      <p class="sub">{{ sub }}</p>
+    </div>
+  </div>
+  {% include "partials/review_done.html" %}
+  <div class="split">
+    <div class="stack">
+      {%- if pick_notice %}
+      <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>The edition you picked doesn't fit this CD</b>{{ pick_notice }}</div></div>
+      {%- endif %}
+      {%- if notice %}
+      <div class="notice" role="status">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+        <div><b>{{ notice[0] }}</b>{{ notice[1] }}
+          <div class="actions" style="margin-top:14px">
+            <form method="post" action="/review/{{ record.id }}/accept" class="contents"><button class="btn" type="submit">{{ "Keep these tracks" if record.review_reason == "not_accurate" else "Keep this Rip" }}</button></form>
+            <button class="btn danger" type="button" id="discard-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="discard-confirm"
+                    onclick="var d=document.getElementById('discard-confirm');d.hidden=false;this.setAttribute('aria-expanded','true');d.focus()">Discard and re-rip</button>
+          </div>
+          <div class="confirm" id="discard-confirm" role="alertdialog" aria-labelledby="discard-h" aria-describedby="discard-d" tabindex="-1" hidden
+               onkeydown="if(event.key==='Escape'){this.querySelector('[data-cancel]').click()}">
+            <b id="discard-h">Discard this Rip?</b>
+            <p id="discard-d">All {{ track_count }} ripped tracks are deleted from scratch and nothing is filed. Clean the CD and insert it again to rip it from the start. This can't be undone.</p>
+            <form method="post" action="/review/{{ record.id }}/discard" class="actions">
+              <button class="btn danger" type="submit">Discard the Rip</button>
+              <button class="btn quiet" type="button" data-cancel
+                      onclick="var o=document.getElementById('discard-open');document.getElementById('discard-confirm').hidden=true;o.setAttribute('aria-expanded','false');o.focus()">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {%- endif %}
+      <section class="bin rev" id="editions" aria-labelledby="editions-h">
+        <h2 class="tab" id="editions-h">{% if editions %}Matching editions <span class="c">{{ editions | length }}</span>{% else %}Album details{% endif %}</h2>
+        <form class="box" method="post" action="/review/{{ record.id }}/release">
+          {%- for e in editions %}
+          <label class="radio"><input type="radio" name="release" value="{{ e.value }}"{% if loop.first %} checked{% endif %}><div>
+            <div class="edition">{% if e.match.release.has_front is not false %}<img class="cover" src="/review/{{ record.id }}/cover/{{ e.match.release.id }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}<div><div class="tt">{{ e.heading }}</div>{% if pick and pick.value == e.value %}<div class="ts">Your pick during the Rip</div>{% endif %}<dl class="facts" style="margin-top:8px">{% for k, v in e.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div></div>
+            <details class="preview"{% if e.differences or (loop.first and not editions | selectattr("differences") | list) %} open{% endif %}><summary>Track list{% if e.differences %} · <span class="diffnote">{{ e.differences }} title{{ "s" if e.differences != 1 }} differ from the other editions, marked</span>{% endif %}</summary>
+              <table class="tbl cdt"><thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th></tr></thead><tbody>
+              {%- for t in e.tracks %}
+                <tr><td class="n">{{ t.number }}</td><td{% if t.differs %} class="diff"{% endif %}>{{ t.title }}{% if t.artist %}<div class="ts">{{ t.artist }}</div>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td></tr>
+              {%- endfor %}
+              </tbody></table>
+            </details>
+          </div><span class="mark sel" aria-hidden="true"><svg class="i"><use href="/static/icons.svg#check"/></svg>Selected</span></label>
+          {%- endfor %}
+          {%- if not editions %}
+          <p class="pad ts">No edition in the music database (MusicBrainz) has this CD's {{ track_count }} tracks.</p>
+          {%- endif %}
+          <details class="manual"{% if manual_open %} open{% endif %}>
+            <summary>{{ "None of these: enter the details myself" if editions else "Enter the details" }}</summary>
+            <div class="pad stack" style="gap:18px">
+              {%- if errors %}
+              <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
+              {%- endif %}
+              <div class="field"><label for="album">Album</label><input class="input" id="album" name="album" value="{{ form.album }}"></div>
+              <div class="field"><label for="artist">Artist</label><input class="input" id="artist" name="artist" value="{{ form.artist }}"></div>
+              <div class="field" style="max-width:160px"><label for="year">Year</label><input class="input" id="year" name="year" inputmode="numeric" placeholder="e.g. 1997" value="{{ form.year }}"></div>
+              <div class="field"><label for="tracks">Track titles</label><span class="hint">One per line, in order. This CD has {{ track_count }} tracks.</span><textarea class="input" id="tracks" name="tracks" rows="6">{{ form.tracks }}</textarea></div>
+              <div class="actions"><button class="btn{% if not editions %} pri{% endif %}" type="submit" formaction="/review/{{ record.id }}/manual">File with these details</button></div>
+            </div>
+          </details>
+          {%- if editions %}
+          <div class="pad actions" style="border-top:1px solid var(--rule)"><button class="btn pri" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>File this edition</button></div>
+          {%- endif %}
+        </form>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin ink" aria-labelledby="cd-h">
+        <h2 class="tab" id="cd-h">This CD</h2>
+        <div class="box"><div class="pad">
+          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if mb_disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ mb_disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}</dl>
+          <p class="ts" style="margin-top:12px"><a href="/jobs/{{ record.id }}">Rip details and log</a></p>
+        </div></div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

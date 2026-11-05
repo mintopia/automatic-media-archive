@@ -1,0 +1,223 @@
+"""Runs and Steps (GLOSSARY): what Logs stores about each tool run."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+from ama.db import Database
+from ama.events import EventBus
+from ama.runs import RunKind, Runs, StepState
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.t = datetime(2026, 11, 5, 9, 58, 0)
+
+    def __call__(self) -> datetime:
+        return self.t
+
+    def tick(self, seconds: float) -> None:
+        self.t += timedelta(seconds=seconds)
+
+
+def make_runs(tmp_path, clock=None, secrets=lambda: ()) -> Runs:
+    return Runs(Database(tmp_path / "ama.sqlite3"), EventBus(), secrets=secrets,
+                now=clock or Clock())
+
+
+def test_a_finished_step_keeps_its_output_result_and_exit_code_after_a_restart(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    run = runs.start_run(RunKind.APP, "AMA started", item="startup")
+    step = runs.begin(run, "ffmpeg", "Get ffmpeg", tool="ffmpeg 9.0.2")
+    runs.line(step, "Downloading ffmpeg 9.0.2")
+    clock.tick(14)
+    runs.line(step, "The download failed its SHA-256 check", error=True)
+    runs.end(step, failed=True, exit_code=1, result="Download failed")
+    runs.finish_run(run, failed=True)
+
+    again = make_runs(tmp_path, clock)  # a new process on the same database
+    [got] = again.list_runs()
+    assert (got.kind, got.title, got.failed) == (RunKind.APP, "AMA started", True)
+    [s] = again.steps(got.id)
+    assert (s.name, s.tool, s.result, s.state, s.exit_code) == (
+        "Get ffmpeg", "ffmpeg 9.0.2", "Download failed", StepState.FAILED, 1)
+    assert s.took == timedelta(seconds=14)
+    assert [(ln.text, ln.error) for ln in again.output(s.id)] == [
+        ("Downloading ffmpeg 9.0.2", False), ("The download failed its SHA-256 check", True)]
+    assert (s.lines, s.errors) == (2, 1)
+
+
+def test_a_running_step_streams_its_recent_lines_from_memory(tmp_path):
+    runs = make_runs(tmp_path)
+    run = runs.start_run(RunKind.TOOLS, "Getting cyanrip", item="cyanrip")
+    step = runs.begin(run, "cyanrip", "Get cyanrip")
+    for n in range(Runs.RING + 5):
+        runs.line(step, f"line {n}")
+    tail = runs.tail(step)
+    assert len(tail) == Runs.RING
+    assert tail[-1].text == f"line {Runs.RING + 4}" and tail[-1].n == Runs.RING + 5
+    assert runs.steps(run)[0].lines == Runs.RING + 5  # the count is all of them
+
+
+def test_secrets_never_reach_stored_output(tmp_path):
+    runs = make_runs(tmp_path, secrets=lambda: ("hunter2", ""))
+    run = runs.start_run(RunKind.NAS, "Lost the NAS", item="nas")
+    step = runs.begin(run, "reconnect", "Reconnect")
+    runs.line(step, "net use said: bad password hunter2")
+    assert runs.output(step)[0].text == "net use said: bad password •••"
+    assert runs.tail(step)[0].text == "net use said: bad password •••"
+
+
+def test_a_restart_ends_whatever_was_running(tmp_path):
+    runs = make_runs(tmp_path)
+    run = runs.start_run(RunKind.APP, "AMA started", item="startup")
+    step = runs.begin(run, "nas", "Connect to the NAS")
+
+    again = make_runs(tmp_path)
+    again.recover()
+    [s] = again.steps(run)
+    assert s.state == StepState.FAILED and s.result == "AMA stopped before this finished"
+    assert again.get_run(run).failed is True
+    assert step == s.id
+
+
+def test_a_restart_lets_a_jobs_running_step_carry_on(tmp_path):
+    runs = make_runs(tmp_path)
+    runs._db.execute("INSERT INTO jobs (id, disc_type, status, scratch_dir, started_at) "
+                     "VALUES (3, 'BD', 'ripped', '', '2026-11-05T10:00:00')")
+    runs.job_begin(3, "encode:1", "Encode")
+    runs.job_note(3, "before the restart")
+    runs.flush()  # as the app does within a second, and when it stops
+
+    again = make_runs(tmp_path)
+    again.recover()
+    again.job_note(3, "after it")
+    [s] = again.steps(again.job_run(3))
+    assert s.state == StepState.RUNNING
+    assert [ln.text for ln in again.tail(s.id)] == [
+        "before the restart",
+        "AMA restarted while this ran: output from just before the restart may be missing",
+        "after it"]
+
+
+def test_a_job_has_one_run_whose_steps_follow_one_another(tmp_path):
+    runs = make_runs(tmp_path)
+    db = runs._db
+    db.execute("INSERT INTO jobs (id, disc_type, status, scratch_dir, started_at) "
+               "VALUES (7, 'CD', 'ripping', '', '2026-11-05T10:00:00')")
+    runs.job_begin(7, "rip", "Rip", tool="cyanrip")
+    runs.job_note(7, "Track 1 done")
+    runs.job_begin(7, "identify", "Identification")  # ends the Rip
+    runs.job_note(7, "Identified as Kid A")
+    runs.job_end(7, finish=True)
+    run = runs.job_run(7)
+    rip, ident = runs.steps(run)
+    assert (rip.key, rip.state, [ln.text for ln in runs.output(rip.id)]) == (
+        "rip", StepState.DONE, ["Track 1 done"])
+    assert (ident.key, ident.state) == ("identify", StepState.DONE)
+    assert runs.get_run(run).failed is False
+
+
+def test_beginning_a_step_again_starts_its_output_afresh(tmp_path):
+    """An Encode cut short by a restart runs again: its step shows the new attempt."""
+    runs = make_runs(tmp_path)
+    run = runs.start_run(RunKind.APP, "x")
+    step = runs.begin(run, "s", "S")
+    runs.line(step, "first try")
+    again = runs.begin(run, "s", "S")
+    runs.line(again, "second try")
+    assert again == step
+    assert [ln.text for ln in runs.output(step)] == ["second try"]
+
+
+def _finished_step(runs: Runs, clock: Clock, text: str) -> int:
+    run = runs.start_run(RunKind.TOOLS, "Getting cyanrip", item="cyanrip")
+    step = runs.begin(run, "cyanrip", "Get cyanrip")
+    runs.line(step, text)
+    runs.end(step, result="Downloaded")
+    runs.finish_run(run, failed=False)
+    return step
+
+
+def test_keeping_output_for_0_days_keeps_all_of_it(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    step = _finished_step(runs, clock, "old line")
+    clock.tick(400 * 86400)
+    runs.prune(0)
+    assert [ln.text for ln in runs.output(step)] == ["old line"]
+    assert runs.get_step(step).removed is None
+
+
+def test_pruning_removes_only_output_older_than_n_days_and_keeps_the_summaries(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    old = _finished_step(runs, clock, "old line")
+    clock.tick(10 * 86400)
+    recent = _finished_step(runs, clock, "recent line")
+    running_run = runs.start_run(RunKind.APP, "AMA started")
+    running = runs.begin(running_run, "nas", "Connect to the NAS")
+    runs.line(running, "still going")
+    clock.tick(5 * 86400)  # old finished 15 days ago, recent 5 days ago
+
+    runs.prune(14)
+    runs.prune(14)  # idempotent
+
+    assert runs.output(old) == []
+    s = runs.get_step(old)
+    assert (s.name, s.result, s.state, s.lines) == ("Get cyanrip", "Downloaded",
+                                                    StepState.DONE, 0)
+    assert s.removed is not None
+    assert (s.removed.days, s.removed.at) == (14, clock.t.date())
+    assert [ln.text for ln in runs.output(recent)] == ["recent line"]
+    assert runs.get_step(recent).removed is None
+    assert [ln.text for ln in runs.output(running)] == ["still going"]
+    assert len(runs.list_runs()) == 3
+
+
+def test_a_pruned_step_run_again_has_fresh_output(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    step = _finished_step(runs, clock, "old line")
+    clock.tick(20 * 86400)
+    runs.prune(14)
+    run = runs.get_step(step).run_id
+    again = runs.begin(run, "cyanrip", "Get cyanrip")
+    runs.line(again, "new line")
+    runs.end(again)
+    assert runs.get_step(again).removed is None
+    assert [ln.text for ln in runs.output(again)] == ["new line"]
+
+
+def _stored(tmp_path, step: int) -> list[str]:
+    """The Step's output as another process would read it from the database."""
+    return [ln.text for ln in make_runs(tmp_path).output(step)]
+
+
+def test_an_error_line_is_stored_at_once(tmp_path):
+    runs = make_runs(tmp_path)
+    step = runs.begin(runs.start_run(RunKind.APP, "x"), "s", "S")
+    runs.line(step, "working")
+    runs.line(step, "MakeMKV crashed", error=True)
+    assert _stored(tmp_path, step) == ["working", "MakeMKV crashed"]
+
+
+def test_a_steps_lines_are_stored_when_the_process_exits(tmp_path):
+    import subprocess
+    import sys
+    script = (
+        "import sys\n"
+        "from ama.db import Database\n"
+        "from ama.events import EventBus\n"
+        "from ama.runs import RunKind, Runs\n"
+        "from pathlib import Path\n"
+        "runs = Runs(Database(Path(sys.argv[1])), EventBus())\n"
+        "step = runs.begin(runs.start_run(RunKind.APP, 'x'), 's', 'S')\n"
+        "runs.line(step, 'the last words')\n"
+        "raise SystemExit(3)\n")
+    done = subprocess.run([sys.executable, "-c", script, str(tmp_path / "ama.sqlite3")],
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 3, done.stderr
+    assert _stored(tmp_path, 1) == ["the last words"]
+

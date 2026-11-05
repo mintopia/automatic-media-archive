@@ -5,16 +5,16 @@
 <title>Sign in · Automatic Media Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ama.css"><script src="assets/theme.js"></script>
+<link rel="stylesheet" href="assets/ama.css"><link rel="stylesheet" href="assets/ama-app.css"><script src="assets/theme.js"></script>
 </head>
 <body>
 
-<main style="min-height:100vh;display:grid;place-items:center">
-  <form class="bin ink" style="width:min(400px,100%)" action="now.html">
+<main class="signin">
+  <form class="bin ink" action="now.html">
     <div class="tab"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#lock"/></svg>Automatic Media Archive</div>
-    <div class="box"><div class="pad" style="display:flex;flex-direction:column;gap:18px">
-      <h1 style="font-size:26px">Sign in</h1>
-      <div class="field"><label for="pw">Password</label><input class="input" id="pw" type="password" value="hunter2" aria-invalid="true" aria-describedby="pw-err" autocomplete="current-password"><span class="hint" id="pw-err" style="color:var(--rev-ink)">That password didn't work. Try again.</span></div>
+    <div class="box"><div class="pad">
+      <h1>Sign in</h1>
+      <div class="field"><label for="pw">Password</label><input class="input" id="pw" type="password" value="hunter2" aria-invalid="true" aria-describedby="pw-err" autocomplete="current-password"><span class="hint err" id="pw-err">That password didn't work. Try again.</span></div>
       <button class="btn pri" type="submit">Sign in</button>
     </div></div>
   </form>

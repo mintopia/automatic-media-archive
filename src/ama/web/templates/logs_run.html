@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ v.title }} · Logs{% endblock %}
+{% block main %}
+{%- set run = v.run %}{% set job = v.job %}
+{%- set end = run.finished_at %}
+<main>
+  <div class="crumb"><a href="/logs">Logs</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ v.title }}</span></div>
+  <div class="run-head">
+    <div>
+      <h1>{{ v.title }}</h1>
+      <p class="sub">{{ v.sub }}</p>
+    </div>
+    <div class="acts">
+      {%- if job %}<a class="stk {{ v.phase.css }}" href="/jobs/{{ job.id }}">{{ v.phase }}</a><a class="btn quiet" href="/jobs/{{ job.id }}">Job page</a>
+      {%- elif v.state == "running" %}<span class="mark running"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#loader"/></svg>Running</span>
+      {%- elif v.state == "failed" %}<span class="mark failed"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>Failed</span>
+      {%- else %}<span class="mark done"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Done</span>{% endif %}
+    </div>
+  </div>
+  <div class="split">
+    <div class="stack">
+      {%- if v.notice %}
+      <div class="notice" role="status">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+        <div><b>{{ v.notice[0] }}</b>{{ v.notice[1] }}{% if job %} Nothing was filed.{% endif %}
+          {%- if v.fixed_by %} Fixed since: see <a href="/logs/runs/{{ v.fixed_by.id }}">{{ v.fixed_by.title }}</a>.{% endif %}</div>
+      </div>
+      {%- elif run.kind == "nas" and v.steps and v.steps[0].key == "hold" %}
+      <div class="notice ok" role="status">
+        <svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+        <div><b>Nothing was lost.</b>Rips kept going to scratch; filing waited until the NAS was back{% if v.state == "running" %}, and still does{% endif %}.</div>
+      </div>
+      {%- endif %}
+      <section class="bin ink" aria-labelledby="steps-h">
+        <h2 class="tab" id="steps-h">Steps <span class="c">{{ v.steps | length }}</span></h2>
+        <div class="box">
+        {%- set gone = namespace(first=true) %}
+        {%- for s in v.steps %}
+          {%- set lines = output.get(s.stored.id, []) if s.stored else [] %}
+          {%- include "partials/run_step.html" %}
+        {%- else %}
+          <p class="pad ts">No steps yet.</p>
+        {%- endfor %}
+        </div>
+      </section>
+    </div>
+    <aside class="aside run-aside" aria-label="About this run">
+      <div class="grp">
+        <h2>This run</h2>
+        <dl class="facts">
+          {%- if job %}
+          <dt>Job</dt><dd><a href="/jobs/{{ job.id }}">{{ v.title }}</a></dd>
+          <dt>Disc</dt><dd>{{ job.disc_type.long_name }}{% if job.label %} · {{ job.label }}{% endif %}</dd>
+          <dt>Phase</dt><dd>{{ v.phase }}</dd>
+          {%- else %}
+          {%- set _, _, what = v.kind_icon %}
+          <dt>Kind</dt><dd>App event: {{ what }}</dd>
+          {%- endif %}
+          <dt>{{ "Ran" if end else "Started" }}</dt><dd>{{ when(run.started_at) | capitalize }}{% if end %} to {{ end.strftime("%H:%M") }}{% endif %}</dd>
+          {%- set failed = v.steps | selectattr("state", "eq", "failed") | list | length %}
+          {%- set notrun = v.steps | selectattr("state", "eq", "notrun") | list | length %}
+          <dt>Steps</dt><dd>{% if failed or notrun %}{{ v.done_count }} done{% if failed %}, {{ failed }} failed{% endif %}{% if notrun %}, {{ notrun }} didn't run{% endif %}{% else %}{{ v.done_count }} of {{ v.steps | length }} done{% endif %}</dd>
+          <dt>Output</dt><dd>{% if v.removed %}Removed {{ v.removed.at.day }} {{ v.removed.at.strftime("%b") }} · <a href="/settings/logs">Change</a>{% else %}Kept{% endif %}</dd>
+        </dl>
+      </div>
+      {%- set js = jobset_of(job) if job else none %}
+      {%- set locked = js.groups | selectattr("locked") | rejectattr("unrecorded") | list if js else [] %}
+      {%- if locked %}
+      {%- set all_filed = job.status == "filed" and locked | length == js.groups | length %}
+      <div class="grp">
+        <h2>Settings used</h2>
+        {%- for g in locked %}
+        {%- if all_filed and loop.first %}
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>All locked when Filed</p>
+        {%- elif not all_filed %}
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>{{ g.group.label }} locked at {{ g.state.locked_at.strftime("%H:%M") }}</p>
+        {%- endif %}
+        <dl class="facts">
+          {%- for f in g.fields %}
+          <dt>{{ f.v.setting.label }}</dt><dd>{{ f.v.text }}{% if f.v.overridden %} <span class="ts">(changed for this Job)</span>{% endif %}</dd>
+          {%- endfor %}
+        </dl>
+        {%- endfor %}
+        {%- set open = js.groups | rejectattr("locked") | map(attribute="group.label") | list %}
+        {%- if open %}
+        <p class="ts" style="margin-top:12px">{{ open | join(" and ") }} can still change on the <a href="/jobs/{{ job.id }}">Job page</a>.</p>
+        {%- endif %}
+      </div>
+      {%- endif %}
+      {%- if not job %}
+      <div class="grp"><p class="ts">{% if run.kind == "nas" %}The share and login are in <a href="/settings/nas">Settings › NAS</a>.{% else %}Tool versions and paths are in <a href="/settings/tools">Settings › Tools</a>.{% endif %}</p></div>
+      {%- endif %}
+    </aside>
+  </div>
+  {%- if v.state == "running" or (job and v.steps | selectattr("state", "in", ["running", "waiting"]) | list) %}
+  <div hidden hx-get="/logs/runs/{{ run.id }}/live" hx-trigger="sse:logs, sse:encode, sse:rip" hx-swap="none" data-run-live data-sig="{{ v.signature }}"></div>
+  {%- endif %}
+</main>
+<script src="/static/logs.js" defer></script>
+{% endblock %}

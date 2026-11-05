@@ -1,0 +1,38 @@
+{#- The drive card while a CD is being read or Ripped. `cd` is a CdRip or None (reading the TOC). `heading`: h1 on the Job page.
+    `cd.guess` (the likely release from MusicBrainz, or the one the user picked) fills in the album, artist and cover while it rips. -#}
+{%- set tag = heading or "div" -%}
+{%- set live_phase = phase if phase is defined and phase else "ripping" | phase -%}
+{%- set g = cd.guess if cd else none -%}
+<div class="drive">
+  {%- if g and g.cover %}
+  <div class="cell art"><img src="/covers/{{ g.cover }}" alt="Cover of {{ g.title }}"><span>Audio CD</span></div>
+  {%- else %}
+  <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+  {%- endif %}
+  <div class="body">
+    {%- if cd %}
+    {%- set name = g.title if g else (cd.label or "Unknown CD") %}
+    <{{ tag }} class="title">{% if link %}<a href="/jobs/{{ cd.job_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
+    <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
+    {%- if g %}
+    <div class="guess">{% if g.picked %}<b>Your pick</b>{% else %}<b>Likely</b>, from the CD's track list{% endif %}{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} versions of this album</span> · <a href="/jobs/{{ cd.job_id }}/release">{{ "Change" if g.picked else "Pick yours" }}</a>{% else %} · checked again after the Rip{% endif %}</div>
+    {%- elif cd.mb_disc_id %}
+    <div class="guess">Album not known yet · looked up again after the Rip<span class="mono" style="display:block;overflow-wrap:anywhere">MusicBrainz Disc ID {{ cd.mb_disc_id }}</span></div>
+    {%- endif %}
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">{{ cd.position() }}</span></div>
+    <div class="prog">
+      <div style="flex:1"><div class="bar" role="progressbar" aria-valuenow="{{ cd.percent | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Rip progress"><i style="width:{{ '%.1f' | format(cd.percent) }}%"></i></div><div class="eta">{% if cd.eta_seconds is not none %}<span class="nw">{{ cd.eta_seconds | left }}</span> · {% endif %}the Disc ejects when it's done</div></div>
+      <div class="pct">{{ cd.percent | int }}%</div>
+    </div>
+    {%- if heading == "h1" and jobset_of is defined %}{% with js = jobset_of(cd.job_id), oob = false %}{% include "partials/job_settings_sum.html" %}{% endwith %}{% endif %}
+    {%- set out = output_of(cd.job_id, "rip") if link else none %}
+    {%- if out %}{% from "partials/now_output.html" import foot %}
+    {{- foot(out, "cyanrip · " ~ cd.position()) }}
+    {%- endif %}
+    {%- else %}
+    <{{ tag }} class="title">Audio CD</{{ tag }}>
+    <div class="meta">Reading the track list</div>
+    <div class="status"><span class="stk {{ live_phase.css }}">{{ live_phase }}</span><span class="ts">Starting</span></div>
+    {%- endif %}
+  </div>
+</div>

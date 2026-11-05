@@ -1,0 +1,79 @@
+{#- A CD's Rip: drive card, tracks with AccurateRip results, and what was found on it.
+    `view` is a CdRip (live) or a CdJob (finished); `live` says which. -#}
+{%- if view is none -%}
+{#- The Rip being watched just finished: load its result in place. -#}
+<div hx-get="/jobs/{{ cd_last_id }}" hx-trigger="load" hx-select="#disc" hx-target="#disc" hx-swap="outerHTML"></div>
+{%- else -%}
+<div class="split">
+  <div class="stack">
+    {%- if live %}
+    {%- with cd=view, heading="h1", link=False %}{% include "partials/cd_drive.html" %}{% endwith %}
+    {%- else %}
+    {%- set verified = view.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length %}
+    {%- set pick = view.pick %}
+    <div class="drive">
+      {%- if pick and pick.cover %}
+      <div class="cell art"><img src="/covers/{{ pick.cover }}" alt="Cover of {{ pick.album }}"><span>Audio CD</span></div>
+      {%- else %}
+      <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
+      {%- endif %}
+      <div class="body">
+        <h1 class="title">{{ pick.album if pick else (view.record.label or "Unknown CD") }}</h1>
+        <div class="meta">{% if pick %}{{ pick.artist }} · {% endif %}{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
+        {%- if pick %}
+        <div class="guess"><b>Your pick</b>, while it ripped{% if (record is defined and record.status == "review") %} · <a href="/review/{{ view.record.id }}">pick again in Review</a>{% endif %}</div>
+        {%- endif %}
+        <div class="status">{%- set st = record.status if record is defined else "ripped" %}{% set p = st | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips</span></div>
+        {%- if st == "ripped" %}{% with job_id = view.record.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
+      </div>
+    </div>
+    {%- endif %}
+    {%- with js = jobset_of(view.job_id if live else view.record.id), jobset_live = live %}{% include "partials/job_settings.html" %}{% endwith %}
+    <section class="bin {{ 'rip' if live else 'ink' }}" aria-labelledby="tracks-h">
+      <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
+      <div class="box">
+        <table class="tbl cdt">
+          <thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th><th class="st">Status</th></tr></thead>
+          <tbody>
+          {%- for t in view.tracks %}
+            {%- set now = live and t.number == view.current and not t.ripped %}
+            <tr{% if now %} class="now"{% endif %}><td class="n">{{ t.number }}</td><td>{% if now %}<b>{% endif %}{{ "Hidden track" if t.number == 0 else (view.track_title(t.number) or "Track " ~ t.number) }}{% if now %}</b>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td>
+              <td class="st">
+              {%- if t.ripped -%}
+                {% include "partials/cd_track_ar.html" %}
+              {%- elif now -%}
+                Ripping {{ t.percent | int }}%<div class="bar thin" role="progressbar" aria-valuenow="{{ t.percent | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Track {{ t.number }} progress"><i style="width:{{ '%.1f' | format(t.percent) }}%"></i></div>
+              {%- else -%}
+                <span class="wait">Waiting</span>
+              {%- endif -%}
+              </td></tr>
+          {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="aside stack">
+    {%- if view.hidden_track or view.preemphasis %}
+    <section class="bin ink" aria-labelledby="found-h">
+      <h2 class="tab" id="found-h">Found on this CD</h2>
+      <div class="box"><div class="pad notes">
+        {%- if view.hidden_track %}
+        <p><b>Hidden track before track 1</b><br><span class="ts">{{ view.hidden_track.seconds | mmss }} of audio before track 1. It's {{ "being " if live else "" }}kept as track 0.</span></p>
+        {%- endif %}
+        {%- if view.preemphasis %}
+        <p><b>Pre-emphasis</b><br><span class="ts">This CD was mastered with pre-emphasis. The files are marked so players can correct it; the audio itself isn't changed.</span></p>
+        {%- endif %}
+      </div></div>
+    </section>
+    {%- endif %}
+    <section class="bin ink" aria-labelledby="next-h">
+      <h2 class="tab" id="next-h">After the Rip</h2>
+      <div class="box"><div class="pad notes">
+        <p>Each track is compared with other people's rips of the same CD (the AccurateRip database). The more rips that match, the surer it is.</p>
+        <p class="ts">Then it's matched on MusicBrainz and filed to Music. If more than one edition matches, or a track isn't verified, it waits in Review.</p>
+      </div></div>
+    </section>
+  </div>
+</div>
+{%- endif -%}
