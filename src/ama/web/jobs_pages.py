@@ -1,8 +1,12 @@
-"""Routes for one Disc: its Rip (live or finished), or why it failed."""
+"""Routes for one Job's page (#41): its Rip (live or finished), its Steps, or why it failed.
+
+`/jobs/{id}` is the one page every link to a Job opens (rip card, Encoding row,
+Review, History); its breadcrumb follows the Job's Phase (`job_steps.section`)."""
 
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
@@ -12,6 +16,7 @@ from ama.encoder import EncodeStatus
 from ama.extras import ExtraStatus
 from ama.media import Album, Screen
 from ama.web import TEMPLATES, view_context
+from ama.web.job_steps import job_steps, section
 from ama.events import Topic
 
 router = APIRouter()
@@ -26,13 +31,34 @@ def _job_or_404(services, job_id: int) -> JobRecord:
 
 @router.get("/disc", response_class=HTMLResponse)
 def disc_in_drive(request: Request) -> Response:
-    """The video Disc being ripped, live. Once it's done, its record page."""
+    """The video Disc being ripped (else the last one): its Job page."""
+    ripper = request.app.state.services.video_rip
+    job = ripper.active or ripper.job
+    return RedirectResponse(f"/jobs/{job.id}" if job else "/", status_code=303)
+
+
+@router.get("/discs/{rest:path}")
+def old_disc_url(rest: str) -> Response:
+    """v1 linked Jobs as /discs/{id}; keep those bookmarks working."""
+    return RedirectResponse(f"/jobs/{rest}", status_code=301)
+
+
+def _job_context(services, rec: JobRecord) -> dict:
+    """What every Job page has: its Steps, and the nav section its Phase puts it in."""
+    where = section(rec)
+    steps = job_steps(services, rec)
+    identified = next((s.subject for s in steps if s.name == "Identification"), "")
+    unnamed = "Unknown CD" if rec.disc_type == DiscType.CD else rec.disc_type.long_name
+    return {"job": rec, "steps": steps, "now": datetime.now(), "section": where,
+            "current": where.href, "job_name": rec.title or identified or rec.label or unnamed}
+
+
+@router.get("/jobs/{job_id}/steps", response_class=HTMLResponse)
+def steps(request: Request, job_id: int) -> Response:
+    """The Steps section alone: the page re-fetches it whenever the pipeline moves."""
     services = request.app.state.services
-    ripper = services.video_rip
-    if ripper.active is None:
-        return RedirectResponse(f"/jobs/{ripper.job.id}" if ripper.job else "/", status_code=303)
-    ctx = view_context(services) | {"current": "/", "live": True}
-    return TEMPLATES.TemplateResponse(request, "job.html", ctx)
+    ctx = _job_context(services, _job_or_404(services, job_id)) | {"oob": True}  # + crumb
+    return TEMPLATES.TemplateResponse(request, "partials/job_steps.html", ctx)
 
 
 @router.get("/jobs/{job_id}", response_class=HTMLResponse)
@@ -44,13 +70,8 @@ def job_page(request: Request, job_id: int) -> Response:
     return _video_page(request, services, rec)
 
 
-def _section(rec: JobRecord) -> str:
-    """The nav section a Disc's page is in: History once it's Ripped (failures stay on Now)."""
-    return "/" if rec.status in (JobStatus.RIPPING, JobStatus.FAILED) else "/history"
-
-
 def _cd_page(request: Request, services, rec: JobRecord) -> Response:
-    ctx = view_context(services) | {"current": _section(rec), "record": rec}
+    ctx = view_context(services) | _job_context(services, rec) | {"record": rec}
     if rec.status == JobStatus.FAILED:
         tracks = services.cd.job(rec.id).tracks
         ctx |= {"log": services.jobs.log_lines(rec.id), "track_count": len(tracks)}
@@ -68,9 +89,9 @@ def _cd_page(request: Request, services, rec: JobRecord) -> Response:
 
 def _video_page(request: Request, services, job: JobRecord) -> Response:
     active = services.video_rip.active
+    ctx = view_context(services) | _job_context(services, job)
     if active is not None and active.id == job.id:
-        return RedirectResponse("/disc", status_code=303)
-    ctx = view_context(services) | {"current": _section(job), "job": job}
+        return TEMPLATES.TemplateResponse(request, "job.html", ctx | {"live": True})
     if job.status == JobStatus.FAILED:
         ctx["log_lines"] = services.jobs.log_lines(job.id)
         licence = job.failure is not None and job.failure.kind == FailureKind.LICENCE

@@ -75,6 +75,7 @@ class TitleEncode:
     job: JobRecord
     name: str  # what is being encoded: "Arrival (2016)", "The Office - s01e04 - The Quiz"
     progress: EncodeProgress
+    title_number: int = 0  # the Title of `disc` being encoded
 
 
 UHD_MIN_HEIGHT = 1500  # taller than this is a 4K (UHD) picture, whatever the Disc looked like
@@ -131,7 +132,8 @@ class Encoder:
         src = rec.scratch_dir / title.file
         tmp = done.with_name(f"{done.stem}.tmp.mkv")
         self._abort = False
-        self.current = TitleEncode(rec, name, EncodeProgress(0.0))
+        self.current = TitleEncode(rec, name, EncodeProgress(0.0), title.number)
+        self._jobs.encode_started(rec.id, title.number)
         self._publish()
         try:
             probe_lines: list[str] = []
@@ -177,7 +179,7 @@ class Encoder:
                     return
                 p = reader.feed(line)
                 if p is not None and self.current is not None:
-                    self.current = TitleEncode(rec, name, p)
+                    self.current = TitleEncode(rec, name, p, title.number)
                     self._publish_soon()
 
             tmp.unlink(missing_ok=True)
@@ -206,6 +208,7 @@ class Encoder:
                                              + "; ".join(lost), [])
                 self._jobs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
             os.replace(tmp, done)
+            self._jobs.encode_finished(rec.id, title.number)
             minutes = max(1, round((self._clock() - started) / 60))
             self._jobs.log(rec.id, f"Encode{f' of the Extra “{name}”' if extra else ''} "
                                     f"finished in {minutes} min "
