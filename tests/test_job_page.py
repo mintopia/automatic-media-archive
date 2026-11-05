@@ -196,6 +196,36 @@ def test_an_extras_discs_job_page_lists_its_extras(client, harness):
         assert "st done" in _step(steps, f"Extra: EXAMPLE_MOVIE_BONUS - Title {n}<")
 
 
+def _links_to_its_run(page: str, job_id: int) -> bool:
+    crumb = _crumb(page)
+    return f'<a class="view-log" href="/logs/jobs/{job_id}">' in crumb and "View log" in crumb
+
+
+def test_a_job_page_links_to_its_run_while_it_rips_and_in_history(client, harness):
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # the fake Rip holds at 50%
+    eventually(lambda: harness.services.video_rip.active is not None)
+    rec = harness.services.video_rip.active
+    assert _links_to_its_run(_page(client, f"/jobs/{rec.id}"), rec.id)
+
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    harness.makemkv.release()
+    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
+    page = _page(client, f"/jobs/{rec.id}")
+    assert '<a href="/history">History</a>' in _crumb(page)
+    assert _links_to_its_run(page, rec.id)
+
+
+def test_a_failed_job_page_links_to_its_run_instead_of_embedding_the_log(client, harness):
+    harness.makemkv.fail_title = 1
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.services.jobs.list(JobStatus.FAILED))
+    rec = harness.services.jobs.list(JobStatus.FAILED)[0]
+    page = _page(client, f"/jobs/{rec.id}")
+    assert _links_to_its_run(page, rec.id)
+    assert "full log" not in page and 'class="log"' not in page
+
+
 def test_old_discs_urls_redirect_to_the_job_page(client):
     r = client.get("/discs/7/log", follow_redirects=False)
     assert r.status_code == 301 and r.headers["location"] == "/jobs/7/log"

@@ -308,6 +308,7 @@ td.diff{background:var(--notice);font-weight:600}
 .scratch{min-height:44px}
 .scratch[aria-current]{color:var(--ink);align-self:stretch;border-bottom:3px solid var(--ink);padding-top:3px}
 .crumb a{display:inline-flex;align-items:center;min-height:24px}
+.crumb .view-log{margin-left:auto;gap:6px;white-space:nowrap}
 .tab-h{display:flex}
 .bar.enc{border-color:var(--ink2)}.bar.enc i{border-right:1px solid var(--ink)}
 .menu{position:relative;display:flex;align-items:center;align-self:stretch;margin-left:auto}
