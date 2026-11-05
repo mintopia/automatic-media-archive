@@ -1,18 +1,26 @@
-{#- Now page: the Ripping bin. Topic "rip". `current_rip` (any Disc Type) is the same view the drive card reads. -#}
+{#- Now page: the Ripping bin. Topic "rip". `current_rip` (any Disc Type) is the same view the drive card reads.
+    `ripped` (CDs) and `ripped_video` are ripped Discs not yet identified; `waiting_for(id)`
+    says why one can't move on, if it can't. -#}
+{%- from "partials/waiting_line.html" import line -%}
 {%- set r = current_rip -%}
-<section class="bin rip{% if not r and not ripped and not repeat %} empty{% endif %}" aria-labelledby="ripping-h">
-  <h2 class="tab" id="ripping-h">Ripping <span class="c">{{ (1 if r else 0) + ripped | length }}</span></h2>
+{%- set waiting_rows = ripped | length + ripped_video | length -%}
+<section class="bin rip{% if not r and not waiting_rows and not repeat %} empty{% endif %}" aria-labelledby="ripping-h">
+  <h2 class="tab" id="ripping-h">Ripping <span class="c">{{ (1 if r else 0) + waiting_rows }}</span></h2>
   <div class="box">
   {%- if r %}
     <div class="row compact">{% if r.cover %}<div class="dtype art"><img src="/covers/{{ r.cover }}" alt=""></div>{% else %}<div class="dtype">{{ r.disc_type }}</div>{% endif %}<div><div class="tt">{% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</div><div class="ts">{% if r.likely %}Likely · {% endif %}{{ r.detail }}{% if r.percent is not none %} · {{ r.percent }}%{% endif %}</div></div><span class="stk {{ r.phase.css }}">{{ r.phase }}</span></div>
   {%- endif %}
   {%- for d in ripped %}
     {%- set p = d.record.status | phase %}
-    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div></div><span class="stk {{ p.css }}">{{ p }}</span></div>
+    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div>{{ line(waiting_for(d.record.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
-  {%- if not r and not ripped and repeat %}
+  {%- for d in ripped_video %}
+    {%- set p = d.status | phase %}
+    <div class="row compact"><div class="dtype">{{ d.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.id }}">{{ d.name }}</a></div><div class="ts">{{ d.titles | length }} Titles ripped · waiting to be identified</div>{{ line(waiting_for(d.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
+  {%- endfor %}
+  {%- if not r and not waiting_rows and repeat %}
     <p class="pad ts">Waiting for your choice on {{ repeat.name }}.</p>
-  {%- elif not r and not ripped %}
+  {%- elif not r and not waiting_rows %}
     <p class="pad ts">Nothing ripping.</p>
   {%- endif %}
   </div>

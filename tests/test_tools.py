@@ -10,7 +10,7 @@ import pytest
 
 from ama.config import ToolsConfig
 from ama.events import EventBus
-from ama.tools import Member, Pin, ToolFailed, ToolReady, Tools, ToolUnavailable
+from ama.tools import Member, Pin, ToolFailed, ToolNotFound, ToolReady, Tools, ToolUnavailable
 from tests.fakes import FakeFetch, FakeRunner
 
 FFMPEG = b"pretend ffmpeg.exe"
@@ -114,10 +114,45 @@ def test_failed_download_is_reported_and_leaves_no_partial_tool(tmp_path):
 
 def test_config_override_is_used_as_is_with_no_download(tmp_path):
     fetch = FakeFetch(GOOD)
-    tools = make_tools(tmp_path, fetch, cyanrip=r"C:\custom\cyanrip.exe")
-    assert tools.path("cyanrip") == Path(r"C:\custom\cyanrip.exe")
+    custom = tmp_path / "custom" / "cyanrip.exe"
+    custom.parent.mkdir()
+    custom.write_bytes(b"any build")
+    tools = make_tools(tmp_path, fetch, cyanrip=str(custom))
+    assert tools.path("cyanrip") == custom
     asyncio.run(tools.provision())
     assert fetch.calls == ["https://example/ffmpeg.zip"]
+    assert isinstance(tools.status("cyanrip"), ToolReady)
+
+
+def test_a_config_override_with_nothing_there_is_not_found_until_the_file_appears(tmp_path):
+    custom = tmp_path / "custom" / "ffprobe.exe"
+    tools = make_tools(tmp_path, FakeFetch(GOOD), ffprobe=str(custom))
+    status = tools.status("ffprobe")
+    assert isinstance(status, ToolNotFound) and status.path == custom
+    with pytest.raises(ToolUnavailable):
+        tools.path("ffprobe")
+
+    custom.parent.mkdir()
+    custom.write_bytes(b"ffprobe")
+    assert tools.path("ffprobe") == custom
+
+
+def test_run_keeps_checking_a_missing_override_and_publishes_when_it_appears(tmp_path):
+    custom = tmp_path / "custom" / "cyanrip.exe"
+    tools = make_tools(tmp_path, FakeFetch(GOOD), cyanrip=str(custom))
+    tools.retry_seconds = 0.01
+
+    async def go():
+        task = asyncio.create_task(tools.run())
+        await asyncio.sleep(0.05)
+        assert not task.done()  # still waiting for cyanrip
+        custom.parent.mkdir()
+        custom.write_bytes(b"cyanrip")
+        with tools.bus.subscribe() as q:
+            await asyncio.wait_for(task, 5)
+            assert not q.empty()  # the Now page re-renders, so the banner goes
+
+    asyncio.run(go())
     assert isinstance(tools.status("cyanrip"), ToolReady)
 
 

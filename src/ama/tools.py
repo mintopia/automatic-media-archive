@@ -136,6 +136,14 @@ class ToolFailed:
 
 
 @dataclass(frozen=True)
+class ToolNotFound:
+    """`[tools] <name>` in ama.toml names a file that isn't there."""
+
+    name: str
+    path: Path
+
+
+@dataclass(frozen=True)
 class MakemkvMissing:
     searched: tuple[str, ...]
 
@@ -162,7 +170,7 @@ class MakemkvBroken:
     detail: str
 
 
-ManagedStatus = ToolReady | ToolPending | ToolDownloading | ToolFailed
+ManagedStatus = ToolReady | ToolPending | ToolDownloading | ToolFailed | ToolNotFound
 MakemkvStatus = (ToolReady | ToolPending | MakemkvMissing | MakemkvTooOld | MakemkvUnregistered
                  | MakemkvKeyRejected | MakemkvBroken)
 ToolStatus = ManagedStatus | MakemkvStatus
@@ -268,22 +276,24 @@ class Tools:
         self._makemkv_candidates = (default_makemkv_candidates() if makemkv_candidates is None
                                     else tuple(makemkv_candidates))
         self._status: dict[str, ToolStatus] = {n: ToolPending() for n in TOOL_NAMES}
-        for name in ("ffmpeg", "ffprobe", "cyanrip"):
-            if override := self._override(name):
-                self._status[name] = ToolReady(override, "config")
         self._loop: asyncio.AbstractEventLoop | None = None
         self._last_progress = 0.0
 
     # --- the resolver ---
 
     def path(self, name: str) -> Path:
-        status = self._status[name]
+        status = self.status(name)
         if isinstance(status, ToolReady):
             return status.path
         raise ToolUnavailable(name, status)
 
     def status(self, name: str) -> ToolStatus:
-        return self._status[name]
+        status = self._status[name]  # KeyError: not a tool AMA knows
+        override = self._override(name) if name != "makemkvcon" else None
+        if override is None:
+            return status
+        # Looked at every time, so fixing the file (or the setting) needs no restart.
+        return ToolReady(override, "config") if override.is_file() else ToolNotFound(name, override)
 
     def _override(self, name: str) -> Path | None:
         value = getattr(self.cfg, name)
@@ -292,13 +302,15 @@ class Tools:
     # --- lifecycle ---
 
     async def run(self) -> None:
-        """Startup: check MakeMKV while provisioning, retrying failed downloads until all are in."""
+        """Startup: check MakeMKV while provisioning, retrying failed downloads (and looking
+        again for overrides that aren't there) until all are in."""
         await asyncio.gather(self.check_makemkv(), self._provision_until_ready())
 
     async def _provision_until_ready(self) -> None:
         while True:
             await self.provision()
-            if not any(isinstance(s, ToolFailed) for s in self._status.values()):
+            if not any(isinstance(self.status(n), ToolFailed | ToolNotFound)
+                       for n in TOOL_NAMES):
                 return
             await asyncio.sleep(self.retry_seconds)
 
@@ -372,6 +384,14 @@ class Tools:
         os.replace(new, dest)
 
     # --- MakeMKV preflight ---
+
+    async def watch_makemkv(self) -> None:
+        """Background task: while MakeMKV isn't usable, check again every `retry_seconds`, so
+        its banner goes once it's installed or registered (no button press needed)."""
+        while True:
+            await asyncio.sleep(self.retry_seconds)
+            if not isinstance(self._status["makemkvcon"], ToolReady | ToolPending):
+                await self.check_makemkv()
 
     async def check_makemkv(self) -> MakemkvStatus:
         status = await asyncio.to_thread(self._preflight)

@@ -1,6 +1,8 @@
 {#- Now page: the Encoding bin. Topic "encode". `encoding`: Movies not yet filed, FIFO;
     `tv_encoding`: kept TV Titles not yet filed; `encode_job`: the Encode running
-    now (live progress), or None; `encode_next`: the Disc id that encodes next. -#}
+    now (live progress), or None; `encode_next`: the Disc id that encodes next.
+    A row queued behind another Encode is plain "Waiting"; `waiting_for(id)` lines are problems. -#}
+{%- from "partials/waiting_line.html" import line -%}
 {%- macro running(job, href, name) %}
     <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="{{ href }}">{{ name }}</a></div><div class="bar thin enc" role="progressbar" aria-valuenow="{{ job.progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Encode progress"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>
 {%- endmacro %}
@@ -15,7 +17,7 @@
       {%- if m.status == "encoded" %}Encoded · filing to the NAS
       {%- elif m.status == "failed" %}The Encode didn't work · retried when the app restarts
       {%- elif m.disc_id == encode_next %}Next in line
-      {%- else %}Waiting{% endif %}</div></div>
+      {%- else %}Waiting{% endif %}</div>{{ line(waiting_for(m.disc_id)) }}</div>
       {%- if m.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Encoding</span>{% endif %}</div>
     {%- endif %}
   {%- endfor %}
@@ -26,7 +28,7 @@
     <div class="row compact"><div class="dtype">{{ tv_disc_types[e.disc_id] }}</div><div><div class="tt"><a href="/discs/{{ e.disc_id }}">{{ e.name }}</a></div><div class="ts">
       {%- if e.status == "encoded" %}Encoded · filing to the NAS
       {%- elif e.status == "failed" %}The Encode didn't work · retried when the app restarts
-      {%- else %}Waiting{% endif %}</div></div>
+      {%- else %}Waiting{% endif %}</div>{{ line(waiting_for(e.disc_id)) }}</div>
       {%- if e.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Encoding</span>{% endif %}</div>
     {%- endif %}
   {%- endfor %}
