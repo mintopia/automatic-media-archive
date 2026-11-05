@@ -43,8 +43,12 @@ Extracting content off a Disc to local storage with no lossy processing.
 _Avoid_: Backup, extract, dump
 
 **Encode**:
-Lossy transcoding of a ripped video Title into its archived form. A Job's Encode Phase covers one Encode per Title.
+Lossy transcoding of a ripped video Title into its archived form. A Job's Encode Phase covers one Title Encode per Title.
 _Avoid_: Transcode, convert, compress
+
+**Title Encode**:
+The Encode of one Title of a Job (the Main Feature, an Extra or an Episode), with its own place in the Encode queue and its own status. Only one Title Encode runs at a time.
+_Avoid_: Job, encode job (a Job is the whole pass of a Disc)
 
 **Identification**:
 Matching a Disc to its real-world release (album, film, series) so it can be named and filed.
@@ -63,7 +67,7 @@ One entry in Logs: a Job's record of its Steps, or an app event (startup, NAS co
 _Avoid_: Build, execution
 
 **Step**:
-One tool run or action inside a Run, with its own output and result: Rip, Identification, one Encode per Title, and File for a Job. Steps are detail inside a Phase, never a Phase.
+One tool run or action inside a Run, with its own output and result: Rip, Identification, one Title Encode per Title, and File for a Job. Steps are detail inside a Phase, never a Phase.
 _Avoid_: Task, stage
 
 **Paused**:

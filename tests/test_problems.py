@@ -14,7 +14,7 @@ import uvicorn
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from ama.config import PlexConfig
 from ama.events import EventBus, Topic
@@ -94,14 +94,14 @@ def test_with_no_tmdb_key_a_ripped_video_disc_shows_a_banner_and_why_its_card_wa
         ripping = page[page.index('id="ripping-h"'):page.index('id="encoding-h"')]
         assert "Waiting: No TMDB API key is set in ama.toml ([tmdb] api_key)" in ripping
         assert "next try" in ripping
-        disc_page = html.unescape(c.get("/discs/1").text)
-        assert "Waiting: No TMDB API key" in disc_page
+        job_page = html.unescape(c.get("/jobs/1").text)
+        assert "Waiting: No TMDB API key" in job_page
 
         h.services.tmdb.api_key = "tmdb-key"  # the key is set (Settings, #26)
-        eventually(lambda: h.services.discs.list(DiscStatus.FILED), timeout=5)
+        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
         page = _now(c)
         assert "[tmdb] api_key" not in page and "Waiting:" not in page
-        assert "Waiting:" not in html.unescape(c.get("/discs/1/waiting").text)
+        assert "Waiting:" not in html.unescape(c.get("/jobs/1/waiting").text)
 
 
 def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_path):
@@ -142,7 +142,7 @@ def test_a_job_waiting_for_the_nas_says_so_until_the_nas_is_back(tmp_path):
         assert "Waiting: The NAS isn't connected" in encoding  # Encoded, waiting to file
         assert "Can't reach the NAS" in _now(c)  # the app-wide NAS banner
         h.share["reachable"] = True
-        eventually(lambda: h.services.discs.list(DiscStatus.FILED), timeout=5)
+        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
         eventually(lambda: "Waiting:" not in _now(c))
 
 
@@ -194,7 +194,7 @@ def test_a_failing_notification_shows_a_banner_until_one_gets_through(harness):
 
     problems = Problems(EventBus(), now=lambda: NOW)
     ch = Channel()
-    notifier = Notifier(harness.services.discs, EventBus(), [ch], problems)
+    notifier = Notifier(harness.services.jobs, EventBus(), [ch], problems)
     note = Notification(next(iter(Event)), "Disc done", "Insert the next one")
     notifier.send([note])
     [banner] = problems.banners()

@@ -183,7 +183,7 @@ SECTIONS: list[Section] = [
         )),
         Group("Database and log file", (
             Field("paths.state_db", "Database",
-                  Markup("AMA's record of every Disc. A plain name is kept next to "
+                  Markup("AMA's record of every Job. A plain name is kept next to "
                          "<code>ama.toml</code>."), _key("[paths] state_db")),
             Field("paths.log_file", "Log file", "AMA's own diagnostic log.",
                   _key("[paths] log_file")),
@@ -239,13 +239,13 @@ SECTIONS: list[Section] = [
                     tech=Markup("Constant quality (CQ), 0 to 51. ")
                     + _key("[encode.cq] dvd", "bd", "uhd")),
         ), live=True, note="Used for Encodes that haven't started"),
-    ), note="Changes apply to Discs whose Encode hasn't started."),
+    ), note="Changes apply to Jobs whose Encode hasn't started."),
     Section("archive/libraries", "archive", "Libraries", (
         Group("Plex connection", (
             Field("plex.url", "Plex server",
                   "Where Plex runs, with its port. Plex normally uses 32400."),
             Field("plex.token", "Plex sign-in token",
-                  "Lets AMA tell Plex to look for new files as soon as a Disc is filed. "
+                  "Lets AMA tell Plex to look for new files as soon as a Job is filed. "
                   "Without it, Plex finds them on its next scheduled scan.",
                   "Plex calls it the X-Plex-Token."),
             Field("plex.nas_path", "Share path seen by Plex",
@@ -272,7 +272,7 @@ SECTIONS: list[Section] = [
         Group("TMDB", (
             Field("tmdb.api_key", "TMDB API key",
                   "Lets AMA recognise films and TV series using The Movie Database. Without it "
-                  "every video Disc goes to Review with no suggestions.",
+                  "every video Job goes to Review with no suggestions.",
                   'The v3 "API Key" from your TMDB account settings.'),
         ), live=True, note="Used from the next Identification"),
     )),

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 from tests.test_cd_archive import SPECIAL, _response
@@ -52,10 +52,10 @@ def test_a_failed_rip_offers_one_way_out(harness, client):
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
     eventually(lambda: harness.drive.ejected == 1)
-    eventually(lambda: harness.services.discs.list(DiscStatus.FAILED))
-    rec = harness.services.discs.list(DiscStatus.FAILED)[0]
-    page = _page(client, f"/discs/{rec.id}")
-    form = page[page.index(f'action="/discs/{rec.id}/dismiss"'):]
+    eventually(lambda: harness.services.jobs.list(JobStatus.FAILED))
+    rec = harness.services.jobs.list(JobStatus.FAILED)[0]
+    page = _page(client, f"/jobs/{rec.id}")
+    form = page[page.index(f'action="/jobs/{rec.id}/dismiss"'):]
     form = form[:form.index("</form>")]
     assert form.count("<button") == 1 and "OK, I'll put it back in" in form
     assert "Dismiss" not in page and "Try again" not in page
@@ -63,7 +63,7 @@ def test_a_failed_rip_offers_one_way_out(harness, client):
 
 def test_a_filed_films_titles_say_what_each_became(harness, client):
     rec = _file_example_movie(harness)
-    page = _page(client, f"/discs/{rec.id}")
+    page = _page(client, f"/jobs/{rec.id}")
     titles = page[page.index('id="titles-h"') - 80:]
     titles = titles[:titles.index("</section>")]
     assert 'class="bin ink"' in titles and "Filed as" in titles

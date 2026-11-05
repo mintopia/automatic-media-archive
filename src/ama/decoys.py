@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from ama.discs import TitleRecord
+from ama.jobs import TitleRecord
 
 MIN_VERSIONS = 8
 DURATION_TOLERANCE_S = 3

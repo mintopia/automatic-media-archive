@@ -17,7 +17,7 @@ import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from ama.discs import DiscRecord, ReviewReason, TitleRecord
+from ama.jobs import JobRecord, ReviewReason, TitleRecord
 from ama.tmdb import Episode
 from ama.tv import episode_like, play_alls
 
@@ -26,7 +26,7 @@ EXTRA = "extra"
 DISCARD = "discard"
 
 
-def wants_tv(rec: DiscRecord) -> bool:
+def wants_tv(rec: JobRecord) -> bool:
     try:
         kind = json.loads((rec.scratch_dir / MARK_FILE).read_text(encoding="utf-8"))["kind"]
     except (OSError, ValueError, KeyError, TypeError):
@@ -34,7 +34,7 @@ def wants_tv(rec: DiscRecord) -> bool:
     return kind == "tv"
 
 
-def mark(rec: DiscRecord, tv: bool) -> None:
+def mark(rec: JobRecord, tv: bool) -> None:
     """The user says the Disc is TV (or a film after all)."""
     tmp = rec.scratch_dir / f"{MARK_FILE}.tmp"
     tmp.write_text(json.dumps({"kind": "tv" if tv else "film"}), encoding="utf-8")

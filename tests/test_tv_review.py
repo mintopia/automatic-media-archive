@@ -11,7 +11,7 @@ from __future__ import annotations
 import html
 
 from ama.archive import extended_path
-from ama.discs import DiscStatus, ReviewReason, TitleRecord, TitleStatus
+from ama.jobs import JobStatus, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 
@@ -23,8 +23,8 @@ TITLES = [(1, 29 * 60 + 10, "1"), (2, 29 * 60 + 40, "2"), (3, 30 * 60 + 5, "3"),
 
 
 def _tv_disc(harness, label: str = LABEL, titles=TITLES, disc_type=DiscType.DVD):
-    discs = harness.services.discs
-    rec = discs.create(disc_type, label, "video")
+    jobs = harness.services.jobs
+    rec = jobs.create(disc_type, label, "video")
     rec.scratch_dir.mkdir(parents=True)
     records = []
     for n, seconds, segments in titles:
@@ -32,8 +32,8 @@ def _tv_disc(harness, label: str = LABEL, titles=TITLES, disc_type=DiscType.DVD)
         (rec.scratch_dir / name).write_bytes(b"mkv")
         records.append(TitleRecord(n, n - 1, seconds, 1_000_000_000, 2, 1, segments, name,
                                    TitleStatus.RIPPED))
-    discs.set_titles(rec.id, records, 0, 0)
-    discs.mark_ripped(rec.id)
+    jobs.set_titles(rec.id, records, 0, 0)
+    jobs.mark_ripped(rec.id)
     return rec
 
 
@@ -46,8 +46,8 @@ def _the_office(harness) -> None:
 
 
 def _in_review(harness, rec):
-    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.REVIEW, timeout=5)
-    return harness.services.discs.get(rec.id)
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.REVIEW, timeout=5)
+    return harness.services.jobs.get(rec.id)
 
 
 def _page(client, url: str) -> str:
@@ -77,7 +77,7 @@ def test_a_tv_disc_of_many_equal_length_episodes_is_tv_not_decoys(harness, clien
     rec = _in_review(harness, _tv_disc(harness, "SPACED_D1", episodes))
     assert rec.review_reason == ReviewReason.EPISODES
     assert _searched_films(harness) == []
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "decoy" not in log
 
 
@@ -86,7 +86,7 @@ def test_a_films_two_cuts_are_identified_as_the_film_not_tv(harness, client):
     cuts = [(1, 117 * 60, "1-20"), (2, 112 * 60, "1-18,21"), (3, 14 * 60, "30")]
     rec = _tv_disc(harness, "BLADE_RUNNER", cuts, DiscType.BD)
     eventually(lambda: harness.services.movie_archive.movies.get(rec.id) is not None, timeout=5)
-    assert harness.services.discs.get(rec.id).review_reason is None
+    assert harness.services.jobs.get(rec.id).review_reason is None
 
 
 def test_two_episode_length_titles_are_tv_only_when_tmdb_knows_the_series(harness, client):
@@ -138,8 +138,8 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
         "t1": "S01E03", "t2": "S01E05", "t3": "S00E01", "t4": "discard", "t5": "extra"})
     assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
 
-    filed = eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
-                       timeout=10) or harness.services.discs.get(rec.id)
+    filed = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+                       timeout=10) or harness.services.jobs.get(rec.id)
     assert filed.title == "The Office (2001) · 3 Episodes"
     assert _filed_names(harness) == [
         "Other/THE_OFFICE_S1_D2 - Title 5.mkv",
@@ -151,7 +151,7 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
         f"HEVC {LABEL}_t00.mkv".encode()  # Title 1
     assert len(harness.ffmpeg.encodes()) == 4  # the Play all is never encoded
     eventually(lambda: not rec.scratch_dir.exists())  # the Rip is gone (ADR-0002)
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "Review: The Office (2001) (TMDB 2996); Title 1 = S01E03" in log
     assert "Title 5 = Extra; 1 discarded" in log
     assert "Nothing needs you right now" in _page(client, "/review")
@@ -177,7 +177,7 @@ def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harn
     assert len(harness.ffmpeg.encodes()) == 1
 
     harness.ffmpeg.release()
-    eventually(lambda: len(harness.services.discs.list(DiscStatus.FILED)) == 2, timeout=10)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=10)
     assert len(harness.ffmpeg.encodes()) == 5  # 3 Episodes, the film and its Extra (#8)
     assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # History, on Now
 
@@ -190,13 +190,13 @@ def test_a_failed_episode_encode_keeps_the_rip_and_is_queued_again_at_restart(ha
         "series": str(OFFICE), "season": "1",
         "t1": "S01E01", "t2": "discard", "t3": "discard", "t4": "discard", "t5": "discard"})
     titles = harness.services.tv_archive.titles
-    eventually(lambda: titles.for_disc(rec.id)[0].status == "failed")
-    assert harness.services.discs.get(rec.id).status == DiscStatus.RIPPED
+    eventually(lambda: titles.for_job(rec.id)[0].status == "failed")
+    assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     assert (rec.scratch_dir / f"{LABEL}_t00.mkv").exists()
 
     harness.ffmpeg.exit_code = 0
     harness.services.tv_archive.recover()  # what the next start does
-    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
                timeout=10)
 
 
@@ -223,9 +223,9 @@ def test_a_mapping_is_checked_and_ignored_once_the_disc_has_left_review(harness,
     again = client.post(f"/review/{rec.id}/episodes", follow_redirects=False,
                         data=ok | {"t1": "S01E02"})
     assert again.status_code == 303
-    [only] = harness.services.tv_archive.titles.for_disc(rec.id)
+    [only] = harness.services.tv_archive.titles.for_job(rec.id)
     assert only.episode.code == "S01E01"
-    eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
                timeout=10)
 
 
@@ -235,8 +235,8 @@ def test_any_video_disc_in_review_can_be_marked_as_tv_and_back(harness, client):
     harness.web.add_film("Example Movie", 78, "Example Movie", runtime=122, year=2020)
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # a film's Disc, two films fit
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=5)
-    [rec] = harness.services.discs.list(DiscStatus.REVIEW)
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=5)
+    [rec] = harness.services.jobs.list(JobStatus.REVIEW)
     assert "It's TV episodes" in _page(client, f"/review/{rec.id}")
     r = client.post(f"/review/{rec.id}/kind", data={"kind": "tv"}, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == f"/review/{rec.id}"

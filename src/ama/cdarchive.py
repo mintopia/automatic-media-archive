@@ -34,7 +34,7 @@ from ama.archive import Archive, safe_name
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
-from ama.discs import DiscRecord, DiscStatus, DiscStore, ReviewReason
+from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason
 from ama.drive import DiscType
 from ama.events import EventBus, Topic
 from ama.media import Album, MediaStore
@@ -93,7 +93,7 @@ def disc_file_stem(match: Match) -> str:
 HIDDEN_TRACK = "Hidden Track"
 
 
-def track_tags(match: Match, number: int, disc_id: str) -> dict[str, list[str]]:
+def track_tags(match: Match, number: int, mb_disc_id: str) -> dict[str, list[str]]:
     """Vorbis comments for track `number` (0 = hidden track), MusicBrainz Picard names."""
     r = match.release
     tags: dict[str, list[str]] = {
@@ -101,7 +101,7 @@ def track_tags(match: Match, number: int, disc_id: str) -> dict[str, list[str]]:
         "TRACKNUMBER": [str(number)], "TRACKTOTAL": [str(len(match.tracks))],
         "DISCNUMBER": [str(match.disc_number)], "DISCTOTAL": [str(r.disc_total)],
         "MUSICBRAINZ_ALBUMID": [r.id], "MUSICBRAINZ_ALBUMARTISTID": list(r.artist_ids),
-        "MUSICBRAINZ_DISCID": [disc_id], "MEDIA": ["CD"],
+        "MUSICBRAINZ_DISCID": [mb_disc_id], "MEDIA": ["CD"],
     }
     track = next((t for t in match.tracks if t.number == number), None)
     if track is None:
@@ -155,13 +155,13 @@ def rename_cue_files(cue: str, names: dict[str, str]) -> str:
 # ---- the worker ---------------------------------------------------------------
 
 class CdArchiver:
-    def __init__(self, discs: DiscStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
+    def __init__(self, jobs: JobStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
                  archive: Archive, plex: Plex, bus: EventBus, interval: float,
                  covers: Covers, media: MediaStore, retry_seconds: float = 60.0,
                  problems: Problems | None = None) -> None:
         self._covers = covers
         self._media = media
-        self._discs = discs
+        self._jobs = jobs
         self._tracks = tracks
         self._nas = nas
         self._mb = mb
@@ -172,13 +172,13 @@ class CdArchiver:
         self.backoff = Backoff(retry_seconds, problems=problems)
 
     async def run(self) -> None:
-        await asyncio.to_thread(self._discs.clean_filed_scratch)
+        await asyncio.to_thread(self._jobs.clean_filed_scratch)
         while True:
             await self.check_once()
             await asyncio.sleep(self._interval)
 
     async def check_once(self) -> None:
-        waiting = self._discs.list(DiscStatus.RIPPED, include_dismissed=True, types={DiscType.CD})
+        waiting = self._jobs.list(JobStatus.RIPPED, include_dismissed=True, types={DiscType.CD})
         for rec in reversed(waiting):  # oldest first
             if not self.backoff.due(rec.id):
                 continue
@@ -186,9 +186,9 @@ class CdArchiver:
                 await asyncio.to_thread(self.identify, rec)
             except RetryLater as e:
                 if self.backoff.later(rec.id, str(e), e.problem):
-                    self._discs.log(rec.id, f"{e}; trying again in a while", error=True)
+                    self._jobs.log(rec.id, f"{e}; trying again in a while", error=True)
             except Exception:
-                log.exception("CD Identification/filing of Disc %s crashed", rec.id)
+                log.exception("CD Identification/filing of Job %s crashed", rec.id)
                 self.backoff.later(rec.id, "Identification went wrong (see the app's log file)")
             else:
                 self.backoff.done(rec.id)
@@ -199,48 +199,48 @@ class CdArchiver:
             self._bus.publish(topic)
 
     # -- one Disc (runs in a worker thread) --
-    def identify(self, rec: DiscRecord) -> None:
+    def identify(self, rec: JobRecord) -> None:
         """Identify and file one `ripped` CD, applying the Review decision if there is one."""
         tracks = self._tracks.load(rec.id)
         report = cyanrip.parse_report(
             (rec.scratch_dir / "rip.log").read_text(encoding="utf-8", errors="replace"))
-        disc_id = report.disc_id or ""
+        mb_disc_id = report.mb_disc_id or ""
         decision = cdreview.load_decision(rec.scratch_dir)
         if isinstance(decision, cdreview.ManualDetails):
-            self.file(rec, cdreview.manual_match(decision), disc_id)
+            self.file(rec, cdreview.manual_match(decision), mb_disc_id)
             return
         # After Review, choose from what Review showed; otherwise ask MusicBrainz.
         response = cdreview.saved_response(rec.scratch_dir) if decision else None
         if response is None:
             try:
-                response = self._mb.lookup(disc_id) if disc_id else None
+                response = self._mb.lookup(mb_disc_id) if mb_disc_id else None
             except httpx.HTTPError as e:
                 raise RetryLater(f"Couldn't reach MusicBrainz ({e})") from e
             if response is not None:
                 (rec.scratch_dir / MB_FILE).write_text(json.dumps(response, ensure_ascii=False),
                                                        encoding="utf-8")
-        candidates = musicbrainz.matches(response, disc_id) if response else []
+        candidates = musicbrainz.matches(response, mb_disc_id) if response else []
         if isinstance(decision, cdreview.PickRelease):
             picked = [m for m in cdreview.fitting(tracks, candidates)
                       if (m.release.id, m.disc_number)
                       == (decision.release_id, decision.disc_number)]
             if picked:
-                self.file(rec, picked[0], disc_id)
+                self.file(rec, picked[0], mb_disc_id)
                 return
-            self._discs.log(rec.id, "The edition picked in Review isn't in the MusicBrainz "
+            self._jobs.log(rec.id, "The edition picked in Review isn't in the MusicBrainz "
                                     "answer any more", error=True)
         reason = review_reason(tracks, candidates, rip_accepted=decision is not None)
         if reason is not None:
-            self._discs.mark_review(rec.id, reason)
-            self._discs.log(rec.id, f"Needs Review: {reason.value.replace('_', ' ')}")
+            self._jobs.mark_review(rec.id, reason)
+            self._jobs.log(rec.id, f"Needs Review: {reason.value.replace('_', ' ')}")
             return
         match = candidates[0]
-        self._discs.log(rec.id, f"Identified as {match.release.title} by {match.release.artist}, "
+        self._jobs.log(rec.id, f"Identified as {match.release.title} by {match.release.artist}, "
                                 f"disc {match.disc_number} of {match.release.disc_total} "
                                 f"(MusicBrainz release {match.release.id})")
-        self.file(rec, match, disc_id)
+        self.file(rec, match, mb_disc_id)
 
-    def file(self, rec: DiscRecord, match: Match, disc_id: str) -> None:
+    def file(self, rec: JobRecord, match: Match, mb_disc_id: str) -> None:
         """Tag, file and verify this Disc as `match`, then delete its scratch and tell Plex."""
         filing.require_nas(self._nas)
         scratch = rec.scratch_dir
@@ -250,7 +250,7 @@ class CdArchiver:
             src = scratch / f"{t.number:02d}.flac"
             title = next((x.title for x in match.tracks if x.number == t.number), HIDDEN_TRACK)
             name = track_file(match, t.number, title)
-            write_tags(src, track_tags(match, t.number, disc_id))
+            write_tags(src, track_tags(match, t.number, mb_disc_id))
             files[name] = src
             renamed[src.name] = name
         stem = disc_file_stem(match)
@@ -263,14 +263,14 @@ class CdArchiver:
         files[f"{stem}.log"] = scratch / "rip.log"
         art = None
         if not match.release.id:
-            self._discs.log(rec.id, "Details entered by hand: no cover art")
+            self._jobs.log(rec.id, "Details entered by hand: no cover art")
         else:
             try:
                 art = self._covers.release(match.release)  # cached for its History page
             except httpx.HTTPError as e:
                 raise RetryLater(f"Couldn't fetch the cover art ({e})") from e
             if art is None:
-                self._discs.log(rec.id, "No cover art on the Cover Art Archive")
+                self._jobs.log(rec.id, "No cover art on the Cover Art Archive")
         if art is not None:
             cached = self._covers.path(art)
             assert cached is not None
@@ -278,7 +278,7 @@ class CdArchiver:
         with filing.to_nas():
             folder = self._archive.place(album_folder(match), files)
         title = f"{match.release.title} — {match.release.artist}"
-        self._media.save(rec.id, Album.of(match, disc_id, art))
-        self._discs.mark_filed(rec.id, title, folder)
-        self._discs.log(rec.id, f"Filed {len(files)} files to {folder}; scratch deleted")
-        filing.scan(self._plex, self._discs, rec.id, folder)
+        self._media.save(rec.id, Album.of(match, mb_disc_id, art))
+        self._jobs.mark_filed(rec.id, title, folder)
+        self._jobs.log(rec.id, f"Filed {len(files)} files to {folder}; scratch deleted")
+        filing.scan(self._plex, self._jobs, rec.id, folder)

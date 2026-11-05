@@ -19,7 +19,7 @@ from pathlib import Path
 from ama import encode, hdr, picture
 from ama.config import CqConfig
 from ama.db import Database
-from ama.discs import DiscRecord, DiscStatus, DiscStore, TitleRecord
+from ama.jobs import JobRecord, JobStatus, JobStore, TitleRecord
 from ama.drive import DiscType
 from ama.encode import EncodeProgress, ProgressReader
 from ama.events import EventBus, Topic
@@ -28,8 +28,8 @@ from ama.retry import RetryLater
 from ama.tools import ToolLookup, ToolUnavailable
 
 PUBLISH_EVERY_SECONDS = 0.5
-LOG_TAIL = 15  # ffmpeg warning lines kept for the Disc log when an Encode fails
-# What the Encode pipeline's progress shows on: the queue, the Disc pages, History, Review.
+LOG_TAIL = 15  # ffmpeg warning lines kept for the Job log when an Encode fails
+# What the Encode pipeline's progress shows on: the queue, the Job pages, History, Review.
 PIPELINE_TOPICS = (Topic.ENCODE, Topic.RIP, Topic.FILED, Topic.REVIEW)
 
 
@@ -52,9 +52,9 @@ class EncodeQueue:
         self._column = column  # its status column
 
     def requeue(self, *statuses: EncodeStatus) -> list[int]:
-        """Put rows in `statuses` back in the queue; the Discs affected."""
+        """Put rows in `statuses` back in the queue; the Jobs affected."""
         marks = ", ".join("?" * len(statuses))
-        rows = self._db.execute(f"SELECT DISTINCT disc_id FROM {self._table} "
+        rows = self._db.execute(f"SELECT DISTINCT job_id FROM {self._table} "
                                 f"WHERE {self._column} IN ({marks})", statuses).fetchall()
         self._db.execute(f"UPDATE {self._table} SET {self._column} = ? "
                          f"WHERE {self._column} IN ({marks})",
@@ -62,17 +62,17 @@ class EncodeQueue:
         return [r[0] for r in rows]
 
     def waiting(self, cols: str, order: str) -> list[tuple]:
-        """Rows of Discs still on their way to the Archive (`ripped`), in `order`."""
+        """Rows of Jobs still on their way to the Archive (`ripped`), in `order`."""
         return self._db.execute(
-            f"SELECT {cols} FROM {self._table} q JOIN discs d ON d.id = q.disc_id "
-            f"WHERE d.status = ? ORDER BY {order}", (DiscStatus.RIPPED,)).fetchall()
+            f"SELECT {cols} FROM {self._table} q JOIN jobs d ON d.id = q.job_id "
+            f"WHERE d.status = ? ORDER BY {order}", (JobStatus.RIPPED,)).fetchall()
 
 
 @dataclass(frozen=True)
-class EncodeJob:
+class TitleEncode:
     """The Encode in progress (memory only), for the UI."""
 
-    disc: DiscRecord
+    job: JobRecord
     name: str  # what is being encoded: "Arrival (2016)", "The Office - s01e04 - The Quiz"
     progress: EncodeProgress
 
@@ -90,15 +90,15 @@ class _Aborted(Exception):
 
 
 class Encoder:
-    def __init__(self, discs: DiscStore, bus: EventBus, cq: CqConfig, tool: ToolLookup,
+    def __init__(self, jobs: JobStore, bus: EventBus, cq: CqConfig, tool: ToolLookup,
                  streamer: Streamer, clock: Callable[[], float] = time.monotonic) -> None:
-        self._discs = discs
+        self._jobs = jobs
         self._bus = bus
         self.cq = cq
         self._tool = tool
         self._stream = streamer
         self._clock = clock
-        self.current: EncodeJob | None = None
+        self.current: TitleEncode | None = None
         self.lock = asyncio.Lock()  # one Encode at a time, whoever asks
         self._abort = False
         self._last_publish = 0.0
@@ -111,7 +111,7 @@ class Encoder:
         except ToolUnavailable as e:
             raise RetryLater(f"{e.name} isn't ready yet") from None
 
-    async def encode_title(self, rec: DiscRecord, title: TitleRecord, name: str,
+    async def encode_title(self, rec: JobRecord, title: TitleRecord, name: str,
                            original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,
                            extra: bool = False) -> int | None:
         """Encode one ripped Title of `rec` to `done` (written as `<stem>.tmp.mkv`, then
@@ -123,7 +123,7 @@ class Encoder:
             return await self._encode_title(rec, title, name, original_language, done,
                                             ffmpeg, ffprobe, extra)
 
-    async def _encode_title(self, rec: DiscRecord, title: TitleRecord, name: str,
+    async def _encode_title(self, rec: JobRecord, title: TitleRecord, name: str,
                             original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,
                             extra: bool) -> int | None:
         then = (f"The Extra “{name}” is left out; the film is filed without it" if extra
@@ -131,7 +131,7 @@ class Encoder:
         src = rec.scratch_dir / title.file
         tmp = done.with_name(f"{done.stem}.tmp.mkv")
         self._abort = False
-        self.current = EncodeJob(rec, name, EncodeProgress(0.0))
+        self.current = TitleEncode(rec, name, EncodeProgress(0.0))
         self._publish()
         try:
             probe_lines: list[str] = []
@@ -151,19 +151,19 @@ class Encoder:
                 DiscType.BD if extra and rec.disc_type == DiscType.UHD else rec.disc_type,
                 probe.height)
             if kind != rec.disc_type and not extra:
-                self._discs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
+                self._jobs.log(rec.id, f"The Disc looked like a {rec.disc_type.long_name}, but "
                                         f"its Main Feature is 4K, so it is encoded as a UHD")
             cq = encode.cq_for(self.cq, kind)
             pic = await self._analyse_picture(rec, ffmpeg, src, probe)
-            self._discs.log(rec.id, pic.describe())
-            self._discs.log(rec.id, f"Encoding Title {title.number} as {name}: HEVC "
+            self._jobs.log(rec.id, pic.describe())
+            self._jobs.log(rec.id, f"Encoding Title {title.number} as {name}: HEVC "
                                     f"10-bit, CQ {cq}; keeping {len(sel.audio)} audio and "
                                     f"{len(sel.subtitles)} subtitle tracks, {probe.chapters} "
                                     "chapters")
             if source_hdr.is_hdr10:
                 dropped = [n for n, on in (("Dolby Vision", source_hdr.dolby_vision),
                                            ("HDR10+", source_hdr.hdr10_plus)) if on]
-                self._discs.log(rec.id, f"HDR10: {source_hdr}" + (
+                self._jobs.log(rec.id, f"HDR10: {source_hdr}" + (
                     f"; {' and '.join(dropped)} metadata will be dropped (ADR-0003)"
                     if dropped else ""))
             reader = ProgressReader(probe.duration_s or title.duration_s)
@@ -177,7 +177,7 @@ class Encoder:
                     return
                 p = reader.feed(line)
                 if p is not None and self.current is not None:
-                    self.current = EncodeJob(rec, name, p)
+                    self.current = TitleEncode(rec, name, p)
                     self._publish_soon()
 
             tmp.unlink(missing_ok=True)
@@ -204,17 +204,17 @@ class Encoder:
                     tmp.unlink(missing_ok=True)
                     return self._failed(rec, then, "the Encode didn't keep the HDR10 metadata: "
                                              + "; ".join(lost), [])
-                self._discs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
+                self._jobs.log(rec.id, f"HDR10 metadata kept: {encoded_hdr}")
             os.replace(tmp, done)
             minutes = max(1, round((self._clock() - started) / 60))
-            self._discs.log(rec.id, f"Encode{f' of the Extra “{name}”' if extra else ''} "
+            self._jobs.log(rec.id, f"Encode{f' of the Extra “{name}”' if extra else ''} "
                                     f"finished in {minutes} min "
                                     f"({done.stat().st_size / 1000**3:.1f} GB)")
             return probe.height
         finally:
             self.current = None
 
-    async def _analyse_picture(self, rec: DiscRecord, ffmpeg: Path, src: Path,
+    async def _analyse_picture(self, rec: JobRecord, ffmpeg: Path, src: Path,
                                probe: encode.Probe) -> picture.Picture:
         """Sample the Title for black bars and, on a DVD, its scan type. A failed sample
         counts for nothing: the Encode then crops less, never more."""
@@ -251,10 +251,10 @@ class Encoder:
         except ValueError as e:
             return f"{e}; ffprobe exit {code}"
 
-    def _failed(self, rec: DiscRecord, then: str, why: str, tail: list[str]) -> None:
+    def _failed(self, rec: JobRecord, then: str, why: str, tail: list[str]) -> None:
         for line in tail:
-            self._discs.log(rec.id, line, error=True)
-        self._discs.log(rec.id, f"The Encode didn't work: {why}. {then}", error=True)
+            self._jobs.log(rec.id, line, error=True)
+        self._jobs.log(rec.id, f"The Encode didn't work: {why}. {then}", error=True)
 
     def _publish(self) -> None:
         self._loop = asyncio.get_running_loop()

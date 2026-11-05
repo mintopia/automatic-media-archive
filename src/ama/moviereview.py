@@ -8,7 +8,7 @@
 - `saved_search`: the TMDB search Identification made (`tmdb.json`), the films offered first.
 
 A decision (film + Main Feature) joins the Encode queue (`Movies.enqueue`) and the
-Disc goes back to `ripped` (`DiscStore.requeue`); `MovieArchiver` Encodes and files it.
+Disc goes back to `ripped` (`JobStore.requeue`); `MovieArchiver` Encodes and files it.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ama import review
-from ama.discs import DiscRecord, DiscStore, TitleRecord, TitleStatus
+from ama.jobs import JobRecord, JobStore, TitleRecord, TitleStatus
 from ama.moviearchive import TMDB_FILE  # the search MovieArchiver.identify saved
 from ama.proc import Streamer
 from ama.tmdb import RUNTIME_TOLERANCE_S, Candidate
@@ -46,13 +46,13 @@ def thumb_args(ffmpeg: Path, src: Path, at_s: float, dest: Path) -> list[str]:
             "-y", str(dest)]
 
 
-def ripped_titles(rec: DiscRecord) -> list[TitleRecord]:
+def ripped_titles(rec: JobRecord) -> list[TitleRecord]:
     return [t for t in rec.titles if t.status == TitleStatus.RIPPED]
 
 
 @dataclass
 class Thumbnailer:
-    discs: DiscStore
+    jobs: JobStore
     tool: ToolLookup
     streamer: Streamer
     interval: float
@@ -66,9 +66,9 @@ class Thumbnailer:
                 log.exception("Taking Review thumbnails crashed")
             await asyncio.sleep(self.interval)
 
-    def _missing(self) -> list[tuple[DiscRecord, TitleRecord, int]]:
+    def _missing(self) -> list[tuple[JobRecord, TitleRecord, int]]:
         return [(rec, t, pct)
-                for rec in review.queue(self.discs) if rec.disc_type in VIDEO_DISC_TYPES
+                for rec in review.queue(self.jobs) if rec.disc_type in VIDEO_DISC_TYPES
                 for t in ripped_titles(rec) for pct in POSITIONS
                 if (rec.id, t.number, pct) not in self.failed
                 and not thumb_path(rec.scratch_dir, t.number, pct).exists()]
@@ -84,7 +84,7 @@ class Thumbnailer:
         for rec, title, pct in missing:
             await asyncio.to_thread(self._grab, ffmpeg, rec, title, pct)
 
-    def _grab(self, ffmpeg: Path, rec: DiscRecord, title: TitleRecord, pct: int) -> None:
+    def _grab(self, ffmpeg: Path, rec: JobRecord, title: TitleRecord, pct: int) -> None:
         dest = thumb_path(rec.scratch_dir, title.number, pct)
         tmp = dest.with_name(f"{dest.stem}.tmp.jpg")
         dest.parent.mkdir(exist_ok=True)
@@ -97,7 +97,7 @@ class Thumbnailer:
         if code != 0 or not tmp.exists():
             tmp.unlink(missing_ok=True)
             self.failed.add((rec.id, title.number, pct))
-            self.discs.log(rec.id, f"Couldn't take a picture of Title {title.number} at {pct}% "
+            self.jobs.log(rec.id, f"Couldn't take a picture of Title {title.number} at {pct}% "
                                    f"(ffmpeg exit {code}{': ' + lines[-1] if lines else ''})",
                            error=True)
             return

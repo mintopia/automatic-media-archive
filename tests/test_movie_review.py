@@ -11,7 +11,7 @@ import html
 from pathlib import Path
 
 from ama.archive import extended_path
-from ama.discs import DiscStatus, ReviewReason
+from ama.jobs import JobStatus, ReviewReason
 from tests.conftest import eventually
 from tests.test_movie_archive import _rip, _wait_for
 
@@ -23,7 +23,7 @@ def _ambiguous(harness):
                          director="Bob Older")
     harness.web.add_film("Example Movie", 78, "Example Movie", runtime=122, year=2020)
     _rip(harness)
-    rec = _wait_for(harness, DiscStatus.REVIEW)
+    rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.MULTIPLE_MATCHES
     return rec
 
@@ -99,12 +99,12 @@ def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_f
     movie = harness.services.movie_archive.movies.get(rec.id)
     assert movie.film.name == "Arrival (2016)" and movie.title_number == 2
 
-    filed = _wait_for(harness, DiscStatus.FILED)
+    filed = _wait_for(harness, JobStatus.FILED)
     assert filed.title == "Arrival (2016)"
     folder = "Arrival (2016) {tmdb-329865}"
     [path] = extended_path(harness.nas_root / "Movies" / folder).glob(f"{folder}*.mkv")
     assert path.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # the Title the user chose
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "Review: identified as Arrival (2016)" in log
     assert "Nothing needs you right now" in _page(client, "/review")
 
@@ -124,5 +124,5 @@ def test_a_decision_is_ignored_once_the_disc_has_left_review_and_checked_otherwi
                         follow_redirects=False)
     assert again.status_code == 303
     assert harness.services.movie_archive.movies.get(rec.id).film.id == 1234
-    _wait_for(harness, DiscStatus.FILED)
+    _wait_for(harness, JobStatus.FILED)
     assert client.get(f"/review/{rec.id}", follow_redirects=False).status_code == 303

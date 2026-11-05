@@ -1,5 +1,5 @@
 {#- Now page: the Ripping bin. Topic "rip". `current_rip` (any Disc Type) is the same view the drive card reads.
-    `ripped` (CDs) and `ripped_video` are ripped Discs not yet identified; `waiting_for(id)`
+    `ripped` (CDs) and `ripped_video` are ripped Jobs not yet identified; `waiting_for(id)`
     says why one can't move on, if it can't. -#}
 {%- from "partials/waiting_line.html" import line -%}
 {%- set r = current_rip -%}
@@ -12,11 +12,11 @@
   {%- endif %}
   {%- for d in ripped %}
     {%- set p = d.record.status | phase %}
-    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div>{{ line(waiting_for(d.record.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
+    <div class="row compact"><div class="dtype">{{ d.record.disc_type }}</div><div><div class="tt"><a href="/jobs/{{ d.record.id }}">{{ d.record.label or "Unknown CD" }}</a></div><div class="ts">{{ d.tracks | length }} tracks · {{ d.tracks | selectattr("ar") | selectattr("ar.status", "equalto", "accurate") | list | length }} checked against other copies · waiting to be identified</div>{{ line(waiting_for(d.record.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
   {%- for d in ripped_video %}
     {%- set p = d.status | phase %}
-    <div class="row compact"><div class="dtype">{{ d.disc_type }}</div><div><div class="tt"><a href="/discs/{{ d.id }}">{{ d.name }}</a></div><div class="ts">{{ d.titles | length }} Titles ripped · waiting to be identified</div>{{ line(waiting_for(d.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
+    <div class="row compact"><div class="dtype">{{ d.disc_type }}</div><div><div class="tt"><a href="/jobs/{{ d.id }}">{{ d.name }}</a></div><div class="ts">{{ d.titles | length }} Titles ripped · waiting to be identified</div>{{ line(waiting_for(d.id)) }}</div><span class="stk {{ p.css }}">{{ p }}</span></div>
   {%- endfor %}
   {%- if not r and not waiting_rows and repeat %}
     <p class="pad ts">Waiting for your choice on {{ repeat.name }}.</p>

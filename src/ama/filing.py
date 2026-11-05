@@ -9,7 +9,7 @@ from pathlib import Path
 import httpx
 
 from ama.archive import FilingError
-from ama.discs import DiscStore
+from ama.jobs import JobStore
 from ama.nas import NasConnected, NasMonitor
 from ama.plex import Plex
 from ama.retry import RetryLater
@@ -30,10 +30,10 @@ def to_nas() -> Iterator[None]:
         raise RetryLater(f"Couldn't file to the NAS ({e})") from e
 
 
-def scan(plex: Plex, discs: DiscStore, disc_id: int, folder: Path) -> None:
+def scan(plex: Plex, jobs: JobStore, job_id: int, folder: Path) -> None:
     """Ask Plex to scan `folder`, logging the outcome; a failure never un-files anything."""
     try:
-        discs.log(disc_id, plex.scan(folder))
+        jobs.log(job_id, plex.scan(folder))
     except httpx.HTTPError as e:
-        discs.log(disc_id, f"Couldn't ask Plex to scan the folder ({e}); "
+        jobs.log(job_id, f"Couldn't ask Plex to scan the folder ({e}); "
                            "Plex will find it on its next scan", error=True)

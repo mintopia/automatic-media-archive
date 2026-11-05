@@ -75,8 +75,8 @@
       <section class="bin ink" aria-labelledby="cd-h">
         <h2 class="tab" id="cd-h">This CD</h2>
         <div class="box"><div class="pad">
-          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}</dl>
-          <p class="ts" style="margin-top:12px"><a href="/discs/{{ record.id }}">Rip details and log</a></p>
+          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if mb_disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ mb_disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}</dl>
+          <p class="ts" style="margin-top:12px"><a href="/jobs/{{ record.id }}">Rip details and log</a></p>
         </div></div>
       </section>
     </div>

@@ -31,7 +31,7 @@ class Plex:
         return sep.join([base.rstrip("/\\"), *parts])
 
     def scan(self, folder: Path) -> str:
-        """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError,
+        """Start a partial scan of `folder`; a sentence for the Job log. Raises httpx.HTTPError,
         and shows a banner until a scan works again."""
         try:
             said = self._scan(folder)
@@ -45,6 +45,7 @@ class Plex:
 
     def _scan(self, folder: Path) -> str:
         if not (self.cfg.url and self.cfg.token):
+
             return "Plex isn't set up in ama.toml, so it will find this on its next scan"
         path = self.server_path(folder)
         base = self.cfg.url.rstrip("/")

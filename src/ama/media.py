@@ -39,7 +39,7 @@ class Album:
     disc_number: int
     disc_total: int
     tracks: tuple[AlbumTrack, ...]
-    disc_id: str = ""              # MusicBrainz Disc ID
+    mb_disc_id: str = ""              # MusicBrainz Disc ID
     release_id: str = ""           # "" = details entered by hand in Review
     release_group_id: str = ""
     disc_title: str = ""
@@ -51,10 +51,10 @@ class Album:
     kind: Literal["album"] = "album"
 
     @classmethod
-    def of(cls, match: Match, disc_id: str, cover: str | None) -> Album:
+    def of(cls, match: Match, mb_disc_id: str, cover: str | None) -> Album:
         r = match.release
         return cls(title=r.title, artist=r.artist, disc_number=match.disc_number,
-                   disc_total=r.disc_total, disc_id=disc_id, release_id=r.id,
+                   disc_total=r.disc_total, mb_disc_id=mb_disc_id, release_id=r.id,
                    release_group_id=r.release_group_id or "", disc_title=match.disc_title,
                    date=r.date or "", country=r.country or "", barcode=r.barcode or "",
                    labels=tuple(dict.fromkeys(r.labels)), cover=cover,
@@ -79,8 +79,8 @@ class Album:
             out.append(("MusicBrainz release", f"{MB}/release/{self.release_id}"))
         if self.release_group_id:
             out.append(("Release group", f"{MB}/release-group/{self.release_group_id}"))
-        if self.disc_id:
-            out.append(("Disc ID", f"{MB}/cdtoc/{self.disc_id}"))
+        if self.mb_disc_id:
+            out.append(("Disc ID", f"{MB}/cdtoc/{self.mb_disc_id}"))
         if self.release_id:
             out.append(("Cover Art Archive", f"{CAA}/release/{self.release_id}"))
         return out
@@ -135,19 +135,19 @@ def from_json(text: str) -> Media:
 
 
 class MediaStore:
-    """The `media_info` table: one row per filed Disc."""
+    """The `media_info` table: one row per filed Job."""
 
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def save(self, disc_id: int, info: Media) -> None:
-        self._db.execute("INSERT INTO media_info (disc_id, info) VALUES (?, ?) "
-                         "ON CONFLICT (disc_id) DO UPDATE SET info = excluded.info",
-                         (disc_id, to_json(info)))
+    def save(self, job_id: int, info: Media) -> None:
+        self._db.execute("INSERT INTO media_info (job_id, info) VALUES (?, ?) "
+                         "ON CONFLICT (job_id) DO UPDATE SET info = excluded.info",
+                         (job_id, to_json(info)))
 
-    def get(self, disc_id: int) -> Media | None:
-        row = self._db.execute("SELECT info FROM media_info WHERE disc_id = ?",
-                               (disc_id,)).fetchone()
+    def get(self, job_id: int) -> Media | None:
+        row = self._db.execute("SELECT info FROM media_info WHERE job_id = ?",
+                               (job_id,)).fetchone()
         return from_json(row[0]) if row else None
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 
 from ama import decoys, makemkv
-from ama.discs import DiscStatus, ReviewReason, TitleRecord
+from ama.jobs import JobStatus, ReviewReason, TitleRecord
 from ama.video_rip import MIN_TITLE_SECONDS, title_records
 from tests.conftest import eventually
 from tests.fakes import DATA
@@ -63,8 +63,8 @@ def _heat(harness):
     harness.makemkv.scan_file = "makemkv-info-bd-decoys.txt"
     harness.web.add_film("Heat", 949, "Heat", runtime=170, year=1995, director="Michael Mann")
     _rip(harness, label="HEAT_BD")
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=10)
-    return harness.services.discs.list(DiscStatus.REVIEW)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=10)
+    return harness.services.jobs.list(JobStatus.REVIEW)[0]
 
 
 def test_a_disc_with_decoys_goes_to_review_even_when_tmdb_is_confident(harness, client):
@@ -72,7 +72,7 @@ def test_a_disc_with_decoys_goes_to_review_even_when_tmdb_is_confident(harness, 
     assert rec.review_reason == ReviewReason.DECOY_PLAYLISTS
     assert harness.services.movie_archive.movies.get(rec.id) is None
     assert harness.ffmpeg.encodes() == []
-    log = "\n".join(map(str, harness.services.discs.log_lines(rec.id)))
+    log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "Suspected decoy playlists: 14 Titles run within 3 s of each other" in log
     assert "Title 6 (00805.mpls) plays in order" in log
     row = html.unescape(client.get("/review").text)
@@ -104,8 +104,8 @@ def test_the_review_page_warns_of_decoys_and_picks_the_version_that_plays_in_ord
 def test_a_normal_review_page_has_no_decoy_notice(harness, client):
     harness.web.add_film("Example Movie", 1, "Example Movie", runtime=95)
     _rip(harness)
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW), timeout=10)
-    rec = harness.services.discs.list(DiscStatus.REVIEW)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=10)
+    rec = harness.services.jobs.list(JobStatus.REVIEW)[0]
     page = html.unescape(client.get(f"/review/{rec.id}").text)
     assert "near-identical" not in page and "00800.mpls" not in page
     assert "the longest, likely the film" in page

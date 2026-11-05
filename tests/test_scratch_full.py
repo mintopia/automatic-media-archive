@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import html
 
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import eventually
 
@@ -20,7 +20,7 @@ def test_blu_ray_is_ejected_unripped_when_scratch_is_below_its_threshold(client,
     harness.drive.insert(DiscType.BD, "THE_MATRIX")
     eventually(lambda: harness.drive.ejected == 1)
     assert harness.makemkv.calls == []
-    assert harness.services.discs.get(1) is None
+    assert harness.services.jobs.get(1) is None
     page = page_text(client, "/scratch")
     assert "Ejected: not enough space" in page
     assert ("THE_MATRIX · Blu-ray was not ripped. 212 of 256 GB of scratch is in use; "
@@ -33,7 +33,7 @@ def test_cd_is_ejected_unripped_when_scratch_is_full(client, harness):
     harness.drive.insert(DiscType.CD, "OK_COMPUTER")
     eventually(lambda: harness.drive.ejected == 1)
     assert [c for c in harness.cyanrip.calls if "-I" not in c] == []
-    assert harness.services.discs.get(1) is None
+    assert harness.services.jobs.get(1) is None
     assert "an Audio CD needs up to 1 GB" in page_text(client, "/scratch")
 
 
@@ -45,7 +45,7 @@ def test_a_disc_that_fits_is_ripped_and_clears_the_refusal(client, harness):
     harness.makemkv.release()
     harness.drive.insert(DiscType.DVD, "SPIRITED_AWAY")
     eventually(lambda: harness.drive.ejected == 2)
-    assert harness.services.discs.get(1).disc_type == DiscType.DVD
+    assert harness.services.jobs.get(1).disc_type == DiscType.DVD
     assert "not enough space" not in page_text(client, "/scratch")
     assert "Not enough space" not in page_text(client, "/")
 
@@ -58,7 +58,7 @@ def test_scratch_page_lists_the_discs_holding_scratch(client, harness):
     eventually(harness.ffmpeg.encoding.is_set)
     harness.makemkv.disc_name = "Mystery Thing"
     harness.drive.insert(DiscType.BD, "MYSTERY_THING")  # Disc 2: no TMDB match -> Review
-    eventually(lambda: harness.services.discs.list(DiscStatus.REVIEW))
+    eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW))
     harness.cyanrip.hold_at = 2
     harness.drive.insert(DiscType.CD, "OK_COMPUTER")  # Disc 3: Ripping
     harness.cyanrip.wait_until_held()

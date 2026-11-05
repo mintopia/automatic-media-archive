@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ama.app import create_app
-from ama.discs import DiscStatus
+from ama.jobs import JobStatus
 from ama.drive import DiscType
 from tests.conftest import Harness, eventually, make_harness
 
@@ -61,11 +61,11 @@ def test_a_finished_rip_says_insert_the_next_disc_on_both_channels(notified):
     assert "KID_A" in discord["embeds"][0]["description"]
     assert ntfy["title"] == DONE
     assert "KID_A" in ntfy["message"]
-    assert notified.services.discs.list(DiscStatus.RIPPED)[0].label == "KID_A"
+    assert notified.services.jobs.list(JobStatus.RIPPED)[0].label == "KID_A"
 
 
 def test_a_disc_needing_review_notifies_both_channels(notified):
-    notified.web.musicbrainz[notified.cyanrip.disc_id] = 404  # MusicBrainz doesn't know it
+    notified.web.musicbrainz[notified.cyanrip.mb_disc_id] = 404  # MusicBrainz doesn't know it
     notified.drive.insert(DiscType.CD, "MYSTERY")
     _sent(notified, 2)
 
@@ -79,7 +79,7 @@ def test_a_failed_disc_notifies_both_channels_with_what_went_wrong(notified):
     notified.drive.insert(DiscType.CD, "SCRATCHED")
     _sent(notified, 1)
 
-    rec = notified.services.discs.list(DiscStatus.FAILED)[0]
+    rec = notified.services.jobs.list(JobStatus.FAILED)[0]
     assert _titles(notified) == (["Disc failed"], ["Disc failed"])
     assert rec.failure and rec.failure.headline in _ntfy(notified)[0]["message"]
     assert rec.failure.headline in _discord(notified)[0]["embeds"][0]["description"]
@@ -87,13 +87,13 @@ def test_a_failed_disc_notifies_both_channels_with_what_went_wrong(notified):
 
 def test_discarding_a_rip_in_review_is_not_a_failure_to_report(app):
     h, client = app
-    h.web.musicbrainz[h.cyanrip.disc_id] = 404
+    h.web.musicbrainz[h.cyanrip.mb_disc_id] = 404
     h.drive.insert(DiscType.CD)
     _sent(h, 2)
-    rec = h.services.discs.list(DiscStatus.REVIEW)[0]
+    rec = h.services.jobs.list(JobStatus.REVIEW)[0]
 
     client.post(f"/review/{rec.id}/discard", follow_redirects=False)
-    eventually(lambda: h.services.discs.get(rec.id).status == DiscStatus.FAILED)
+    eventually(lambda: h.services.jobs.get(rec.id).status == JobStatus.FAILED)
     time.sleep(0.3)
     assert _titles(h) == ([DONE, "Review needed"],) * 2
 
@@ -119,7 +119,7 @@ def test_a_channel_without_its_config_value_is_off(tmp_path, caplog, discord, to
     h = make_harness(tmp_path, discord=discord, ntfy_topic=topic)
     with TestClient(create_app(h.services)):
         h.drive.insert(DiscType.CD)
-        eventually(lambda: len(h.services.discs.list(DiscStatus.RIPPED)) == 1)
+        eventually(lambda: len(h.services.jobs.list(JobStatus.RIPPED)) == 1)
         eventually(lambda: _channels_used(h) == sent_to)
         time.sleep(0.3)
     assert _channels_used(h) == sent_to
@@ -134,7 +134,7 @@ def test_a_notification_failure_never_blocks_the_pipeline(notified, caplog, stat
     eventually(lambda: notified.drive.ejected == 1)
 
     notified.web.notify_status = 200  # the next Disc still rips, and still notifies
-    notified.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
+    notified.cyanrip.mb_disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
     notified.drive.insert(DiscType.CD, "SECOND")
     _sent(notified, 2)
     assert "SECOND" in _ntfy(notified)[1]["message"]
@@ -149,7 +149,7 @@ def test_a_channel_that_hangs_never_holds_up_the_next_rip(notified, monkeypatch)
                         lambda note: gate.wait(10))
     notified.drive.insert(DiscType.CD, "FIRST")
     eventually(lambda: notified.drive.ejected == 1)
-    notified.cyanrip.disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
+    notified.cyanrip.mb_disc_id = "O75dAncJZ7onpacHCAgF4NqupdA-"  # another CD, not a repeat
     notified.drive.insert(DiscType.CD, "SECOND")
-    eventually(lambda: len(notified.services.discs.list(DiscStatus.RIPPED)) == 2)
+    eventually(lambda: len(notified.services.jobs.list(JobStatus.RIPPED)) == 2)
     gate.set()
