@@ -406,7 +406,7 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 
 | Tab | Holds | TOML tables |
 |---|---|---|
-| General | Web UI (Address, Port), New Discs (read-only), Storage; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
+| General | Web UI (Address, Port), Storage; Advanced "Database and log file" | `[web]`, `[scratch]`, `[paths]` |
 | Ripping | Drive; Advanced "Reading CDs" and "Tools" | `[drive]`, `[cd]`, `[tools]` |
 | Archive | sub-nav: Encode, Libraries, NAS, Identification | `[encode.*]`; `[plex]` and the Libraries; `[nas]`; `[tmdb]` |
 | Alerts | Discord, ntfy | `[discord]`, `[ntfy]` |
@@ -415,7 +415,7 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 - **Divider file:** the five tabs are divider tabs in a row, 32px below the h1. Each tab's hit area reaches 10px upward into that gap; on phones the tabs are 44px tall (48px when open). Closed tabs are `sheet` with a rule border and `ink-2` lettering; the open one is `ink`, 4px taller, and sits on a sheet with an `ink` top edge. Each tab is its own page. On phones the row scrolls sideways, fades at the right, and scrolls the open tab into view.
 - **Sub-nav (Archive):** a row of 48px links under the tab, `ink-2` 500 / 15px, the current one `ink` 600 with a 3px `ink` underline.
 - **Group:** a 700 / 16px heading with an optional 13px `ink-2` note at the right (for example "Takes effect at once").
-- **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px. A read-only value (New Discs in General) is plain text with a "Change in the menu" button.
+- **Field row:** label and hint on the left, the control in a column of up to 380px on the right, rows divided by the hairline. One column under 720px.
 - **Wording:** the plain explanation comes first and the technical term second (`.tech`, under the hint). TOML keys ("Key `[cd] offset`") appear only in Advanced rows and the Encode disclosure.
 - **Advanced:** expert sections sit in a closed `<details>`: a 64px summary with the name, an "Advanced" tag (20px, rule-bordered, 600 / 11px), "You probably don't need to change this." in `ink-2`, the group's restart note at the right and a chevron that turns open. Encode's "Quality, sound and subtitles" uses the same disclosure with a "Now: …" summary.
 - **Restart notes:** per group, in the group's note ("Used after a restart", "Checked when AMA starts · used after a restart", "Used from the next CD Rip"). A per-field restart tag (20px, rule-bordered, redo icon) appears only in a mixed group. Once such a key is saved it reads "Waiting for restart" with an `ink` border.
