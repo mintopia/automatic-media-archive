@@ -92,7 +92,9 @@ class _Aborted(Exception):
 
 class Encoder:
     def __init__(self, jobs: JobStore, bus: EventBus, cq: CqConfig, tool: ToolLookup,
-                 streamer: Streamer, clock: Callable[[], float] = time.monotonic) -> None:
+                 streamer: Streamer, clock: Callable[[], float] = time.monotonic,
+                 hold: Callable[[], bool] = lambda: False) -> None:
+        self._hold = hold  # start no new Encode (a restart is waiting)
         self._jobs = jobs
         self._bus = bus
         self.cq = cq
@@ -121,6 +123,8 @@ class Encoder:
         `extra`: a film's Extra, Encoded as what it is (a UHD's HD Extra gets BD's CQ)
         and left out if it fails."""
         async with self.lock:
+            while self._hold():
+                await asyncio.sleep(0.5)
             return await self._encode_title(rec, title, name, original_language, done,
                                             ffmpeg, ffprobe, extra)
 

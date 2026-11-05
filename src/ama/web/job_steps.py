@@ -187,7 +187,7 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
         state = StepState.NOT_RUN if ident.state in (StepState.FAILED, StepState.NOT_RUN) \
             else StepState.WAITING
         return [Step("Encode", state, "One per Title kept, once it is identified")]
-    job = services.movie_archive.encoder.current
+    encode = services.movie_archive.encoder.current
     times = services.jobs.encode_times(rec.id)
     steps = []
     for number, subject, status, note in planned:
@@ -198,14 +198,14 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
             continue
         if rec.status == JobStatus.FILED and status == EncodeStatus.ENCODED:
             status = EncodeStatus.FILED  # a film's row stays "encoded" once it is filed
-        live = job is not None and job.job.id == rec.id and job.title_number == number
+        live = encode is not None and encode.job.id == rec.id and encode.title_number == number
         state = StepState.RUNNING if live else _STATE[status]
         if rec.status == JobStatus.FILED and state == StepState.WAITING:
             state = StepState.NOT_RUN
         steps.append(Step("Encode", state, note or _DETAIL[EncodeStatus.ENCODING if live
                                                            else status], subject,
                           started=started, finished=finished if state != StepState.RUNNING
-                          else None, progress=job.progress if live else None, colour="enc"))
+                          else None, progress=encode.progress if live else None, colour="enc"))
     return steps
 
 
