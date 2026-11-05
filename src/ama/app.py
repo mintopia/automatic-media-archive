@@ -25,12 +25,13 @@ from ama.cdarchive import CdArchiver
 from ama.cdguess import CdPicks, Guesser
 from ama.cdrip import CdRipper, CdTracks
 from ama.covers import DIR as COVERS_DIR, Covers
-from ama.config import Config
+from ama.config import Config, Kind
 from ama.db import Database
-from ama.jobs import JobStore
+from ama.jobs import JobRecord, JobStore
+from ama.job_settings import JobSettings
 from ama.encoder import Encoder
 from ama.encoder_probe import EncoderProbe
-from ama.drive import DriveMonitor, DriveProbe, default_probe
+from ama.drive import DiscType, DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.film_guess import FilmGuesses
 from ama.media import MediaStore
@@ -92,6 +93,7 @@ class Services:
     encoders: EncoderProbe  # which encoders pass a test encode (ADR 0010)
     problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
     restart: Restarter
+    job_settings: JobSettings | None = None  # set by build_services; per-Job overrides + locks
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
     def apply_live(self, cfg: Config) -> None:
@@ -153,6 +155,7 @@ def build_services(
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
     tv_titles = TvTitles(db)
+    job_settings = JobSettings(db, jobs, lambda: services.config, _kind_of(tv_titles))
     restart = Restarter(lambda: busy(services), bus)
     encoder = Encoder(jobs, bus, cfg.encode, tool, streamer, hold=restart.holding)
     movie_archive = MovieArchiver(jobs, Movies(db), tmdb, nas, archive, plex, bus, encoder,
@@ -209,7 +212,19 @@ def build_services(
         restart=restart,
     )
     services.settings = Settings(config_path, cfg, services.apply_live)
+    services.job_settings = job_settings
     return services
+
+
+def _kind_of(tv_titles: TvTitles) -> Callable[[JobRecord], Kind]:
+    """The Library kind a Job files to, as far as is known yet: music for a CD; TV once a
+    video Job's Titles are mapped to a series' Episodes; else films."""
+    def kind_of(job: JobRecord) -> Kind:
+        if job.disc_type == DiscType.CD:
+            return Kind.MUSIC
+        rows = tv_titles.for_job(job.id)
+        return Kind.TV if rows and rows[0].path.parts[0] == Kind.TV.folder else Kind.FILMS
+    return kind_of
 
 
 def busy(services: Services) -> Busy:
