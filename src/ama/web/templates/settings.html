@@ -48,10 +48,23 @@
 {% block main %}
 <main class="settings" id="main">
   <h1>Settings</h1>
-  {%- if pending %}
-  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>Restart AMA to use {{ pending | length }} saved change{{ "s" if pending | length != 1 }}</b><ul>{% for p in pending %}<li>{{ p }}</li>{% endfor %}</ul>
-    <p class="rmeta">Restart AMA when nothing is Ripping or Encoding: a Rip that's cut off fails and needs the Disc put back in, and an Encode starts again.</p>
-    {%- if new_address %}<p class="rmeta">After the restart AMA is at <a href="{{ new_address }}">{{ new_address }}</a>; this address stops working.</p>{% endif %}</div></div></div>
+  {%- set moved %}{% if new_address %}<p class="rmeta">After the restart AMA is at <a href="{{ new_address }}">{{ new_address }}</a>; this address stops working.</p>{% endif %}{% endset %}
+  {%- set changes %}<ul>{% for p in pending %}<li>{{ p }}</li>{% endfor %}</ul>{% endset %}
+  {%- set rip_part %}<b>{{ busy.rip }}</b>{% endset %}
+  {%- if restart_waiting %}
+  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>AMA restarts when nothing is Ripping or Encoding</b>{{ changes }}
+    <p class="rmeta">{% if busy %}Waiting for {% if busy.rip is not none %}{{ rip_part }} to finish Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}for {{ busy.encodes }} Encode{% endif %}{% if busy.eta_s %}, about {{ busy.eta_s | minutes }}{% endif %}. No new Rip starts meanwhile.{% else %}Restarting now.{% endif %}</p>{{ moved }}</div>
+    <form method="post" action="/restart/cancel"><input type="hidden" name="back" value="{{ back }}"><button class="btn quiet" type="submit">Don't restart</button></form></div></div>
+  {%- elif pending %}
+  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>Restart AMA to use {{ pending | length }} saved change{{ "s" if pending | length != 1 }}</b>{{ changes }}
+    {%- if busy and not confirm %}<p class="rmeta">{% if busy.rip is not none %}{{ rip_part }} is Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}{{ busy.encodes }} Encode is running{% endif %}. Restarting now {{ busy.stops }}.</p>{% endif %}{{ moved }}</div>
+    {%- if not (busy and confirm) %}
+    <form method="post" action="/restart"><input type="hidden" name="back" value="{{ back }}"><button class="btn pri" type="submit">{% if busy %}Restart…{% else %}Restart now{% endif %}</button></form>
+    {%- endif %}</div>
+    {%- if busy and confirm %}
+    <div class="rconfirm" id="rconfirm" role="alertdialog" aria-labelledby="rc-h" aria-describedby="rc-d" tabindex="-1"><div><b id="rc-h">{{ busy.headline }}</b><span id="rc-d">Restart when idle waits for {% if busy.rip is not none %}{{ rip_part }} to finish Ripping{% if busy.encodes %} and {% endif %}{% endif %}{% if busy.encodes %}for the Encode to finish{% endif %}{% if busy.eta_s %} (about {{ busy.eta_s | minutes }}){% endif %}, and starts no new Rip meanwhile. Restart now {{ busy.stops }}.</span></div>
+      <form class="actions" method="post" action="/restart/when-idle"><input type="hidden" name="back" value="{{ back }}"><a class="btn quiet" href="{{ back }}">Cancel</a><button class="btn danger" type="submit" formaction="/restart" name="force" value="1">Restart now</button><button class="btn pri" type="submit" autofocus>Restart when idle</button></form></div>
+    {%- endif %}</div>
   {%- endif %}
   <nav class="files" aria-label="Settings sections">{% for label, href, on in tabs %}<a class="tab" href="{{ href }}"{% if on %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
   {%- if problem or not page %}

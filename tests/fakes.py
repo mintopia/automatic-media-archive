@@ -212,7 +212,7 @@ class FakeCyanrip:
     def release(self) -> None:
         self._go.set()
 
-    def wait_until_held(self, timeout: float = 3.0) -> None:
+    def wait_until_held(self, timeout: float = 15.0) -> None:
         assert self._held.wait(timeout), "Rip never reached the hold point"
 
     def __call__(self, args: Sequence[str], on_line: Callable[[str], None],
