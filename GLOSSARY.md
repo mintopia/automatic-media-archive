@@ -1,6 +1,6 @@
 # Automatic Media Archive
 
-Semi-automated archiving of the owner's own physical optical media into a Plex-served library on a NAS.
+Semi-automated archiving of the owner's own physical optical media into Plex-served Libraries.
 
 ## Media
 
@@ -19,6 +19,10 @@ _Avoid_: Media type, format
 **Title**:
 One playable programme on a video Disc (a film, an episode, a bonus feature), as enumerated by the drive.
 _Avoid_: Playlist, track, stream
+
+**Skipped**:
+A Title the user unticked during the Rip, before its turn came, so it was never ripped. Distinct from the short and duplicate Titles the Rip leaves out on its own.
+_Avoid_: Deselected, excluded, dropped
 
 **Main Feature**:
 The Title that is the film itself on a movie Disc.
@@ -67,12 +71,20 @@ The single user-facing stage a Job is in: Ripping, Review, Encoding, Filed or Fa
 _Avoid_: Status, stage, step
 
 **Run**:
-One entry in Logs: a Job's record of its Steps, or an app event (startup, NAS connect or drop, tool download) with Steps of its own. A Job has exactly one Run; "Run" names the log record, never the Job itself.
+One entry in Logs: a Job's record of its Steps, or an app event (startup, tool download, Scratch cleanup) with Steps of its own. A Job has exactly one Run; "Run" names the log record, never the Job itself.
 _Avoid_: Build, execution
 
 **Step**:
 One tool run or action inside a Run, with its own output and result: Rip, Identification, one Title Encode per Title, and File for a Job. Steps are detail inside a Phase, never a Phase.
 _Avoid_: Task, stage
+
+**Scratch**:
+Local working storage holding a Job's Rip (and Encode in progress) until it is filed. Removed when the Job is filed or fails; a failed Encode's Scratch is kept for a retry until Scratch cleanup removes it.
+_Avoid_: Temp, staging, cache
+
+**Scratch cleanup**:
+Removing kept Scratch of finished Jobs, oldest first, once it passes the retention age or while free space is below the cleanup floor.
+_Avoid_: Purge, pruning
 
 **Paused**:
 AMA ignores newly inserted Discs; a Rip already under way finishes and every other Phase carries on.
@@ -81,11 +93,11 @@ _Avoid_: Stopped, disabled, idle
 ## Output
 
 **Archive**:
-The final, named, Plex-ready files on the NAS. For CDs this is lossless; for video Discs it is the Encode, and no lossless copy is kept.
+The final, named, Plex-ready files in the Libraries. For CDs this is lossless; for video Discs it is the Encode, and no lossless copy is kept.
 _Avoid_: Backup, master
 
 **Library**:
-A named folder of the Archive for one kind of media (films, TV, music), matching one Plex library. Each kind has a default Library; a Job may be sent to another of the same kind.
+A named folder, anywhere the PC can reach, holding the Archive for one kind of media (films, TV, music), matching one Plex library. Each kind has a default Library; a Job may be sent to another of the same kind.
 _Avoid_: Destination, section, collection
 
 **History**:

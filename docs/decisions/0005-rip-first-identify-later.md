@@ -9,8 +9,9 @@ low-confidence and need a human, and for video Discs the Titles worth keeping
 (Main Feature, Episodes, Extras) can depend on Identification.
 
 ## Decision
-Every inserted Disc is Ripped immediately (all Titles >= 30 s, duplicates
-dropped) and ejected, regardless of Identification confidence. Identification
+Every inserted Disc is Ripped immediately (all Titles at or above the
+configured minimum length for its Disc Type, default 30 s; duplicates dropped)
+and ejected, regardless of Identification confidence. Identification
 runs alongside; low-confidence results go to Review. Encode and filing to the
 Archive wait on accepted Identification. Scratch is deleted after filing.
 
@@ -21,3 +22,8 @@ Archive wait on accepted Identification. Scratch is deleted after filing.
 
 ## Supersedes
 None
+
+Amended 2026-11-05: the 30 s minimum Title length is now a per-Disc-Type
+setting (default 30 s), recorded on each Job. Exception: while a Rip runs, the
+user may untick Titles that haven't started; they are Skipped and never ripped.
+Ripping takes long enough that dropping an unwanted Title early is worth it.

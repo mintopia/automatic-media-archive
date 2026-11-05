@@ -26,3 +26,6 @@ mounted path, and the tray is Windows-only.
 
 ## Supersedes
 None
+
+Amended 2026-11-05: AMA no longer manages a NAS, so the NAS seam is gone
+(ADR 0011).
