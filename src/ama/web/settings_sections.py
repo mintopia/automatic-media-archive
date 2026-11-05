@@ -457,8 +457,8 @@ SECTIONS: list[Section] = [
     Section("alerts", "alerts", "Alerts", (
         Group("Discord", (
             Field("discord.webhook_url", "Webhook URL",
-                  "Posts to a Discord channel when a Disc needs Review, is done or failed. "
-                  "Empty turns Discord off."),
+                  "Posts to a Discord channel when a Rip is done and when a Job needs Review, "
+                  "is filed or failed. Empty turns Discord off."),
         ), live=True, note="Used from the next alert"),
         Group("ntfy", (
             Field("ntfy.url", "Server",
@@ -468,8 +468,8 @@ SECTIONS: list[Section] = [
                   "Anyone who knows the topic can read your alerts, so it's kept like a "
                   "password. Empty turns ntfy off."),
         ), live=True, note="Used from the next alert"),
-    ), note=Markup("Alerts go out when a Disc needs Review, is filed (“insert the next one”) "
-                   "or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
+    ), note=Markup("Alerts go out when a Rip is done (“insert the next one”) and when a Job "
+                   "needs Review, is filed or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
                    "Archive › Libraries</a>.")),
     Section("logs", "logs", "Logs", (
         Group("Step output", (
