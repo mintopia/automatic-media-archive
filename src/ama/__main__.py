@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(2)
     _setup_logging(cfg.paths.log_file)
     logging.getLogger("ama").info("starting; config %s", args.config.resolve())
-    services = build_services(cfg)
+    services = build_services(cfg, config_path=args.config)
     uvicorn.run(create_app(services), host=cfg.web.host, port=cfg.web.port, log_config=None)
 
 

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% macro icon(name, cls="i") %}<svg class="{{ cls }}" aria-hidden="true"><use href="/static/icons.svg#{{ name }}"/></svg>{% endmacro %}
+{% macro restart_note() %}{{ icon("redo") }}Used after a restart{% endmacro %}
+{% macro tstat(st) %}<span class="tstat{% if not st.ok %} off{% endif %}">{{ icon("check" if st.ok else "alert") }}{{ st.text }}</span>{% endmacro %}
+{% macro ferr(f) %}{% if f.error %}<div class="ferr" id="{{ f.id }}-e">{{ icon("alert") }}<span>{{ f.error }}</span></div>{% endif %}{% endmacro %}
+{% macro described(f, r) -%}
+{%- set ids = [] -%}
+{%- if r.row.hint or r.row.tech %}{% set _ = ids.append(r.id ~ "-h") %}{% endif -%}
+{%- if f.error %}{% set _ = ids.append(f.id ~ "-e") %}{% endif -%}
+{%- if ids %} aria-describedby="{{ ids | join(' ') }}"{% endif -%}
+{%- endmacro %}
+{% macro input(f, r, typ, placeholder="") -%}
+<input class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="{{ typ }}" name="{{ f.key }}"{% if f.value != "" %} value="{{ f.value }}"{% endif %}{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if f.step %} step="{{ f.step }}"{% endif %}{{ described(f, r) }}{% if f.error %} aria-invalid="true"{% endif %}{% if typ == "password" %} autocomplete="new-password"{% endif %} spellcheck="false">
+{%- endmacro %}
+{% macro control(r) -%}
+{%- set f = r.fields[0] -%}
+{%- if r.status %}{{ tstat(r.status) }}{% endif -%}
+{%- if f.kind == "secret" -%}
+  {%- if f.is_set and not f.error -%}
+  <div class="secret" role="group" aria-labelledby="{{ f.id }}-l"{{ described(f, r) }}><span class="state">{{ icon("check") }}Set</span><button class="btn quiet" type="button" data-secret-replace aria-label="Replace {{ r.row.label }}">Replace</button><button class="btn quiet" type="button" data-secret-remove aria-label="Remove {{ r.row.label }}">Remove</button></div>
+  {{- input(f, r, "password", "New " ~ r.row.label) | replace('<input ', '<input hidden disabled ', 1) | safe }}<input type="hidden" name="remove" value="{{ f.key }}" disabled>
+  {%- else -%}
+  {{ input(f, r, "password", "Not set") }}{{ ferr(f) }}
+  {%- if f.is_set %}<button class="btn quiet" type="button" data-secret-keep>Keep the saved one</button>{% endif -%}
+  {%- endif -%}
+{%- else -%}
+  {%- set box = input(f, r, f.kind, r.placeholder) -%}
+  {%- if r.row.unit %}<div class="unit">{{ box }}<span>{{ r.row.unit }}</span></div>{% else %}{{ box }}{% endif %}{{ ferr(f) }}
+{%- endif -%}
+{%- endmacro %}
+{% macro row(r) -%}
+<div class="sf"><div><div class="lb">
+  {%- if r.pertype or (r.fields[0].kind == "secret" and r.fields[0].is_set and not r.fields[0].error) %}<span id="{{ r.id }}-l">{{ r.row.label }}</span>{% else %}<label for="{{ r.id }}">{{ r.row.label }}</label>{% endif -%}
+  {%- if r.pending %}<span class="rs pending">{{ icon("redo") }}Waiting for restart</span>{% endif -%}
+  </div>
+  {%- if r.row.hint or r.row.tech %}<div class="hn" id="{{ r.id }}-h">{{ r.row.hint }}{% if r.row.tech %}<span class="tech">{{ r.row.tech }}</span>{% endif %}</div>{% endif -%}
+  </div><div class="ctl">
+  {%- if r.pertype -%}
+  <table class="pertype" aria-labelledby="{{ r.id }}-l"{% if r.row.hint or r.row.tech %} aria-describedby="{{ r.id }}-h"{% endif %}><thead><tr><th scope="col">Disc Type</th><th scope="col">{{ r.row.column }}</th></tr></thead><tbody>
+    {%- for name, f in r.cells %}<tr><td>{{ name }}</td><td>
+      {%- set box %}<input class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="number" name="{{ f.key }}" value="{{ f.value }}"{% if f.step %} step="{{ f.step }}"{% endif %} aria-label="{{ name }} {{ r.row.column | lower }}"{% if f.error %} aria-invalid="true" aria-describedby="{{ f.id }}-e"{% endif %}>{% endset -%}
+      {%- if r.row.unit %}<div class="unit">{{ box }}<span>{{ r.row.unit }}</span></div>{% else %}{{ box }}{% endif %}{{ ferr(f) }}</td></tr>
+    {%- endfor %}</tbody></table>
+  {%- else %}{{ control(r) }}{% endif -%}
+  </div></div>
+{%- endmacro %}
+{% block title %}{% if section.sub %}{{ section.name }} · {% for label, href, on in tabs if on %}{{ label }}{% endfor %}{% else %}{{ section.name }}{% endif %} · Settings{% endblock %}
+{% block main %}
+<main class="settings" id="main">
+  <h1>Settings</h1>
+  {%- if pending %}
+  <div class="notice restart" role="status">{{ icon("redo") }}<div class="rbody"><div><b>Restart AMA to use {{ pending | length }} saved change{{ "s" if pending | length != 1 }}</b><ul>{% for p in pending %}<li>{{ p }}</li>{% endfor %}</ul>
+    <p class="rmeta">Restart AMA when nothing is Ripping or Encoding: a Rip that's cut off fails and needs the Disc put back in, and an Encode starts again.</p>
+    {%- if new_address %}<p class="rmeta">After the restart AMA is at <a href="{{ new_address }}">{{ new_address }}</a>; this address stops working.</p>{% endif %}</div></div></div>
+  {%- endif %}
+  <nav class="files" aria-label="Settings sections">{% for label, href, on in tabs %}<a class="tab" href="{{ href }}"{% if on %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+  {%- if problem or not page %}
+  <div class="box setbox"><div class="notice setnotice" role="alert">{{ icon("alert") }}<div><b><code>ama.toml</code> can't be edited here right now</b>{{ problem }} Fix the file by hand; AMA keeps running with the values it started with.</div></div></div>
+  {%- else %}
+  <form class="box setbox" method="post" action="/settings/{{ section.slug }}" aria-label="{{ section.name }} settings" novalidate data-settings>
+    {%- if subs %}
+    <nav class="subnav" aria-label="{% for label, href, on in tabs if on %}{{ label }}{% endfor %} settings">{% for s in subs %}<a href="/settings/{{ s.slug }}"{% if s.slug == section.slug %} aria-current="page"{% endif %}>{{ s.name }}</a>{% endfor %}</nav>
+    {%- endif %}
+    <div class="leave" role="alertdialog" aria-labelledby="leave-h" aria-describedby="leave-d" tabindex="-1" hidden data-leave><div><b id="leave-h">Leave {{ section.name }} without saving?</b><span id="leave-d"></span></div><div class="actions"><button class="btn quiet" type="button" data-stay>Stay on {{ section.name }}</button><button class="btn danger" type="button" data-discard>Discard and go</button><button class="btn pri" type="submit" data-save-go>Save and go</button></div></div>
+    <input type="hidden" name="next" value="">
+    {%- if rejected %}
+    <div class="notice setnotice" role="alert" tabindex="-1" id="errsum">{{ icon("alert") }}<div><b>{{ section.name }} {{ "weren't" if section.name.endswith("s") else "wasn't" }} saved</b><code>ama.toml</code> hasn't changed.
+      {%- if page.errors %} Fix {{ "this field" if page.errors | length == 1 else "these " ~ (page.errors | length) ~ " fields" }}:<ul class="errlist">{% for f in page.errors %}<li><a href="#{{ f.id }}">{{ f.label }}: {{ f.error }}</a></li>{% endfor %}</ul>{% endif %}
+      {%- if page.general %}<ul class="errlist">{% for g in page.general %}<li>{{ g }}</li>{% endfor %}</ul>{% endif %}</div></div>
+    {%- endif %}
+    {%- for gv in page.groups %}{% set g = gv.group %}
+    {%- if g.advanced %}
+    <details class="adv"{% if gv.open %} open{% endif %}><summary><span class="advh"><span class="advtag">Advanced</span><span class="advt">{{ g.title }}</span>{{ icon("chevron", "i chev") }}</span><span class="advsub">You probably don't need to change this.</span><span class="advnote">{% if g.live %}{{ g.note }}{% else %}{{ icon("redo") }}{{ g.note or "Used after a restart" }}{% endif %}</span></summary>
+      {%- if g.intro %}<p class="advp">{{ g.intro }}</p>{% endif %}
+      {%- for r in gv.rows %}{{ row(r) }}{% endfor %}</details>
+    {%- else %}
+    <div class="grp-h"><h2>{{ g.title }}</h2>
+      {%- if gv.status %}<span class="ts grpst">{{ tstat(gv.status) }}{% if g.live %}<span>{{ g.note }}</span>{% else %}<span class="rnote">{{ restart_note() }}</span>{% endif %}</span>
+      {%- elif g.live %}<span class="ts">{{ g.note }}</span>
+      {%- else %}<span class="ts rnote">{{ icon("redo") }}{{ g.note or "Used after a restart" }}</span>{% endif %}</div>
+    {%- for r in gv.rows %}
+    {{ row(r) }}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    {%- if section.template %}{% include section.template %}{% endif %}
+    <div class="setfoot"><span class="st{% if rejected %} dirty{% endif %}" data-st>{% if rejected %}Not saved: fix the fields marked above{% elif saved %}<span class="ok" role="status">{{ icon("check") }}Saved at {{ saved }}</span>{% else %}No unsaved changes{% endif %}</span><button class="btn quiet" type="button" data-undo{% if not rejected %} hidden{% endif %}>Undo changes</button><button class="btn pri" type="submit"{% if not rejected %} disabled{% endif %}>Save {{ section.name }}</button></div>
+  </form>
+  {%- endif %}
+  <p class="ts setnote">{% if section.note %}{{ section.note }} {% endif %}Saved to <code>ama.toml</code>. Editing the file by hand does the same thing; this page shows what's in it now.</p>
+</main>
+<script src="/static/settings.js" defer></script>
+{% endblock %}

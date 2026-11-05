@@ -26,6 +26,7 @@
       <div class="mg"><div class="ml" id="m-theme">Theme</div><div class="segs" role="group" aria-labelledby="m-theme">
         <button type="button" data-theme-set="system" aria-pressed="true">System</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button><button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
       </div></div>
+      <a class="mi" href="/settings"{% if current == "/settings" %} aria-current="page"{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>Settings</a>
       {%- if can_log_out %}
       <form method="post" action="/logout"><button class="mi" type="submit"><svg class="i" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button></form>
       {%- endif %}

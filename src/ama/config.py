@@ -1,16 +1,19 @@
 """The one config file (TOML, untracked; `ama.example.toml` is the checked-in template).
 
-Parsed once at startup into frozen pydantic models. Unknown keys are errors so
+Parsed at startup into frozen pydantic models; the Settings page validates its
+edits through the same models (ADR 0008, `ama.settings`). Unknown keys are errors so
 a typo can't silently fall back to a default. Every setting must also appear in
 `ama.example.toml` (enforced by tests/test_config.py).
 """
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
 
 
 class _Section(BaseModel):
@@ -21,14 +24,35 @@ def _secret() -> str:
     return Field(default="", repr=False)
 
 
+def _web_address(value: str) -> str:
+    if value and not value.startswith(("http://", "https://")):
+        raise ValueError("Enter a full address starting with https:// or http://")
+    return value
+
+
+def _discord_webhook(value: str) -> str:
+    if value and not re.match(r"https://(ptb\.|canary\.)?discord(app)?\.com/api/webhooks/", value):
+        raise ValueError("Paste the whole webhook URL, starting with https://discord.com/api/webhooks/")
+    return value
+
+
+def _drive_letter(value: str) -> str:
+    if value and not re.fullmatch(r"[A-Za-z]:?", value):
+        raise ValueError("Enter a drive letter like D:, or leave it empty")
+    return value
+
+
+WebAddress = Annotated[str, AfterValidator(_web_address)]
+
+
 class WebConfig(_Section):
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = Field(default=8080, ge=1, le=65535)
     password: str = _secret()
 
 
 class DriveConfig(_Section):
-    letter: str = ""
+    letter: Annotated[str, AfterValidator(_drive_letter)] = ""
     poll_seconds: float = Field(default=3.0, gt=0)
 
 
@@ -74,17 +98,17 @@ class TmdbConfig(_Section):
 
 
 class PlexConfig(_Section):
-    url: str = ""
+    url: WebAddress = ""
     token: str = _secret()
     nas_path: str = ""  # where the Plex server sees `nas.unc`; empty = the same path
 
 
 class DiscordConfig(_Section):
-    webhook_url: str = _secret()
+    webhook_url: Annotated[str, AfterValidator(_discord_webhook)] = _secret()
 
 
 class NtfyConfig(_Section):
-    url: str = "https://ntfy.sh"
+    url: WebAddress = "https://ntfy.sh"
     topic: str = _secret()
 
 
