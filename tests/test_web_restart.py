@@ -95,3 +95,17 @@ def test_the_boot_id_is_open_without_signing_in(tmp_path):
     with TestClient(create_app(h.services)) as client:
         assert client.get("/boot", follow_redirects=False).status_code == 200
         assert client.post("/restart", follow_redirects=False).headers["location"] == "/login"
+        for near in ("/bootstrap", "/boot/x", "/boots"):  # only /boot itself is open
+            assert client.get(near, follow_redirects=False).headers["location"] == "/login"
+
+
+@pytest.mark.parametrize("back", ["/\\evil.com", "//evil.com", "https://evil.com", "evil",
+                                  "/settings//evil.com", "/a\\b", ""])
+def test_restart_goes_back_only_to_a_same_origin_path(setup, back):
+    client, h = setup
+    h.cyanrip.hold_at = 2  # busy: the redirect carries `back`
+    h.drive.insert(DiscType.CD, "ARRIVAL")
+    h.cyanrip.wait_until_held()
+    r = client.post("/restart", data={"back": back}, follow_redirects=False)
+    assert r.headers["location"] == "/settings?restart=confirm"
+    h.cyanrip.release()

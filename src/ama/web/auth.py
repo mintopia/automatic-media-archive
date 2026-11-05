@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 COOKIE = "ama_session"
 CONTROL_HEADER = "X-AMA-Control"  # the supervisor's tray (ama.tray)
-OPEN_PATHS = ("/login", "/static/", "/boot")
+OPEN_PREFIXES = ("/login", "/static/")  # open without signing in, with what's under them
+OPEN_EXACT = frozenset({"/boot"})  # open as exactly this path only
 
 
 def _secret(services: Services) -> str:
@@ -58,7 +59,7 @@ def install(app: FastAPI, services: Services, control_token: str = "") -> None:
     @app.middleware("http")
     async def require_session(request: Request, call_next) -> Response:
         path = request.url.path
-        if path.startswith(OPEN_PATHS) or hmac.compare_digest(
+        if path in OPEN_EXACT or path.startswith(OPEN_PREFIXES) or hmac.compare_digest(
             request.cookies.get(COOKIE, ""), token
         ) or (control_token and is_control(request, control_token)):
             return await call_next(request)

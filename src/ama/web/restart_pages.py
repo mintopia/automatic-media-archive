@@ -23,8 +23,9 @@ router = APIRouter()
 
 
 def _back(back: str) -> str:
-    """Only a path on this server: never an open redirect."""
-    return back if back.startswith("/") and not back.startswith("//") else "/settings"
+    """Only a path on this server: never an open redirect (`//host`, `/\\host`)."""
+    same_origin = back.startswith("/") and "\\" not in back and "//" not in back
+    return back if same_origin else "/settings"
 
 
 @router.post("/restart", response_class=HTMLResponse)
