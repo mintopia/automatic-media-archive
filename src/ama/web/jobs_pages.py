@@ -6,6 +6,8 @@ from dataclasses import replace
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
+from ama import cdreview
+from ama.cdguess import value
 from ama.jobs import JobRecord, JobStatus, FailureKind
 from ama.drive import DiscType
 from ama.encoder import EncodeStatus
@@ -62,7 +64,14 @@ def _cd_page(request: Request, services, rec: JobRecord) -> Response:
     if isinstance(album, Album):
         ctx |= {"view": replace(view, album=album), "album": album}
         return TEMPLATES.TemplateResponse(request, "job_cd_filed.html", ctx)
-    ctx |= {"live": live, "view": view, "title": rec.title or rec.label or "Unknown CD"}
+    if not live and view.pick:
+        match = next((m for m in cdreview.candidates(rec.scratch_dir, view.tracks)
+                      if value(m) == view.pick.value), None)
+        if match:
+            view = replace(view, picked_titles={t.number: t.title for t in match.tracks})
+    ctx |= {"live": live, "view": view,
+            "title": rec.title or (view.pick.album if not live and view.pick else None)
+            or rec.label or "Unknown CD"}
     return TEMPLATES.TemplateResponse(request, "job_cd.html", ctx)
 
 

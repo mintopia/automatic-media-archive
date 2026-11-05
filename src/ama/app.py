@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from ama.archive import Archive
 from ama.backfill import Backfill
 from ama.cdarchive import CdArchiver
-from ama.cdguess import Guesser
+from ama.cdguess import CdPicks, Guesser
 from ama.cdrip import CdRipper, CdTracks
 from ama.covers import DIR as COVERS_DIR, Covers
 from ama.config import Config
@@ -50,7 +50,7 @@ from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
 from ama.video_rip import VideoRipper
-from ama.web import (STATIC_DIR, auth, jobs_pages, extras_pages, history_pages,
+from ama.web import (STATIC_DIR, auth, cd_pick_pages, jobs_pages, extras_pages, history_pages,
                      movie_review_pages, pages,
                      repeat_pages, review_pages, scratch_pages, set_review_pages,
                      settings_pages, tv_review_pages)
@@ -161,7 +161,8 @@ def build_services(
         jobs=jobs,
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch, pause=pause, guesser=Guesser(mb, covers)),
+                    scratch=scratch, pause=pause, picks=CdPicks(db),
+                    guesser=Guesser(mb, covers)),
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               pause=pause, disc_root=disc_root,
@@ -212,6 +213,7 @@ def create_app(services: Services) -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(jobs_pages.router)
+    app.include_router(cd_pick_pages.router)
     app.include_router(review_pages.router)
     app.include_router(movie_review_pages.router)
     app.include_router(extras_pages.router)

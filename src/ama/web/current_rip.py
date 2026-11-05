@@ -28,6 +28,7 @@ class CurrentRip:
     percent: int | None   # whole Disc; None before there's anything to measure
     href: str | None      # where its live page is
     likely: bool = False  # `name` is a guess, only for show
+    picked: bool = False  # `name` is the release the user picked (CD)
     cover: str | None = None  # a guessed album's cached cover (CD)
     phase: Phase = Phase.RIPPING
     # The source state, for the drive card's full detail.
@@ -52,7 +53,8 @@ def _cd(rip: CdRip) -> CurrentRip:
     g = rip.guess
     return CurrentRip(DiscType.CD, g.match.release.title if g else (rip.label or "Unknown CD"),
                       rip.position(), int(rip.percent), f"/jobs/{rip.job_id}",
-                      likely=g is not None, cover=g.cover if g else None, cd=rip)
+                      likely=g is not None and not g.picked, picked=g is not None and g.picked,
+                      cover=g.cover if g else None, cd=rip)
 
 
 def _video(job: JobRecord, progress: RipProgress, likely: Screen | None) -> CurrentRip:
