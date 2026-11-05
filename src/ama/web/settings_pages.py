@@ -165,6 +165,10 @@ def _context(request: Request, services: Services, section: Section, **extra: An
         "subs": [s for s in SECTIONS if s.tab == section.tab] if section.sub else [],
         "pending": [label_of(k) for k in pending],
         "new_address": new_address,
+        "busy": services.restart.busy() if pending or services.restart.waiting else None,
+        "restart_waiting": services.restart.waiting,
+        "back": f"/settings/{section.slug}",
+        "confirm": False,
         "problem": settings.problem,
         "page": None,
         "saved": "",
@@ -190,7 +194,7 @@ def settings_home() -> Response:
 
 
 @router.get("/settings/{slug:path}", response_class=HTMLResponse)
-def settings_page(request: Request, slug: str, saved: str = "") -> Response:
+def settings_page(request: Request, slug: str, saved: str = "", restart: str = "") -> Response:
     services: Services = request.app.state.services
     section = _section(slug)
     if services.settings is None or services.settings.file is None:
@@ -201,7 +205,8 @@ def settings_page(request: Request, slug: str, saved: str = "") -> Response:
         page = _page(services, section)
     except ConfigError as e:
         return _render(request, _context(request, services, section, problem=str(e)))
-    return _render(request, _context(request, services, section, page=page, saved=saved))
+    return _render(request, _context(request, services, section, page=page, saved=saved,
+                                     confirm=restart == "confirm"))
 
 
 @router.post("/settings/{slug:path}", response_class=HTMLResponse)

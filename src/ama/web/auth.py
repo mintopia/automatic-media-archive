@@ -1,6 +1,6 @@
 """Optional shared password.
 
-`web.password` empty = no auth. Set = every route except /login and /static
+`web.password` empty = no auth. Set = every route except /login, /static and /boot
 needs the session cookie: HMAC(secret, password), where the secret lives in
 SQLite. Sign-ins survive restarts; changing the password signs everyone out.
 """
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ama.app import Services
 
 COOKIE = "ama_session"
-OPEN_PATHS = ("/login", "/static/")
+OPEN_PATHS = ("/login", "/static/", "/boot")
 
 
 def _secret(services: Services) -> str:

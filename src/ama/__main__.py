@@ -1,4 +1,10 @@
-"""`uv run ama [--config PATH]`: run the app (web UI + background monitors)."""
+"""`uv run ama [run|serve] [--config PATH]`: run the app (web UI + background monitors).
+
+`run` (the default) is the supervisor (ADR 0009, `ama.supervisor`): it starts
+`serve` as a child and starts it again when it exits asking to restart.
+`serve` is the server itself; it exits with RESTART_EXIT_CODE after a restart
+from the UI, so without a supervisor (or a container restart policy) it stays down.
+"""
 
 from __future__ import annotations
 
@@ -7,12 +13,14 @@ import logging
 import logging.handlers
 import os
 import sys
+import threading
 from pathlib import Path
 
 import uvicorn
 
 from ama.app import build_services, create_app
 from ama.config import ConfigError, load_config
+from ama.supervisor import RESTART_EXIT_CODE, server_launcher, supervise
 
 
 def _setup_logging(log_file: Path) -> None:
@@ -36,6 +44,8 @@ def _setup_logging(log_file: Path) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="ama", description="Automatic Media Archive")
+    parser.add_argument("command", nargs="?", choices=("run", "serve"), default="run",
+                        help="run: the supervisor (default); serve: the server alone")
     parser.add_argument(
         "--config",
         type=Path,
@@ -43,20 +53,38 @@ def main(argv: list[str] | None = None) -> None:
         help="config file (default: $AMA_CONFIG or ./ama.toml)",
     )
     args = parser.parse_args(argv)
+    if args.command == "run":
+        sys.exit(supervise(server_launcher(["--config", str(args.config.resolve())])))
+    serve(args.config)
+
+
+def serve(config: Path) -> None:
     try:
-        cfg = load_config(args.config)
+        cfg = load_config(config)
     except ConfigError as e:
         if sys.stderr is not None:
             print(f"ama: {e}", file=sys.stderr)
         else:  # no console under pythonw: leave the reason next to the config
-            args.config.resolve().with_name("ama-startup-error.log").write_text(
+            config.resolve().with_name("ama-startup-error.log").write_text(
                 f"{e}\n", encoding="utf-8"
             )
         sys.exit(2)
     _setup_logging(cfg.paths.log_file)
-    logging.getLogger("ama").info("starting; config %s", args.config.resolve())
-    services = build_services(cfg, config_path=args.config)
-    uvicorn.run(create_app(services), host=cfg.web.host, port=cfg.web.port, log_config=None)
+    logging.getLogger("ama").info("starting; config %s", config.resolve())
+    services = build_services(cfg, config_path=config)
+    # A streaming /events response never finishes on its own: give shutdown a deadline.
+    server = uvicorn.Server(uvicorn.Config(create_app(services), host=cfg.web.host,
+                                           port=cfg.web.port, log_config=None,
+                                           timeout_graceful_shutdown=3))
+
+    def stop() -> None:  # after the restarting page is on its way to the browser
+        threading.Timer(0.5, lambda: setattr(server, "should_exit", True)).start()
+
+    services.restart.on_request = stop
+    server.run()
+    if services.restart.requested:
+        logging.getLogger("ama").info("restarting")
+        sys.exit(RESTART_EXIT_CODE)
 
 
 if __name__ == "__main__":
