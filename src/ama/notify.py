@@ -9,10 +9,11 @@ anything is published on the bus, so no pipeline stage has to call this:
 - Job failed: a Job became `failed` (not when the user discarded it in Review).
 
 A channel is on when its config value is set (`discord.webhook_url`,
-`ntfy.topic`), else silently absent. Sending happens on a worker thread from
-the notifier's own task, and every failure is logged and dropped: a
-notification never blocks or breaks the pipeline. Discs already in a state at
-startup don't notify again. Log lines never contain the webhook URL or topic
+`ntfy.topic`), else silently absent. Sending happens off the notifier's own
+task, every channel on its own thread at the same time with its own 10 s
+timeout, so a slow or dead channel never delays another. Every failure is
+logged and dropped: a notification never blocks or breaks the pipeline. Discs
+already in a state at startup don't notify again. Log lines never contain the webhook URL or topic
 (both are secrets).
 """
 
@@ -21,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
@@ -33,6 +35,8 @@ from ama.events import EventBus
 from ama.problems import Problem, Problems
 
 log = logging.getLogger(__name__)
+
+TIMEOUT = 10.0
 
 
 class Event(StrEnum):
@@ -108,7 +112,7 @@ class Discord:
 
     def send(self, note: Notification) -> None:
         # wait=true: otherwise a message Discord drops still answers 204.
-        self.http.post(self.webhook_url, params={"wait": "true"}, json={
+        self.http.post(self.webhook_url, params={"wait": "true"}, timeout=TIMEOUT, json={
             "embeds": [{"title": note.title, "description": note.message,
                         "color": _COLOUR[note.event]}],
             "allowed_mentions": {"parse": []},  # a Disc label can't ping @everyone
@@ -124,7 +128,7 @@ class Ntfy:
 
     def send(self, note: Notification) -> None:
         # JSON publish to the server root: non-ASCII titles need no header encoding.
-        self.http.post(self.url.rstrip("/") + "/", json={
+        self.http.post(self.url.rstrip("/") + "/", timeout=TIMEOUT, json={
             "topic": self.topic, "title": note.title, "message": note.message,
             "tags": [_TAGS[note.event]], "priority": _PRIORITY[note.event],
         }).raise_for_status()
@@ -147,6 +151,20 @@ def _why(e: Exception) -> str:
     return type(e).__name__
 
 
+def _send_all(ch: Channel, notes: Sequence[Notification]) -> str | None:
+    """Why the last of `notes` failed on `ch`, or None if it went through."""
+    why = None
+    for note in notes:
+        try:
+            ch.send(note)
+        except Exception as e:  # noqa: BLE001 - nothing here may break the pipeline
+            why = _why(e)
+            log.warning("Couldn't send the %s notification to %s: %s", note.title, ch.name, why)
+        else:
+            why = None
+    return why
+
+
 class Notifier:
     """Background task: watches Job statuses after every bus event and notifies."""
 
@@ -159,18 +177,16 @@ class Notifier:
         self.channels = list(channels)
 
     def send(self, notes: Sequence[Notification]) -> None:
-        """Every note to every channel; failures are logged and shown as a banner until a
-        send works again, never raised."""
-        for note in notes:
-            for ch in self.channels:
-                try:
-                    ch.send(note)
-                except Exception as e:  # noqa: BLE001 - nothing here may break the pipeline
-                    log.warning("Couldn't send the %s notification to %s: %s",
-                                note.title, ch.name, _why(e))
-                    self._failing[ch.name] = _why(e)
-                else:
-                    self._failing.pop(ch.name, None)
+        """Every note to every channel, all channels at once; failures are logged and shown
+        as a banner until a send works again, never raised."""
+        chans = list(self.channels)
+        with ThreadPoolExecutor(max(1, len(chans)), thread_name_prefix="notify") as pool:
+            results = list(pool.map(lambda ch: _send_all(ch, notes), chans))
+        for ch, why in zip(chans, results):
+            if why is None:
+                self._failing.pop(ch.name, None)
+            else:
+                self._failing[ch.name] = why
         if self._problems is not None:
             if self._failing:
                 self._problems.report(Problem.NOTIFY, ", ".join(
