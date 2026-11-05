@@ -1,0 +1,5 @@
+{#- A Job's "Waiting: <reason>" line, under its Phase (problems.Waiting). Sub-detail only:
+    the Job stays in its Phase. `line(w)` renders nothing when `w` is None. -#}
+{%- macro line(w) -%}
+{%- if w %}<div class="ts waiting" role="status">Waiting: {{ w.reason }} · next try {{ w.retry_at.strftime("%H:%M") }}</div>{% endif -%}
+{%- endmacro -%}

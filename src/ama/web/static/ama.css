@@ -185,6 +185,7 @@ main:has(>.solo),main:has(.solo){max-width:844px}
 .ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
 .ok .i{width:16px;height:16px}
 .wait{color:var(--ink2)}
+.waiting{color:var(--rev-ink);margin-top:2px}
 .warn{color:var(--rev-ink);font-weight:600}
 .bad{color:var(--fail);font-weight:600}
 .tbl tr.now td{background:var(--well)}
@@ -316,6 +317,12 @@ td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
 .mpanel .mi:hover{background:var(--well)}
 .mpanel .mi[aria-current]{font-weight:700}
 .mpanel .mi .i{color:var(--ink2)}
+/* Paused: the top-bar mark (docs/mockups/settings-menu-paused.html); its live wrapper adds no box */
+.pmark{display:contents}
+.paused{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--ink);border-radius:3px;font:700 11px/1 Archivo;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.paused .i{width:12px;height:12px}
+.top .paused{margin-left:auto}
+.pmark:has(.paused)~.scratch,.pmark:has(.paused)+.menu{margin-left:0}
 .now .idle{display:none}
 main.login{min-height:100vh;display:grid;place-items:center}
 .login form{width:min(400px,100%)}
@@ -330,6 +337,8 @@ main.login{min-height:100vh;display:grid;place-items:center}
   .menu{order:4;margin:0 -16px;padding:0 16px 0 24px;border-top:1px solid var(--rule)}
   .scratch~.menu{margin-left:-16px}
   .mpanel{right:8px;top:calc(100% + 4px)}
+  .top .paused{display:none}
+  .pmark:has(.paused)~.scratch{margin-left:auto}.pmark:has(.paused)+.menu{margin-left:-16px}
   .now:not(:has(.bin:not(.empty))) .bin.empty,.now:not(:has(.bin:not(.empty))) .aside{display:none}
   .now:not(:has(.bin:not(.empty))) .idle{display:block}
 }

@@ -1,0 +1,4 @@
+{#- A Job page's Waiting line, kept live: re-fetched from /discs/{id}/waiting on every
+    "problems" SSE event (a fragment can't know which Job's page it's on). Needs `disc_id`. -#}
+{%- from "partials/waiting_line.html" import line -%}
+<div hx-get="/discs/{{ disc_id }}/waiting" hx-trigger="sse:problems" hx-swap="outerHTML">{{ line(waiting_for(disc_id)) }}</div>

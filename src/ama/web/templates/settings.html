@@ -94,6 +94,7 @@
       {%- if gv.status %}<span class="ts grpst">{{ tstat(gv.status) }}{% if g.live %}<span>{{ g.note }}</span>{% else %}<span class="rnote">{{ restart_note() }}</span>{% endif %}</span>
       {%- elif g.live %}<span class="ts">{{ g.note }}</span>
       {%- else %}<span class="ts rnote">{{ icon("redo") }}{{ g.note or "Used after a restart" }}</span>{% endif %}</div>
+    {%- if g.template %}{% include g.template %}{% endif %}
     {%- for r in gv.rows %}
     {{ row(r) }}
     {%- endfor %}

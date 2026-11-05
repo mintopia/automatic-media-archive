@@ -30,6 +30,7 @@ from ama.discs import (
 from ama.drive import DiscPresent, DiscType, DriveMonitor, DriveState
 from ama.events import EventBus, Topic
 from ama.makemkv import Msg, Progress, RobotLine
+from ama.pause import Pause
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
@@ -107,10 +108,11 @@ class VideoRipper:
 
     def __init__(self, drive: DriveMonitor, store: DiscStore, bus: EventBus,
                  makemkvcon: Callable[[], Path], streamer: Streamer, repeat: RepeatGuard,
-                 scratch: ScratchGate,
+                 scratch: ScratchGate, pause: Pause,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
                  guess: Callable[[str], Screen | None] | None = None) -> None:
+        self._pause = pause
         self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
         self.likely: Screen | None = None  # a guessed film while ripping; only for show
         self._drive = drive
@@ -171,6 +173,8 @@ class VideoRipper:
         if not self._is_video(state):
             return
         if self._handled == self._drive.insertion:  # once per insertion: never re-rip on our own
+            return
+        if self._pause.paused:  # left unhandled: resuming picks this Disc up
             return
         self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)

@@ -121,6 +121,8 @@ class Group:
     # values in place of "You probably don't need to change this."
     tagged: bool = True
     summary: Callable[[Config], str] | None = None
+    # A group showing app state, not ama.toml keys: rendered by this partial, rows empty.
+    template: str = ""
 
     def keys(self) -> Iterator[str]:
         for r in self.rows:
@@ -270,6 +272,9 @@ SECTIONS: list[Section] = [
                   "Without a password, anyone on your home network can use AMA. Once saved it's "
                   "never shown again."),
         )),
+        # Paused (#36) is the app's state, toggled in the top-bar menu, not an ama.toml key.
+        Group("New Discs", (), live=True, note="Changes at once",
+              template="partials/settings_pause.html"),
         Group("Storage", (
             Field("paths.scratch", "Scratch folder",
                   "Rips wait here for Identification, Review and Encode. Needs at least 256 GB "

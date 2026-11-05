@@ -16,6 +16,7 @@
         <h1 class="title">{{ view.record.label or "Unknown CD" }}</h1>
         <div class="meta">{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
         <div class="status">{%- set st = record.status if record is defined else "ripped" %}{% set p = st | phase %}<span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips</span></div>
+        {%- if st == "ripped" %}{% with disc_id = view.record.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}
       </div>
     </div>
     {%- endif %}
