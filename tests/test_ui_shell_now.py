@@ -33,7 +33,10 @@ def test_now_has_an_h1_and_its_bins_are_headings(client):
 def test_an_idle_now_marks_every_bin_empty_and_has_the_quiet_line(client):
     page = client.get("/").text
     assert page.count(' empty" aria-labelledby') == 4
-    assert "Nothing ripping, encoding or waiting for you." in page
+    idle = page.split('class="idle')[1].split("</p>")[0]
+    assert ("Nothing ripping, encoding or waiting for you. "
+            "You'll get a notification when a Disc needs a decision.") in idle.replace("&#39;", "'")
+    assert '<a href="/history">History</a>' in idle
 
 
 def test_the_review_count_and_drive_status_are_their_own_live_fragments(live_server, harness):

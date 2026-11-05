@@ -4,7 +4,7 @@
 {% block main %}
 {%- set k = makemkv | kind -%}
 <main>
-  <div class="split"><div class="stack">
+  <div class="solo stack">
     <div class="page-head"><div><div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>MakeMKV</span></div>
       <h1>{% if k == "ToolReady" %}MakeMKV is ready{% elif k == "ToolPending" %}Checking MakeMKV{% else %}DVD and Blu-ray Rips are paused{% endif %}</h1>
       <p class="sub">MakeMKV rips DVDs and Blu-rays. It's yours to install and register; AMA only checks it.</p></div>
@@ -27,6 +27,6 @@
       <form method="post" action="/makemkv/check"><button class="btn pri" type="submit">{% if k == "ToolReady" %}Check again{% else %}I've fixed it, check again{% endif %}</button></form>
       <a class="btn quiet" href="/">Back to Now</a>
     </div>
-  </div></div>
+  </div>
 </main>
 {% endblock %}

@@ -22,7 +22,7 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--ground)}
-body{min-height:100vh;background:var(--ground);color:var(--ink);font:400 15px/1.45 Archivo,system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-wrap:break-word;background:var(--ground);color:var(--ink);font:400 15px/1.45 Archivo,system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 ::selection{background:var(--enc);color:#17181A}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
@@ -192,7 +192,8 @@ main:has(>.solo),main:has(.solo){max-width:844px}
 .skipped{padding:12px 14px;border-top:1px solid var(--rule);color:var(--ink2);font-size:13px}
 .notes{display:flex;flex-direction:column;gap:10px;font-size:14px}
 @media (max-width:720px){.tbl .hide-m{display:none}.tbl .st{width:auto}.tbl td,.tbl th{padding:10px 8px}}
-@media (max-width:720px){.cdt .len{display:none}.cdt .st{width:auto}.cdt td,.cdt th{padding:10px 8px}}
+@media (max-width:720px){.cdt .st{width:auto}.cdt td,.cdt th{padding:10px 8px}}
+@media (max-width:480px){.cdt .len{display:none}}
 details summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;font-weight:600;list-style:none}
 details summary::-webkit-details-marker{display:none}
 details[open] summary{border-bottom:1px solid var(--rule)}
@@ -280,7 +281,7 @@ a.tab{text-decoration:none}a.tab:hover{text-decoration:underline;text-underline-
 .preview{margin-top:12px}.preview>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;gap:6px}
 .preview .tbl{margin-top:8px;background:var(--well)}
 .diffnote{color:var(--rev-ink);font-weight:600}
-td.diff{box-shadow:inset 3px 0 0 var(--rev);padding-left:12px}
+td.diff{background:var(--notice);font-weight:600}
 @media (max-width:720px){.edition .cover{width:56px;height:56px}}
 /* Long album titles (FFVII) must not widen the page on a phone */
 .drive .title{overflow-wrap:break-word}.crumb span{min-width:0;overflow-wrap:anywhere}
@@ -349,9 +350,14 @@ main.login{min-height:100vh;display:grid;place-items:center}
   .mpanel{right:8px;top:calc(100% + 4px)}
   .top .paused{display:none}
   .pmark:has(.paused)~.scratch{margin-left:auto}.pmark:has(.paused)+.menu{margin-left:-16px}
-  .now:not(:has(.bin:not(.empty))) .bin.empty,.now:not(:has(.bin:not(.empty))) .aside{display:none}
-  .now:not(:has(.bin:not(.empty))) .idle{display:block}
 }
+/* Idle Now (docs/mockups/now-empty.html): every bin empty -> the drive panel and one quiet line, centred */
+.now:not(:has(.bin:not(.empty))){max-width:844px}
+.now:not(:has(.bin:not(.empty))) .split{grid-template-columns:minmax(0,1fr)}
+.now:not(:has(.bin:not(.empty))) .bin.empty,.now:not(:has(.bin:not(.empty))) .aside{display:none}
+.now:not(:has(.bin:not(.empty))) .idle{display:flex}
+.now .idle{flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:var(--ink2)}
+.now .idle a{color:var(--ink);font-weight:600;display:inline-flex;align-items:center;min-height:44px;text-underline-offset:3px}
 
 /* Review, failure and History flows (fix-built-flows) */
 .filed-note{margin-bottom:24px}
@@ -364,7 +370,8 @@ main.login{min-height:100vh;display:grid;place-items:center}
 .mark .i{width:16px;height:16px;color:var(--ink)}
 .mark.sel{color:var(--ink)}
 .radio .mark.sel{visibility:hidden}.radio:has(>input:checked) .mark.sel{visibility:visible}
-@media (max-width:720px){.radio .mark.sel{display:none}.confirm .actions .btn{flex:1}}
+@media (max-width:720px){.confirm .actions .btn{flex:1}}
+@media (max-width:480px){.radio .mark.sel{display:none}}
 .alt{display:flex;flex-direction:column;gap:10px}
 .alt-h{font:600 15px/1.3 Archivo;letter-spacing:0}
 .title-row>label{cursor:pointer;min-width:0}
@@ -376,8 +383,10 @@ main.login{min-height:100vh;display:grid;place-items:center}
 .hist .src{display:inline-flex;align-items:center;min-height:24px;margin-left:6px;padding:0 7px;font:600 12px/1 Archivo,sans-serif;letter-spacing:0;vertical-align:baseline}
 .names summary{display:inline-flex;align-items:center;min-height:24px}
 @media (max-width:720px){
-  .hist .meta a,.hist .src,.names summary{min-height:44px}
-  .hist .src{padding:0 12px}
+  .names summary{min-height:44px}
+  /* 44px hit areas without inflating the chip or the meta line (DESIGN.md Targets) */
+  .hist .meta a,.hist .src{position:relative}
+  .hist .meta a::after,.hist .src::after{content:"";position:absolute;inset:-10px -4px}
 }
 
 /* Job page Steps (#41): the Logs run mockup's step rows, without the expandable output */
@@ -470,7 +479,7 @@ main.settings{max-width:1100px}
 .pertype .input{width:96px}
 /* Libraries, grouped by kind (settings-libraries*.html) */
 .libs{border-top:1px solid var(--rule)}
-.librow{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1.3fr) minmax(0,1fr) 310px;gap:4px 20px;align-items:center;padding:12px 24px;border-top:1px solid var(--rule);font-size:14px}
+.librow{display:grid;grid-template-columns:minmax(0,160px) minmax(0,2fr) minmax(0,1fr) 300px;gap:4px 20px;align-items:center;padding:12px 24px;border-top:1px solid var(--rule);font-size:14px}
 .libs>.librow:first-child{border-top:0}
 .librow .nm{font-weight:600;font-size:15px;overflow-wrap:anywhere}
 .librow .k{display:block;font-size:12px;color:var(--ink2)}
@@ -702,4 +711,26 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
   .rowout{padding:0 14px 4px 66px}
   .out-sum .linkbtn:last-child{margin-left:0}
   .drive .log.tail,.rowout+.log{max-height:150px}
+}
+
+/* Responsive pass (#39) */
+@media (min-width:721px){.page-head>.actions{flex:none;flex-wrap:nowrap}}
+@media (max-width:720px){.actions>form{flex:1;display:flex}.actions>form>.btn{flex:1}}
+a.stk{text-decoration:none}
+.run-aside .lk{display:flex;align-items:center;gap:6px;color:var(--ink2);font-size:13px;margin:-6px 0 10px}
+.run-aside .lk .i{width:14px;height:14px}
+.run-aside dl.facts{grid-template-columns:minmax(0,8.5em) minmax(0,1fr)}
+.run-aside dl.facts+dl.facts{margin-top:6px}
+.run-aside dl.facts+.lk{margin-top:14px}
+@media (max-width:720px){.jobset-sum .open{flex-basis:100%;text-align:left}}
+@media (min-width:721px) and (max-width:960px){.librow{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.librow .nm,.librow .act{grid-column:1/-1}}
+/* Tablet top bar (721-1100px): everything stays on one row without pushing the page sideways */
+@media (min-width:721px) and (max-width:1100px){
+  .top{gap:20px;padding:0 20px}
+  .scratch{gap:8px}.scratch .lbl{display:none}.meter{width:72px}
+  .nav a{padding:0 12px}
+}
+@media (min-width:721px) and (max-width:900px){
+  .brand{font-size:16px}
+  .top .paused{font-size:0;gap:0;padding:0 7px}
 }

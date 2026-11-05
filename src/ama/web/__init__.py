@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup, escape
 
 from ama.cdrip import CdJob
 from ama.jobs import JobStatus
@@ -41,6 +42,14 @@ TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 # `{% set p = job.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span>`: status as a Phase.
 TEMPLATES.env.filters["phase"] = phase_of
+
+
+def breakable_path(path: object) -> Markup:
+    """A path that wraps after its separators on narrow screens, not mid-name."""
+    return Markup(str(escape(str(path))).replace("\\", "\\<wbr>").replace("/", "/<wbr>"))
+
+
+TEMPLATES.env.filters["path"] = breakable_path
 
 # Top-bar navigation, in order. Add a page here when its ticket ships.
 NAV: list[tuple[str, str]] = [("Now", "/"), ("Review", "/review"), ("History", "/history")]

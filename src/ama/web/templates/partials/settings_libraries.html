@@ -24,7 +24,7 @@
 <div class="grp-h"><h2>{{ g.kind.label }}</h2><span class="ts">Default: {{ g.default.name }}</span></div>
 <div class="libs" role="list" aria-label="{{ g.kind.label }} Libraries">
   {%- for r in g.rows %}{% set lib = r.lib %}{% set q = lib.name | urlencode %}
-  <div class="librow{% if r.form or r.removing %} open{% endif %}" role="listitem" id="{{ r.id }}"><div class="lc nm">{{ lib.name }}</div><div class="lc"><span class="k">Folder</span><span class="path">{{ lib.path }}</span></div><div class="lc"><span class="k">Plex library</span>{{ lib.plex or "Whichever holds the folder" }}</div><div class="act">
+  <div class="librow{% if r.form or r.removing %} open{% endif %}" role="listitem" id="{{ r.id }}"><div class="lc nm">{{ lib.name }}</div><div class="lc"><span class="k">Folder</span><span class="path">{{ lib.path | path }}</span></div><div class="lc"><span class="k">Plex library</span>{{ lib.plex or "Whichever holds the folder" }}</div><div class="act">
     {%- if lib.default %}<span class="lockd">{{ icon("lock") }}Default, can't be removed</span>{% endif -%}
     <a class="btn quiet" href="?edit={{ q }}#{{ r.id }}" aria-label="Edit {{ lib.name }}"{% if r.focus and lib.default %} data-focus{% endif %}>Edit</a>
     {%- if not lib.default %}<button class="btn quiet" type="submit" formaction="/settings/archive/libraries/default" name="library" value="{{ lib.name }}" aria-label="Make {{ lib.name }} the {{ g.kind.label }} default">Make default</button><a class="btn danger" href="?remove={{ q }}#{{ r.id }}" aria-label="Remove {{ lib.name }}"{% if r.removing %} aria-expanded="true"{% endif %}{% if r.focus %} data-focus{% endif %}>Remove</a>{% endif -%}

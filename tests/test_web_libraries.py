@@ -62,10 +62,18 @@ def test_libraries_are_grouped_by_kind_with_the_default_first_and_locked(setup):
     assert "Default, can't be removed" in movies and "Remove" not in movies
     assert 'aria-label="Make Family Films the Films default"' in family
     assert 'aria-label="Remove Family Films"' in family
-    assert str(h.nas_root / "Family Films") in family
+    assert str(h.nas_root / "Family Films") in family.replace("<wbr>", "")
     assert "Add Films Library" in films
     assert "Default: TV" in _group(page, "TV") and "TV Shows" in _group(page, "TV")
     assert "Add Music Library" in _group(page, "Music")
+
+
+def test_a_long_folder_breaks_after_its_separators_not_mid_name(setup):
+    client, _, h = setup
+    family = _group(_page(client), "Films").split('role="listitem"')[2]
+    path = family.split('<span class="path">')[1].split("</span>")[0]
+    assert path.endswith("\\<wbr>Family Films")
+    assert path.replace("<wbr>", "") == str(h.nas_root / "Family Films")
 
 
 def test_add_opens_an_empty_form_whose_plex_list_holds_only_that_kinds_libraries(setup):
