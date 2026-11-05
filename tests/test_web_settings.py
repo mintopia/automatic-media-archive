@@ -216,3 +216,12 @@ def test_a_drive_makemkv_has_seen_shows_its_name(tmp_path):
 def test_unknown_section_is_404(setup):
     client, _, _ = setup
     assert client.get("/settings/nope").status_code == 404
+
+
+def test_the_alerts_page_names_the_events_actually_sent(setup):
+    client, _, _ = setup
+    page = _page(client, "/settings/alerts")
+    assert ("Alerts go out when a Rip is done (“insert the next one”) and when a Job needs "
+            "Review, is filed or failed.") in page
+    assert ("Posts to a Discord channel when a Rip is done and when a Job needs Review, "
+            "is filed or failed.") in page

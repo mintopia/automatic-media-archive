@@ -1,11 +1,13 @@
 """Push notifications to Discord (webhook) and ntfy (topic) that pull people back to the UI.
 
-Three events, read off Job status changes (`JobStore.statuses()`) whenever
+Four events, read off Job status changes (`JobStore.statuses()`) whenever
 anything is published on the bus, so no pipeline stage has to call this:
 
 - Rip done: a Job's Rip finished and its Disc was ejected (left `ripping` for
   `ripped`/`review`/`filed`), so the next Disc can go in.
 - Review needed: a Job entered `review`.
+- Filed: a Job became `filed`, unless nothing in it was ripped (every Title
+  Skipped).
 - Job failed: a Job became `failed` (not when the user discarded it in Review).
 
 A channel is on when its config value is set (`discord.webhook_url`,
@@ -30,7 +32,8 @@ from typing import Protocol
 import httpx
 
 from ama.config import Config
-from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind
+from ama.drive import DiscType
+from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind, TitleStatus
 from ama.events import EventBus
 from ama.problems import Problem, Problems
 
@@ -42,6 +45,7 @@ TIMEOUT = 10.0
 class Event(StrEnum):
     RIP_DONE = "rip_done"
     REVIEW_NEEDED = "review_needed"
+    JOB_FILED = "job_filed"
     JOB_FAILED = "job_failed"
 
 
@@ -60,6 +64,8 @@ def changes(before: Mapping[int, JobStatus],
             out.append((job_id, Event.RIP_DONE))
         if cur == JobStatus.REVIEW:
             out.append((job_id, Event.REVIEW_NEEDED))
+        if cur == JobStatus.FILED:
+            out.append((job_id, Event.JOB_FILED))
         if cur == JobStatus.FAILED:
             out.append((job_id, Event.JOB_FAILED))
     return out
@@ -84,6 +90,8 @@ def notification(event: Event, rec: JobRecord) -> Notification:
         case Event.REVIEW_NEEDED:
             return Notification(event, "Review needed",
                                 f"{_subject(rec)} needs Review before it can be filed.")
+        case Event.JOB_FILED:
+            return Notification(event, "Filed", f"{_subject(rec)} is filed as {rec.title}.")
         case Event.JOB_FAILED:
             why = " ".join(p for p in (rec.failure.headline, rec.failure.advice) if p) \
                 if rec.failure else ""
@@ -98,10 +106,11 @@ class Channel(Protocol):
 
 
 # Discord embed colours / ntfy tags+priority per event.
-_COLOUR = {Event.RIP_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.JOB_FAILED: 0xC62828}
+_COLOUR = {Event.RIP_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.JOB_FILED: 0x1565C0,
+           Event.JOB_FAILED: 0xC62828}
 _TAGS = {Event.RIP_DONE: "white_check_mark", Event.REVIEW_NEEDED: "eyes",
-         Event.JOB_FAILED: "warning"}
-_PRIORITY = {Event.RIP_DONE: 3, Event.REVIEW_NEEDED: 4, Event.JOB_FAILED: 4}
+         Event.JOB_FILED: "file_folder", Event.JOB_FAILED: "warning"}
+_PRIORITY = {Event.RIP_DONE: 3, Event.REVIEW_NEEDED: 4, Event.JOB_FILED: 3, Event.JOB_FAILED: 4}
 
 
 @dataclass
@@ -165,6 +174,12 @@ def _send_all(ch: Channel, notes: Sequence[Notification]) -> str | None:
     return why
 
 
+def _empty(rec: JobRecord) -> bool:
+    """A video Job with no Title ripped (every Title Skipped); a CD's tracks aren't Titles."""
+    return rec.disc_type != DiscType.CD and not any(
+        t.status == TitleStatus.RIPPED for t in rec.titles)
+
+
 class Notifier:
     """Background task: watches Job statuses after every bus event and notifies."""
 
@@ -203,6 +218,8 @@ class Notifier:
             if event == Event.JOB_FAILED and rec.failure \
                     and rec.failure.kind == FailureKind.DISCARDED:
                 continue  # the user's own decision in Review
+            if event == Event.JOB_FILED and _empty(rec):
+                continue
             notes.append(notification(event, rec))
         return notes
 

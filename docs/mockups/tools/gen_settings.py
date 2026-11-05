@@ -462,14 +462,14 @@ def alerts(fname, error=False):
                      '<input class="input bad" id="discord-url" type="password" name="discord-url" value="api/webhooks/1234" aria-describedby="discord-url-h discord-url-e" aria-invalid="true" spellcheck="false">'
                      f'<div class="ferr" id="discord-url-e">{ico("alert")}<span>Paste the whole webhook URL, starting with https://discord.com/api/webhooks/</span></div>'
                      '<button class="btn quiet" type="button">Keep the saved one</button>',
-                     hint="Posts to a Discord channel when a Disc needs Review, is done or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server",
                   '<input class="input bad" id="ntfy-url" type="text" name="ntfy-url" value="ntfy.sh" aria-describedby="ntfy-url-h ntfy-url-e" aria-invalid="true" spellcheck="false">'
                   f'<div class="ferr" id="ntfy-url-e">{ico("alert")}<span>Enter a full address starting with https:// or http://</span></div>',
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     else:
         discord = sf("discord-url", "Webhook URL", secret_set("discord-url", "Discord webhook URL"), secret=True,
-                     hint="Posts to a Discord channel when a Disc needs Review, is done or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server", inp("ntfy-url", "https://ntfy.sh"),
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     rows += [
@@ -482,7 +482,7 @@ def alerts(fname, error=False):
         foot("Alerts", "error" if error else "clean"),
     ]
     page(fname, "Alerts", "alerts", form("Alerts settings", rows),
-         note='<p class="ts setnote">Alerts go out when a Disc needs Review, is filed (“insert the next one”) or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
+         note='<p class="ts setnote">Alerts go out when a Rip is done (“insert the next one”) and when a Job needs Review, is filed or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
 
 
 alerts("settings-notifications.html")
