@@ -530,7 +530,6 @@ main.settings{max-width:1100px}
 .grpst{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 16px}
 .sf .hn .tech{display:block;margin-top:4px}
 .sf .ctl>.btn{align-self:flex-start}
-.ro{display:flex;align-items:center;min-height:44px}
 .adv{border-top:1px solid var(--rule)}
 .adv>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:4px 16px;min-height:64px;padding:18px 24px;font-weight:400;cursor:pointer;list-style:none}
 .adv>summary::-webkit-details-marker{display:none}

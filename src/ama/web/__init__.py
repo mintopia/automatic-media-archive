@@ -83,14 +83,13 @@ FRAGMENTS: dict[str, str] = {
     "scratch-encode": "partials/scratch.html",
     "pause": "partials/paused_mark.html",
     "pause-menu": "partials/pause_menu.html",
-    "pause-settings": "partials/settings_pause_now.html",
 }
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
 FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
                                    "scratch-rip": "rip", "scratch-encode": "encode",
                                    "review-count": "review", "drive-status": "drive",
-                                   "pause-menu": "pause", "pause-settings": "pause"}
+                                   "pause-menu": "pause"}
 
 
 def fragments_for(topic: str) -> list[str]:
