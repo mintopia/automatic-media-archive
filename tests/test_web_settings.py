@@ -103,6 +103,22 @@ def test_saving_writes_the_file_and_says_when(setup):
     assert "Restart AMA" not in page  # a live key needs no restart
 
 
+def test_the_minimum_title_length_is_set_per_video_disc_type_under_ripping(setup):
+    client, toml, services = setup
+    page = _page(client, "/settings/ripping")
+    assert "Shortest Title ripped" in page
+    for disc_type in ("DVD", "Blu-ray", "UHD Blu-ray"):
+        assert disc_type in page
+    assert page.count('value="30"') >= 3
+    r = client.post("/settings/ripping", data={"rip.min_title_seconds.bd": "120"},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    assert "bd = 120\n" in toml.read_text(encoding="utf-8")
+    assert services.video_rip.cfg.min_title_seconds.bd == 120
+    r = client.post("/settings/ripping", data={"rip.min_title_seconds.dvd": "4.5"})
+    assert r.status_code == 422 and "Enter a whole number" in html.unescape(r.text)
+
+
 def test_invalid_input_gets_a_field_message_and_the_file_is_unchanged(setup):
     client, toml, _ = setup
     before = toml.read_bytes()

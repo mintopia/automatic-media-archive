@@ -143,6 +143,7 @@ class JobRecord:
     dismissed: bool
     skipped_short: int = 0
     skipped_duplicates: int = 0
+    min_title_seconds: int = 30  # a video Rip's minimum Title length (ADR 0005)
     titles: tuple[TitleRecord, ...] = ()  # video Discs only
     review_reason: ReviewReason | None = None
     title: str = ""                 # what it was filed as, e.g. "Kid A — Radiohead"
@@ -163,7 +164,8 @@ class JobRecord:
         parts = []
         if self.skipped_short:
             n = self.skipped_short
-            parts.append(f"{n} Title{'s' if n != 1 else ''} shorter than 30 seconds (menus, logos)")
+            parts.append(f"{n} Title{'s' if n != 1 else ''} shorter than "
+                         f"{self.min_title_seconds} seconds (menus, logos)")
         if self.skipped_duplicates:
             n = self.skipped_duplicates
             parts.append(f"{n} exact duplicate{'s' if n != 1 else ''} of other Titles")
@@ -172,7 +174,7 @@ class JobRecord:
 
 _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
          "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates, "
-         "review_reason, title, archive_dir, filed_at")
+         "review_reason, title, archive_dir, filed_at, min_title_seconds")
 
 
 def _rip_name(rec: JobRecord) -> str:
@@ -193,7 +195,7 @@ class JobStore:
 
     def _record(self, row) -> JobRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
-         short, dupes, reason, title, archive_dir, filed_at) = row
+         short, dupes, reason, title, archive_dir, filed_at, min_title) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
             "status, source, name FROM titles WHERE job_id = ? ORDER BY number",
@@ -204,6 +206,7 @@ class JobStore:
             scratch_dir=Path(scratch), started_at=datetime.fromisoformat(started),
             finished_at=datetime.fromisoformat(finished) if finished else None,
             dismissed=bool(dismissed), skipped_short=short, skipped_duplicates=dupes,
+            min_title_seconds=min_title,
             titles=tuple(TitleRecord(*t[:8], status=TitleStatus(t[8]), source=t[9], name=t[10])
                          for t in titles),
             review_reason=ReviewReason(reason) if reason else None, title=title,
@@ -211,11 +214,13 @@ class JobStore:
             filed_at=datetime.fromisoformat(filed_at) if filed_at else None,
         )
 
-    def create(self, disc_type: DiscType, label: str, scratch_subdir: str) -> JobRecord:
+    def create(self, disc_type: DiscType, label: str, scratch_subdir: str,
+               min_title_seconds: int = 30) -> JobRecord:
         """Start a record in `ripping`; its scratch folder is `scratch/<subdir>/<id>`."""
         cur = self._db.execute(
-            "INSERT INTO jobs (disc_type, label, status, scratch_dir, started_at) "
-            "VALUES (?, ?, 'ripping', '', ?)", (disc_type.value, label, self._ts()))
+            "INSERT INTO jobs (disc_type, label, status, scratch_dir, started_at, "
+            "min_title_seconds) VALUES (?, ?, 'ripping', '', ?, ?)",
+            (disc_type.value, label, self._ts(), min_title_seconds))
         job_id = cur.lastrowid
         assert job_id is not None
         scratch = self._scratch / scratch_subdir / str(job_id)

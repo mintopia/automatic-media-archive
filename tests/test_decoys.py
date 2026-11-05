@@ -6,7 +6,7 @@ import html
 
 from ama import decoys, makemkv
 from ama.jobs import JobStatus, ReviewReason, TitleRecord
-from ama.video_rip import MIN_TITLE_SECONDS, title_records
+from ama.video_rip import title_records
 from tests.conftest import eventually
 from tests.fakes import DATA
 from tests.test_movie_archive import _rip
@@ -14,7 +14,7 @@ from tests.test_movie_archive import _rip
 
 def _titles(fixture: str) -> list[TitleRecord]:
     scan = makemkv.parse_scan((DATA / fixture).read_text(encoding="utf-8").splitlines())
-    return title_records(makemkv.select_titles(scan.titles, MIN_TITLE_SECONDS).keep)
+    return title_records(makemkv.select_titles(scan.titles, 30).keep)
 
 
 def _t(number: int, duration_s: int, segments: str = "") -> TitleRecord:

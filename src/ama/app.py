@@ -110,6 +110,7 @@ class Services:
             self.log_pruner.request()  # a shorter keep applies at once
         self.config = cfg
         self.cd.cfg = cfg.cd
+        self.video_rip.cfg = cfg.rip
         self.movie_archive.encoder.cfg = cfg.encode
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
@@ -200,7 +201,7 @@ def build_services(
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               pause=pause, disc_root=disc_root,
-                              guesses=film_guesses, hold=restart.holding),
+                              guesses=film_guesses, hold=restart.holding, cfg=cfg.rip),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
