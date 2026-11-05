@@ -16,24 +16,25 @@ from ama.config import PlexConfig
 
 class Plex:
     def __init__(self, cfg: PlexConfig, http: httpx.Client, archive_root: Path) -> None:
-        self._cfg = cfg
+        self.cfg = cfg
         self._http = http
         self._root = archive_root
 
     def server_path(self, folder: Path) -> str:
         """`folder` (under the Archive root) as the Plex server sees it."""
-        base = self._cfg.nas_path or str(self._root)
+        base = self.cfg.nas_path or str(self._root)
         sep = "/" if "/" in base else "\\"
         parts = folder.relative_to(self._root).parts
         return sep.join([base.rstrip("/\\"), *parts])
 
     def scan(self, folder: Path) -> str:
         """Start a partial scan of `folder`; a sentence for the Job log. Raises httpx.HTTPError."""
-        if not (self._cfg.url and self._cfg.token):
+        if not (self.cfg.url and self.cfg.token):
+
             return "Plex isn't set up in ama.toml, so it will find this on its next scan"
         path = self.server_path(folder)
-        base = self._cfg.url.rstrip("/")
-        headers = {"X-Plex-Token": self._cfg.token, "Accept": "application/json"}
+        base = self.cfg.url.rstrip("/")
+        headers = {"X-Plex-Token": self.cfg.token, "Accept": "application/json"}
         r = self._http.get(f"{base}/library/sections", headers=headers)
         r.raise_for_status()
         section = _section_for(r.json(), path)

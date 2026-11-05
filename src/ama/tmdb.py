@@ -192,19 +192,19 @@ class TmdbError(Exception):
 class Tmdb:
     def __init__(self, http: httpx.Client, api_key: str) -> None:
         self._http = http
-        self._key = api_key
+        self.api_key = api_key
 
     @property
     def configured(self) -> bool:
-        return bool(self._key)
+        return bool(self.api_key)
 
     def _get(self, path: str, params: dict) -> dict:
         # A v4 read-access token (a JWT) goes in the header; a v3 key has to be a param.
         headers = {"Accept": "application/json"}
-        if self._key.startswith("eyJ"):
-            headers["Authorization"] = f"Bearer {self._key}"
+        if self.api_key.startswith("eyJ"):
+            headers["Authorization"] = f"Bearer {self.api_key}"
         else:
-            params = {**params, "api_key": self._key}
+            params = {**params, "api_key": self.api_key}
         try:
             r = self._http.get(f"{BASE}{path}", params=params, headers=headers)
         except httpx.HTTPError as e:

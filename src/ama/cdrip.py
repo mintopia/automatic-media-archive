@@ -222,7 +222,7 @@ class CdRipper:
                  bus: EventBus, streamer: Streamer, tool: ToolLookup, interval: float,
                  repeat: RepeatGuard, scratch: ScratchGate,
                  guesser: Guesser | None = None) -> None:
-        self._cfg = cfg
+        self.cfg = cfg
         self._guesser = guesser
         self.guess_retry_seconds = 60.0  # MusicBrainz trouble during the early guess
         self._repeat = repeat
@@ -310,7 +310,7 @@ class CdRipper:
         self._publish()
         info_lines: list[str] = []
         try:
-            code = await self._run_tool(cyanrip.info_command(exe, device, self._cfg.offset),
+            code = await self._run_tool(cyanrip.info_command(exe, device, self.cfg.offset),
                                         info_lines.append)
         except FileNotFoundError:
             code = None
@@ -393,8 +393,8 @@ class CdRipper:
         cwd = rec.scratch_dir.parent
         try:
             code = await self._run_tool(
-                cyanrip.rip_command(exe, device, self._cfg.offset, rec.scratch_dir.name,
-                                    self._cfg.retries), on_line, cwd)
+                cyanrip.rip_command(exe, device, self.cfg.offset, rec.scratch_dir.name,
+                                    self.cfg.retries), on_line, cwd)
         except FileNotFoundError:
             code = None
 
@@ -423,7 +423,7 @@ class CdRipper:
             else:
                 bad = min(errors_in) if errors_in else \
                     next((t.number for t in live.tracks if not t.ripped), None)
-                failure = _unreadable(bad, self._cfg.retries) \
+                failure = _unreadable(bad, self.cfg.retries) \
                     if bad is not None and (errors_in or report.ripping_errors) else GENERIC
             await self._fail(rec, failure)
         self.current = None

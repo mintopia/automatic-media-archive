@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from ama.app import create_app
 from ama.drive import DiscType
+from ama import web
 from ama.web import TEMPLATES, fragments_for
 from tests.conftest import eventually, make_harness
 from tests.test_web_now import _read_event
@@ -62,6 +63,28 @@ def test_with_a_password_the_menu_logs_out(tmp_path):
         r = c.post("/logout")
         assert r.status_code == 303 and r.headers["location"] == "/login"
         assert c.get("/").status_code == 303
+
+
+def test_pages_registered_in_the_menu_sit_between_theme_and_log_out(tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "MENU", [("Settings", "/settings", "settings")])
+    h = make_harness(tmp_path, password="hunter2")
+    with TestClient(create_app(h.services)) as c:
+        c.post("/login", data={"password": "hunter2"})
+        page = c.get("/").text
+    menu = page.split('<div class="mpanel">')[1].split("</details>")[0]
+    settings = ('<a class="mi" href="/settings"><svg class="i" aria-hidden="true">'
+                '<use href="/static/icons.svg#settings"/></svg>Settings</a>')
+    assert menu.index('data-theme-set="dark"') < menu.index(settings) < menu.index("Log out")
+    assert 'href="/settings"' not in page.split('<nav class="nav"')[1].split("</nav>")[0]
+
+
+def test_a_menu_page_is_marked_current_on_itself_and_its_subpages(harness, monkeypatch):
+    monkeypatch.setattr(web, "MENU", [("Settings", "/settings", "settings")])
+    base = TEMPLATES.env.get_template("base.html")
+    ctx = web.view_context(harness.services)
+    assert 'href="/settings" aria-current="page"' in base.render(ctx | {"current": "/settings/nas"})
+    assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/"})
+    assert 'href="/settings" aria-current' not in base.render(ctx | {"current": "/settingsx"})
 
 
 def test_sign_in_page_has_no_inline_styles(tmp_path):

@@ -27,6 +27,7 @@ from ama.config import (
     ToolsConfig,
     WebConfig,
 )
+from ama.config import load_config
 from ama.events import EventBus
 from ama.proc import ProcResult
 from ama.tools import Tools
@@ -79,12 +80,60 @@ class Harness:
     disk: FakeDisk  # the scratch volume's size and use
 
 
+def write_config(tmp_path, extra: str = "") -> Path:
+    """An ama.toml like `make_config`'s, with comments, for the Settings tests."""
+    p = tmp_path / "ama.toml"
+    nas = tmp_path / "nas"
+    p.write_text(f"""# AMA test config
+[web]
+# Who can open AMA.
+host = "0.0.0.0"
+port = 8080
+password = ""
+
+[drive]
+letter = ""
+poll_seconds = 0.01
+
+[cd]
+offset = 667
+retries = 10
+
+[nas]
+unc = '{nas}'
+retry_seconds = 0.05
+
+[paths]
+scratch = 'scratch'
+state_db = "ama.sqlite3"
+log_file = "ama.log"
+
+[tmdb]
+api_key = "tmdb-key"
+
+[plex]
+url = "http://plex:32400"
+token = "plex-token"
+nas_path = "/volume1/media"
+
+[encode.cq]
+# CQ per Disc Type.
+dvd = 20
+bd = 22
+uhd = 24
+{extra}""", encoding="utf-8")
+    return p
+
+
 def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                  fetch: FakeFetch | None = None, pins: tuple | None = None,
-                 discord: str = "", ntfy_topic: str = "") -> Harness:
+                 discord: str = "", ntfy_topic: str = "",
+                 config_file: Path | None = None) -> Harness:
     """Tools default to ready: config overrides for ffmpeg/ffprobe/cyanrip, a registered
-    MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead."""
-    cfg = make_config(tmp_path, password, discord, ntfy_topic)
+    MakeMKV. Pass `fetch` to provision the managed tools from fake downloads instead.
+    `config_file` (from `write_config`) runs from a real ama.toml, as Settings edits it."""
+    cfg = load_config(config_file) if config_file else make_config(
+        tmp_path, password, discord, ntfy_topic)
     drive = FakeDrive()
     share = {"reachable": nas_reachable}
     runner = FakeRunner(lambda a: ProcResult(2, "System error 53 has occurred.\n\n"
@@ -112,7 +161,8 @@ def make_harness(tmp_path, password: str = "", nas_reachable: bool = True,
                               streamer=FakeTools(makemkv, cyanrip, ffmpeg),
                               make_tools=make_tools,
                               http=httpx.Client(transport=web.transport()),
-                              disc_root=lambda: drive.root, disk_usage=disk)
+                              disc_root=lambda: drive.root, disk_usage=disk,
+                              config_path=config_file)
     # Preflight now, so a Disc inserted right after startup never races the first check.
     asyncio.run(services.tools.check_makemkv())
     services.cd_archive.backoff.retry_seconds = 0.05
