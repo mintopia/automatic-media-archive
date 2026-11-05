@@ -96,10 +96,37 @@ webhook_url = ""
 url = "https://ntfy.sh"
 topic = ""
 
+[encode]
+# How video Discs are Encoded (ADR 0010). Applies to Jobs whose Encode hasn't
+# started. Archives are always MKV at a constant quality.
+# Encoder: hevc_nvenc (NVIDIA HEVC), av1_nvenc (NVIDIA AV1), hevc_qsv (Intel Quick
+# Sync HEVC) or libx265 (software HEVC, very slow for UHD). AMA test-encodes each
+# at startup and on save; one that fails can't be picked in Settings.
+encoder = "hevc_nvenc"
+# Speed, the same four steps on every encoder: faster, balanced, slower, slowest.
+# Slower makes smaller files at the same quality.
+speed = "slower"
+# Sound: all (copy every track), first_plus_stereo (the first track plus an AAC
+# stereo copy that plays everywhere) or languages (tracks in the preferred
+# languages, commentaries too, plus the film's original language).
+audio = "languages"
+# Subtitles: all, languages (the preferred languages, plus untagged forced ones)
+# or none.
+subtitles = "languages"
+# Preferred languages, most preferred first: names (English, Japanese) or codes (en, ja).
+languages = "English"
+
 [encode.cq]
-# NVENC HEVC constant-quality level (CQ, 0-51, lower = better and bigger) per
-# Disc Type. CDs are never Encoded. Encodes are the permanent Archive
-# (ADR-0002), so lock these in during the pilot calibration (ticket #17).
+# Constant-quality level (CQ, or CRF for libx265; 0-51, lower = better and
+# bigger) per Disc Type. CDs are never Encoded. Encodes are the permanent
+# Archive (ADR-0002), so lock these in during the pilot calibration (ticket #17).
 dvd = 20
 bd = 22
 uhd = 22
+
+[encode.max_resolution]
+# The tallest picture kept per Disc Type: keep (the Disc's own), or 720p for
+# Blu-ray, 1080p for UHD Blu-ray (scaled down, HDR kept).
+dvd = "keep"
+bd = "keep"
+uhd = "keep"
