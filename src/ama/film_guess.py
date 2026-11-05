@@ -73,6 +73,11 @@ class FilmGuesses:
                                (job_id,)).fetchone()
         return FilmGuess(Candidate(**json.loads(row[0])), row[1], bool(row[2])) if row else None
 
+    def picked(self, job_id: int) -> Candidate | None:
+        """The film the user picked for the Job, if they picked one."""
+        guess = self.get(job_id)
+        return guess.film if guess and guess.picked else None
+
     # -- automatic -------------------------------------------------------------
 
     def candidates(self, label: str) -> list[Candidate]:

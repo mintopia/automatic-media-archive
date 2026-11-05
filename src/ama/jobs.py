@@ -51,6 +51,9 @@ class ReviewReason(StrEnum):
     MULTIPLE_MATCHES = "multiple_matches"    # several films fit name and runtime
     EPISODES = "episodes"                    # looks like TV: Titles -> Episodes needs a human
     DECOY_PLAYLISTS = "decoy_playlists"      # many near-identical Titles: which is the film?
+    PICK_RUNTIME_MISMATCH = "pick_runtime_mismatch"  # the user's pick isn't within 5 min
+    # CD
+    PICK_NOT_FITTING = "pick_not_fitting"    # the release the user picked doesn't fit the Rip
 
 
 class TitleStatus(StrEnum):

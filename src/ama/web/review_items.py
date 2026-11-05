@@ -56,6 +56,10 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
                             "Match episodes"),
     ReviewReason.DECOY_PLAYLISTS: ("Several near-identical versions of the film · check which "
                                    "Title is the film", "Choose Title"),
+    ReviewReason.PICK_RUNTIME_MISMATCH: ("The running time of the film you picked doesn't "
+                                         "match the Disc · confirm the film", "Confirm film"),
+    ReviewReason.PICK_NOT_FITTING: ("The edition you picked doesn't fit this CD · pick yours",
+                                    "Choose edition"),
 }
 
 

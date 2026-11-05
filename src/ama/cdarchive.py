@@ -24,6 +24,7 @@ import asyncio
 import json
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -31,6 +32,7 @@ from mutagen.flac import FLAC
 
 from ama import cdreview, cyanrip, filing, musicbrainz
 from ama.archive import Archive, safe_name
+from ama.cdguess import CdPick
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
@@ -157,8 +159,10 @@ def rename_cue_files(cue: str, names: dict[str, str]) -> str:
 class CdArchiver:
     def __init__(self, jobs: JobStore, tracks: CdTracks, nas: NasMonitor, mb: MusicBrainz,
                  archive: Archive, plex: Plex, bus: EventBus, interval: float,
-                 covers: Covers, media: MediaStore, retry_seconds: float = 60.0,
+                 covers: Covers, media: MediaStore, *,
+                 picked: Callable[[int], CdPick | None], retry_seconds: float = 60.0,
                  problems: Problems | None = None) -> None:
+        self._picked = picked  # the release the user picked while it ripped (cdguess.py)
         self._covers = covers
         self._media = media
         self._jobs = jobs

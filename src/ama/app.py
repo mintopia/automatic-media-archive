@@ -149,6 +149,7 @@ def build_services(
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
     film_guesses = FilmGuesses(db, tmdb, covers)
+    cd_picks = CdPicks(db)
     plex = Plex(cfg.plex, http, archive, problems)
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
@@ -159,7 +160,8 @@ def build_services(
                                   streamer, interval=cfg.drive.poll_seconds,
                                   retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
-                                  media=media, covers=covers, problems=problems)
+                                  media=media, covers=covers, picked=film_guesses.picked,
+                                  problems=problems)
     if disc_root is None:
         def disc_root() -> Path | None:
             device = drive.device()
@@ -174,7 +176,7 @@ def build_services(
         jobs=jobs,
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
                     tool=tool, interval=cfg.drive.poll_seconds, repeat=repeat,
-                    scratch=scratch, pause=pause, picks=CdPicks(db),
+                    scratch=scratch, pause=pause, picks=cd_picks,
                     guesser=Guesser(mb, covers), hold=restart.holding),
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
@@ -184,7 +186,7 @@ def build_services(
         musicbrainz=mb,
         cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
                               interval=cfg.drive.poll_seconds, covers=covers, media=media,
-                              problems=problems),
+                              picked=cd_picks.get, problems=problems),
         movie_archive=movie_archive,
         tmdb=tmdb,
         thumbnails=Thumbnailer(jobs, tool, streamer, interval=cfg.drive.poll_seconds),
