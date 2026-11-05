@@ -120,6 +120,18 @@ class ScratchConfig(_Section):
     uhd: int = Field(default=100, ge=0)
 
 
+class MinTitleConfig(_Section):
+    dvd: int = Field(default=30, ge=0)
+    bd: int = Field(default=30, ge=0)
+    uhd: int = Field(default=30, ge=0)
+
+
+class RipConfig(_Section):
+    """A video Title shorter than its Disc Type's `min_title_seconds` isn't ripped (ADR 0005)."""
+
+    min_title_seconds: MinTitleConfig = MinTitleConfig()
+
+
 class TmdbConfig(_Section):
     api_key: str = _secret()
 
@@ -234,6 +246,7 @@ class Config(_Section):
     nas: NasConfig
     paths: PathsConfig
     scratch: ScratchConfig = ScratchConfig()
+    rip: RipConfig = RipConfig()
     tmdb: TmdbConfig = TmdbConfig()
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()

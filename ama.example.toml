@@ -70,6 +70,13 @@ dvd = 10
 bd = 50
 uhd = 100
 
+[rip.min_title_seconds]
+# Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
+# are menus, logos and warnings. Each Job records the minimum its Rip used.
+dvd = 30
+bd = 30
+uhd = 30
+
 [tmdb]
 # TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
 api_key = ""

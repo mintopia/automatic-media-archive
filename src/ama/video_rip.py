@@ -1,6 +1,7 @@
 """Video Rip to scratch: a DVD/BD/UHD in the drive is ripped with makemkvcon, then ejected.
 
-Every Title >= 30 s is ripped (exact duplicates dropped) into
+Every Title at or above its Disc Type's minimum length (`[rip.min_title_seconds]`,
+recorded on the Job) is ripped (exact duplicates dropped) into
 `scratch/video/<Job id>/`, one `makemkvcon mkv` run per Title, regardless of
 Identification (ADR-0005). On any failure the Disc is ejected, marked failed
 with its log, and its partial files are deleted. Nothing is retried on its own:
@@ -18,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ama import makemkv
+from ama.config import RipConfig
 from ama.jobs import (
     JobRecord,
     JobStatus,
@@ -40,7 +42,6 @@ from ama.tools import ToolUnavailable, makemkv_headline
 
 log = logging.getLogger(__name__)
 
-MIN_TITLE_SECONDS = 30  # ADR-0005
 VIDEO_DISC_TYPES = frozenset({DiscType.DVD, DiscType.BD, DiscType.UHD})
 PUBLISH_EVERY_SECONDS = 0.5
 
@@ -112,7 +113,9 @@ class VideoRipper:
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
                  guesses: FilmGuesses | None = None,
-                 hold: Callable[[], bool] = lambda: False) -> None:
+                 hold: Callable[[], bool] = lambda: False,
+                 cfg: RipConfig = RipConfig()) -> None:
+        self.cfg = cfg
         self._pause = pause
         self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesses = guesses  # the Job's Best guess (film_guess.py)
@@ -198,7 +201,9 @@ class VideoRipper:
     async def rip(self, inserted: DiscPresent, fingerprint: str | None = None) -> None:
         self._loop = asyncio.get_running_loop()
         self._abort = False
-        job = self._store.create(inserted.disc_type, inserted.label, "video")
+        job = self._store.create(
+            inserted.disc_type, inserted.label, "video",
+            getattr(self.cfg.min_title_seconds, inserted.disc_type.name.lower()))
         self._repeat.remember(job.id, fingerprint)
         shutil.rmtree(job.scratch_dir, ignore_errors=True)
         job.scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -293,9 +298,10 @@ class VideoRipper:
             await self._save_hints(job, scan)
             if not scan.titles:
                 return Failure(FailureKind.DISC, "MakeMKV couldn't read this Disc.", _DISC_ADVICE)
-            sel = makemkv.select_titles(scan.titles, MIN_TITLE_SECONDS)
+            sel = makemkv.select_titles(scan.titles, job.min_title_seconds)
             if not sel.keep:
-                return Failure(FailureKind.DISC, "There are no Titles of 30 seconds or more.",
+                return Failure(FailureKind.DISC, f"There are no Titles of "
+                               f"{job.min_title_seconds} seconds or more.",
                                "Nothing on this Disc looks worth archiving.")
             titles = title_records(sel.keep)
             self._store.set_titles(job.id, titles,
@@ -333,7 +339,7 @@ class VideoRipper:
 
                 code, out = await self._makemkv(
                     job, makemkv.mkv_args(exe, source, t.makemkv_id, job.scratch_dir,
-                                           MIN_TITLE_SECONDS), on_progress)
+                                           job.min_title_seconds), on_progress)
                 summary = makemkv.rip_summary(out)
                 ok = (code == 0 and (job.scratch_dir / t.file).exists()
                       and (summary is None or (summary[0] >= 1 and summary[1] == 0)))
@@ -349,7 +355,7 @@ class VideoRipper:
             return f.failure
 
     async def _scan(self, job: JobRecord, exe: Path, source: str) -> makemkv.Scan:
-        _, out = await self._makemkv(job, makemkv.info_args(exe, source, MIN_TITLE_SECONDS))
+        _, out = await self._makemkv(job, makemkv.info_args(exe, source, job.min_title_seconds))
         return makemkv.parse_scan_records(out)
 
     async def _save_hints(self, job: JobRecord, scan: makemkv.Scan) -> None:

@@ -33,6 +33,32 @@ def test_all_long_titles_are_ripped_to_scratch_and_the_disc_ejects(client, harne
     assert "2 exact duplicates" in page
 
 
+def _min_title_seconds(harness, **per_type: int) -> None:
+    cfg = harness.services.config
+    harness.services.apply_live(cfg.model_copy(update={"rip": cfg.rip.model_copy(update={
+        "min_title_seconds": cfg.rip.min_title_seconds.model_copy(update=per_type)})}))
+
+
+def test_a_rip_uses_its_disc_types_minimum_title_length_and_the_job_keeps_it(client, harness):
+    _min_title_seconds(harness, bd=200, dvd=5)
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.drive.ejected == 1)
+    disc_runs = [c for c in harness.makemkv.calls if "disc:9999" not in c]
+    assert disc_runs and all("--minlength=200" in c for c in disc_runs)
+    assert harness.makemkv.ripped_ids == [0]  # Title 1 is 2:31, under 200 s
+    _min_title_seconds(harness, bd=30)
+    page = page_text(client, "/jobs/1")
+    assert "13 Titles shorter than 200 seconds" in page
+
+
+def test_a_disc_with_no_title_long_enough_fails_naming_the_minimum(client, harness):
+    _min_title_seconds(harness, bd=9000)
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.drive.ejected == 1)
+    assert "There are no Titles of 9000 seconds or more." in page_text(client, "/jobs/1")
+
+
 def test_rip_progress_is_shown_while_ripping(client, harness):
     harness.drive.insert(DiscType.DVD, "HEAT_DISC1")
     eventually(lambda: "Title 1 of 2" in page_text(client, "/disc"))
