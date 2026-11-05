@@ -111,6 +111,18 @@ webhook_url = ""
 url = "https://ntfy.sh"
 topic = ""
 
+[webhook]
+# Any URL that takes a JSON POST per alert, e.g. Home Assistant or your own script.
+# SECRET. Empty = webhook alerts off. The body is versioned JSON:
+#   {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
+#    "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+# event: rip_done, review_needed, job_filed, job_failed, or test ("Send test"; job is null).
+url = ""
+# An optional header sent with every POST, e.g. a token the receiver checks.
+# The value is a SECRET. Both must be set for the header to be sent.
+header_name = ""
+header_value = ""
+
 [encode]
 # How video Discs are Encoded (ADR 0010). Applies to Jobs whose Encode hasn't
 # started. Archives are always MKV at a constant quality.

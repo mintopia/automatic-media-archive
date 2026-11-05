@@ -157,6 +157,23 @@ class NtfyConfig(_Section):
     topic: str = _secret()
 
 
+def _header_name(value: str, info: ValidationInfo) -> str:
+    value = value.strip()
+    if value and _edited(info, "webhook.header_name") and not re.fullmatch(
+            r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", value):
+        raise ValueError("Use letters, digits and dashes only, like X-Ama-Token")
+    return value
+
+
+class WebhookConfig(_Section):
+    """Alerts as versioned JSON POSTed to `url`; `header_name`/`header_value`, when both
+    are set, go with every request (e.g. a token the receiver checks)."""
+
+    url: Annotated[str, AfterValidator(_web_address("webhook.url", "https"))] = _secret()
+    header_name: Annotated[str, AfterValidator(_header_name)] = ""
+    header_value: str = _secret()
+
+
 class LogsConfig(_Section):
     """Logs (#34): Step output older than `keep_days` is removed; 0 keeps it forever."""
 
@@ -271,6 +288,7 @@ class Config(_Section):
     plex: PlexConfig = PlexConfig()
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
+    webhook: WebhookConfig = WebhookConfig()
     encode: EncodeConfig
     logs: LogsConfig = LogsConfig()
     # Empty in the file = one default per kind under the user's home (`LibraryKind.default_path`).
