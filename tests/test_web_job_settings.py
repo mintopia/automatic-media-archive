@@ -70,6 +70,17 @@ def test_an_edit_that_loses_the_race_with_the_lock_is_refused_with_a_notice(clie
     harness.makemkv.release()
 
 
+def test_the_logs_run_lists_the_settings_locked_so_far(client, harness):
+    job = _ripping_bd(harness)
+    harness.services.job_settings.set(job.id, "encode.quality", "20")
+    harness.services.job_settings.encode_config(job)
+    text = _text(client.get(f"/logs/jobs/{job.id}"))
+    assert "Settings used" in text and "Encode locked at" in text
+    assert "Quality 20 (changed for this Job)" in text
+    assert "Library can still change on the Job page" in text
+    harness.makemkv.release()
+
+
 def test_a_filed_cd_shows_every_group_locked_with_its_stored_values(client, harness):
     from tests.test_cd_archive import COVER, DISC_1, SPECIAL, _insert, _response, _wait_for
     harness.web.covers[SPECIAL] = COVER

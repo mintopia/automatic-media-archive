@@ -63,6 +63,30 @@
           <dt>Output</dt><dd>{% if v.removed %}Removed {{ v.removed.at.day }} {{ v.removed.at.strftime("%b") }} · <a href="/settings/logs">Change</a>{% else %}Kept{% endif %}</dd>
         </dl>
       </div>
+      {%- set js = jobset_of(job) if job else none %}
+      {%- set locked = js.groups | selectattr("locked") | rejectattr("unrecorded") | list if js else [] %}
+      {%- if locked %}
+      {%- set all_filed = job.status == "filed" and locked | length == js.groups | length %}
+      <div class="grp">
+        <h2>Settings used</h2>
+        {%- for g in locked %}
+        {%- if all_filed and loop.first %}
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>All locked when Filed</p>
+        {%- elif not all_filed %}
+        <p class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>{{ g.group.label }} locked at {{ g.state.locked_at.strftime("%H:%M") }}</p>
+        {%- endif %}
+        <dl class="facts">
+          {%- for f in g.fields %}
+          <dt>{{ f.v.setting.label }}</dt><dd>{{ f.v.text }}{% if f.v.overridden %} <span class="ts">(changed for this Job)</span>{% endif %}</dd>
+          {%- endfor %}
+        </dl>
+        {%- endfor %}
+        {%- set open = js.groups | rejectattr("locked") | map(attribute="group.label") | list %}
+        {%- if open %}
+        <p class="ts" style="margin-top:12px">{{ open | join(" and ") }} can still change on the <a href="/jobs/{{ job.id }}">Job page</a>.</p>
+        {%- endif %}
+      </div>
+      {%- endif %}
       {%- if not job %}
       <div class="grp"><p class="ts">{% if run.kind == "nas" %}The share and login are in <a href="/settings/nas">Settings › NAS</a>.{% else %}Tool versions and paths are in <a href="/settings/tools">Settings › Tools</a>.{% endif %}</p></div>
       {%- endif %}
