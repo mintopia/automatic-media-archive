@@ -77,13 +77,12 @@ def test_a_ui_edit_equals_the_same_hand_edit(toml, tmp_path):
 
 def test_a_key_missing_from_the_file_is_added_to_its_table(tmp_path):
     p = tmp_path / "ama.toml"
-    p.write_text("# mine\n[nas]\nunc = '\\\\nas\\media'  # the share\n\n[paths]\nscratch = 's'\n\n"
+    p.write_text("# mine\n[cd]\noffset = 6  # my drive\n\n[paths]\nscratch = 's'\n\n"
                  "[encode.cq]\ndvd = 20\nbd = 22\nuhd = 22\n", encoding="utf-8")
-    SettingsFile(p).save({"nas.retry_seconds": "30", "tmdb.api_key": "k3y"})
+    SettingsFile(p).save({"cd.retries": "30", "tmdb.api_key": "k3y"})
     cfg = load_config(p)
-    assert cfg.nas.retry_seconds == 30 and cfg.tmdb.api_key == "k3y"
-    assert p.read_text(encoding="utf-8").startswith(
-        "# mine\n[nas]\nunc = '\\\\nas\\media'  # the share\n")
+    assert cfg.cd.retries == 30 and cfg.tmdb.api_key == "k3y"
+    assert p.read_text(encoding="utf-8").startswith("# mine\n[cd]\noffset = 6  # my drive\n")
 
 
 def test_a_comment_after_the_edited_value_stays(tmp_path):
@@ -210,7 +209,24 @@ def test_a_file_without_libraries_gets_them_on_the_nas_share_and_a_bak(tmp_path)
                              ("music", "Music", SHARE + "Music", "", True)]
     after = p.read_text(encoding="utf-8")
     assert 'libraries_path = "/volume1/media"' in after and "nas_path" not in after
+    assert "[nas]" not in after and "unc" not in after
     assert load_config(p).plex.libraries_path == "/volume1/media"
+
+
+def test_the_nas_table_is_dropped_with_its_comments_and_credentials(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text("[cd]\noffset = 6\n\n[nas]\n# The share.\nunc = '\\\\nas\\media'\n"
+                 "username = \"me\"\npassword = \"hunter2\"\nretry_seconds = 30\n\n"
+                 "[paths]\nscratch = 'scratch'\n\n[encode.cq]\ndvd = 20\nbd = 22\nuhd = 22\n"
+                 + "".join(f"\n[[libraries]]\nname = \"{k.folder}\"\nkind = \"{k.value}\"\n"
+                           f"path = 'D:\\{k.folder}'\ndefault = true\n" for k in LibraryKind),
+                 encoding="utf-8")
+    assert upgrade(p)
+    after = p.read_text(encoding="utf-8")
+    assert after.startswith("[cd]\noffset = 6\n\n[paths]\n")
+    assert "nas" not in after and "hunter2" not in after
+    assert "hunter2" in p.with_name("ama.toml.bak").read_text(encoding="utf-8")
+    assert load_config(p).cd.offset == 6
 
 
 def test_each_library_points_at_the_same_folder_as_before(tmp_path):
@@ -260,18 +276,18 @@ def test_live_keys_apply_without_a_restart(app):
 
 def test_library_changes_apply_from_the_next_filing(app, tmp_path):
     app.settings.save_library(LibraryKind.MUSIC, None, {"name": "Lossless", "plex": "",
-                                                 "path": str(tmp_path / "nas" / "Lossless")})
+                                                 "path": str(tmp_path / "libraries" / "Lossless")})
     app.settings.make_default("Lossless")
-    assert app.archive.folder(Path("Music/Artist")) == tmp_path / "nas" / "Lossless" / "Artist"
+    assert app.archive.folder(Path("Music/Artist")) == tmp_path / "libraries" / "Lossless" / "Artist"
     assert app.settings.pending() == []
 
 
 def test_other_keys_save_and_wait_for_a_restart(app):
-    app.settings.save({"web.port": "8081", "nas.retry_seconds": "30"})
-    assert app.config.web.port == 8080 and app.config.nas.retry_seconds == 0.05
-    assert app.settings.pending() == ["web.port", "nas.retry_seconds"]
+    app.settings.save({"web.port": "8081", "drive.poll_seconds": "3"})
+    assert app.config.web.port == 8080 and app.config.drive.poll_seconds == 0.01
+    assert app.settings.pending() == ["web.port", "drive.poll_seconds"]
     app.settings.save({"web.port": "8080"})
-    assert app.settings.pending() == ["nas.retry_seconds"]
+    assert app.settings.pending() == ["drive.poll_seconds"]
 
 
 def test_a_hand_edit_is_picked_up_like_a_ui_edit(app):

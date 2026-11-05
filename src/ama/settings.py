@@ -309,7 +309,8 @@ class SettingsFile:
 def upgrade(path: Path) -> bool:
     """Rewrite a v1/v2 file once for plain Library paths (ADR 0011): each Library's folder
     is resolved against `nas.unc` (the share's Movies, TV and Music when it lists none) and
-    `plex.nas_path` becomes `plex.libraries_path`. True if the file changed (its previous
+    `plex.nas_path` becomes `plex.libraries_path`, then `[nas]` is dropped. True if the
+    file changed (its previous
     text is the `.bak`); a file already rewritten, missing or unparsable is left alone."""
     try:
         doc = tomlkit.parse(path.read_text(encoding="utf-8", newline=""))
@@ -341,6 +342,9 @@ def upgrade(path: Path) -> bool:
                 resolved = str(Path(unc) / folder)
                 entry["path"] = _toml_value(resolved, resolved)
                 changed = True
+    if "nas" in doc:
+        del doc["nas"]
+        changed = True
     if changed:
         _write_atomic(path, doc.as_string())
     return changed

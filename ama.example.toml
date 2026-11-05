@@ -41,17 +41,6 @@ offset = 667
 # How many times cyanrip re-reads a frame before counting it as an error.
 retries = 10
 
-[nas]
-# UNC path of the NAS share that holds the Libraries ([[libraries]] below).
-# Connected with `net use` at startup; retried while it fails.
-unc = '\\nas\media'
-# Credentials for the share. SECRET (password). Empty username = connect as the
-# logged-on Windows user.
-username = ""
-password = ""
-# How often to retry connecting while the NAS is unreachable (seconds).
-retry_seconds = 60
-
 [paths]
 # Local scratch folder for Rips awaiting Identification, Review and Encode.
 # Needs at least 256 GB free (ADR-0005). Created if missing.
@@ -155,7 +144,8 @@ keep_days = 0
 # ("films", "tv" or "music") needs exactly one default = true; a Job is filed
 # to its kind's default unless it picked another Library of that kind.
 # `path` is the Library's full folder path: a local folder, a mapped drive or a
-# UNC path (created when first filed to).
+# UNC path (created when first filed to). AMA doesn't connect or mount anything:
+# when a folder isn't reachable, its Jobs wait and filing is retried every minute.
 # `plex` is the name of the Plex library that holds it, scanned after each
 # filing; empty = whichever Plex library's folder contains it.
 # Leave out every [[libraries]] entry to use Videos\Movies, Videos\TV and Music

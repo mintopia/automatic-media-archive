@@ -1,14 +1,13 @@
 """Wiring: build the long-lived services, and the FastAPI app that serves them.
 
 `build_services` is the one place real OS/process adapters are chosen; tests
-pass fakes for `probe`, `runner`, `streamer`, `tool`, `make_tools`, `nas_exists`
-and `http` (an httpx client, e.g. over a MockTransport). `create_app`'s lifespan
+pass fakes for `probe`, `runner`, `streamer`, `tool`, `make_tools` and `http` (an
+httpx client, e.g. over a MockTransport). `create_app`'s lifespan
 starts every background monitor as an asyncio task and cancels them on exit.
 """
 
 from __future__ import annotations
 import asyncio
-import os
 import shutil
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -40,7 +39,6 @@ from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
 from ama.musicbrainz import USER_AGENT, MusicBrainz
-from ama.nas import NasMonitor
 from ama.notify import Notifier, channels
 from ama.pause import Pause
 from ama.problems import Problems
@@ -71,7 +69,6 @@ class Services:
     db: Database
     bus: EventBus
     drive: DriveMonitor
-    nas: NasMonitor
     jobs: JobStore
     cd: CdRipper
     video_rip: VideoRipper
@@ -98,7 +95,7 @@ class Services:
     problems: Problems  # why Jobs can't move on: Waiting lines and Now banners
     restart: Restarter
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
-    app_events: AppEvents  # startup, NAS and tool events as Runs
+    app_events: AppEvents  # startup and tool events as Runs
     log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
     scratch_cleaner: ScratchCleaner  # removes failed Encodes' Rips past retention_days
     job_settings: JobSettings | None = None  # set by build_services; per-Job overrides + locks
@@ -127,7 +124,7 @@ class Services:
         Scratch cleanup comes first: it takes failed Encodes before the archivers requeue them."""
         return [self.scratch_cleaner.run, self.problems.run, self.runs.run, self.log_pruner.run,
                 self.app_events.run, self.drive.run,
-                self.nas.run, self.cd.run, self.video_rip.run,
+                self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
@@ -139,7 +136,6 @@ def build_services(
     cfg: Config,
     probe: DriveProbe | None = None,
     runner: Runner = run,
-    nas_exists: Callable[[str], bool] = os.path.isdir,
     streamer: Streamer = stream,
     tool: ToolLookup | None = None,
     make_tools: Callable[[EventBus], Tools] | None = None,
@@ -164,7 +160,6 @@ def build_services(
     scratch = ScratchGate(cfg.scratch, cfg.paths.scratch, drive, bus, disk_usage)
     http = http or httpx.Client(timeout=30)
     http.headers["User-Agent"] = USER_AGENT
-    nas = NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists)
     cd_tracks = CdTracks(db)
     archive = Archive(cfg.libraries)
     mb = MusicBrainz(http)
@@ -183,7 +178,7 @@ def build_services(
                       job_config=job_settings.encode_config)
     movie_archive = MovieArchiver(jobs, Movies(db), tmdb, archive, plex, bus, encoder,
                                   streamer, interval=cfg.drive.poll_seconds,
-                                  retry_seconds=cfg.nas.retry_seconds, claimed=tv_titles.has,
+                                  claimed=tv_titles.has,
                                   extras=Extras(db, cfg.paths.state_db.parent / STILLS),
                                   media=media, covers=covers, picked=film_guesses.picked,
                                   problems=problems, library=job_settings.library)
@@ -196,7 +191,6 @@ def build_services(
         db=db,
         bus=bus,
         drive=drive,
-        nas=nas,
         tools=tools,
         jobs=jobs,
         cd=CdRipper(cfg.cd, drive, jobs, cd_tracks, bus, streamer=streamer,
@@ -221,7 +215,7 @@ def build_services(
         scratch=scratch,
         tv_archive=TvArchiver(jobs, tv_titles, encoder, archive, plex, bus,
                               interval=cfg.drive.poll_seconds,
-                              retry_seconds=cfg.nas.retry_seconds, tmdb=tmdb, media=media,
+                              tmdb=tmdb, media=media,
                               covers=covers, problems=problems,
                               library=job_settings.library),
         notifier=Notifier(jobs, bus, channels(cfg, http), problems),
@@ -238,7 +232,7 @@ def build_services(
         problems=problems,
         restart=restart,
         runs=runs,
-        app_events=AppEvents(runs, bus, nas, tools, config_path),
+        app_events=AppEvents(runs, bus, tools, config_path),
         log_pruner=LogPruner(runs, lambda: services.config.logs.keep_days),
         scratch_cleaner=ScratchCleaner(
             jobs, runs, lambda: services.config.scratch.retention_days,

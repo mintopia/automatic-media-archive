@@ -31,7 +31,7 @@ def _rip_and_file(harness):
 
 
 def _film_folder(harness):
-    return extended_path(harness.nas_root / "Movies" / FOLDER)
+    return extended_path(harness.libraries_root / "Movies" / FOLDER)
 
 
 def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_review(
@@ -94,7 +94,7 @@ def test_decoy_versions_of_the_film_are_not_extras(client, harness):
     assert "<dt>Extras</dt><dd>2 Extras, filed under Other</dd>" in page
     client.post(f"/review/{rec.id}/film", data={"film": "949", "title": "6"})
     _rip_and_file_wait(harness)
-    other = extended_path(harness.nas_root / "Movies" / "Heat (1995) {tmdb-949}" / "Other")
+    other = extended_path(harness.libraries_root / "Movies" / "Heat (1995) {tmdb-949}" / "Other")
     assert len(list(other.iterdir())) == 2
     assert len(harness.ffmpeg.encodes()) == 3  # the film and its 2 Extras, no decoys
 

@@ -88,7 +88,7 @@
       </div>
       {%- endif %}
       {%- if not job %}
-      <div class="grp"><p class="ts">{% if run.kind == "scratch" %}Each Job keeps its record:{% for s in v.steps %} <a href="/jobs/{{ s.key[4:] }}">Job {{ s.key[4:] }}</a>{{ "," if not loop.last else "." }}{% endfor %} The retention age is in <a href="/settings/general">Settings › General</a>.{% elif run.kind == "nas" %}The share and login are in <a href="/settings/nas">Settings › NAS</a>.{% else %}Tool versions and paths are in <a href="/settings/tools">Settings › Tools</a>.{% endif %}</p></div>
+      <div class="grp"><p class="ts">{% if run.kind == "scratch" %}Each Job keeps its record:{% for s in v.steps %} <a href="/jobs/{{ s.key[4:] }}">Job {{ s.key[4:] }}</a>{{ "," if not loop.last else "." }}{% endfor %} The retention age is in <a href="/settings/general">Settings › General</a>.{% elif run.kind == "nas" %}AMA no longer connects to a NAS; each Library's folder is in <a href="/settings/archive/libraries">Settings › Libraries</a>.{% else %}Tool versions and paths are in <a href="/settings/tools">Settings › Tools</a>.{% endif %}</p></div>
       {%- endif %}
     </aside>
   </div>

@@ -1,4 +1,4 @@
-"""TV Episode mapping, end to end: the real app with fakes for ffmpeg, the NAS folder
+"""TV Episode mapping, end to end: the real app with fakes for ffmpeg, the Library folder
 and the web (TMDB, Plex).
 
 The TV Disc is put straight into scratch as ripped (the fake makemkvcon only knows a
@@ -126,7 +126,7 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
 
 
 def _filed_names(harness) -> list[str]:
-    root = extended_path(harness.nas_root / SHOW)
+    root = extended_path(harness.libraries_root / SHOW)
     return sorted(p.relative_to(root).as_posix() for p in root.rglob("*.mkv"))
 
 
@@ -146,7 +146,7 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
         "Season 00/The Office - s00e01 - Christmas Special (1).mkv",
         "Season 01/The Office - s01e03 - The Quiz.mkv",
         "Season 01/The Office - s01e05 - New Girl.mkv"]
-    root = extended_path(harness.nas_root / SHOW)
+    root = extended_path(harness.libraries_root / SHOW)
     assert (root / "Season 01/The Office - s01e03 - The Quiz.mkv").read_bytes() == \
         f"HEVC {LABEL}_t00.mkv".encode()  # Title 1
     assert len(harness.ffmpeg.encodes()) == 4  # the Play all is never encoded

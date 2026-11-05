@@ -1,4 +1,4 @@
-"""Waiting for things outside AMA (network, NAS, tools), shared by the archivers."""
+"""Waiting for things outside AMA (network, Library folders, tools), shared by the archivers."""
 
 from __future__ import annotations
 

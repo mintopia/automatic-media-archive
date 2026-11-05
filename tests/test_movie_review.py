@@ -1,4 +1,4 @@
-"""Movie Review, end to end: the real app with a fake drive, makemkvcon, ffmpeg, NAS
+"""Movie Review, end to end: the real app with a fake drive, makemkvcon, ffmpeg, Library
 folder and web (TMDB, Plex).
 
 The fake BD rips two Titles: Title 1 (2:01:33, the Main Feature) and Title 2 (0:02:31).
@@ -104,7 +104,7 @@ def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_f
     filed = _wait_for(harness, JobStatus.FILED)
     assert filed.title == "Arrival (2016)"
     folder = "Arrival (2016) {tmdb-329865}"
-    [path] = extended_path(harness.nas_root / "Movies" / folder).glob(f"{folder}*.mkv")
+    [path] = extended_path(harness.libraries_root / "Movies" / folder).glob(f"{folder}*.mkv")
     assert path.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # the Title the user chose
     log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "Review: identified as Arrival (2016)" in log

@@ -87,7 +87,7 @@ def test_while_ripping_the_likely_album_cover_and_track_titles_are_shown(harness
 
     harness.cyanrip.release()
     rec = eventually_status(harness, JobStatus.REVIEW)   # the guess never files anything
-    assert not (harness.nas_root / "Music").exists()
+    assert not (harness.libraries_root / "Music").exists()
     assert rec.title == ""
 
 

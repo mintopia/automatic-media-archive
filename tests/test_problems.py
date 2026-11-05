@@ -43,9 +43,9 @@ def test_a_jobs_blocking_reason_is_kept_until_it_moves_on():
     bus = EventBus()
     problems = Problems(bus, now=lambda: NOW)
 
-    seen = _published(bus, lambda: problems.waiting(3, "The NAS isn't connected", 120))
+    seen = _published(bus, lambda: problems.waiting(3, "The Movies folder isn't reachable", 120))
     waiting = problems.why(3)
-    assert waiting is not None and waiting.reason == "The NAS isn't connected"
+    assert waiting is not None and waiting.reason == "The Movies folder isn't reachable"
     assert waiting.retry_at == datetime(2026, 11, 5, 21, 42, 0)
     assert {Topic.RIP, Topic.ENCODE, Topic.PROBLEMS} <= seen  # cards and banners re-render
     assert problems.why(4) is None
@@ -61,7 +61,7 @@ def test_a_job_waiting_on_an_app_wide_cause_raises_one_banner_until_every_job_mo
     key = "No TMDB API key is set in ama.toml ([tmdb] api_key)"
     problems.waiting(1, key, 60, Problem.TMDB_KEY)
     problems.waiting(2, key, 60, Problem.TMDB_KEY)
-    problems.waiting(3, "The NAS isn't connected", 60)
+    problems.waiting(3, "The Movies folder isn't reachable", 60)
 
     [banner] = problems.banners()
     assert banner.problem == Problem.TMDB_KEY and banner.jobs == 2
@@ -134,7 +134,7 @@ def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_p
 
 
 def test_a_job_waiting_for_an_unreachable_library_folder_says_which_until_it_files(tmp_path):
-    h = make_harness(tmp_path, nas_reachable=False)  # filing doesn't wait on the NAS
+    h = make_harness(tmp_path)
     folder = h.drop_library(LibraryKind.FILMS)
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with TestClient(create_app(h.services)) as c:

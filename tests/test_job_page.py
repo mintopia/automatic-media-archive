@@ -109,6 +109,7 @@ def test_the_crumb_follows_the_phase_and_review_and_history_link_to_the_job_page
     ident = _step(_steps(page), "Identification")
     assert "st waiting" in ident and "Needs Review: Found in the film database" in ident
     assert "One per Title kept" in _step(_steps(page), ">Encode<")
+    assert "To the Library, then a Plex scan" in _step(_steps(page), ">File<")
 
     client.post(f"/review/{rec.id}/film", data={"film": "1234", "title": "1"})
     eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED, timeout=5)

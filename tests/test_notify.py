@@ -228,7 +228,7 @@ def test_a_job_filed_with_no_titles_in_it_sends_no_filed_alert(notified):
     empty = jobs.create(DiscType.BD, "ALL_SKIPPED", "empty")
     jobs.set_titles(empty.id, [TitleRecord(1, 0, 3600, 1, 1, 0, "", "t1.mkv")], 0, 0)
     jobs.mark_ripped(empty.id)
-    jobs.mark_filed(empty.id, "Nothing", notified.nas_root / "Nothing")
+    jobs.mark_filed(empty.id, "Nothing", notified.libraries_root / "Nothing")
     _insert(notified, DISC_1, 24, _response(only=SPECIAL))
     eventually(lambda: "Filed" in _titles(notified)[0] and "Filed" in _titles(notified)[1])
     time.sleep(0.3)

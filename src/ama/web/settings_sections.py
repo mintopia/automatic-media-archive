@@ -139,7 +139,7 @@ class Group:
 class Section:
     slug: str  # URL under /settings/
     tab: str  # TABS key
-    name: str  # "General", or the sub-section name ("NAS")
+    name: str  # "General", or the sub-section name ("Libraries")
     groups: tuple[Group, ...]
     note: str | Markup = ""  # under the sheet; default says the file is the source
     # A section with its own UI beyond field rows: a partial rendered after the groups'
@@ -202,16 +202,6 @@ def _tool_status(name: str) -> Callable[[Services], Status]:
                 return Status("Download failed", ok=False)
         return Status(makemkv_headline(st), ok=False)
     return status
-
-
-def _nas_status(services: Services) -> Status:
-    from ama.nas import NasConnected, NasUnreachable
-    match services.nas.status:
-        case NasConnected():
-            return Status("Connected")
-        case NasUnreachable():
-            return Status("Can't reach the NAS", ok=False)
-    return Status("Connecting", ok=False)
 
 
 def _encoder_options(services: Services, saved: str) -> tuple[Option, ...]:
@@ -437,20 +427,6 @@ SECTIONS: list[Section] = [
                    "<code>ama.toml</code>."), note_only=True,
         template="partials/settings_libraries.html", context=settings_libraries.context,
         owns=("libraries",), foot="Plex connection"),
-    Section("archive/nas", "archive", "NAS", (
-        Group("NAS share", (
-            Field("nas.unc", "Share",
-                  r"The shared folder on your NAS that holds your Libraries, like \\nas\media. "
-                  "AMA connects when it starts and keeps trying while it can't.",
-                  Markup("Connected with Windows' <code>net use</code>.")),
-            Field("nas.username", "Username",
-                  "Leave empty to connect as the Windows user AMA runs as.",
-                  placeholder="Logged-on Windows user"),
-            Field("nas.password", "Password", "Once saved it's never shown again."),
-            Field("nas.retry_seconds", "Try again every",
-                  "How often AMA tries again while it can't reach the NAS.", unit="seconds"),
-        ), status=_nas_status),
-    )),
     Section("archive/identification", "archive", "Identification", (
         Group("TMDB", (
             Field("tmdb.api_key", "TMDB API key",

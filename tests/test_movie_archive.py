@@ -1,5 +1,5 @@
 """Movie Identification, Encode and filing, end to end: the real app with a fake drive,
-makemkvcon, ffmpeg/ffprobe, NAS folder and web (TMDB, Plex).
+makemkvcon, ffmpeg/ffprobe, Library folders and web (TMDB, Plex).
 
 The fake BD (tests/data/makemkv-info-bd.txt) is "Example Movie", label EXAMPLE_MOVIE;
 its Main Feature (Title 1) runs 2:01:33, i.e. 121.5 minutes.
@@ -37,7 +37,7 @@ def _wait_for(harness, status: JobStatus):
 
 
 def _filed(harness, version="1080p"):
-    return extended_path(harness.nas_root / "Movies" / FOLDER / f"{FOLDER} - {version}.mkv")
+    return extended_path(harness.libraries_root / "Movies" / FOLDER / f"{FOLDER} - {version}.mkv")
 
 
 def _uhd_source(harness) -> None:
@@ -94,15 +94,15 @@ def test_saved_encode_settings_apply_to_the_next_encode(tmp_path):
 
 def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_library(
         client, harness, tmp_path):
-    nas = harness.nas_root
+    root = harness.libraries_root
     elsewhere = tmp_path / "local disk" / "Films HD"  # a Library needn't be on the share
     cfg = harness.services.config
     libraries = [
-        {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "plex": "Movies"},
+        {"name": "Movies", "kind": "films", "path": str(root / "Movies"), "plex": "Movies"},
         {"name": "Films", "kind": "films", "path": str(elsewhere), "plex": "Films",
          "default": True},
-        {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
-        {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]
+        {"name": "TV", "kind": "tv", "path": str(root / "TV"), "default": True},
+        {"name": "Music", "kind": "music", "path": str(root / "Music"), "default": True}]
     harness.services.apply_live(
         Config.model_validate(cfg.model_dump() | {"libraries": libraries}))
     # Named, not found by folder: its Plex folder doesn't contain the filed one.
@@ -113,7 +113,7 @@ def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_librar
 
     _wait_for(harness, JobStatus.FILED)
     assert extended_path(elsewhere / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
-    assert not (nas / "Movies").exists()
+    assert not (root / "Movies").exists()
     eventually(lambda: any("/refresh" in r.url.path for r in harness.web.plex_requests))
     scan = next(r for r in harness.web.plex_requests if "/refresh" in r.url.path)
     assert scan.url.path == "/library/sections/7/refresh"
@@ -269,7 +269,7 @@ def test_an_encode_waits_for_its_library_folder_across_a_restart_then_files(tmp_
         assert h.services.jobs.get(1).status == JobStatus.RIPPED
     assert len(h.ffmpeg.encodes()) == 2  # Main Feature + Extra
 
-    h2 = make_harness(tmp_path, nas_reachable=False)  # filing doesn't wait on the NAS
+    h2 = make_harness(tmp_path)
     h2.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with _client(h2):
         eventually(lambda: (w := h2.services.problems.why(1)) is not None
@@ -382,7 +382,7 @@ def test_the_bd_and_uhd_of_one_film_are_filed_into_one_folder_as_two_versions(cl
     harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
     eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=5)
 
-    folder = extended_path(harness.nas_root / "Movies" / FOLDER)
+    folder = extended_path(harness.libraries_root / "Movies" / FOLDER)
     assert sorted(p.name for p in folder.iterdir()) == [
         f"{FOLDER} - 1080p.mkv", f"{FOLDER} - 4K.mkv", "Other"]
     # Both Discs' Extras are kept, each named after its Disc.
