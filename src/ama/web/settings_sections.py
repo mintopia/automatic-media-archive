@@ -275,9 +275,8 @@ def _key(*keys: str) -> Markup:
 # --- the page ----------------------------------------------------------------
 
 # Tabs in order: (key, label). A tab with sub-sections opens on its first one.
-# Logs joins when its setting lands (#34).
 TABS: list[tuple[str, str]] = [("general", "General"), ("ripping", "Ripping"),
-                               ("archive", "Archive"), ("alerts", "Alerts")]
+                               ("archive", "Archive"), ("alerts", "Alerts"), ("logs", "Logs")]
 
 _DISC_TYPES = (("DVD", "dvd"), ("Blu-ray", "bd"), ("UHD Blu-ray", "uhd"))
 
@@ -451,6 +450,13 @@ SECTIONS: list[Section] = [
     ), note=Markup("Alerts go out when a Disc needs Review, is filed (“insert the next one”) "
                    "or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
                    "Archive › Libraries</a>.")),
+    Section("logs", "logs", "Logs", (
+        Group("Step output", (
+            Field("logs.keep_days", "Keep step output for",
+                  "0 keeps it forever. Older output is removed at startup and once a day; "
+                  "Jobs, History and each run's summary are always kept.", unit="days"),
+        ), live=True, note="Takes effect at once"),
+    )),
 ]
 
 BY_SLUG: dict[str, Section] = {s.slug: s for s in SECTIONS}

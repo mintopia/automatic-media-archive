@@ -31,7 +31,8 @@ log = logging.getLogger(__name__)
 # Tables whose new values running code picks up at once (`Services.apply_live`).
 # Everything else is read once at startup. A table added here needs its consumer
 # wired in `apply_live`.
-LIVE_TABLES = frozenset({"cd", "encode", "plex", "tmdb", "discord", "ntfy", "libraries"})
+LIVE_TABLES = frozenset({"cd", "encode", "plex", "tmdb", "discord", "ntfy", "libraries",
+                         "logs"})
 
 
 def is_live(key: str) -> bool:

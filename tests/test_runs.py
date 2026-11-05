@@ -126,3 +126,62 @@ def test_beginning_a_step_again_starts_its_output_afresh(tmp_path):
     runs.line(again, "second try")
     assert again == step
     assert [ln.text for ln in runs.output(step)] == ["second try"]
+
+
+def _finished_step(runs: Runs, clock: Clock, text: str) -> int:
+    run = runs.start_run(RunKind.TOOLS, "Getting cyanrip", item="cyanrip")
+    step = runs.begin(run, "cyanrip", "Get cyanrip")
+    runs.line(step, text)
+    runs.end(step, result="Downloaded")
+    runs.finish_run(run, failed=False)
+    return step
+
+
+def test_keeping_output_for_0_days_keeps_all_of_it(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    step = _finished_step(runs, clock, "old line")
+    clock.tick(400 * 86400)
+    runs.prune(0)
+    assert [ln.text for ln in runs.output(step)] == ["old line"]
+    assert runs.get_step(step).removed is None
+
+
+def test_pruning_removes_only_output_older_than_n_days_and_keeps_the_summaries(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    old = _finished_step(runs, clock, "old line")
+    clock.tick(10 * 86400)
+    recent = _finished_step(runs, clock, "recent line")
+    running_run = runs.start_run(RunKind.APP, "AMA started")
+    running = runs.begin(running_run, "nas", "Connect to the NAS")
+    runs.line(running, "still going")
+    clock.tick(5 * 86400)  # old finished 15 days ago, recent 5 days ago
+
+    runs.prune(14)
+    runs.prune(14)  # idempotent
+
+    assert runs.output(old) == []
+    s = runs.get_step(old)
+    assert (s.name, s.result, s.state, s.lines) == ("Get cyanrip", "Downloaded",
+                                                    StepState.DONE, 0)
+    assert s.removed is not None
+    assert (s.removed.days, s.removed.at) == (14, clock.t.date())
+    assert [ln.text for ln in runs.output(recent)] == ["recent line"]
+    assert runs.get_step(recent).removed is None
+    assert [ln.text for ln in runs.output(running)] == ["still going"]
+    assert len(runs.list_runs()) == 3
+
+
+def test_a_pruned_step_run_again_has_fresh_output(tmp_path):
+    clock = Clock()
+    runs = make_runs(tmp_path, clock)
+    step = _finished_step(runs, clock, "old line")
+    clock.tick(20 * 86400)
+    runs.prune(14)
+    run = runs.get_step(step).run_id
+    again = runs.begin(run, "cyanrip", "Get cyanrip")
+    runs.line(again, "new line")
+    runs.end(again)
+    assert runs.get_step(again).removed is None
+    assert [ln.text for ln in runs.output(again)] == ["new line"]
