@@ -23,6 +23,7 @@ class FakeDrive:
         self.ejected = 0
         self.stuck = False  # eject() fails and the Disc stays in
         self.root: Path | None = None  # the Disc's filesystem (e.g. BDMV/META), if a test makes one
+        self.optical: tuple[str, ...] = ("D:",)  # every optical drive Windows reports
 
     def insert(self, disc_type: DiscType, label: str = "") -> None:
         self.state = DiscPresent(disc_type, label)
@@ -39,6 +40,9 @@ class FakeDrive:
 
     def device(self) -> str:
         return "D:"
+
+    def drives(self) -> tuple[str, ...]:
+        return self.optical
 
     def fail_with(self, error: Exception) -> None:
         self._error = error

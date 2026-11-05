@@ -11,6 +11,7 @@ no field, or appears twice.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, get_args
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
 
     from ama.app import Services
     from ama.config import Config
+
+log = logging.getLogger(__name__)
 
 # A placeholder or status can depend on the running app (e.g. the drive Windows found).
 Dynamic = Callable[["Services"], str]
@@ -164,12 +167,19 @@ class Section:
 
 # --- dynamic bits --------------------------------------------------------------
 
-def _drive_placeholder(services: Services) -> str:
+def _drive_options(services: Services, saved: str) -> tuple[Option, ...]:
+    """Automatic, then each optical drive; a saved one that's gone stays, marked."""
     try:
-        device = services.drive.device()
-    except Exception:  # noqa: BLE001 - only a hint
-        device = None
-    return f"Automatic ({device})" if device else "Automatic"
+        found = services.drive.drives()
+    except Exception:  # noqa: BLE001 - the list is a convenience; the saved value still shows
+        log.exception("listing optical drives failed")
+        found = ()
+    options = [Option("", "Automatic (first drive found)")]
+    names = services.tools.drive_names
+    options += [Option(d, f"{d} · {names[d]}" if d in names else d) for d in found]
+    if saved and saved not in found:
+        options.append(Option(saved, f"{saved} (not found)", broken=True))
+    return tuple(options)
 
 
 def _tool_status(name: str) -> Callable[[Services], Status]:
@@ -316,9 +326,8 @@ SECTIONS: list[Section] = [
     )),
     Section("ripping", "ripping", "Ripping", (
         Group("Drive", (
-            Field("drive.letter", "Drive letter",
-                  "Leave empty to use the first optical drive Windows finds.",
-                  placeholder=_drive_placeholder),
+            Choice("drive.letter", "Drive", _drive_options,
+                   "Automatic uses the first optical drive Windows finds.", style="select"),
             Field("drive.poll_seconds", "Check for a Disc every",
                   "How soon AMA notices a Disc going in or coming out. 3 seconds suits most "
                   "drives.", unit="seconds"),
