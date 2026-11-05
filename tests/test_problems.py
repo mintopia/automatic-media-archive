@@ -17,7 +17,7 @@ from ama.app import create_app
 from ama.archive import Archive
 from ama.jobs import JobStatus
 from ama.drive import DiscType
-from ama.config import PlexConfig
+from ama.config import Library, LibraryKind, PlexConfig
 from ama.events import EventBus, Topic
 from ama.notify import Event, Notification, Notifier
 from ama.plex import Plex
@@ -171,8 +171,10 @@ def test_a_failing_plex_scan_shows_a_banner_until_a_scan_works(tmp_path):
         status["code"], json={"MediaContainer": {"Directory": [
             {"key": "1", "Location": [{"path": "/media/Movies"}]}]}})))
     problems = Problems(EventBus(), now=lambda: NOW)
-    plex = Plex(PlexConfig(url="http://plex:32400", token="t", nas_path="/media"), web,
-                Archive(tmp_path), problems)
+    libraries = [Library(name=k.folder, kind=k, path=str(tmp_path / k.folder), default=True)
+                 for k in LibraryKind]
+    plex = Plex(PlexConfig(url="http://plex:32400", token="t", libraries_path="/media"), web,
+                Archive(libraries), problems)
     with pytest.raises(httpx.HTTPError):
         plex.scan(tmp_path / "Movies" / "Film")
     [banner] = problems.banners()

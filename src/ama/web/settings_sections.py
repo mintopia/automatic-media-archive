@@ -421,10 +421,11 @@ SECTIONS: list[Section] = [
                   "Lets AMA tell Plex to look for new files as soon as a Job is filed. "
                   "Without it, Plex finds them on its next scheduled scan.",
                   "Plex calls it the X-Plex-Token."),
-            Field("plex.nas_path", "Share path seen by Plex",
-                  "Only if Plex runs on another machine: where that machine sees the NAS share. "
-                  "Leave empty when Plex sees the same path as AMA.",
-                  placeholder="Same as the NAS share"),
+            Field("plex.libraries_path", "Plex sees Libraries at",
+                  "Only if Plex runs on another machine: the folder where that machine sees "
+                  "your Library folders, each by its own name. Leave empty when Plex sees "
+                  "them at the same paths as AMA.",
+                  placeholder="Same paths as AMA"),
         ), live=True, status=_plex_status),
     ), note=Markup("A Job goes to its kind's default unless you pick another Library in its "
                    "settings before it's filed. Each Library saves on its own, to "

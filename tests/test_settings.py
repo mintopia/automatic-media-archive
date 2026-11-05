@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from ama.config import LibraryKind, load_config
-from ama.settings import SettingsFile, SettingsRejected
+from ama.settings import SettingsFile, SettingsRejected, upgrade
 from tests.conftest import make_harness, write_config
 
 EXAMPLE = Path(__file__).parent.parent / "ama.example.toml"
@@ -135,10 +135,17 @@ def test_a_file_without_libraries_gets_the_defaults_it_was_using_written_out(tmp
                  encoding="utf-8")
     SettingsFile(p).save_library(LibraryKind.FILMS, None, {"name": "Movies 4K", "plex": "",
                                                     "path": SHARE + "Movies 4K"})
-    assert _libraries(p) == [("films", "Movies", SHARE + "Movies", "", True),
-                             ("tv", "TV", SHARE + "TV", "", True),
-                             ("music", "Music", SHARE + "Music", "", True),
+    home = Path.home()
+    assert _libraries(p) == [("films", "Movies", str(home / "Videos" / "Movies"), "", True),
+                             ("tv", "TV", str(home / "Videos" / "TV"), "", True),
+                             ("music", "Music", str(home / "Music"), "", True),
                              ("films", "Movies 4K", SHARE + "Movies 4K", "", False)]
+
+
+def test_a_library_can_be_any_folder(toml):
+    SettingsFile(toml).save_library(LibraryKind.FILMS, None, {"name": "Films", "plex": "",
+                                                       "path": "D:\Films"})
+    assert _libraries(toml)[-1] == ("films", "Films", "D:\Films", "", False)
 
 
 def test_make_default_moves_the_kinds_default(toml):
@@ -163,12 +170,73 @@ def test_a_library_that_doesnt_validate_names_its_fields_and_the_file_is_unchang
     f = SettingsFile(toml)
     with pytest.raises(SettingsRejected) as e:
         f.save_library(LibraryKind.FILMS, None, {"name": "tv", "plex": "", "path": "D:\\Films"})
-    assert set(e.value.errors) == {"name", "path"}
-    assert "TV" in e.value.errors["name"] and "NAS share" in e.value.errors["path"]
+    assert set(e.value.errors) == {"name"} and "TV" in e.value.errors["name"]
     with pytest.raises(SettingsRejected) as e:
         f.save_library(LibraryKind.FILMS, None, {"name": " ", "plex": "", "path": ""})
     assert e.value.errors == {"name": "This can't be empty", "path": "This can't be empty"}
+    with pytest.raises(SettingsRejected) as e:
+        f.save_library(LibraryKind.FILMS, None, {"name": "Films", "plex": "", "path": "Films"})
+    assert set(e.value.errors) == {"path"} and "full folder path" in e.value.errors["path"]
     assert toml.read_bytes() == original
+
+
+# --- the one-time rewrite to plain Library paths (ADR 0011) -------------------------------
+
+V2 = r"""[nas]
+unc = '\\nas\media'
+
+[paths]
+scratch = 'scratch'
+
+[plex]
+url = "http://nas:32400"
+# Where Plex sees the share.
+nas_path = "/volume1/media"
+
+[encode.cq]
+dvd = 20
+bd = 22
+uhd = 22
+"""
+
+
+def test_a_file_without_libraries_gets_them_on_the_nas_share_and_a_bak(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2, encoding="utf-8")
+    assert upgrade(p)
+    assert p.with_name("ama.toml.bak").read_text(encoding="utf-8") == V2
+    assert _libraries(p) == [("films", "Movies", SHARE + "Movies", "", True),
+                             ("tv", "TV", SHARE + "TV", "", True),
+                             ("music", "Music", SHARE + "Music", "", True)]
+    after = p.read_text(encoding="utf-8")
+    assert 'libraries_path = "/volume1/media"' in after and "nas_path" not in after
+    assert load_config(p).plex.libraries_path == "/volume1/media"
+
+
+def test_each_library_points_at_the_same_folder_as_before(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2 + "".join(
+        f"\n[[libraries]]\nname = \"{n}\"\nkind = \"{k}\"\npath = '{path}'\ndefault = true\n"
+        for n, k, path in (("Movies", "films", "Films"), ("TV", "tv", SHARE + "TV"),
+                           ("Music", "music", "Audio\Music"))), encoding="utf-8")
+    upgrade(p)
+    assert [path for _, _, path, _, _ in _libraries(p)] == [
+        SHARE + "Films", SHARE + "TV", SHARE + "Audio\Music"]
+
+
+def test_running_the_rewrite_again_changes_nothing(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text(V2, encoding="utf-8")
+    upgrade(p)
+    once, bak = p.read_bytes(), p.with_name("ama.toml.bak").read_bytes()
+    assert not upgrade(p)
+    assert p.read_bytes() == once and p.with_name("ama.toml.bak").read_bytes() == bak
+
+
+def test_the_example_needs_no_rewrite(toml):
+    before = toml.read_bytes()
+    assert not upgrade(toml)
+    assert toml.read_bytes() == before
 
 
 # --- the running app: live keys apply at once, the rest wait for a restart ---------------

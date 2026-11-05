@@ -141,7 +141,9 @@ class TmdbConfig(_Section):
 class PlexConfig(_Section):
     url: Annotated[str, AfterValidator(_web_address("plex.url", "http"))] = ""
     token: str = _secret()
-    nas_path: str = ""  # where the Plex server sees `nas.unc`; empty = the same path
+    # Where the Plex server sees the Libraries ("Plex sees Libraries at"): each Library
+    # folder is <libraries_path>/<its folder name>. Empty = the same path as AMA.
+    libraries_path: str = ""
 
 
 class DiscordConfig(_Section):
@@ -214,13 +216,19 @@ class LibraryKind(StrEnum):
 
     @property
     def folder(self) -> str:
-        """The kind's folder on the share when no Libraries are configured."""
+        """The kind's folder name, as Plex lays it out: its default Library's name and the
+        first part of an archiver's logical path."""
         return _KINDS[self][1]
 
+    def default_path(self) -> Path:
+        """The kind's default Library folder when none are configured."""
+        return Path.home().joinpath(*_KINDS[self][2])
 
-# kind -> (label, default folder on the share)
-_KINDS = {LibraryKind.FILMS: ("Films", "Movies"), LibraryKind.TV: ("TV", "TV"),
-          LibraryKind.MUSIC: ("Music", "Music")}
+
+# kind -> (label, folder name, default Library folder under the user's home)
+_KINDS = {LibraryKind.FILMS: ("Films", "Movies", ("Videos", "Movies")),
+          LibraryKind.TV: ("TV", "TV", ("Videos", "TV")),
+          LibraryKind.MUSIC: ("Music", "Music", ("Music",))}
 
 
 def _not_blank(value: str) -> str:
@@ -230,12 +238,20 @@ def _not_blank(value: str) -> str:
     return value
 
 
+def library_folder(value: str) -> str:
+    """A Library's folder: a full path, wherever it is (ADR 0011)."""
+    value = _not_blank(value)
+    if not Path(value).is_absolute():
+        raise ValueError(r"Enter the full folder path, like D:\Movies or \\nas\media\Movies")
+    return value
+
+
 class Library(_Section):
     """A named folder of the Archive for one kind of media, matching one Plex library."""
 
     name: Annotated[str, AfterValidator(_not_blank)]
     kind: LibraryKind
-    path: Annotated[str, AfterValidator(_not_blank)]  # a folder on the NAS share
+    path: Annotated[str, AfterValidator(library_folder)]
     plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
     default: bool = False
 
@@ -255,7 +271,7 @@ class Config(_Section):
     ntfy: NtfyConfig = NtfyConfig()
     encode: EncodeConfig
     logs: LogsConfig = LogsConfig()
-    # Empty in the file = one default per kind at the share's Movies, TV and Music folders.
+    # Empty in the file = one default per kind under the user's home (`LibraryKind.default_path`).
     libraries: tuple[Library, ...] = ()
 
     @model_validator(mode="before")
@@ -263,25 +279,16 @@ class Config(_Section):
     def _default_libraries(cls, data: Any) -> Any:
         if not isinstance(data, dict) or data.get("libraries"):
             return data
-        nas = data.get("nas")
-        unc = nas.unc if isinstance(nas, NasConfig) else (nas or {}).get("unc")
-        if not isinstance(unc, str):
-            return data  # `nas.unc` is missing: reported as such
         return {**data, "libraries": [
-            {"name": k.folder, "kind": k.value, "path": str(Path(unc) / k.folder),
-             "default": True} for k in LibraryKind]}
+            {"name": k.folder, "kind": k.value, "path": str(k.default_path()), "default": True}
+            for k in LibraryKind]}
 
     @model_validator(mode="after")
     def _check_libraries(self) -> Config:
-        share = Path(self.nas.unc)
         names = [lib.name.casefold() for lib in self.libraries]
         for lib in self.libraries:
             if names.count(lib.name.casefold()) > 1:
                 raise ValueError(f"Two Libraries are called {lib.name}; give each its own name")
-            path = Path(lib.path)
-            if path == share or not path.is_relative_to(share):
-                raise ValueError(f"Library {lib.name}: its folder must be inside the NAS share "
-                                 f"({self.nas.unc})")
         for kind in LibraryKind:
             defaults = [lib for lib in self.libraries if lib.kind == kind and lib.default]
             if not defaults:

@@ -8,6 +8,7 @@ import shutil
 import pytest
 
 from ama.archive import PARTIAL, Archive, FilingError, safe_name
+from ama.config import Library, LibraryKind
 from ama.jobs import JobStatus
 from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
 from tests.conftest import eventually
@@ -21,6 +22,11 @@ def _sources(tmp_path):
     return {"01 - A.flac": src / "01.flac", "02 - B.flac": src / "02.flac"}
 
 
+def _libraries(root):
+    return [Library(name=k.folder, kind=k, path=str(root / k.folder), default=True)
+            for k in LibraryKind]
+
+
 def test_files_are_written_under_a_temporary_name_then_renamed(tmp_path):
     seen = []
 
@@ -30,7 +36,7 @@ def test_files_are_written_under_a_temporary_name_then_renamed(tmp_path):
         assert dest.name.endswith(PARTIAL)
         shutil.copyfile(src, dest)
 
-    archive = Archive(tmp_path / "nas", copy=watching_copy)
+    archive = Archive(_libraries(tmp_path / "nas"), copy=watching_copy)
     folder = archive.place(tmp_path.joinpath("Music", "X", "Y").relative_to(tmp_path),
                            _sources(tmp_path))
     assert sorted(p.name for p in folder.iterdir()) == ["01 - A.flac", "02 - B.flac"]
@@ -41,7 +47,7 @@ def test_a_copy_that_comes_out_different_is_not_renamed_into_place(tmp_path):
     def truncating_copy(src, dest):
         dest.write_bytes(src.read_bytes()[:10])
 
-    archive = Archive(tmp_path / "nas", copy=truncating_copy)
+    archive = Archive(_libraries(tmp_path / "nas"), copy=truncating_copy)
     with pytest.raises(FilingError):
         archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), _sources(tmp_path))
     assert list((tmp_path / "nas" / "Music").iterdir()) == []
@@ -49,7 +55,7 @@ def test_a_copy_that_comes_out_different_is_not_renamed_into_place(tmp_path):
 
 def test_filing_again_skips_files_already_in_place(tmp_path):
     copies = []
-    archive = Archive(tmp_path / "nas", copy=lambda s, d: (copies.append(d), shutil.copyfile(s, d)))
+    archive = Archive(_libraries(tmp_path / "nas"), copy=lambda s, d: (copies.append(d), shutil.copyfile(s, d)))
     files = _sources(tmp_path)
     archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), files)
     archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), files)
