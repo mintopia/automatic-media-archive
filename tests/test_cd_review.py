@@ -246,7 +246,7 @@ def test_discarding_an_unverified_rip_deletes_it(harness, client):
     assert not rec.scratch_dir.exists()
     assert not (harness.nas_root / "Music").exists()
     page = _page(client, "/")
-    assert "Didn't work" not in page or f"/jobs/{rec.id}" not in page
+    assert f"/jobs/{rec.id}" not in page
     assert 'Needs Review <span class="c">0</span>' in page
 
 

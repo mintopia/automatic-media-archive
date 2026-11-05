@@ -305,7 +305,7 @@ The spacing rhythm is 4 / 8 / 12 / 16 / 18 / 24 / 28 / 32px.
 
 **Responsive:**
 - **≤1100px:** the split collapses to one column. The aside loses its left rule and sits 28px below.
-- **Idle Now (every width):** when every bin is empty, the empty bins and the aside collapse: one centred 780px column with the drive panel, then a hairline-topped line "Nothing ripping, encoding or waiting for you. You'll get a notification when a Disc needs a decision." with a bold History link at its right (`docs/mockups/now-empty.html`).
+- **Now with nothing happening (every width):** the layout never collapses. The drive panel and every bin (Needs Review, Ripping, Encoding, History, Didn't work) stay in place, each showing its empty state: the box holds one `ink-2` line saying the bin is empty (`docs/mockups/now-empty.html`).
 - **≤720px:** the top bar wraps. The nav moves to a full-bleed, horizontally scrolling row with 48px targets, the scratch label hides and the meter shrinks to 48px. Page padding drops to 20px / 16px. The drive panel stacks, with its dark cell becoming a horizontal strip and the title dropping to 26px. Rows become two columns and their trailing action spans the full width (buttons stretch). Compact rows keep three columns. Buttons in action groups share the width equally. The selected-edition mark and the track list's Length column drop only under 480px. Long paths break after their separators (`| path` filter).
 
 ## Elevation & Depth

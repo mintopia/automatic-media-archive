@@ -399,8 +399,6 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .confirm b{display:block;margin-bottom:2px}
 .confirm p{color:var(--ink2);font-size:14px;max-width:62ch}
 .confirm .actions{margin-top:12px}
-.idle{margin-top:28px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:var(--ink2)}
-.idle a{color:var(--ink);font-weight:600;display:inline-flex;align-items:center;min-height:44px;text-underline-offset:3px}
 .signin{min-height:100vh;display:grid;place-items:center}
 .signin form{width:min(400px,100%)}
 .signin .pad{display:flex;flex-direction:column;gap:18px}

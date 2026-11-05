@@ -25,18 +25,41 @@
 <main id="main">
   <div class="notice" role="status" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#alert"/></svg><div><b>Can't reach the NAS (\\nas\media)</b>Check it's switched on. Retrying every minute; finished Discs wait safely until it's back.</div></div>
   <h1 class="sr">Now</h1>
-  <div class="solo">
-    <section aria-labelledby="drive-h">
-      <h2 id="drive-h" class="sr">Disc in drive</h2>
-      <div class="drive empty">
-        <div class="cell"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#eject"/></svg><span>Drive empty</span></div>
-        <div class="body">
-          <div class="title">Insert a Disc</div>
-          <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
+  <div class="split">
+    <div class="stack">
+      <section aria-labelledby="drive-h">
+        <h2 id="drive-h" class="sr">Disc in drive</h2>
+        <div class="drive empty">
+          <div class="cell"><svg class="i" aria-hidden="true"><use href="assets/icons.svg#eject"/></svg><span>Drive empty</span></div>
+          <div class="body">
+            <div class="title">Insert a Disc</div>
+            <div class="meta">CD, DVD, Blu-ray or UHD Blu-ray. Ripping starts on its own and the Disc ejects when it's done.</div>
+          </div>
         </div>
-      </div>
-    </section>
-    <p class="idle"><span>Nothing ripping, encoding or waiting for you. You'll get a notification when a Disc needs a decision.</span><a href="history.html">History</a></p>
+      </section>
+      <section class="bin rev empty" aria-labelledby="rev-h">
+        <h2 class="tab" id="rev-h">Needs Review <span class="c">0</span></h2>
+        <div class="box"><p class="pad ts">Nothing needs you right now. You'll get a notification when a Disc needs a decision.</p></div>
+      </section>
+    </div>
+    <div class="aside stack">
+      <section class="bin rip empty" aria-labelledby="ripping-h">
+        <h2 class="tab" id="ripping-h">Ripping <span class="c">0</span></h2>
+        <div class="box"><p class="pad ts">Nothing ripping.</p></div>
+      </section>
+      <section class="bin enc empty" aria-labelledby="encoding-h">
+        <h2 class="tab" id="encoding-h">Encoding <span class="c">0</span></h2>
+        <div class="box"><p class="pad ts">Nothing waiting to encode.</p></div>
+      </section>
+      <section class="bin fil empty" aria-labelledby="filed-h">
+        <h2 class="tab-h" id="filed-h"><a class="tab" href="history.html">History <span class="c">0</span></a></h2>
+        <div class="box"><p class="pad ts">Nothing filed yet today. <a href="history.html">Everything filed before</a></p></div>
+      </section>
+      <section class="bin ink empty" aria-labelledby="failed-h">
+        <h2 class="tab" id="failed-h">Didn't work <span class="c">0</span></h2>
+        <div class="box"><p class="pad ts">Nothing has failed.</p></div>
+      </section>
+    </div>
   </div>
 </main>
 <script src="assets/menu.js"></script>
