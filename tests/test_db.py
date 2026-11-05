@@ -1,6 +1,7 @@
 import shutil
 
 from ama.db import MIGRATIONS, Database
+from ama.jobs import JobStore
 
 
 def test_values_persist_across_restarts(tmp_path):
@@ -80,3 +81,19 @@ def test_a_new_database_has_the_same_schema_as_a_recreated_v1_one(tmp_path):
         return db.execute("SELECT type, name, sql FROM sqlite_master ORDER BY name").fetchall()
 
     assert schema(Database(tmp_path / "old.db")) == schema(Database(tmp_path / "new.db"))
+
+
+def test_a_job_ripped_before_the_minimum_title_length_was_a_setting_used_30_seconds(tmp_path):
+    before = tmp_path / "before"
+    before.mkdir()
+    for f in sorted(MIGRATIONS.glob("*.sql")):
+        if int(f.name[:4]) <= 19:
+            shutil.copy(f, before / f.name)
+    db = Database(tmp_path / "s.db", migrations=before)
+    db.execute("INSERT INTO jobs (disc_type, status, scratch_dir, started_at, skipped_short) "
+               "VALUES ('BD', 'ripped', 'x', '2026-11-04T10:00:00', 4)")
+    db.close()
+
+    job = JobStore(Database(tmp_path / "s.db"), tmp_path).get(1)
+    assert job is not None and job.min_title_seconds == 30
+    assert job.skipped_summary == "Not ripped: 4 Titles shorter than 30 seconds (menus, logos)."

@@ -323,6 +323,13 @@ SECTIONS: list[Section] = [
                   "How soon AMA notices a Disc going in or coming out. 3 seconds suits most "
                   "drives.", unit="seconds"),
         )),
+        Group("Video Titles", (
+            PerType("min-title", "Shortest Title ripped", "Minimum length",
+                    tuple((n, f"rip.min_title_seconds.{k}") for n, k in _DISC_TYPES),
+                    hint="Shorter Titles are menus, logos and warnings, and aren't ripped. "
+                         "Lower it to keep short Extras.",
+                    tech=_key("[rip.min_title_seconds] dvd", "bd", "uhd"), unit="seconds"),
+        ), live=True, note="Used from the next Rip"),
         Group("Reading CDs", (
             Field("cd.offset", "Read offset",
                   "Lines up your drive's reading so each CD Rip can be checked against "
