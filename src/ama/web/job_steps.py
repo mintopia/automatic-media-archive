@@ -11,9 +11,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Protocol
 
 from ama import extras as extras_mod
+from ama.phase import Phase, phase_of
 from ama.jobs import JobRecord, JobStatus, FailureKind, LogLine
 from ama.drive import DiscType
 from ama.encode import EncodeProgress
@@ -91,6 +93,29 @@ def _why(lines: list[LogLine]) -> LogLine | None:
     """The log line saying what the Job was identified as and how (the latest)."""
     return next((ln for ln in reversed(lines) if ln.text.startswith(_IDENTIFIED)
                  and not ln.text.startswith("Review: Rip discarded")), None)
+
+
+class _StepLike(Protocol):
+    name: str
+    state: str
+
+
+def job_phase(rec: JobRecord, steps: Sequence[_StepLike]) -> Phase:
+    """The Job's Phase, from its status and its Steps (GLOSSARY: Phase).
+
+    `ripped` spans more than one Phase: the Job is Ripping until it is identified, then
+    Encoding while its Title Encodes (and the File after them) run. A CD has no Encode,
+    so it stays Ripping until it is filed."""
+    if rec.status == JobStatus.RIPPED and any(
+            s.name == "Identification" and s.state == StepState.DONE for s in steps) \
+            and any(s.name == "Encode" for s in steps):
+        return Phase.ENCODING
+    return phase_of(rec.status)
+
+
+def phase_now(services: Services, rec: JobRecord) -> Phase:
+    """`job_phase` from the Job's Steps as they stand now."""
+    return job_phase(rec, job_steps(services, rec))
 
 
 def job_steps(services: Services, rec: JobRecord) -> list[Step]:

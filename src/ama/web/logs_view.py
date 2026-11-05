@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING
 from ama.drive import DiscType
 from ama.encode import EncodeProgress
 from ama.jobs import JobRecord, JobStatus
-from ama.phase import Phase, phase_of
+from ama.phase import Phase
 from ama.runs import Removed, RunKind, RunRecord, StepRecord
-from ama.web.job_steps import Step, job_steps
+from ama.web.job_steps import Step, job_phase, job_steps
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -159,15 +159,6 @@ def job_title(rec: JobRecord, steps: list[Step]) -> str:
     identified = next((s.subject for s in steps if s.name == "Identification"), "")
     unnamed = "Unknown CD" if rec.disc_type == DiscType.CD else rec.disc_type.long_name
     return rec.title or identified or rec.label or unnamed
-
-
-def job_phase(rec: JobRecord, steps: list[StepView]) -> Phase:
-    phase = phase_of(rec.status)
-    if rec.status == JobStatus.RIPPED and any(s.name == "Encode" and s.state in
-                                               ("running", "waiting") for s in steps) \
-            and any(s.name == "Identification" and s.state == "done" for s in steps):
-        return Phase.ENCODING
-    return phase
 
 
 def run_view(services: Services, run: RunRecord, now: datetime | None = None) -> RunView:

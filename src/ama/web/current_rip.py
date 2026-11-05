@@ -51,7 +51,7 @@ def current_rip(services: Services) -> CurrentRip | None:
 
 def _cd(rip: CdRip) -> CurrentRip:
     g = rip.guess
-    return CurrentRip(DiscType.CD, g.match.release.title if g else (rip.label or "Unknown CD"),
+    return CurrentRip(DiscType.CD, g.title if g else (rip.label or "Unknown CD"),
                       rip.position(), int(rip.percent), f"/jobs/{rip.job_id}",
                       likely=g is not None and not g.picked, picked=g is not None and g.picked,
                       cover=g.cover if g else None, cd=rip)
@@ -61,5 +61,5 @@ def _video(job: JobRecord, progress: RipProgress, guess: FilmGuess | None) -> Cu
     detail = (f"Title {progress.title_number} of {len(job.titles)}" if progress.title_number
               else "Reading the Disc")
     return CurrentRip(job.disc_type, guess.name if guess else job.name, detail,
-                      progress.pct, "/disc", likely=guess is not None,
+                      progress.pct, f"/jobs/{job.id}", likely=guess is not None,
                       cover=guess.poster if guess else None, job=job, progress=progress)

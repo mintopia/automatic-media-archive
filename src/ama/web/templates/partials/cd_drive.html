@@ -5,13 +5,13 @@
 {%- set g = cd.guess if cd else none -%}
 <div class="drive">
   {%- if g and g.cover %}
-  <div class="cell art"><img src="/covers/{{ g.cover }}" alt="Cover of {{ g.match.release.title }}"><span>Audio CD</span></div>
+  <div class="cell art"><img src="/covers/{{ g.cover }}" alt="Cover of {{ g.title }}"><span>Audio CD</span></div>
   {%- else %}
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Audio CD</span></div>
   {%- endif %}
   <div class="body">
     {%- if cd %}
-    {%- set name = g.match.release.title if g else (cd.label or "Unknown CD") %}
+    {%- set name = g.title if g else (cd.label or "Unknown CD") %}
     <{{ tag }} class="title">{% if link %}<a href="/jobs/{{ cd.job_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
     <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
     {%- if g %}

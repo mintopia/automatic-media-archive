@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#- Pick the release of the CD being ripped (web/cd_pick_pages.py). `editions`: review_pages.Edition, likeliest first; `selected`: the one shown now. -#}
-{% block title %}Which release · {{ cd.guess.match.release.title }}{% endblock %}
+{% block title %}Which release · {{ cd.guess.title }}{% endblock %}
 {% block main %}
 <main>
   <div class="page-head gap">

@@ -8,7 +8,7 @@
   <h2 class="tab" id="ripping-h">Ripping <span class="c">{{ (1 if r else 0) + waiting_rows }}</span></h2>
   <div class="box">
   {%- if r %}
-    <div class="row compact">{% if r.cover %}<div class="dtype art"><img src="/covers/{{ r.cover }}" alt=""></div>{% else %}<div class="dtype">{{ r.disc_type }}</div>{% endif %}<div><div class="tt">{% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</div><div class="ts">{% if r.likely %}{{ "Likely" if r.disc_type == "CD" else "Best guess" }} · {% elif r.picked %}Your pick · {% endif %}{{ r.detail }}{% if r.percent is not none %} · {{ r.percent }}%{% endif %}</div></div><span class="stk {{ r.phase.css }}">{{ r.phase }}</span></div>
+    <div class="row compact">{% if r.cover %}<div class="dtype art"><img src="/covers/{{ r.cover }}" alt=""></div>{% else %}<div class="dtype">{{ r.disc_type }}</div>{% endif %}<div><div class="tt">{% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</div><div class="ts">{% if r.likely %}{{ "Likely" if r.disc_type == DiscType.CD else "Best guess" }} · {% elif r.picked %}Your pick · {% endif %}{{ r.detail }}{% if r.percent is not none %} · {{ r.percent }}%{% endif %}</div></div><span class="stk {{ r.phase.css }}">{{ r.phase }}</span></div>
   {%- endif %}
   {%- for d in ripped %}
     {%- set p = d.record.status | phase %}

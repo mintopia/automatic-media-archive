@@ -67,6 +67,32 @@ def test_the_encoding_row_opens_the_job_page_showing_the_encode_in_progress(clie
     harness.ffmpeg.release()
 
 
+def _card(page: str) -> str:
+    """The Job page's drive card."""
+    start = page.index('class="drive')
+    return page[start:page.index('id="steps"')]
+
+
+def test_a_job_encoding_shows_the_encoding_phase_not_ripping(client, harness):
+    rec = _encoding_film(client, harness)
+    card = _card(_page(client, f"/jobs/{rec.id}"))
+    assert '<span class="stk enc">Encoding</span>' in card
+    assert "Ripping" not in card and "Failed" not in card
+    assert card.count("Best guess") <= 1
+    harness.ffmpeg.release()
+
+
+def test_a_ripping_job_before_any_progress_is_ripping_not_failed(client, harness):
+    from ama.web import TEMPLATES, view_context
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.services.video_rip.active is not None)
+    rec = harness.services.video_rip.active
+    card = TEMPLATES.get_template("partials/rip_card.html").render(
+        view_context(harness.services) | {"job": rec, "progress": None, "on_page": True})
+    assert '<span class="stk rip">Ripping</span>' in card and "Failed" not in card
+    harness.makemkv.release()
+
+
 def test_the_crumb_follows_the_phase_and_review_and_history_link_to_the_job_page(
         client, harness):
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=95)  # runtime is off

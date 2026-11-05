@@ -1,7 +1,7 @@
 {%- set kind = drive | kind -%}
 {%- if repeat -%}
 {% include "partials/repeat_disc.html" %}
-{%- elif current_rip and current_rip.disc_type == "CD" -%}{#- the same view as the Ripping bin -#}
+{%- elif current_rip and current_rip.disc_type == DiscType.CD -%}{#- the same view as the Ripping bin -#}
 {%- with heading=None, link=True, cd=current_rip.cd, phase=current_rip.phase %}{% include "partials/cd_drive.html" %}{% endwith -%}
 {%- elif current_rip -%}
 {%- with job = current_rip.job, progress = current_rip.progress, on_page = false, phase = current_rip.phase -%}

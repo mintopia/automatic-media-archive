@@ -21,10 +21,12 @@ from ama.jobs import JobStatus
 from ama.extras import ExtraStatus
 from ama.media import Album
 from ama.moviearchive import FiledMovie
-from ama.phase import phase_of
+from ama.drive import DiscType
+from ama.phase import Phase, phase_of
 from ama.tvarchive import FiledTv
 from ama.web import auth
 from ama.web.current_rip import current_rip
+from ama.web.job_steps import phase_now
 from ama.web.now_output import step_output
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
@@ -42,6 +44,8 @@ TEMPLATES.env.filters["kind"] = lambda value: type(value).__name__
 TEMPLATES.env.filters["makemkv_headline"] = makemkv_headline
 # `{% set p = job.status | phase %}<span class="stk {{ p.css }}">{{ p }}</span>`: status as a Phase.
 TEMPLATES.env.filters["phase"] = phase_of
+# Compare against these, never against raw status or Disc Type strings.
+TEMPLATES.env.globals.update(Phase=Phase, JobStatus=JobStatus, DiscType=DiscType)
 
 
 def breakable_path(path: object) -> Markup:
@@ -124,6 +128,7 @@ def view_context(services: Services) -> dict[str, Any]:
         "current_rip": current_rip(services),
         # (Job id, Step key) -> the running Step's newest lines for Now's "Show output", or None
         "output_of": lambda job_id, key: step_output(services, job_id, key),
+        "phase_of_job": lambda rec: phase_now(services, rec),  # its Phase from its Steps
         "cd": cd.current,
         "cd_reading": cd.reading_toc,
         "cd_last_id": cd.last_job_id,

@@ -59,6 +59,11 @@ class Guess:
     picked: bool = False           # the user picked `match`
 
     @property
+    def title(self) -> str:
+        """The guessed release's title (the album's name)."""
+        return self.match.release.title
+
+    @property
     def releases(self) -> int:
         """How many releases fit the Rip ("1 of 3 versions")."""
         return len(self.candidates)

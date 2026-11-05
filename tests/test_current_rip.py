@@ -34,6 +34,8 @@ def test_a_video_rip_is_a_row_in_the_ripping_bin_with_its_progress(client, harne
     assert re.search(r"Title 1 of 2 · \d+%", rows[0])
     assert 'Ripping <span class="c">1</span>' in _frag(harness, "ripping")
     assert "Nothing ripping." not in _frag(harness, "ripping")
+    job = harness.services.video_rip.active
+    assert f'<a href="/jobs/{job.id}">' in rows[0]  # one Job URL, as for a CD
     harness.makemkv.release()
     eventually(lambda: harness.drive.ejected == 1)
 
