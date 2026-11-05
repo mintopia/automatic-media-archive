@@ -7,7 +7,6 @@ only templates that show it (the scratch page and its live fragments) walk scrat
 from __future__ import annotations
 
 import math
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,7 +14,7 @@ from typing import TYPE_CHECKING
 from ama.jobs import JobRecord, JobStatus
 from ama.moviearchive import EncodeStatus
 from ama.phase import Phase
-from ama.scratch import GB
+from ama.scratch import GB, dir_bytes
 from ama.web.review_items import review_items
 
 if TYPE_CHECKING:
@@ -32,17 +31,6 @@ class ScratchItem:
     gb: int              # whole GB, rounded up
     sticker: Phase | None = None  # its status chip
     href: str = ""       # its Review, when it waits for one
-
-
-def dir_bytes(path: Path) -> int:
-    total = 0
-    for root, _dirs, files in os.walk(path):
-        for name in files:
-            try:
-                total += os.stat(os.path.join(root, name)).st_size
-            except OSError:
-                pass
-    return total
 
 
 def scratch_items(services: Services) -> list[ScratchItem]:

@@ -50,6 +50,7 @@ from ama.repeat import RepeatGuard
 from ama.restart import Busy, Restarter
 from ama.runs import LogPruner, Runs
 from ama.scratch import DiskUsageFn, ScratchGate
+from ama.scratch_cleanup import ScratchCleaner
 from ama.settings import Settings
 from ama.sets import DiscSets
 from ama.tmdb import Tmdb
@@ -99,6 +100,7 @@ class Services:
     runs: Runs  # Logs: every Job's Run and each app event's, with Step output
     app_events: AppEvents  # startup, NAS and tool events as Runs
     log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
+    scratch_cleaner: ScratchCleaner  # removes failed Encodes' Rips past retention_days
     job_settings: JobSettings | None = None  # set by build_services; per-Job overrides + locks
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
@@ -108,9 +110,12 @@ class Services:
             self.encoders.request()  # test the encoders again on save (ADR 0010)
         if cfg.logs != self.config.logs:
             self.log_pruner.request()  # a shorter keep applies at once
+        if cfg.scratch != self.config.scratch:
+            self.scratch_cleaner.request()
         self.config = cfg
         self.cd.cfg = cfg.cd
         self.video_rip.cfg = cfg.rip
+        self.scratch.cfg = cfg.scratch
         self.movie_archive.encoder.cfg = cfg.encode
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
@@ -118,9 +123,10 @@ class Services:
         self.notifier.channels = channels(cfg, self.http)
 
     def background_tasks(self) -> list[Callable[[], object]]:
-        """Coroutine functions run for the app's lifetime. Add new monitors/workers here."""
-        return [self.problems.run, self.runs.run, self.log_pruner.run, self.app_events.run,
-                self.drive.run,
+        """Coroutine functions run for the app's lifetime. Add new monitors/workers here.
+        Scratch cleanup comes first: it takes failed Encodes before the archivers requeue them."""
+        return [self.scratch_cleaner.run, self.problems.run, self.runs.run, self.log_pruner.run,
+                self.app_events.run, self.drive.run,
                 self.nas.run, self.cd.run, self.video_rip.run,
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
@@ -234,7 +240,10 @@ def build_services(
         runs=runs,
         app_events=AppEvents(runs, bus, nas, tools, config_path),
         log_pruner=LogPruner(runs, lambda: services.config.logs.keep_days),
+        scratch_cleaner=ScratchCleaner(jobs, runs,
+                                       lambda: services.config.scratch.retention_days),
     )
+    jobs.finished = services.scratch_cleaner.request
     services.settings = Settings(config_path, cfg, services.apply_live)
     services.encoders.log = services.app_events  # each encoder test is a Step in Logs
     services.job_settings = job_settings

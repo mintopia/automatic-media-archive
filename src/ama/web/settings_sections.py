@@ -313,6 +313,13 @@ SECTIONS: list[Section] = [
                     hint="With less free, an inserted Disc is ejected unripped and Now shows "
                          "what's holding scratch.", unit="GB"),
         )),
+        Group("Scratch cleanup", (
+            Field("scratch.retention_days", "Remove kept scratch after",
+                  "A failed Encode keeps its Rip on scratch to try again. After this many "
+                  "days it's removed, oldest first; the Job keeps its record. 0 never removes "
+                  "it. Checked at startup, every hour and when a Job finishes; each cleanup "
+                  "is listed in Logs.", unit="days"),
+        ), live=True, note="Takes effect at once"),
         Group("Database and log file", (
             Field("paths.state_db", "Database",
                   Markup("AMA's record of every Job. A plain name is kept next to "

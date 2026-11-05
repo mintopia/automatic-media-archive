@@ -201,8 +201,8 @@ class Notifier:
             if rec is None:
                 continue
             if event == Event.JOB_FAILED and rec.failure \
-                    and rec.failure.kind == FailureKind.DISCARDED:
-                continue  # the user's own decision in Review
+                    and rec.failure.kind in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
+                continue  # the user's own decision in Review, or housekeeping
             notes.append(notification(event, rec))
         return notes
 

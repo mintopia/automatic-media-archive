@@ -46,6 +46,7 @@ class RunKind(StrEnum):
     APP = "app"      # startup
     NAS = "nas"      # the NAS dropped, or came back
     TOOLS = "tools"  # a tool download or check after startup
+    SCRATCH = "scratch"  # a Scratch cleanup that removed something
 
 
 class StepState(StrEnum):

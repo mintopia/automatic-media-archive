@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 
 # An app event's kind on its row and page: (icon, label, "App event: <what>").
 APP_KINDS = {RunKind.APP: ("power", "App", "startup"), RunKind.NAS: ("drive", "NAS", "NAS"),
-             RunKind.TOOLS: ("layers", "Tools", "tools")}
+             RunKind.TOOLS: ("layers", "Tools", "tools"),
+             RunKind.SCRATCH: ("drive", "Scratch", "Scratch cleanup")}
 
 
 def took(delta: timedelta | None) -> str:

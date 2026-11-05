@@ -223,6 +223,7 @@ class TvArchiver:
                     out, ffmpeg, ffprobe)
                 if height is None:
                     self.titles.set_status(rec.id, row.title_number, EncodeStatus.FAILED)
+                    self._jobs.encode_failed(rec.id)
                     continue
                 self.titles.set_status(rec.id, row.title_number, EncodeStatus.ENCODED, height)
                 row = next(r for r in self.titles.for_job(rec.id)

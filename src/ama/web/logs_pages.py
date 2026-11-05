@@ -21,7 +21,8 @@ from ama.web.logs_view import bins, run_view, when
 router = APIRouter()
 
 PAGE = 100  # runs on one page of the list
-_KINDS = {"jobs": [RunKind.JOB], "app": [RunKind.APP, RunKind.NAS, RunKind.TOOLS]}
+_KINDS = {"jobs": [RunKind.JOB],
+          "app": [RunKind.APP, RunKind.NAS, RunKind.TOOLS, RunKind.SCRATCH]}
 
 
 def _services(request: Request):

@@ -67,6 +67,7 @@ class TitleStatus(StrEnum):
 class FailureKind(StrEnum):
     INTERRUPTED = "interrupted"  # the app stopped mid-Rip
     DISCARDED = "discarded"  # the user threw the Rip away in Review
+    SCRATCH_CLEANED = "scratch_cleaned"  # Scratch cleanup removed a failed Encode's Rip
     # video
     LICENCE = "licence"  # MakeMKV refused to work: not the Disc's fault
     MAKEMKV = "makemkv"  # MakeMKV missing, or crashed
@@ -149,6 +150,7 @@ class JobRecord:
     title: str = ""                 # what it was filed as, e.g. "Kid A — Radiohead"
     archive_dir: Path | None = None
     filed_at: datetime | None = None
+    scratch_cleaned_at: datetime | None = None
 
     @property
     def name(self) -> str:
@@ -174,7 +176,11 @@ class JobRecord:
 
 _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
          "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates, "
-         "review_reason, title, archive_dir, filed_at, min_title_seconds")
+         "review_reason, title, archive_dir, filed_at, min_title_seconds, scratch_cleaned_at")
+
+
+def _when(value: str | None) -> datetime | None:
+    return datetime.fromisoformat(value) if value else None
 
 
 def _rip_name(rec: JobRecord) -> str:
@@ -189,13 +195,16 @@ class JobStore:
         self._now = now
         # Logs (runs.py): each Job's Run follows its records here; None keeps no Run.
         self.runs = runs
+        # Called when a Job may have finished (filed, failed, an Encode failed): Scratch
+        # cleanup looks again. Set by build_services; called from any thread.
+        self.finished: Callable[[], None] = lambda: None
 
     def _ts(self) -> str:
         return self._now().isoformat(timespec="seconds")
 
     def _record(self, row) -> JobRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
-         short, dupes, reason, title, archive_dir, filed_at, min_title) = row
+         short, dupes, reason, title, archive_dir, filed_at, min_title, cleaned_at) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
             "status, source, name FROM titles WHERE job_id = ? ORDER BY number",
@@ -211,7 +220,7 @@ class JobStore:
                          for t in titles),
             review_reason=ReviewReason(reason) if reason else None, title=title,
             archive_dir=Path(archive_dir) if archive_dir else None,
-            filed_at=datetime.fromisoformat(filed_at) if filed_at else None,
+            filed_at=_when(filed_at), scratch_cleaned_at=_when(cleaned_at),
         )
 
     def create(self, disc_type: DiscType, label: str, scratch_subdir: str,
@@ -219,8 +228,8 @@ class JobStore:
         """Start a record in `ripping`; its scratch folder is `scratch/<subdir>/<id>`."""
         cur = self._db.execute(
             "INSERT INTO jobs (disc_type, label, status, scratch_dir, started_at, "
-            "min_title_seconds) VALUES (?, ?, 'ripping', '', ?, ?)",
-            (disc_type.value, label, self._ts(), min_title_seconds))
+            "min_title_seconds, changed_at) VALUES (?, ?, 'ripping', '', ?, ?, ?)",
+            (disc_type.value, label, self._ts(), min_title_seconds, self._ts()))
         job_id = cur.lastrowid
         assert job_id is not None
         scratch = self._scratch / scratch_subdir / str(job_id)
@@ -269,8 +278,8 @@ class JobStore:
                          (str(status), job_id, number))
 
     def mark_ripped(self, job_id: int) -> None:
-        self._db.execute("UPDATE jobs SET status = 'ripped', finished_at = ? WHERE id = ?",
-                         (self._ts(), job_id))
+        self._db.execute("UPDATE jobs SET status = 'ripped', finished_at = ?, changed_at = ? "
+                         "WHERE id = ?", (self._ts(), self._ts(), job_id))
         if rec := self.get(job_id):
             log.info("Rip finished: %s: ripped", _rip_name(rec))
         # The Rip Step carries on (the eject is still to come) until Identification begins.
@@ -287,23 +296,27 @@ class JobStore:
             self.runs.flush()  # its Step's last lines (why it failed) before the Job reads failed
         self._db.execute(
             "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
-            "failure_advice = ?, finished_at = COALESCE(finished_at, ?) WHERE id = ?",
-            (failure.kind.value, failure.headline, failure.advice, self._ts(), job_id))
+            "failure_advice = ?, finished_at = COALESCE(finished_at, ?), changed_at = ? "
+            "WHERE id = ?",
+            (failure.kind.value, failure.headline, failure.advice, self._ts(), self._ts(),
+             job_id))
         self._db.execute("UPDATE titles SET status = 'failed' WHERE job_id = ? "
                          "AND status = 'ripping'", (job_id,))
         if self.runs:
             self.runs.job_end(job_id, failed=True, result=failure.headline, finish=True)
+        self.finished()
 
     def mark_review(self, job_id: int, reason: ReviewReason) -> None:
-        self._db.execute("UPDATE jobs SET status = 'review', review_reason = ? WHERE id = ?",
-                         (reason.value, job_id))
+        self._db.execute("UPDATE jobs SET status = 'review', review_reason = ?, changed_at = ? "
+                         "WHERE id = ?", (reason.value, self._ts(), job_id))
         if self.runs:
             self.runs.job_end(job_id, result="Needs Review")
 
     def requeue(self, job_id: int) -> bool:
         """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
-        cur = self._db.execute("UPDATE jobs SET status = 'ripped', review_reason = NULL "
-                               "WHERE id = ? AND status = 'review'", (job_id,))
+        cur = self._db.execute("UPDATE jobs SET status = 'ripped', review_reason = NULL, "
+                               "changed_at = ? WHERE id = ? AND status = 'review'",
+                               (self._ts(), job_id))
         return cur.rowcount == 1
 
     def mark_filed(self, job_id: int, title: str, archive_dir: Path) -> None:
@@ -311,11 +324,57 @@ class JobStore:
         cut-off delete)."""
         self._db.execute(
             "UPDATE jobs SET status = 'filed', review_reason = NULL, title = ?, archive_dir = ?, "
-            "filed_at = COALESCE(filed_at, ?) WHERE id = ?",
-            (title, str(archive_dir), self._ts(), job_id))
+            "filed_at = COALESCE(filed_at, ?), changed_at = ? WHERE id = ?",
+            (title, str(archive_dir), self._ts(), self._ts(), job_id))
         rec = self.get(job_id)
         if rec is not None:
             shutil.rmtree(rec.scratch_dir, ignore_errors=True)
+        self.finished()
+
+    def encode_failed(self, job_id: int) -> None:
+        """A Title Encode failed: the Job's Encode changed status, and it may now be
+        finished, its Scratch kept for a retry until Scratch cleanup removes it."""
+        self._db.execute("UPDATE jobs SET changed_at = ? WHERE id = ?", (self._ts(), job_id))
+        self.finished()
+
+    def kept_scratch(self, changed_before: datetime) -> builtins.list[JobRecord]:
+        """Finished Jobs whose Scratch is kept (a failed Encode, nothing else of the Job
+        still to Encode or file) that last changed status before `changed_before`, oldest
+        first."""
+        rows = self._db.execute(
+            f"SELECT {_COLS} FROM jobs j WHERE status = 'ripped' "
+            "AND scratch_cleaned_at IS NULL AND changed_at < ? AND ("
+            "EXISTS (SELECT 1 FROM movies m WHERE m.job_id = j.id "
+            "AND m.encode_status = 'failed') "
+            "OR (EXISTS (SELECT 1 FROM tv_titles t WHERE t.job_id = j.id "
+            "AND t.encode_status = 'failed') "
+            "AND NOT EXISTS (SELECT 1 FROM tv_titles t WHERE t.job_id = j.id "
+            "AND t.encode_status NOT IN ('failed', 'filed')))) "
+            "ORDER BY changed_at, id",
+            (changed_before.isoformat(timespec="seconds"),)).fetchall()
+        return [self._record(r) for r in rows]
+
+    def mark_scratch_cleaned(self, job_id: int, failure: Failure) -> bool:
+        """Scratch cleanup takes the Job: it fails for good and leaves Now; its files are
+        the cleaner's to remove (`scratch_left` finds them after a restart). False if
+        another pass took it first."""
+        ts = self._ts()
+        cur = self._db.execute(
+            "UPDATE jobs SET status = 'failed', failure_kind = ?, failure_headline = ?, "
+            "failure_advice = ?, scratch_cleaned_at = ?, changed_at = ?, dismissed = 1 "
+            "WHERE id = ? AND status = 'ripped' AND scratch_cleaned_at IS NULL",
+            (failure.kind.value, failure.headline, failure.advice, ts, ts, job_id))
+        if cur.rowcount != 1:
+            return False
+        if self.runs:
+            self.runs.job_end(job_id, failed=True, finish=True)
+        return True
+
+    def scratch_left(self) -> builtins.list[JobRecord]:
+        """Jobs Scratch cleanup took whose files are still there (it was cut off)."""
+        rows = self._db.execute(f"SELECT {_COLS} FROM jobs WHERE scratch_cleaned_at IS NOT NULL "
+                                "ORDER BY changed_at, id").fetchall()
+        return [rec for r in rows if (rec := self._record(r)).scratch_dir.exists()]
 
     def clean_filed_scratch(self) -> None:
         for rec in self.list(JobStatus.FILED, include_dismissed=True):

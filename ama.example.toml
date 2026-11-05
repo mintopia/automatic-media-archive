@@ -69,6 +69,10 @@ cd = 1
 dvd = 10
 bd = 50
 uhd = 100
+# Days a failed Encode's Rip is kept on scratch for a retry; 0 keeps it until you
+# remove it. Older ones are removed, oldest first, at startup, every hour and when
+# a Job finishes; each cleanup is listed in Logs.
+retention_days = 0
 
 [rip.min_title_seconds]
 # Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
