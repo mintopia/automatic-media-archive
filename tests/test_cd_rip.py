@@ -248,3 +248,46 @@ def test_a_rip_starting_and_finishing_is_logged(harness, client, caplog):
     assert f"Rip started: Audio CD “OK_COMPUTER” (Job {rec.id})" in _info(caplog)
     eventually(lambda: f"Rip finished: Audio CD “OK_COMPUTER” (Job {rec.id}): ripped"
                in _info(caplog))
+
+
+def _top_level_texts(html: str) -> list[str]:
+    from html.parser import HTMLParser
+
+    class Top(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.depth, self.texts = 0, []
+
+        def handle_starttag(self, tag, attrs):
+            if self.depth == 0:
+                self.texts.append("")
+            self.depth += 1
+
+        def handle_endtag(self, tag):
+            self.depth -= 1
+
+        def handle_data(self, data):
+            if self.depth:
+                self.texts[-1] += data
+            elif data.strip():
+                self.texts.append(data)
+
+    top = Top()
+    top.feed(html)
+    return [" ".join(t.split()) for t in top.texts]
+
+
+def test_each_track_result_is_one_inline_phrase():
+    from ama.cdrip import Track
+    from ama.cyanrip import ArResult, ArStatus
+    from ama.web import TEMPLATES
+
+    def cell(ar):
+        return _top_level_texts(TEMPLATES.get_template("partials/cd_track_ar.html").render(
+            t=Track(number=1, seconds=60, ripped=True, ar=ar)))
+
+    assert cell(ArResult(ArStatus.ACCURATE, 12)) == ["Verified · matches 12 other rips"]
+    assert cell(ArResult(ArStatus.ACCURATE, 1)) == ["Verified · matches 1 other rip"]
+    assert cell(ArResult(ArStatus.MISMATCH)) == ["Doesn't match other rips"]
+    assert cell(ArResult(ArStatus.NOT_IN_DB)) == ["Ripped · no other rips to compare"]
+    assert cell(None) == ["Ripped · online check unavailable"]
