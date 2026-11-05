@@ -257,6 +257,10 @@ class Runs:
         for secret in self._secrets():
             if secret:
                 text = text.replace(secret, "•••")
+        self._append(step_id, text, error)
+
+    def _append(self, step_id: int, text: str, error: bool = False) -> None:
+        """Store (soon) and hold a line already masked, or with nothing to mask."""
         at = self._now().replace(microsecond=0)
         with self._lock:
             self._unsaved.append((step_id, at.isoformat(), int(error), text))
@@ -437,7 +441,7 @@ class Runs:
                     self._open[job_id] = step_id
                     self._ring[step_id] = collections.deque(kept[-self.RING:], maxlen=self.RING)
                     self._count[step_id] = len(kept)
-                self.line(step_id, RESUMED)
+                self._append(step_id, RESUMED)  # before services (secrets) exist
             else:
                 self._db.execute("UPDATE steps SET state = 'failed', result = ?, "
                                  "finished_at = COALESCE(finished_at, started_at) WHERE id = ?",
