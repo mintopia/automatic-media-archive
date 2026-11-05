@@ -37,11 +37,11 @@ def _longest_s(rec: JobRecord) -> int | None:
 
 def _back(next_: str) -> str:
     """Only back to a page of ours."""
-    return next_ if next_.startswith("/") and not next_.startswith("//") else "/disc"
+    return next_ if next_.startswith("/") and not next_.startswith("//") else "/"
 
 
 @router.get("/jobs/{job_id}/guess/search", response_class=HTMLResponse)
-def search(request: Request, job_id: int, q: str = "", next: str = "/disc") -> Response:
+def search(request: Request, job_id: int, q: str = "", next: str = "/") -> Response:
     services = request.app.state.services
     rec = _job(request, job_id)
     films, error = [], None
@@ -62,7 +62,7 @@ def search(request: Request, job_id: int, q: str = "", next: str = "/disc") -> R
 
 @router.post("/jobs/{job_id}/guess")
 def pick(request: Request, job_id: int, film: Annotated[int, Form()],
-         next: Annotated[str, Form()] = "/disc") -> Response:
+         next: Annotated[str, Form()] = "/") -> Response:
     services = request.app.state.services
     rec = _job(request, job_id)
     if rec.status not in _CHANGEABLE:

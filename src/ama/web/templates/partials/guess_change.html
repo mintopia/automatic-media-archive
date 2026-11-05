@@ -5,7 +5,7 @@
   <form class="search" role="search" action="/jobs/{{ job.id }}/guess/search" hx-get="/jobs/{{ job.id }}/guess/search" hx-target="#guess-results-{{ job.id }}" hx-push-url="false">
     <label class="sr" for="guess-q-{{ job.id }}">Search films</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
     <input class="input" id="guess-q-{{ job.id }}" name="q" type="search" value="{{ g.film.title if g else '' }}" placeholder="Film title" enterkeyhint="search" required>
-    <input type="hidden" name="next" value="{{ '/disc' if on_page else '/' }}">
+    <input type="hidden" name="next" value="{{ ('/jobs/' ~ job.id) if on_page else '/' }}">
   </form>
   <div id="guess-results-{{ job.id }}" aria-live="polite"></div>
 </details>

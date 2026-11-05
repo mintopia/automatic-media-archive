@@ -12,6 +12,7 @@
     <form class="actions" method="post" action="/jobs/{{ job.id }}/dismiss">
       <button class="btn pri" type="submit">OK</button><a class="btn quiet" href="#log" onclick="document.querySelector('#log details').open=true">Show the log</a>
     </form>
+    {% include "partials/job_steps.html" %}
     {% include "partials/job_log.html" %}
   </div></div>
 </main>

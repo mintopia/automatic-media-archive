@@ -59,6 +59,11 @@ _GENERIC: dict[ReviewReason, tuple[str, str]] = {
 }
 
 
+def reason_summary(reason: ReviewReason) -> str:
+    """Why a Disc needs Review, in a line (no more specific than its reason)."""
+    return _GENERIC[reason][0]
+
+
 def review_items(services: Services) -> list[ReviewItem]:
     items = []
     for rec in review.queue(services.jobs):

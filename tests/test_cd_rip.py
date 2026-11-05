@@ -77,7 +77,7 @@ def test_progress_is_live_per_track(harness, client):
     assert "Ripping 50%" in page
     assert "matches 12 other rips" in page  # track 1 already done
     assert 'role="progressbar" aria-valuenow="50"' in page
-    assert page.count("Waiting") == 1           # track 3
+    assert page[:page.index('id="steps"')].count("Waiting") == 1  # track 3 (not the Steps)
     # 200 s done + half of 100 s, of 600 s
     assert round(cd.percent) == 42
     assert "Track 2 of 3 · 41%" in client.get("/").text

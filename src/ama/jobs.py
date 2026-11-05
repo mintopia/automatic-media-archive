@@ -313,3 +313,22 @@ class JobStore:
             "SELECT at, error, text FROM job_log WHERE job_id = ? ORDER BY id",
             (job_id,)).fetchall()
         return [LogLine(datetime.fromisoformat(a), bool(e), t) for a, e, t in rows]
+
+    def encode_started(self, job_id: int, title_number: int) -> None:
+        """A Title's Encode began (again, after a failure or restart: the clock restarts)."""
+        self._db.execute(
+            "INSERT INTO encode_times (job_id, title_number, started_at) VALUES (?, ?, ?) "
+            "ON CONFLICT (job_id, title_number) DO UPDATE SET started_at = excluded.started_at, "
+            "finished_at = NULL", (job_id, title_number, self._ts()))
+
+    def encode_finished(self, job_id: int, title_number: int) -> None:
+        self._db.execute("UPDATE encode_times SET finished_at = ? "
+                         "WHERE job_id = ? AND title_number = ?",
+                         (self._ts(), job_id, title_number))
+
+    def encode_times(self, job_id: int) -> dict[int, tuple[datetime, datetime | None]]:
+        """Title number -> (Encode started, finished or None) for each Title Encoded so far."""
+        rows = self._db.execute("SELECT title_number, started_at, finished_at FROM encode_times "
+                                "WHERE job_id = ?", (job_id,)).fetchall()
+        return {n: (datetime.fromisoformat(s), datetime.fromisoformat(f) if f else None)
+                for n, s, f in rows}

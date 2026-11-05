@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}{% if live %}Ripping {{ title }}{% else %}{{ title }} · History{% endif %}{% endblock %}
+{% block title %}{{ job_name }} · {{ section.label }}{% endblock %}
 {% block main %}
 <main id="disc">
-  <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg>{% if live %}<span>Disc in drive</span>{% else %}<a href="/history">History</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><span>{{ title }}</span>{% endif %}</div>
+  {% include "partials/job_crumb.html" %}
   {%- if live %}
   <div sse-swap="cd-rip">{% include "partials/cd_rip_live.html" %}</div>
   {%- else %}
   {% include "partials/cd_rip.html" %}
   {%- endif %}
+  {% include "partials/job_steps.html" %}
 </main>
 {% endblock %}

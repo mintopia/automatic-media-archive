@@ -111,8 +111,10 @@ class VideoRipper:
                  scratch: ScratchGate, pause: Pause,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
-                 guesses: FilmGuesses | None = None) -> None:
+                 guesses: FilmGuesses | None = None,
+                 hold: Callable[[], bool] = lambda: False) -> None:
         self._pause = pause
+        self._hold = hold  # start no new Rip (a restart is waiting)
         self._guesses = guesses  # the Job's Best guess (film_guess.py)
         self.guessing = False  # TMDB is being asked for the Best guess
         self._films: list[Candidate] = []  # TMDB's films for the Disc's label
@@ -178,7 +180,7 @@ class VideoRipper:
             return
         if self._handled == self._drive.insertion:  # once per insertion: never re-rip on our own
             return
-        if self._pause.paused:  # left unhandled: resuming picks this Disc up
+        if self._pause.paused or self._hold():  # left unhandled: picked up when either ends
             return
         self._handled = self._drive.insertion
         assert isinstance(state, DiscPresent)
