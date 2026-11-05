@@ -320,6 +320,11 @@ SECTIONS: list[Section] = [
                   "days it's removed, oldest first; the Job keeps its record. 0 never removes "
                   "it. Checked at startup, every hour and when a Job finishes; each cleanup "
                   "is listed in Logs.", unit="days"),
+            Field("scratch.floor_gb", "Free scratch to keep",
+                  "With less free than this, kept scratch is removed whatever its age, "
+                  "oldest first, until there's enough. 0 turns it off. It never stops a "
+                  "Rip; a Disc is still ejected unripped only by the space it needs.",
+                  unit="GB"),
         ), live=True, note="Takes effect at once"),
         Group("Database and log file", (
             Field("paths.state_db", "Database",

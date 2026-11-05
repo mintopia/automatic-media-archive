@@ -39,8 +39,11 @@ class World:
         self.tv = TvTitles(db, now=self.now)
         self.days = retention_days
         self.sizes: dict[Path, int] = {}
-        self.cleaner = ScratchCleaner(self.jobs, self.runs, lambda: self.days, now=self.now,
-                                      size=lambda path: self.sizes[path])
+        self.floor_gb = 0
+        self.free = 256 * GB
+        self.cleaner = ScratchCleaner(self.jobs, self.runs, lambda: self.days,
+                                      floor_gb=lambda: self.floor_gb, free=lambda: self.free,
+                                      now=self.now, size=lambda path: self.sizes[path])
 
     def now(self) -> datetime:
         return self.at
@@ -182,6 +185,70 @@ def test_a_cleanup_cut_off_by_a_restart_finishes_on_the_next_start(tmp_path):
     assert len(again.runs.list_runs([RunKind.SCRATCH])) == 1
 
 
+# --- the floor (#54) -------------------------------------------------------------------
+
+
+def test_below_the_floor_the_oldest_kept_scratch_goes_until_free_space_is_above_it(tmp_path):
+    w = World(tmp_path, retention_days=0)
+    oldest = w.film("OLDEST", EncodeStatus.FAILED, size=10 * GB)
+    w.later(hours=1)
+    middle = w.film("MIDDLE", EncodeStatus.FAILED, size=10 * GB)
+    w.later(hours=1)
+    newest = w.film("NEWEST", EncodeStatus.FAILED, size=10 * GB)
+    w.floor_gb, w.free = 20, 5 * GB
+    w.cleaner.clean()
+    assert not w.scratch(oldest).exists() and not w.scratch(middle).exists()
+    assert w.scratch(newest).exists()
+    assert _steps(w) == [(f"OLDEST (Job {oldest})", "10.0 GB · scratch below the 20 GB floor"),
+                         (f"MIDDLE (Job {middle})", "10.0 GB · scratch below the 20 GB floor")]
+    rec = w.jobs.get(oldest)
+    assert rec.failure.kind == FailureKind.SCRATCH_CLEANED
+    [run] = w.runs.list_runs([RunKind.SCRATCH])
+    assert run.detail == "2 Jobs · 20.0 GB freed"
+
+
+def test_the_floor_is_off_by_default(tmp_path):
+    w = World(tmp_path, retention_days=0)
+    kept = w.film("KEPT", EncodeStatus.FAILED)
+    w.free = 0
+    w.cleaner.clean()
+    assert w.scratch(kept).exists()
+    assert w.runs.list_runs([RunKind.SCRATCH]) == []
+
+
+def test_above_the_floor_nothing_younger_than_the_retention_age_goes(tmp_path):
+    w = World(tmp_path)
+    kept = w.film("KEPT", EncodeStatus.FAILED)
+    w.floor_gb, w.free = 20, 21 * GB
+    w.cleaner.clean()
+    assert w.scratch(kept).exists()
+    assert w.runs.list_runs([RunKind.SCRATCH]) == []
+
+
+def test_what_the_retention_age_removes_counts_toward_the_floor(tmp_path):
+    w = World(tmp_path)
+    old = w.film("OLD", EncodeStatus.FAILED, size=10 * GB)
+    w.later(days=15)
+    young = w.film("YOUNG", EncodeStatus.FAILED, size=10 * GB)
+    w.floor_gb, w.free = 20, 15 * GB
+    w.cleaner.clean()
+    assert not w.scratch(old).exists() and w.scratch(young).exists()
+    assert _steps(w) == [(f"OLD (Job {old})", "10.0 GB · older than 14 days")]
+
+
+def test_still_below_the_floor_with_nothing_left_the_run_says_so(tmp_path):
+    w = World(tmp_path, retention_days=0)
+    only = w.film("ONLY", EncodeStatus.FAILED, size=2 * GB)
+    on_its_way = w.film("ENCODING", EncodeStatus.ENCODING, size=30 * GB)
+    w.floor_gb, w.free = 20, 5 * GB
+    w.cleaner.clean()
+    assert not w.scratch(only).exists() and w.scratch(on_its_way).exists()
+    [run] = w.runs.list_runs([RunKind.SCRATCH])
+    assert run.failed is False
+    assert run.detail == ("1 Job · 2.0 GB freed · still below the 20 GB floor, "
+                          "nothing else to remove")
+
+
 # --- the app ---------------------------------------------------------------------------
 
 
@@ -257,3 +324,23 @@ def test_at_startup_old_kept_scratch_is_removed_before_its_encode_is_retried(tmp
     assert rec.status == JobStatus.FAILED and rec.failure.kind == FailureKind.SCRATCH_CLEANED
     assert again.services.movie_archive.movies.get(1).status == EncodeStatus.FAILED
     assert again.ffmpeg.calls == []
+
+
+def test_saving_a_floor_with_scratch_low_removes_kept_scratch_at_once(tmp_path):
+    toml = write_config(tmp_path)
+    h = make_harness(tmp_path, config_file=toml)
+    with TestClient(create_app(h.services)) as client:
+        job = _failed_encode(h, days_ago=0)
+        scratch = h.services.jobs.get(job).scratch_dir
+        page = _text(client.get("/settings/general").text)
+        assert "Free scratch to keep" in page
+        assert h.services.config.scratch.floor_gb == 0  # off by default
+        h.disk.used = h.disk.total - 5 * GB
+
+        r = client.post("/settings/general", data={"scratch.floor_gb": "20"},
+                        follow_redirects=False)
+        assert r.status_code == 303
+        assert "floor_gb = 20" in toml.read_text(encoding="utf-8")
+        eventually(lambda: not scratch.exists())
+        [run] = h.services.runs.list_runs([RunKind.SCRATCH])
+        assert "scratch below the 20 GB floor" in _text(client.get(f"/logs/runs/{run.id}").text)

@@ -73,6 +73,9 @@ uhd = 100
 # remove it. Older ones are removed, oldest first, at startup, every hour and when
 # a Job finishes; each cleanup is listed in Logs.
 retention_days = 0
+# Free scratch (GB) to keep: with less free, kept Rips are removed whatever their
+# age, oldest first, until there's more; 0 turns it off.
+floor_gb = 0
 
 [rip.min_title_seconds]
 # Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
