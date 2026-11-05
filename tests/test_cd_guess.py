@@ -75,7 +75,7 @@ def test_while_ripping_the_likely_album_cover_and_track_titles_are_shown(harness
     eventually(lambda: "Likely" in client.get("/").text)
     now = unescape(client.get("/").text)
     assert ALBUM in now and "Various Artists" in now
-    assert "1 of 3 releases" in now
+    assert "1 of 3 versions of this album" in now
     cover = f"/covers/release-{SPECIAL}.jpg"
     assert cover in now
     assert client.get(cover).content == COVER
@@ -83,7 +83,7 @@ def test_while_ripping_the_likely_album_cover_and_track_titles_are_shown(harness
     disc = harness.services.cd.current.disc_id
     page = unescape(client.get(f"/discs/{disc}").text)
     assert "The Unknown Journey Continues" in page   # track 1's title on MusicBrainz
-    assert "1 of 3 releases" in page and cover in page
+    assert "1 of 3 versions of this album" in page and cover in page
 
     harness.cyanrip.release()
     rec = eventually_status(harness, DiscStatus.REVIEW)   # the guess never files anything

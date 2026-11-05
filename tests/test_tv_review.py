@@ -110,9 +110,9 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
     assert '<option value="0">Specials (Season 00)</option>' in page
     # Episode-length Titles get the season's Episodes in order; the Play all is discarded,
     # the short one kept as an Extra.
-    assert '<option value="S01E01" selected>S01E01 · Downsize</option>' in page
-    assert '<option value="S01E03" selected>S01E03 · The Quiz</option>' in page
-    assert '<option value="S00E02">S00E02 · Christmas Special (2)</option>' in page
+    assert '<option value="S01E01" selected>S01E01 · Downsize' in page
+    assert '<option value="S01E03" selected>S01E03 · The Quiz' in page
+    assert '<option value="S00E02">S00E02 · Christmas Special (2) · 45 min</option>' in page
     assert "“Play all”" in page
     assert page.count('value="discard" selected') == 1
     assert page.count('value="extra" selected') == 1
@@ -122,7 +122,7 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
 
     season2 = _page(client, f"/review/{rec.id}?series={OFFICE}&season=2")
     assert f"{SHOW}/Season 02" in season2
-    assert '<option value="S02E01" selected>S02E01 · Merger</option>' in season2
+    assert '<option value="S02E01" selected>S02E01 · Merger' in season2
 
 
 def _filed_names(harness) -> list[str]:
@@ -136,7 +136,7 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
     r = client.post(f"/review/{rec.id}/episodes", follow_redirects=False, data={
         "series": str(OFFICE), "season": "1",
         "t1": "S01E03", "t2": "S01E05", "t3": "S00E01", "t4": "discard", "t5": "extra"})
-    assert r.status_code == 303 and r.headers["location"] == "/review"
+    assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
 
     filed = eventually(lambda: harness.services.discs.get(rec.id).status == DiscStatus.FILED,
                        timeout=10) or harness.services.discs.get(rec.id)
@@ -252,7 +252,7 @@ def test_the_user_can_search_for_another_series(harness, client):
     rec = _in_review(harness, _tv_disc(harness))
     page = _page(client, f"/review/{rec.id}?q=The Office US")
     assert f'href="/review/{rec.id}?series=2316"' in page and "The Office (2005)" in page
-    assert "TMDB has no series called “Nope”" in _page(client, f"/review/{rec.id}?q=Nope")
+    assert "The TV database (TMDB) has no series called “Nope”" in _page(client, f"/review/{rec.id}?q=Nope")
     picked = _page(client, f"/review/{rec.id}?series=2316")
     assert "TV/The Office (2005) {tmdb-2316}/Season 01" in picked
     harness.web.tmdb_offline = True

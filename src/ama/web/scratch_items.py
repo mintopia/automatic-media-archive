@@ -59,10 +59,8 @@ def scratch_items(services: Services) -> list[ScratchItem]:
         movie = movies.get(rec.id)
         tv = services.tv_archive.titles.for_disc(rec.id)
         if tv:
-            sticker = ("enc", "Encoding") if job is not None and job.disc.id == rec.id \
-                else ("enc", "Waiting")
             waiting.append(_item(rec, tv[0].series.title, "TV · encoding and filing Episodes",
-                                 sticker))
+                                 ("enc", "Encoding")))
         elif movie is None:
             waiting.append(_item(rec, rec.name, "Being identified"))
         elif job is not None and job.disc.id == rec.id:
@@ -74,7 +72,7 @@ def scratch_items(services: Services) -> list[ScratchItem]:
         elif movie.status == EncodeStatus.ENCODED:
             waiting.append(_item(rec, movie.film.name, "Encoded · filing to the NAS"))
         else:
-            waiting.append(_item(rec, movie.film.name, "Waiting to encode", ("enc", "Waiting")))
+            waiting.append(_item(rec, movie.film.name, "Waiting to encode", ("enc", "Encoding")))
     return [*ripping, *review, *waiting]
 
 

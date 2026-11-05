@@ -23,7 +23,7 @@ from ama.musicbrainz import Match
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, extras_pages, movie_review_pages, set_review_pages, \
     tv_review_pages, view_context
-from ama.web.review_items import plural
+from ama.web.review_items import after_decision, cd_title, done_note, plural
 from ama.events import Topic
 
 router = APIRouter()
@@ -49,10 +49,11 @@ def _in_review(services, disc_id: int) -> DiscRecord | None:
     return rec if rec.status == DiscStatus.REVIEW else None
 
 
-def _decided(services, rec: DiscRecord) -> Response:
+def _decided(request: Request, services, rec: DiscRecord, name: str) -> Response:
     if services.discs.requeue(rec.id):
         _publish(services)
-    return RedirectResponse("/review", status_code=303)
+    return after_decision(request, rec.id, f"Done: {name}",
+                          "It's filed to Music next, then it shows in History.")
 
 
 def _publish(services) -> None:
@@ -63,7 +64,7 @@ def _publish(services) -> None:
 @router.get("/review", response_class=HTMLResponse)
 def queue(request: Request) -> Response:
     services = _services(request)
-    ctx = view_context(services) | {"current": "/review",
+    ctx = view_context(services) | {"current": "/review", "done": done_note(request),
                                     "extras_to_sort": extras_pages.to_sort(services)}
     return TEMPLATES.TemplateResponse(request, "review.html", ctx)
 
@@ -152,10 +153,12 @@ def _ar_notice(reason: ReviewReason | None, tracks) -> tuple[str, str] | None:
     match reason:
         case ReviewReason.NOT_ACCURATE:
             bad = cdreview.unverified(tracks, ArStatus.MISMATCH)
-            which = f"Tracks {_join(bad)} don't" if len(bad) > 1 else f"Track {_join(bad)} doesn't"
-            return (f"{plural(len(bad), 'track')} couldn't be verified",
-                    f"{which} match the online check (AccurateRip). They may play fine, "
-                    "or the CD may be scratched.")
+            many = len(bad) > 1
+            which = f"Tracks {_join(bad)} sound" if many else f"Track {_join(bad)} sounds"
+            return (f"{plural(len(bad), 'track')} {'don' if many else 'doesn'}'t match other "
+                    "people's copies of this CD",
+                    f"{which} different from copies others have ripped (checked with "
+                    "AccurateRip). They may play fine, or the CD may be scratched.")
         case ReviewReason.NOT_IN_ACCURATERIP:
             return ("This Rip can't be verified",
                     "This CD isn't in the online check (AccurateRip) yet, so the Rip can't be "
@@ -206,6 +209,7 @@ def _cd_page(request: Request, services, rec: DiscRecord, form: dict[str, str] |
     disc_id = cdreview.disc_id(rec.scratch_dir)
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "heading": heading, "sub": sub,
+        "done": done_note(request),
         "editions": editions, "notice": _ar_notice(rec.review_reason, tracks),
         "form": form, "errors": errors or [], "manual_open": not editions or bool(errors),
         "track_count": len(cdreview.audio_tracks(tracks)),
@@ -262,7 +266,8 @@ def pick_release(request: Request, disc_id: int,
     services.discs.log(rec.id, f"Review: picked {picked.release.title} by "
                                f"{picked.release.artist} (MusicBrainz release "
                                f"{picked.release.id}, disc {picked.disc_number})")
-    return _decided(services, rec)
+    return _decided(request, services, rec,
+                    f"{picked.release.title} — {picked.release.artist}")
 
 
 @router.post("/review/{disc_id}/manual", response_class=HTMLResponse)
@@ -281,7 +286,7 @@ def manual(request: Request, disc_id: int, album: Annotated[str, Form()] = "",
     cdreview.save_decision(rec.scratch_dir, details)
     services.discs.log(rec.id, f"Review: details entered by hand: {details.album} by "
                                f"{details.artist}")
-    return _decided(services, rec)
+    return _decided(request, services, rec, f"{details.album} — {details.artist}")
 
 
 @router.post("/review/{disc_id}/accept")
@@ -293,16 +298,23 @@ def accept(request: Request, disc_id: int) -> Response:
     cdreview.save_decision(rec.scratch_dir, cdreview.AcceptRip())
     services.discs.log(rec.id, "Review: Rip accepted although AccurateRip didn't verify "
                                "every track")
-    return _decided(services, rec)
+    if services.discs.requeue(rec.id):
+        _publish(services)
+    return after_decision(request, rec.id, f"Kept the Rip of {cd_title(services, rec)}",
+                          "It carries on to be named and filed to Music.")
 
 
 @router.post("/review/{disc_id}/discard")
 def discard(request: Request, disc_id: int) -> Response:
     services = _services(request)
     rec = _cd_in_review(services, disc_id)
-    if rec is not None:
-        services.discs.log(rec.id, "Review: Rip discarded; scratch deleted")
-        services.discs.mark_failed(rec.id, DISCARDED)
-        services.discs.dismiss(rec.id)
-        _publish(services)
-    return RedirectResponse("/review", status_code=303)
+    if rec is None:
+        return RedirectResponse("/review", status_code=303)
+    name = cd_title(services, rec)
+    services.discs.log(rec.id, "Review: Rip discarded; scratch deleted")
+    services.discs.mark_failed(rec.id, DISCARDED)
+    services.discs.dismiss(rec.id)
+    _publish(services)
+    return after_decision(request, rec.id, f"Discarded the Rip of {name}",
+                          "Nothing was filed. Clean the CD and insert it again to rip it "
+                          "from the start.")

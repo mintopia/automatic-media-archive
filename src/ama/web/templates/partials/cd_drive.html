@@ -14,9 +14,9 @@
     <{{ tag }} class="title">{% if link %}<a href="/discs/{{ cd.disc_id }}">{{ name }}</a>{% else %}{{ name }}{% endif %}</{{ tag }}>
     <div class="meta">{% if g %}{{ g.match.release.artist }} · {% endif %}{{ cd.tracks | length }} tracks · <span class="nw">{{ cd.total_seconds | minutes }}</span></div>
     {%- if g %}
-    <div class="guess"><b>Likely</b>{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} releases</span>{% endif %} on MusicBrainz · checked again after the Rip</div>
+    <div class="guess"><b>Likely</b>, from the CD's track list{% if g.releases > 1 %} · <span class="nw">1 of {{ g.releases }} versions of this album</span>{% endif %} · checked again after the Rip</div>
     {%- elif cd.mb_disc_id %}
-    <div class="guess">Disc ID <span class="mono" style="overflow-wrap:anywhere">{{ cd.mb_disc_id }}</span></div>
+    <div class="guess">Album not known yet · looked up again after the Rip<span class="mono" style="display:block;overflow-wrap:anywhere">MusicBrainz Disc ID {{ cd.mb_disc_id }}</span></div>
     {%- endif %}
     <div class="status"><span class="stk rip">Ripping</span><span class="ts">{{ cd.position() }}</span></div>
     <div class="prog">

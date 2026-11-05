@@ -78,7 +78,7 @@ def test_the_user_can_search_tmdb_for_another_film(harness, client):
     assert "Search results" in page and 'value="Arrival"' in page
     assert "Arrival (2016)" in page and "Denis Villeneuve" in page
     assert "Example Movie (1987)" not in page
-    assert "TMDB has no film called “Nope”" in _page(client, f"/review/{rec.id}?q=Nope")
+    assert "The film database (TMDB) has no film called “Nope”" in _page(client, f"/review/{rec.id}?q=Nope")
     harness.web.tmdb_offline = True
     assert "Couldn't reach TMDB" in _page(client, f"/review/{rec.id}?q=Arrival")
 
@@ -95,7 +95,7 @@ def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_f
     harness.web.add_film("Arrival", 329865, "Arrival", runtime=118)
     r = client.post(f"/review/{rec.id}/film", data={"film": "329865", "title": "2"},
                     follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"] == "/review"
+    assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
     movie = harness.services.movie_archive.movies.get(rec.id)
     assert movie.film.name == "Arrival (2016)" and movie.title_number == 2
 

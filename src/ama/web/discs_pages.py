@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Annotated
-
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 from ama.discs import DiscRecord, DiscStatus, FailureKind
 from ama.drive import DiscType
+from ama.encoder import EncodeStatus
 from ama.extras import ExtraStatus
 from ama.media import Album, Screen
 from ama.web import TEMPLATES, view_context
@@ -78,13 +77,32 @@ def _video_page(request: Request, services, disc: DiscRecord) -> Response:
         ctx["log_open"] = not licence
         return TEMPLATES.TemplateResponse(
             request, "disc_licence.html" if licence else "disc_failed.html", ctx)
-    screen = services.media.get(disc.id) if disc.status == DiscStatus.FILED else None
+    filed = disc.status == DiscStatus.FILED
+    screen = services.media.get(disc.id) if filed else None
     ctx |= {"rip_disc": disc, "rip_progress": None, "live": False,
+            "became": _what_titles_became(services, disc.id) if filed else None,
             "screen": screen if isinstance(screen, Screen) else None,
             "extras_href": f"/discs/{disc.id}/extras" if disc.status == DiscStatus.FILED
             and any(e.status == ExtraStatus.FILED
                     for e in services.movie_archive.extras.of(disc.id)) else None}
     return TEMPLATES.TemplateResponse(request, "disc.html", ctx)
+
+
+def _what_titles_became(services, disc_id: int) -> dict[int, str]:
+    """Title number -> what it was filed as; a Title left out isn't in it."""
+    out: dict[int, str] = {}
+    movie = services.movie_archive.movies.get(disc_id)
+    if movie is not None:
+        out[movie.title_number] = "Main Feature"
+    for e in services.movie_archive.extras.of(disc_id):
+        if e.status == ExtraStatus.FILED:
+            out[e.title_number] = f"Extra · {e.category.value}"
+    for t in services.tv_archive.titles.for_disc(disc_id):
+        if t.status != EncodeStatus.FILED:
+            continue
+        ep = t.episode
+        out[t.title_number] = (f"{ep.code} · {ep.name}" if ep.name else ep.code) if ep else "Extra"
+    return out
 
 
 @router.get("/discs/{disc_id}/log", response_class=PlainTextResponse)
@@ -95,8 +113,8 @@ def disc_log(request: Request, disc_id: int) -> str:
 
 
 @router.post("/discs/{disc_id}/dismiss")
-def dismiss(request: Request, disc_id: int, next: Annotated[str, Form()] = "") -> Response:
-    """Dismiss a failed Disc from Now. "Try again" also dismisses: re-inserting the Disc Rips it."""
+def dismiss(request: Request, disc_id: int) -> Response:
+    """Take a failed Disc off Now. Inserting it again Rips it from the start."""
     services = request.app.state.services
     rec = _disc_or_404(services, disc_id)
     if rec.status == DiscStatus.FAILED:

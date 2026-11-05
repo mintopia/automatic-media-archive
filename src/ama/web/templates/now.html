@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 {% block main %}
-<main>
+<main class="now">
+  <h1 class="sr">Now</h1>
   <div sse-swap="nas" role="status">{% include "partials/nas.html" %}</div>
-  <div sse-swap="tools" role="status">{% include "partials/tools.html" %}</div>
+  <div sse-swap="tools">{% include "partials/tools.html" %}</div>
   <div class="split">
     <div class="stack">
       <section aria-labelledby="drive-h">
         <h2 id="drive-h" class="sr">Disc in drive</h2>
-        <div sse-swap="drive" aria-live="polite">{% include "partials/drive.html" %}</div>
+        <div sse-swap="drive">{% include "partials/drive.html" %}</div>
+        <p class="sr" role="status" sse-swap="drive-status">{% include "partials/drive_status.html" %}</p>
       </section>
       <div sse-swap="review" class="contents">{% include "partials/review_bin.html" %}</div>
+      <p class="idle ts">Nothing ripping, encoding or waiting for you. <a href="/history">History</a></p>
     </div>
     <div class="aside stack">
       <div sse-swap="ripping" class="contents">{% include "partials/ripping_bin.html" %}</div>

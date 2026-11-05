@@ -55,7 +55,7 @@ def test_a_filed_cds_page_shows_what_it_is_without_scratch_or_the_web(harness, c
     assert "2024" in page and "SQUARE ENIX MUSIC" in page and "SQEX-11101~8" in page
     assert "Disc 1 of 8" in page and "Audio CD" in page
     assert "The Unknown Journey Continues" in page and "2:01" in page   # track 1, 121 s
-    assert "Verified (confidence 65)" in page
+    assert "matches 65 other rips" in page
     assert str(rec.archive_dir) in page   # where it was filed
     for link in (f"https://musicbrainz.org/release/{SPECIAL}",
                  f"https://musicbrainz.org/release-group/{GROUP}",
@@ -80,8 +80,10 @@ def test_history_lists_filed_discs_with_a_cover_thumbnail_in_the_nav_and_on_now(
     assert "24 tracks · verified" in row
     names = row[row.index("<details"):row.index("</details>")]
     assert "<summary" in names and "The Unknown Journey Continues" in names  # track 1
+    summary = names[:names.index("</summary>")]
+    assert "<a " not in summary  # nothing to click inside the toggle
     assert f'href="https://musicbrainz.org/release/{SPECIAL}"' in row[:row.index("</details>")]
-    assert 'aria-label="MusicBrainz release"' in row
+    assert ">MusicBrainz</a>" in row
 
     now = unescape(client.get("/").text)
     assert '<a href="/history">History</a>' in now
@@ -156,9 +158,10 @@ def test_a_filed_tv_discs_page_shows_the_series_poster_overview_and_tmdb_link(ha
     assert "The Office" in page and "A mockumentary about an office." in page
     assert "3 Episodes" in page
     history = unescape(client.get("/history").text)
+    history = history[history.index("<main"):]
     names = history[history.index("<details"):history.index("</details>")]
     assert "S01E02 · Work Experience" in names
-    assert 'href="https://www.themoviedb.org/tv/2996" aria-label="TMDB"' in history
+    assert 'href="https://www.themoviedb.org/tv/2996" rel="noreferrer" target="_blank">TMDB'         in history
     assert 'href="https://www.themoviedb.org/tv/2996"' in page
     assert client.get("/covers/tmdb-tv-2996.jpg").content == POSTER
 

@@ -27,6 +27,7 @@ from ama.tvarchive import planned
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
 from ama.web.movie_review_pages import TitleChoice, _title_choice
+from ama.web.review_items import after_decision, done_note, plural
 from ama.events import Topic
 
 router = APIRouter()
@@ -125,7 +126,7 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         if series else "",
         "titles": [TvTitle(_title_choice(services, rec, t, None), t.number in joined,
                            picks.get(t.number, tvreview.EXTRA)) for t in titles],
-        "errors": errors or [],
+        "errors": errors or [], "done": done_note(request),
         "extra": tvreview.EXTRA, "discard": tvreview.DISCARD,
     }
     return TEMPLATES.TemplateResponse(request, "review_tv.html", ctx, status_code=status_code)
@@ -168,8 +169,8 @@ async def episodes(request: Request, disc_id: int) -> Response:
     if errors:
         return page(request, services, rec, errors, 400, series_id, season, choices)
     services.tv_archive.titles.enqueue(rec.id, series, planned(series, rec, kept))
+    n = sum(1 for k in kept if k.episode)
     if services.discs.requeue(rec.id):
-        n = sum(1 for k in kept if k.episode)
         services.discs.log(rec.id, f"Review: {series.title} (TMDB {series.id}); "
                                    + "; ".join(f"Title {k.title.number} = "
                                                f"{k.episode.code if k.episode else 'Extra'}"
@@ -178,4 +179,6 @@ async def episodes(request: Request, disc_id: int) -> Response:
         services.discs.log(rec.id, f"Queued {n} Episode{'s' if n != 1 else ''} for Encode")
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
-    return RedirectResponse("/review", status_code=303)
+    return after_decision(request, rec.id, f"Done: {series.title} · {plural(n, 'Episode')}",
+                          "They're encoded next, then filed to TV. Follow them under Encoding "
+                          "on Now.")

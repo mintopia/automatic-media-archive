@@ -58,8 +58,8 @@ def test_the_next_tv_disc_is_attached_to_its_set_and_continues_the_episodes(harn
     assert "Which episode is each Title?" in mapping
     assert f"{SHOW}/Season 01" in mapping
     # Disc 1 had Episodes 1-3, so this Disc carries on from Episode 4.
-    assert '<option value="S01E04" selected>S01E04 · Training</option>' in mapping
-    assert '<option value="S01E06" selected>S01E06 · Judgement</option>' in mapping
+    assert '<option value="S01E04" selected>S01E04 · Training' in mapping
+    assert '<option value="S01E06" selected>S01E06 · Judgement' in mapping
 
     client.post(f"/review/{rec.id}/episodes", data={
         "series": str(OFFICE), "season": "1", "t1": "S01E04", "t2": "S01E05", "t3": "S01E06"})
@@ -101,7 +101,7 @@ def test_an_extras_disc_files_its_titles_as_extras_in_the_films_folder(harness, 
 
     r = client.post(f"/review/{rec.id}/set", follow_redirects=False,
                     data={"part": "yes", "set": "movie:1234", "disc": "2"})
-    assert r.status_code == 303 and r.headers["location"] == "/review"
+    assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
     filed = _filed(harness, rec)
     assert filed.title == "Example Movie (2016) · 3 Extras"
     root = extended_path(harness.nas_root / FILM)

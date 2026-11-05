@@ -9,6 +9,7 @@
       <p class="sub">{{ sub }}</p>
     </div>
   </div>
+  {% include "partials/review_done.html" %}
   <div class="split">
     <div class="stack">
       {%- if notice %}
@@ -16,8 +17,19 @@
         <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
         <div><b>{{ notice[0] }}</b>{{ notice[1] }}
           <div class="actions" style="margin-top:14px">
-            <form method="post" action="/review/{{ record.id }}/accept" class="actions"><button class="btn" type="submit">Accept anyway</button></form>
-            <form method="post" action="/review/{{ record.id }}/discard" class="actions"><button class="btn danger" type="submit">Discard and re-rip</button></form>
+            <form method="post" action="/review/{{ record.id }}/accept" class="contents"><button class="btn" type="submit">{{ "Keep these tracks" if record.review_reason == "not_accurate" else "Keep this Rip" }}</button></form>
+            <button class="btn danger" type="button" id="discard-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="discard-confirm"
+                    onclick="var d=document.getElementById('discard-confirm');d.hidden=false;this.setAttribute('aria-expanded','true');d.focus()">Discard and re-rip</button>
+          </div>
+          <div class="confirm" id="discard-confirm" role="alertdialog" aria-labelledby="discard-h" aria-describedby="discard-d" tabindex="-1" hidden
+               onkeydown="if(event.key==='Escape'){this.querySelector('[data-cancel]').click()}">
+            <b id="discard-h">Discard this Rip?</b>
+            <p id="discard-d">All {{ track_count }} ripped tracks are deleted from scratch and nothing is filed. Clean the CD and insert it again to rip it from the start. This can't be undone.</p>
+            <form method="post" action="/review/{{ record.id }}/discard" class="actions">
+              <button class="btn danger" type="submit">Discard the Rip</button>
+              <button class="btn quiet" type="button" data-cancel
+                      onclick="var o=document.getElementById('discard-open');document.getElementById('discard-confirm').hidden=true;o.setAttribute('aria-expanded','false');o.focus()">Cancel</button>
+            </form>
           </div>
         </div>
       </div>
@@ -35,10 +47,10 @@
               {%- endfor %}
               </tbody></table>
             </details>
-          </div><span class="stk rev sel">Selected</span></label>
+          </div><span class="mark sel" aria-hidden="true"><svg class="i"><use href="/static/icons.svg#check"/></svg>Selected</span></label>
           {%- endfor %}
           {%- if not editions %}
-          <p class="pad ts">No edition on MusicBrainz has this CD's {{ track_count }} tracks.</p>
+          <p class="pad ts">No edition in the music database (MusicBrainz) has this CD's {{ track_count }} tracks.</p>
           {%- endif %}
           <details class="manual"{% if manual_open %} open{% endif %}>
             <summary>{{ "None of these: enter the details myself" if editions else "Enter the details" }}</summary>
@@ -63,7 +75,7 @@
       <section class="bin ink" aria-labelledby="cd-h">
         <h2 class="tab" id="cd-h">This CD</h2>
         <div class="box"><div class="pad">
-          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if disc_id %}<dt>Disc ID</dt><dd style="overflow-wrap:anywhere" title="{{ disc_id }}">{{ disc_id[:10] }}…</dd>{% endif %}</dl>
+          <dl class="facts"><dt>Tracks</dt><dd>{{ track_count }}</dd><dt>Length</dt><dd>{{ length }}</dd>{% if ripped_at %}<dt>Ripped</dt><dd>{{ ripped_at }}</dd>{% endif %}{% if disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}</dl>
           <p class="ts" style="margin-top:12px"><a href="/discs/{{ record.id }}">Rip details and log</a></p>
         </div></div>
       </section>

@@ -15,11 +15,11 @@
       <div class="body">
         <h1 class="title">{{ view.record.label or "Unknown CD" }}</h1>
         <div class="meta">{{ view.tracks | length }} tracks · <span class="nw">{{ view.total_seconds | minutes }}</span>{% if view.record.finished_at %} · ejected at {{ view.record.finished_at.strftime("%H:%M") }}{% endif %}</div>
-        <div class="status"><span class="stk fil">Ripped</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified by AccurateRip</span></div>
+        <div class="status">{%- set st = record.status if record is defined else "ripped" %}{% if st == "review" %}<span class="stk rev">Review</span>{% elif st == "filed" %}<span class="stk fil">Filed</span>{% else %}<span class="stk rip">Ripping</span>{% endif %}<span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips</span></div>
       </div>
     </div>
     {%- endif %}
-    <section class="bin rip" aria-labelledby="tracks-h">
+    <section class="bin {{ 'rip' if live else 'ink' }}" aria-labelledby="tracks-h">
       <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
       <div class="box">
         <table class="tbl cdt">
@@ -32,7 +32,7 @@
               {%- if t.ripped -%}
                 {% include "partials/cd_track_ar.html" %}
               {%- elif now -%}
-                Ripping {{ t.percent | int }}%<div class="bar thin" aria-label="{{ t.percent | int }}%"><i style="width:{{ '%.1f' | format(t.percent) }}%"></i></div>
+                Ripping {{ t.percent | int }}%<div class="bar thin" role="progressbar" aria-valuenow="{{ t.percent | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Track {{ t.number }} progress"><i style="width:{{ '%.1f' | format(t.percent) }}%"></i></div>
               {%- else -%}
                 <span class="wait">Waiting</span>
               {%- endif -%}
@@ -57,10 +57,10 @@
       </div></div>
     </section>
     {%- endif %}
-    <section class="bin fil" aria-labelledby="next-h">
+    <section class="bin ink" aria-labelledby="next-h">
       <h2 class="tab" id="next-h">After the Rip</h2>
       <div class="box"><div class="pad notes">
-        <p>Each track is checked against AccurateRip, a database of other people's rips of the same CD. Higher confidence means more matching rips.</p>
+        <p>Each track is compared with other people's rips of the same CD (the AccurateRip database). The more rips that match, the surer it is.</p>
         <p class="ts">Then it's matched on MusicBrainz and filed to Music. If more than one edition matches, or a track isn't verified, it waits in Review.</p>
       </div></div>
     </section>

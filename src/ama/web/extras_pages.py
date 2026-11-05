@@ -20,6 +20,7 @@ from ama.retry import RetryLater
 from ama.moviereview import POSITIONS, short_duration
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
+from ama.web.review_items import after_decision
 from ama.events import Topic
 
 router = APIRouter()
@@ -128,7 +129,8 @@ async def save(request: Request, disc_id: int) -> Response:
         return _page(request, services, rec, [f"{e}. Nothing was lost; try again."],
                      status_code=503)
     services.bus.publish(Topic.REVIEW)
-    return RedirectResponse("/review", status_code=303)
+    return after_decision(request, rec.id, f"Saved the Extras of {rec.title}",
+                          "Plex finds each one in its category's folder.")
 
 
 @router.post("/discs/{disc_id}/extras/leave")

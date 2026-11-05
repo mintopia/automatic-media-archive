@@ -1,5 +1,5 @@
 {#- The Needs Review bin (Now page and /review). Topic "review". `review`: ReviewItems, oldest first. -#}
-<section class="bin rev" aria-labelledby="rev-h">
+<section class="bin rev{% if not review %} empty{% endif %}" aria-labelledby="rev-h">
   <h2 class="tab" id="rev-h">Needs Review <span class="c">{{ review | length }}</span></h2>
   <div class="box">
   {%- for item in review %}

@@ -30,8 +30,8 @@ def test_inserted_cd_is_ripped_to_scratch_verified_and_ejected(harness, client):
     assert harness.drive.ejected == 1
 
     page = client.get(f"/discs/{rec.id}").text
-    assert "Verified (confidence 12)" in page
-    assert "Verified (confidence 7)" in page
+    assert "matches 12 other rips" in page
+    assert "matches 7 other rips" in page
     assert "3 of 3 tracks verified" in page
     assert "waiting to be identified" in client.get("/").text
 
@@ -53,7 +53,7 @@ def test_tracks_not_matching_accuraterip_are_shown_unverified(harness, client):
     harness.drive.insert(DiscType.CD)
     rec = _only_disc(harness, DiscStatus.RIPPED)
     page = client.get(f"/discs/{rec.id}").text
-    assert page.count("Didn't match AccurateRip") == 2
+    assert page.count("Doesn't match other rips") == 2
     assert "1 of 3 tracks verified" in page
 
 
@@ -61,7 +61,7 @@ def test_cd_missing_from_accuraterip(harness, client):
     harness.cyanrip.in_accuraterip = False
     harness.drive.insert(DiscType.CD)
     rec = _only_disc(harness, DiscStatus.RIPPED)
-    assert client.get(f"/discs/{rec.id}").text.count("CD not in AccurateRip") == 3
+    assert client.get(f"/discs/{rec.id}").text.count("no other rips to compare") == 3
 
 
 def test_progress_is_live_per_track(harness, client):
@@ -75,7 +75,8 @@ def test_progress_is_live_per_track(harness, client):
     page = client.get(f"/discs/{cd.disc_id}").text
     assert "Track 2 of 3" in page
     assert "Ripping 50%" in page
-    assert "Verified (confidence 12)" in page  # track 1 already done
+    assert "matches 12 other rips" in page  # track 1 already done
+    assert 'role="progressbar" aria-valuenow="50"' in page
     assert page.count("Waiting") == 1           # track 3
     # 200 s done + half of 100 s, of 600 s
     assert round(cd.percent) == 42
@@ -169,7 +170,7 @@ def test_dismissing_a_failure_clears_it_from_now(harness, client):
     harness.drive.insert(DiscType.CD)
     rec = _only_disc(harness, DiscStatus.FAILED)
     assert rec.failure.kind == "drive"
-    r = client.post(f"/discs/{rec.id}/dismiss", data={"next": "dismiss"}, follow_redirects=False)
+    r = client.post(f"/discs/{rec.id}/dismiss", follow_redirects=False)
     assert r.status_code == 303
     assert "Didn't work" not in client.get("/").text
     assert "Couldn't rip this CD" in client.get(f"/discs/{rec.id}").text  # still viewable

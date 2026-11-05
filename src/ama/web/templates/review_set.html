@@ -14,6 +14,7 @@
       <button class="btn pri" type="submit" form="set">Continue</button>
     </div>
   </div>
+  {% include "partials/review_done.html" %}
   <form id="set" method="post" action="/review/{{ record.id }}/set" class="{{ 'solo' if tv else 'split' }}">
     <div class="stack">
       {%- if errors %}
@@ -25,7 +26,7 @@
           {%- if sets %}
           <div class="box set-list">
             {%- for s in sets %}
-            <label class="radio"><input type="radio" name="set" value="{{ s.key }}"{% if s.key | string == picked %} checked{% endif %}><div><div class="tt">{{ s.name }}</div><div class="ts">{{ s.filed_text }} · {{ path(s.folder) }}</div></div><span class="stk fil">{{ s.members | length }} filed</span></label>
+            <label class="radio"><input type="radio" name="set" value="{{ s.key }}"{% if s.key | string == picked %} checked{% endif %}><div><div class="tt">{{ s.name }}</div><div class="ts">{{ s.filed_text }} · {{ path(s.folder) }}</div></div><span></span></label>
             {%- endfor %}
           </div>
           <div class="field set-disc"><label for="disc">This is Disc</label><input class="input" id="disc" name="disc" type="number" min="1" value="{{ disc }}"><span class="hint">of the set</span></div>

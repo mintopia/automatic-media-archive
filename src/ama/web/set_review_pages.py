@@ -28,6 +28,7 @@ from ama.tmdb import load_hints, search_terms
 from ama.tv import series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
+from ama.web.review_items import after_decision, done_note
 from ama.events import Topic
 
 router = APIRouter()
@@ -73,7 +74,7 @@ def page(request: Request, services, rec: DiscRecord, everything: bool = False,
         "part": form.get("part") or ("no" if (ans and not ans.key) or not offer else "yes"),
         "disc": form.get("disc") or (ans.number if ans and ans.key else
                                      chosen.next_number if chosen else 1),
-        "errors": errors or [],
+        "errors": errors or [], "done": done_note(request),
     }
     return TEMPLATES.TemplateResponse(request, "review_set.html", ctx, status_code=status_code)
 
@@ -129,7 +130,9 @@ def answer(request: Request, disc_id: int, part: Annotated[str, Form()] = "",
     if chosen.key.kind == SetKind.TV:
         return RedirectResponse(f"/review/{rec.id}", status_code=303)
     _file_as_extras_disc(services, rec, chosen)
-    return RedirectResponse("/review", status_code=303)
+    return after_decision(request, rec.id, f"Done: Extras Disc for {chosen.name}",
+                          "Every Title on it is encoded next, then filed with the film's "
+                          "Extras.")
 
 
 def _file_as_extras_disc(services, rec: DiscRecord, film_set: DiscSet) -> None:

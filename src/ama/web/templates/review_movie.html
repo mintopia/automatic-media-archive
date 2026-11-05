@@ -9,9 +9,11 @@
       <p class="sub">{{ record.disc_type.long_name }}{% if record.label %} labelled “{{ record.label }}”{% endif %} · main Title runs {{ main_length }}</p>
     </div>
   </div>
+  {% include "partials/review_done.html" %}
   <form id="search" method="get" action="/review/{{ record.id }}"></form>
   <form id="decide" method="post" action="/review/{{ record.id }}/film" class="split"
-        hx-get="/review/{{ record.id }}/decision" hx-trigger="change[target.type=='radio']" hx-target="#summary" hx-swap="innerHTML">
+        hx-get="/review/{{ record.id }}/decision" hx-trigger="change[target.type=='radio']" hx-target="#summary" hx-swap="innerHTML"
+        onchange="document.getElementById('confirm-film').disabled=!(this.querySelector('[name=film]:checked')&&this.querySelector('[name=title]:checked'))">
     <div class="stack">
       {%- if errors %}
       <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
@@ -21,12 +23,12 @@
         <div class="box">
           <div class="pad search" style="border-bottom:1px solid var(--rule)"><label class="sr" for="q">Search films</label><svg class="i" aria-hidden="true" style="left:36px;top:35px"><use href="/static/icons.svg#search"/></svg><input class="input" id="q" name="q" type="search" form="search" value="{{ q }}" placeholder="Film title" enterkeyhint="search"></div>
           {%- for c in films %}
-          <label class="radio"><input type="radio" name="film" value="{{ c.film.id }}"{% if picked_film and c.film.id == picked_film.id %} checked{% endif %}><div><div class="tt">{{ c.film.name }}</div><div class="ts">{{ c.note }}</div></div>{% if c.fits %}<span class="stk fil">Same length</span>{% else %}<span></span>{% endif %}</label>
+          <label class="radio"><input type="radio" name="film" value="{{ c.film.id }}"{% if picked_film and c.film.id == picked_film.id %} checked{% endif %}><div><div class="tt">{{ c.film.name }}</div><div class="ts">{{ c.note }}</div></div>{% if c.fits %}<span class="mark"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Same length</span>{% else %}<span></span>{% endif %}</label>
           {%- endfor %}
           {%- if search_error %}
           <p class="pad ts" role="alert">{{ search_error }}</p>
           {%- elif not films %}
-          <p class="pad ts">{% if q %}TMDB has no film called “{{ q }}”.{% else %}This Disc has no usable name.{% endif %} Search for the film's title above.</p>
+          <p class="pad ts">{% if q %}The film database (TMDB) has no film called “{{ q }}”.{% else %}This Disc has no usable name.{% endif %} Search for the film's title above.</p>
           {%- endif %}
         </div>
       </section>
@@ -51,13 +53,19 @@
       <section class="bin ink" aria-labelledby="next-h">
         <h2 class="tab" id="next-h">When you confirm</h2>
         <div class="box"><div class="pad stack" style="gap:14px">
-          <div id="summary">{% include "partials/movie_decision.html" %}</div>
-          <div class="actions"><button class="btn pri" type="submit"{% if not films %} disabled{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Encode and file</button></div>
+          <div id="summary" aria-live="polite">{% include "partials/movie_decision.html" %}</div>
+          <div class="actions"><button class="btn pri" id="confirm-film" type="submit"{% if not (picked_film and picked_title) %} disabled{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Encode and file</button></div>
         </div></div>
       </section>
+      <section class="alt" aria-labelledby="alt-h">
+        <h2 class="alt-h" id="alt-h">Not a film?</h2>
+        <div class="actions">
+          <button class="btn" type="submit" form="as-tv">It's TV episodes</button>
+          <a class="btn" href="/review/{{ record.id }}/set">It's an Extras Disc</a>
+        </div>
+        <p class="ts">An Extras Disc holds the Extras of a film that's already filed.</p>
+      </section>
       <p class="ts">Pictures are taken from the ripped copy, so you don't need the Disc. <a href="/discs/{{ record.id }}">Rip details and log</a></p>
-      <p class="ts">Not a film? <button class="btn quiet" type="submit" form="as-tv">It's TV episodes</button></p>
-      <p class="ts">An Extras Disc? <a href="/review/{{ record.id }}/set">Add it to a film already filed</a></p>
     </div>
   </form>
   <form id="as-tv" method="post" action="/review/{{ record.id }}/kind"><input type="hidden" name="kind" value="tv"></form>

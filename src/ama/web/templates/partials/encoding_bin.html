@@ -2,10 +2,10 @@
     `tv_encoding`: kept TV Titles not yet filed; `encode_job`: the Encode running
     now (live progress), or None; `encode_next`: the Disc id that encodes next. -#}
 {%- macro running(job, href, name) %}
-    <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="{{ href }}">{{ name }}</a></div><div class="bar thin enc" aria-label="{{ job.progress.pct }}%"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>
+    <div class="row compact"><div class="dtype">{{ job.disc.disc_type }}</div><div><div class="tt"><a href="{{ href }}">{{ name }}</a></div><div class="bar thin enc" role="progressbar" aria-valuenow="{{ job.progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Encode progress"><i style="width:{{ job.progress.pct }}%"></i></div></div><span class="ts">{{ job.progress.pct }}%{% if job.progress.eta_s is not none %} · {{ job.progress.eta_s | minutes }}{% endif %}</span></div>
 {%- endmacro %}
-<section class="bin enc">
-  <div class="tab">Encoding <span class="c">{{ encoding | length + tv_encoding | length }}</span></div>
+<section class="bin enc{% if not encoding and not tv_encoding %} empty{% endif %}" aria-labelledby="encoding-h">
+  <h2 class="tab" id="encoding-h">Encoding <span class="c">{{ encoding | length + tv_encoding | length }}</span></h2>
   <div class="box">
   {%- for m in encoding %}
     {%- set job = encode_job if encode_job and encode_job.disc.id == m.disc_id else None %}
@@ -16,7 +16,7 @@
       {%- elif m.status == "failed" %}The Encode didn't work · retried when the app restarts
       {%- elif m.disc_id == encode_next %}Next in line
       {%- else %}Waiting{% endif %}</div></div>
-      {%- if m.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Waiting</span>{% endif %}</div>
+      {%- if m.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Encoding</span>{% endif %}</div>
     {%- endif %}
   {%- endfor %}
   {%- for e in tv_encoding %}
@@ -27,7 +27,7 @@
       {%- if e.status == "encoded" %}Encoded · filing to the NAS
       {%- elif e.status == "failed" %}The Encode didn't work · retried when the app restarts
       {%- else %}Waiting{% endif %}</div></div>
-      {%- if e.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Waiting</span>{% endif %}</div>
+      {%- if e.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Encoding</span>{% endif %}</div>
     {%- endif %}
   {%- endfor %}
   {%- if not encoding and not tv_encoding %}

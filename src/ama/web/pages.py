@@ -58,6 +58,13 @@ def login(request: Request, password: Annotated[str, Form()] = "") -> Response:
     return r
 
 
+@router.post("/logout")
+def logout() -> Response:
+    r = RedirectResponse("/login", status_code=303)
+    r.delete_cookie(auth.COOKIE)
+    return r
+
+
 def _sse(event: str, data: str) -> str:
     lines = "".join(f"data: {ln}\n" for ln in data.splitlines() or [""])
     return f"event: {event}\n{lines}\n"

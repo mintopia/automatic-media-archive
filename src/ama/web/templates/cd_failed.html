@@ -13,10 +13,9 @@
       <p class="ts">Nothing was filed. The partial Rip has been deleted from scratch, so it isn't using any space.</p>
       {%- if not record.dismissed %}
       <form class="actions" method="post" action="/discs/{{ record.id }}/dismiss">
-        <button class="btn pri" type="submit" name="next" value="retry"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg>Try again</button>
-        <button class="btn quiet" type="submit" name="next" value="dismiss">Dismiss</button>
+        <button class="btn pri" type="submit">OK, I'll put it back in</button>
       </form>
-      <p class="ts after-actions">Try again waits for you to insert the Disc. Nothing is retried on its own.</p>
+      <p class="ts after-actions">This takes it off Now. Nothing is retried on its own: put the CD back in when you're ready and it's ripped from the start.</p>
       {%- endif %}
       <section class="bin ink" aria-labelledby="log-h">
         <h2 class="tab" id="log-h">Log</h2>

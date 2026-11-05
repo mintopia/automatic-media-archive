@@ -1,6 +1,6 @@
 {#- Now page: History, today's part. Topic "filed". `filed`: CdDiscs, FiledMovies and FiledTv filed today, newest first. -#}
-<section class="bin fil">
-  <a class="tab" href="/history">History <span class="c">{{ filed | length }}</span></a>
+<section class="bin fil{% if not filed %} empty{% endif %}" aria-labelledby="filed-h">
+  <h2 class="tab-h" id="filed-h"><a class="tab" href="/history">History <span class="c">{{ filed | length }}</span></a></h2>
   <div class="box">
   {%- for d in filed[:3] %}
     {%- with dated=False %}{% include "partials/history_row.html" %}{% endwith %}

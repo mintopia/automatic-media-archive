@@ -13,5 +13,5 @@ router = APIRouter()
 @router.get("/scratch", response_class=HTMLResponse)
 def scratch_page(request: Request) -> Response:
     services = request.app.state.services
-    ctx = view_context(services) | {"current": "/"}
+    ctx = view_context(services) | {"current": "/scratch"}
     return TEMPLATES.TemplateResponse(request, "scratch.html", ctx)

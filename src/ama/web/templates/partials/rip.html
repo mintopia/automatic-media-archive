@@ -6,16 +6,18 @@
 <div class="stack">
 {% if screen %}{% include "partials/screen_card.html" %}{% else %}{% include "partials/rip_card.html" %}{% endif %}
 {%- if disc.titles %}
-<section class="bin rip" aria-labelledby="titles-h">
+{%- set filed = became is defined and became is not none %}
+<section class="bin {{ 'rip' if disc.status == 'ripping' else 'ink' }}" aria-labelledby="titles-h">
   <h2 class="tab" id="titles-h">Titles <span class="c">{{ disc.titles | length }}</span></h2>
   <div class="box">
     <table class="tbl">
-      <thead><tr><th>Title</th><th class="num">Length</th><th class="num hide-m">Size</th><th class="num hide-m">Audio</th><th class="num hide-m">Subtitles</th><th class="st">Status</th></tr></thead>
+      <thead><tr><th>Title</th><th class="num">Length</th><th class="num hide-m">Size</th><th class="num hide-m">Audio</th><th class="num hide-m">Subtitles</th><th class="st">{{ "Filed as" if filed else "Status" }}</th></tr></thead>
       <tbody>
         {%- for t in disc.titles %}
         {%- set live = progress and progress.title_number == t.number and t.status == "ripping" %}
         <tr{% if live %} class="now"{% endif %}><td>{% if live %}<b>Title {{ t.number }}</b>{% else %}Title {{ t.number }}{% endif %}</td><td class="num">{{ t.duration }}</td><td class="num hide-m">{{ t.size }}</td><td class="num hide-m">{{ t.audio }}</td><td class="num hide-m">{{ t.subtitles }}</td>
-          {%- if t.status == "ripped" %}<td class="st"><span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Ripped</span></td>
+          {%- if filed %}<td class="st">{% if t.number in became %}<b class="kept">{{ became[t.number] }}</b>{% else %}<span class="ts">{{ "Didn't rip" if t.status == "failed" else "Not kept" }}</span>{% endif %}</td>
+          {%- elif t.status == "ripped" %}<td class="st"><span class="ok"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>Ripped</span></td>
           {%- elif live %}<td class="st">Ripping {{ progress.title_pct }}%<div class="bar thin" role="progressbar" aria-valuenow="{{ progress.title_pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Title {{ t.number }} progress"><i style="width:{{ progress.title_pct }}%"></i></div></td>
           {%- elif t.status == "failed" %}<td class="st bad">Failed</td>
           {%- else %}<td class="st wait">Waiting</td>

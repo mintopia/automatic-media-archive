@@ -76,7 +76,7 @@ def test_a_disc_with_decoys_goes_to_review_even_when_tmdb_is_confident(harness, 
     assert "Suspected decoy playlists: 14 Titles run within 3 s of each other" in log
     assert "Title 6 (00805.mpls) plays in order" in log
     row = html.unescape(client.get("/review").text)
-    assert "Suspected decoy playlists · 14 near-identical versions of the film" in row
+    assert "14 near-identical versions of the film (a copy-protection trick)" in row
 
 
 def test_the_review_page_warns_of_decoys_and_picks_the_version_that_plays_in_order(

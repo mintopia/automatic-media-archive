@@ -36,7 +36,7 @@ def test_the_review_queue_lists_pending_discs_with_why(harness, client):
         assert "3 editions match this CD" in page
         assert f'href="/review/{rec.id}"' in page
         assert "Choose edition" in page
-    assert '<span class="count" aria-label="1 waiting">1</span>' in _page(client, "/")
+    assert '<span class="count" aria-hidden="true">1</span><span class="sr">, 1 waiting</span>' in _page(client, "/")
 
 
 def test_an_empty_review_queue_says_so(client):
@@ -201,9 +201,10 @@ def test_tracks_accuraterip_didnt_verify_are_clearly_shown(harness, client):
     rec = _mismatch(harness, _response(only=SPECIAL))
     assert "2 tracks didn't match" in _page(client, "/")
     page = _page(client, f"/review/{rec.id}")
-    assert "2 tracks couldn't be verified" in page
-    assert "Tracks 4 and 9 don't match the online check (AccurateRip)" in page
-    assert "Accept anyway" in page and "Discard and re-rip" in page
+    assert "2 tracks don't match other people's copies of this CD" in page
+    assert "Tracks 4 and 9 sound different from copies others have ripped (checked with "         "AccurateRip)" in page
+    assert "Keep these tracks" in page and "Discard and re-rip" in page
+    assert 'role="alertdialog"' in page and "Discard this Rip?" in page  # asked before deleting
 
 
 def test_accepting_an_unverified_rip_with_one_edition_files_it(harness, client):
@@ -255,7 +256,7 @@ def test_a_cd_not_in_accuraterip_explains_it_cant_be_verified(harness, client):
     rec = _wait_for(harness, DiscStatus.REVIEW)
     page = _page(client, f"/review/{rec.id}")
     assert "This CD isn't in the online check (AccurateRip)" in page
-    assert "Accept anyway" in page
+    assert "Keep this Rip" in page
 
 
 def test_a_decision_on_a_disc_no_longer_in_review_is_ignored(harness, client):

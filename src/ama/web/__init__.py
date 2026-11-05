@@ -21,6 +21,7 @@ from ama.extras import ExtraStatus
 from ama.media import Album
 from ama.moviearchive import FiledMovie
 from ama.tvarchive import FiledTv
+from ama.web import auth
 from ama.web.review_items import review_items
 from ama.web.scratch_items import scratch_context
 from ama.video_rip import VIDEO_DISC_TYPES
@@ -50,6 +51,8 @@ FRAGMENTS: dict[str, str] = {
     "filed": "partials/filed_bin.html",
     "encode": "partials/encoding_bin.html",
     "review": "partials/review_bin.html",
+    "review-count": "partials/review_count.html",
+    "drive-status": "partials/drive_status.html",
     # The scratch page body: one partial, live on each topic that changes what it shows.
     "scratch": "partials/scratch.html",
     "scratch-rip": "partials/scratch.html",
@@ -58,7 +61,8 @@ FRAGMENTS: dict[str, str] = {
 # A fragment re-renders when the bus topic of the same name is published, or the
 # topic named here (several fragments can follow one topic).
 FRAGMENT_TOPICS: dict[str, str] = {"ripping": "rip", "cd-rip": "rip", "rip-failed": "rip",
-                                   "scratch-rip": "rip", "scratch-encode": "encode"}
+                                   "scratch-rip": "rip", "scratch-encode": "encode",
+                                   "review-count": "review", "drive-status": "drive"}
 
 
 def fragments_for(topic: str) -> list[str]:
@@ -88,6 +92,7 @@ def view_context(services: Services) -> dict[str, Any]:
     cd = services.cd
     return {
         "nav": NAV,
+        "can_log_out": auth.auth_required(services),
         "review": review_items(services),
         "cd": cd.current,
         "cd_reading": cd.reading_toc,

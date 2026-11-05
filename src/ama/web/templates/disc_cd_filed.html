@@ -20,14 +20,14 @@
           {%- if album.disc_total > 1 %}
           <div class="meta">Disc {{ album.disc_number }} of {{ album.disc_total }}{% if album.disc_title %} · {{ album.disc_title }}{% endif %}</div>
           {%- endif %}
-          <div class="status"><span class="stk fil">Filed</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified by AccurateRip{% if rec.filed_at %} · filed {{ rec.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
+          <div class="status"><span class="stk fil">Filed</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips{% if rec.filed_at %} · filed {{ rec.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
         </div>
       </div>
-      <section class="bin fil" aria-labelledby="tracks-h">
+      <section class="bin ink" aria-labelledby="tracks-h">
         <h2 class="tab" id="tracks-h">Tracks <span class="c">{{ view.tracks | length }}</span></h2>
         <div class="box">
           <table class="tbl cdt">
-            <thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th><th class="st">AccurateRip</th></tr></thead>
+            <thead><tr><th class="n">#</th><th>Title</th><th class="len">Length</th><th class="st">Checked</th></tr></thead>
             <tbody>
             {%- for t in view.tracks %}
               <tr><td class="n">{{ t.number }}</td><td>{{ "Hidden track" if t.number == 0 else (album.track_title(t.number) or "Track " ~ t.number) }}{% set a = album.track_artist(t.number) %}{% if a %}<div class="ts">{{ a }}</div>{% endif %}</td><td class="len">{{ t.seconds | mmss }}</td><td class="st">{% include "partials/cd_track_ar.html" %}</td></tr>
@@ -46,7 +46,7 @@
             {%- if album.date or album.country %}<dt>Released</dt><dd>{{ album.date }}{% if album.date and album.country %} · {% endif %}{{ album.country }}</dd>{% endif %}
             {%- for name, cat in album.labels %}<dt>{{ "Label" if loop.first else "" }}</dt><dd>{{ name }}{% if name and cat %} · {% endif %}{{ cat }}</dd>{% endfor %}
             {%- if album.barcode %}<dt>Barcode</dt><dd>{{ album.barcode }}</dd>{% endif %}
-            {%- if album.disc_id %}<dt>Disc ID</dt><dd class="mono" style="overflow-wrap:anywhere">{{ album.disc_id }}</dd>{% endif %}
+            {%- if album.disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ album.disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}
             {%- if view.hidden_track %}<dt>Hidden track</dt><dd>{{ view.hidden_track.seconds | mmss }} before track 1, kept as track 0</dd>{% endif %}
             {%- if view.preemphasis %}<dt>Pre-emphasis</dt><dd>Yes; the files are marked</dd>{% endif %}
             <dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ rec.archive_dir }}</dd>

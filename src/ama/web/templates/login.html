@@ -3,13 +3,13 @@
 {% block body_attrs %}{% endblock %}
 {% block header %}{% endblock %}
 {% block main %}
-<main style="min-height:100vh;display:grid;place-items:center">
-  <form class="bin ink" style="width:min(400px,100%)" method="post" action="/login">
+<main class="login">
+  <form class="bin ink" method="post" action="/login">
     <div class="tab"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>Automatic Media Archive</div>
-    <div class="box"><div class="pad" style="display:flex;flex-direction:column;gap:18px">
-      <h1 style="font-size:26px">Sign in</h1>
+    <div class="box"><div class="pad">
+      <h1>Sign in</h1>
       <div class="field"><label for="pw">Password</label><input class="input" id="pw" name="password" type="password" autofocus autocomplete="current-password"{% if error %} aria-invalid="true" aria-describedby="pw-err"{% endif %}>
-      {%- if error %}<span class="hint" id="pw-err" style="color:var(--rev-ink)">That password didn't work. Try again.</span>{% endif %}</div>
+      {%- if error %}<span class="hint err" id="pw-err">That password didn't work. Try again.</span>{% endif %}</div>
       <button class="btn pri" type="submit">Sign in</button>
     </div></div>
   </form>

@@ -25,7 +25,7 @@ from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_
 from ama.tmdb import Candidate, TmdbError, movie_folder, search_terms, load_hints
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
-from ama.web.review_items import plural
+from ama.web.review_items import after_decision, done_note, plural
 from ama.events import Topic
 
 router = APIRouter()
@@ -145,7 +145,7 @@ def page(request: Request, services, rec: DiscRecord, errors: list[str] | None =
         "titles": [_title_choice(services, rec, t, main, found) for t in ordered],
         "shown": shown, "more_label": _more_label(ordered[shown:], found), "decoys": found,
         "picked_title": main, "main_length": short_duration(main_s),
-        "errors": errors or [],
+        "errors": errors or [], "done": done_note(request),
         "summary": _summary(picked_film, main, rec),
     }
     return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
@@ -225,4 +225,6 @@ def confirm(request: Request, disc_id: int, film: Annotated[int, Form()] = 0,
         services.discs.log(rec.id, "Queued for Encode")
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
-    return RedirectResponse("/review", status_code=303)
+    return after_decision(request, rec.id, f"Done: {candidate.name}",
+                          "It's encoded next, then filed to Movies. Follow it under Encoding "
+                          "on Now.")
