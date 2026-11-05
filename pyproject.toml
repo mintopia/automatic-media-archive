@@ -11,6 +11,8 @@ dependencies = [
     "mutagen>=1.48.1",
     "httpx>=0.28",
     "tomlkit>=0.13",
+    "pystray>=0.19 ; sys_platform == 'win32'",
+    "pillow>=11 ; sys_platform == 'win32'",
 ]
 
 [project.scripts]

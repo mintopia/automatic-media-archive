@@ -81,8 +81,20 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    New-NetFirewallRule -DisplayName "Automatic Media Archive" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
    ```
 
-5. Register the logon task (elevated PowerShell, logged in as the user who
-   owns the MakeMKV licence):
+5. Start it at login, logged in as the user who owns the MakeMKV licence. Either:
+
+   - **From the tray (no admin rights).** Start `C:\ama\.venv\Scripts\pythonw.exe -m ama run
+     --config C:\ama\ama.toml` once; AMA's icon appears in the notification area. Its
+     menu has Open AMA (also a double-click), Pause/Resume new Discs (the same Pause
+     as the UI's menu), Restart (once nothing Rips or Encodes), **Start at login**
+     and Quit. Ticking Start at login adds an "Automatic Media Archive" entry under
+     `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; unticking removes it. If
+     AMA crashes it stays down until the next login (or until you start it again).
+   - **Or with a logon task** (below), which also brings AMA back after a crash.
+
+   Use one or the other, not both: two copies would fight over the port.
+
+   The logon task (elevated PowerShell):
 
    ```powershell
    $action    = New-ScheduledTaskAction -Execute "C:\ama\.venv\Scripts\pythonw.exe" -Argument "-m ama run --config C:\ama\ama.toml" -WorkingDirectory "C:\ama"
