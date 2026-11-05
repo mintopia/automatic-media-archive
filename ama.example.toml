@@ -42,7 +42,7 @@ offset = 667
 retries = 10
 
 [nas]
-# UNC path of the NAS share that holds the Plex library (Music/, Movies/, TV/).
+# UNC path of the NAS share that holds the Libraries ([[libraries]] below).
 # Connected with `net use` at startup; retried while it fails.
 unc = '\\nas\media'
 # Credentials for the share. SECRET (password). Empty username = connect as the
@@ -75,14 +75,14 @@ uhd = 100
 api_key = ""
 
 [plex]
-# Plex Media Server URL, used to trigger a partial scan of each filed folder.
+# Plex Media Server URL, used to trigger a partial scan of each filed folder
+# and to list Plex's libraries in Settings > Archive > Libraries.
 url = "http://nas:32400"
 # Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
 # filed folders on its own next scan.
 token = ""
 # Where the Plex server sees the NAS share (`nas.unc`), when Plex runs on another
-# machine, e.g. '/volume1/media' for Plex on the NAS itself. Plex's library
-# folders must sit under it (e.g. '/volume1/media/Music'). Empty = Plex sees
+# machine, e.g. '/volume1/media' for Plex on the NAS itself. Empty = Plex sees
 # the share at the same path as AMA.
 nas_path = ""
 
@@ -103,3 +103,31 @@ topic = ""
 dvd = 20
 bd = 22
 uhd = 22
+
+# Libraries: named folders of the Archive, one entry per Library. Each kind
+# ("films", "tv" or "music") needs exactly one default = true; a Job is filed
+# to its kind's default unless it picked another Library of that kind.
+# `path` is a folder inside the NAS share (created when first filed to).
+# `plex` is the name of the Plex library that holds it, scanned after each
+# filing; empty = whichever Plex library's folder contains it.
+# Leave out every [[libraries]] entry to use Movies, TV and Music on the share.
+[[libraries]]
+name = "Movies"
+kind = "films"
+path = '\\nas\media\Movies'
+plex = "Movies"
+default = true
+
+[[libraries]]
+name = "TV"
+kind = "tv"
+path = '\\nas\media\TV'
+plex = "TV Shows"
+default = true
+
+[[libraries]]
+name = "Music"
+kind = "music"
+path = '\\nas\media\Music'
+plex = "Music"
+default = true

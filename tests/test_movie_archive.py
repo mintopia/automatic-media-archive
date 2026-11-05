@@ -15,6 +15,7 @@ from urllib.parse import parse_qs
 import pytest
 
 from ama.archive import extended_path
+from ama.config import Config
 from ama.discs import DiscStatus, ReviewReason
 from ama.drive import DiscType
 from ama.moviearchive import EncodeStatus
@@ -65,6 +66,33 @@ def test_a_confident_match_is_encoded_and_filed_with_no_human_interaction(client
     assert "Identified as Example Movie (2016)" in log and "Encode finished" in log
     page = html.unescape(client.get("/").text)
     assert "Example Movie (2016)" in page and "Movies · 1080p" in page  # History, on Now
+
+
+def test_a_film_is_filed_to_the_films_default_library_and_plex_scans_that_library(
+        client, harness):
+    nas = harness.nas_root
+    cfg = harness.services.config
+    libraries = [
+        {"name": "Movies", "kind": "films", "path": str(nas / "Movies"), "plex": "Movies"},
+        {"name": "Films", "kind": "films", "path": str(nas / "Films HD"), "plex": "Films",
+         "default": True},
+        {"name": "TV", "kind": "tv", "path": str(nas / "TV"), "default": True},
+        {"name": "Music", "kind": "music", "path": str(nas / "Music"), "default": True}]
+    harness.services.apply_live(
+        Config.model_validate(cfg.model_dump() | {"libraries": libraries}))
+    # Named, not found by folder: its Plex folder doesn't contain the filed one.
+    harness.web.plex_sections.append({"key": "7", "type": "movie", "title": "Films",
+                                      "Location": [{"id": 9, "path": "/volume1/other"}]})
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    _rip(harness)
+
+    _wait_for(harness, DiscStatus.FILED)
+    assert extended_path(nas / "Films HD" / FOLDER / f"{FOLDER} - 1080p.mkv").exists()
+    assert not (nas / "Movies").exists()
+    eventually(lambda: any("/refresh" in r.url.path for r in harness.web.plex_requests))
+    scan = next(r for r in harness.web.plex_requests if "/refresh" in r.url.path)
+    assert scan.url.path == "/library/sections/7/refresh"
+    assert parse_qs(scan.url.query.decode())["path"] == [f"/volume1/media/Films HD/{FOLDER}"]
 
 
 def test_tmdb_is_searched_with_the_bd_metadata_title_first(harness, client, tmp_path):

@@ -1,50 +1,88 @@
 """Asking Plex Media Server to partially scan a folder just filed into the Archive.
 
 Plex may run elsewhere (often on the NAS), so the folder is translated into the
-server's own path (`plex.nas_path` replaces the Archive root), then matched to
-the library whose folder contains it. The token goes in a header, never the URL.
+server's own path (`plex.nas_path` replaces the Archive root). The scan goes to
+the Plex library of the Library the folder is in (`Library.plex`, by name), or,
+when that Library names none, to the Plex library whose folder contains it. The
+token goes in a header, never the URL.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 
-from ama.config import PlexConfig
+from ama.config import Kind, PlexConfig
+
+if TYPE_CHECKING:
+    from ama.archive import Archive
+
+# The Plex library type that holds each kind.
+PLEX_TYPE = {Kind.FILMS: "movie", Kind.TV: "show", Kind.MUSIC: "artist"}
 
 
 class Plex:
-    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive_root: Path) -> None:
+    def __init__(self, cfg: PlexConfig, http: httpx.Client, archive: Archive) -> None:
         self.cfg = cfg
         self._http = http
-        self._root = archive_root
+        self._archive = archive
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.cfg.url and self.cfg.token)
 
     def server_path(self, folder: Path) -> str:
         """`folder` (under the Archive root) as the Plex server sees it."""
-        base = self.cfg.nas_path or str(self._root)
+        root = self._archive.root
+        base = self.cfg.nas_path or str(root)
         sep = "/" if "/" in base else "\\"
-        parts = folder.relative_to(self._root).parts
+        parts = folder.relative_to(root).parts
         return sep.join([base.rstrip("/\\"), *parts])
+
+    def _get(self, path: str, timeout: float | None = None, **params: str) -> httpx.Response:
+        headers = {"X-Plex-Token": self.cfg.token, "Accept": "application/json"}
+        r = self._http.get(f"{self.cfg.url.rstrip('/')}{path}", params=params or None,
+                           headers=headers,
+                           **({"timeout": timeout} if timeout is not None else {}))
+        r.raise_for_status()
+        return r
+
+    def libraries(self, kind: Kind, timeout: float = 3.0) -> list[str]:
+        """The names of Plex's libraries that can hold `kind`, for Settings. Raises
+        httpx.HTTPError when Plex can't be reached (or isn't set up: check `configured`)."""
+        sections = self._get("/library/sections", timeout).json()
+        return [d.get("title", "") for d in _directories(sections)
+                if d.get("type") == PLEX_TYPE[kind]]
 
     def scan(self, folder: Path) -> str:
         """Start a partial scan of `folder`; a sentence for the Disc log. Raises httpx.HTTPError."""
-        if not (self.cfg.url and self.cfg.token):
+        if not self.configured:
             return "Plex isn't set up in ama.toml, so it will find this on its next scan"
         path = self.server_path(folder)
-        base = self.cfg.url.rstrip("/")
+        sections = self._get("/library/sections").json()
+        library = self._archive.library_of(folder)
+        if library is not None and library.plex:
+            section = _section_named(sections, library.plex)
+            if section is None:
+                return (f"Plex has no library called {library.plex}, so Plex wasn't asked to "
+                        f"scan {path}")
+        else:
+            section = _section_for(sections, path)
+            if section is None:
+                return f"No Plex library contains {path}, so Plex wasn't asked to scan it"
         headers = {"X-Plex-Token": self.cfg.token, "Accept": "application/json"}
-        r = self._http.get(f"{base}/library/sections", headers=headers)
-        r.raise_for_status()
-        section = _section_for(r.json(), path)
-        if section is None:
-            return f"No Plex library contains {path}, so Plex wasn't asked to scan it"
-        url = f"{base}/library/sections/{section}/refresh"
+        url = f"{self.cfg.url.rstrip('/')}/library/sections/{section}/refresh"
         r = self._http.post(url, params={"path": path}, headers=headers)
         if r.status_code in (404, 405):  # older servers only take GET
             r = self._http.get(url, params={"path": path}, headers=headers)
         r.raise_for_status()
         return f"Asked Plex to scan {path}"
+
+
+def _directories(sections: dict) -> list[dict]:
+    return sections.get("MediaContainer", {}).get("Directory", [])
 
 
 def _within(path: str, location: str) -> bool:
@@ -54,8 +92,13 @@ def _within(path: str, location: str) -> bool:
     return path == location or path.startswith((location + "/", location + "\\"))
 
 
+def _section_named(sections: dict, title: str) -> str | None:
+    return next((str(d["key"]) for d in _directories(sections) if d.get("title") == title),
+                None)
+
+
 def _section_for(sections: dict, path: str) -> str | None:
-    for d in sections.get("MediaContainer", {}).get("Directory", []):
+    for d in _directories(sections):
         if any(_within(path, loc.get("path", "")) for loc in d.get("Location", [])):
             return str(d["key"])
     return None

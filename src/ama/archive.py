@@ -12,8 +12,10 @@ import hashlib
 import os
 import re
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
+
+from ama.config import Kind, Library, library_for
 
 PARTIAL = ".ama-partial"
 NAME_LIMIT = 80  # characters per folder/file name, keeps paths under Windows' MAX_PATH
@@ -67,17 +69,40 @@ def _digest(path: Path) -> tuple[int, str]:
     return path.stat().st_size, h.hexdigest()
 
 
-class Archive:
-    """The Archive root (the NAS share). `copy` is replaceable so tests can break a copy."""
+_KIND_OF = {k.folder: k for k in Kind}
 
-    def __init__(self, root: Path, copy: Callable[[Path, Path], object] = shutil.copyfile) -> None:
+
+class Archive:
+    """The Archive root (the NAS share) and its Libraries. `copy` is replaceable so tests can
+    break a copy.
+
+    Archivers name folders by kind, as Plex lays them out (`Movies/<film>`, `TV/<show>`,
+    `Music/<artist>/<album>`); `folder` puts that under the kind's Library, so a stored
+    path keeps meaning the same thing whichever Library holds it."""
+
+    def __init__(self, root: Path, libraries: Sequence[Library] = (),
+                 copy: Callable[[Path, Path], object] = shutil.copyfile) -> None:
         self.root = root
+        self.libraries = tuple(libraries)  # live: replaced when Settings change them
         self.copy = copy
 
-    def place(self, folder: Path, files: Mapping[str, Path]) -> Path:
-        """Copy `files` ({name: source}) into `root/folder`, verified byte-identical; the folder.
-        Raises FilingError or OSError."""
-        folder_path = self.root / folder
+    def folder(self, rel: Path, library: str | None = None) -> Path:
+        """Where `rel` (`Movies/…`, `TV/…`, `Music/…`) is: in the Library the Job picked, else
+        its kind's default."""
+        kind = _KIND_OF.get(rel.parts[0]) if rel.parts else None
+        if kind is None or not self.libraries:
+            return self.root / rel
+        return Path(library_for(self.libraries, kind, library).path, *rel.parts[1:])
+
+    def library_of(self, folder: Path) -> Library | None:
+        """The Library holding `folder` (the innermost, if Libraries nest)."""
+        holding = [lib for lib in self.libraries if Path(folder).is_relative_to(lib.path)]
+        return max(holding, key=lambda lib: len(Path(lib.path).parts), default=None)
+
+    def place(self, folder: Path, files: Mapping[str, Path], library: str | None = None) -> Path:
+        """Copy `files` ({name: source}) into `folder` (see `folder`), verified byte-identical;
+        the folder. Raises FilingError or OSError."""
+        folder_path = self.folder(folder, library)
         dest = extended_path(folder_path)
         dest.mkdir(parents=True, exist_ok=True)
         expected = {name: _digest(src) for name, src in files.items()}

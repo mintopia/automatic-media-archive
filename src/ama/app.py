@@ -90,6 +90,7 @@ class Services:
         self.movie_archive.encoder.cq = cfg.encode.cq
         self.tmdb.api_key = cfg.tmdb.api_key
         self.plex.cfg = cfg.plex
+        self.archive.libraries = cfg.libraries
         self.notifier.channels = channels(cfg, self.http)
 
     def background_tasks(self) -> list[Callable[[], object]]:
@@ -126,12 +127,12 @@ def build_services(
     http.headers["User-Agent"] = USER_AGENT
     nas = NasMonitor(cfg.nas, bus, runner=runner, exists=nas_exists)
     cd_tracks = CdTracks(db)
-    archive = Archive(Path(cfg.nas.unc))
+    archive = Archive(Path(cfg.nas.unc), cfg.libraries)
     mb = MusicBrainz(http)
     covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
-    plex = Plex(cfg.plex, http, archive.root)
+    plex = Plex(cfg.plex, http, archive)
     repeat = RepeatGuard(db, discs, drive, bus, archive.root)
     tv_titles = TvTitles(db)
     encoder = Encoder(discs, bus, cfg.encode.cq, tool, streamer)
