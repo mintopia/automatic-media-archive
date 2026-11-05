@@ -482,3 +482,4 @@ details.adv[open]>summary{border-bottom:0}
 }
 .setfoot .ok{font-weight:600}
 .sf .ctl>.saved-kept{font-size:14px;color:var(--ink2)}
+.settings [hidden]{display:none!important}

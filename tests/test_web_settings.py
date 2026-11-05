@@ -159,6 +159,16 @@ def test_a_hand_edit_shows_on_the_page(setup):
     assert 'value="33"' in _page(client, "/settings/ripping")
 
 
+def test_save_and_go_lands_on_the_next_section_only(setup):
+    client, _, _ = setup
+    r = client.post("/settings/general", data={"web.port": "8080", "next": "/settings/alerts"},
+                    follow_redirects=False)
+    assert r.headers["location"] == "/settings/alerts"
+    r = client.post("/settings/general", data={"web.port": "8080", "next": "https://evil"},
+                    follow_redirects=False)
+    assert r.headers["location"].startswith("/settings/general?saved=")
+
+
 def test_unknown_section_is_404(setup):
     client, _, _ = setup
     assert client.get("/settings/nope").status_code == 404

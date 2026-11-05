@@ -9,8 +9,8 @@
 {%- if f.error %}{% set _ = ids.append(f.id ~ "-e") %}{% endif -%}
 {%- if ids %} aria-describedby="{{ ids | join(' ') }}"{% endif -%}
 {%- endmacro %}
-{% macro input(f, r, typ, placeholder="") -%}
-<input class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="{{ typ }}" name="{{ f.key }}"{% if f.value != "" %} value="{{ f.value }}"{% endif %}{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if f.step %} step="{{ f.step }}"{% endif %}{{ described(f, r) }}{% if f.error %} aria-invalid="true"{% endif %}{% if typ == "password" %} autocomplete="new-password"{% endif %} spellcheck="false">
+{% macro input(f, r, typ, placeholder="", hidden=False) -%}
+<input {% if hidden %}hidden disabled {% endif %}class="input{% if f.error %} bad{% endif %}" id="{{ f.id }}" type="{{ typ }}" name="{{ f.key }}"{% if f.value != "" %} value="{{ f.value }}"{% endif %}{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if f.step %} step="{{ f.step }}"{% endif %}{{ described(f, r) }}{% if f.error %} aria-invalid="true"{% endif %}{% if typ == "password" %} autocomplete="new-password"{% endif %} spellcheck="false">
 {%- endmacro %}
 {% macro control(r) -%}
 {%- set f = r.fields[0] -%}
@@ -18,9 +18,9 @@
 {%- if f.kind == "secret" -%}
   {%- if f.is_set and not f.error -%}
   <div class="secret" role="group" aria-labelledby="{{ f.id }}-l"{{ described(f, r) }}><span class="state">{{ icon("check") }}Set</span><button class="btn quiet" type="button" data-secret-replace aria-label="Replace {{ r.row.label }}">Replace</button><button class="btn quiet" type="button" data-secret-remove aria-label="Remove {{ r.row.label }}">Remove</button></div>
-  {{- input(f, r, "password", "New " ~ r.row.label) | replace('<input ', '<input hidden disabled ', 1) | safe }}<input type="hidden" name="remove" value="{{ f.key }}" disabled>
+  {{- input(f, r, "password", "New " ~ r.row.label, hidden=True) }}<input type="hidden" name="remove" value="{{ f.key }}" disabled>
   {%- else -%}
-  {{ input(f, r, "password", "Not set") }}{{ ferr(f) }}
+  {{ input(f, r, "password", "New " ~ r.row.label if f.is_set else "Not set") }}{{ ferr(f) }}
   {%- if f.is_set %}<button class="btn quiet" type="button" data-secret-keep>Keep the saved one</button>{% endif -%}
   {%- endif -%}
 {%- else -%}
