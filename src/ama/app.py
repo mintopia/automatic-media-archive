@@ -31,7 +31,8 @@ from ama.jobs import JobStore
 from ama.encoder import Encoder
 from ama.drive import DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
-from ama.media import MediaStore, film_guess
+from ama.film_guess import FilmGuesses
+from ama.media import MediaStore
 from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
 from ama.moviereview import Thumbnailer
@@ -80,6 +81,7 @@ class Services:
     sets: DiscSets
     covers: Covers
     media: MediaStore
+    film_guesses: FilmGuesses  # a video Job's Best guess
     backfill: Backfill
     pause: Pause
     plex: Plex
@@ -137,6 +139,7 @@ def build_services(
     covers = Covers(cfg.paths.state_db.parent / COVERS_DIR, mb)
     media = MediaStore(db)
     tmdb = Tmdb(http, cfg.tmdb.api_key)
+    film_guesses = FilmGuesses(db, tmdb, covers)
     plex = Plex(cfg.plex, http, archive.root, problems)
     repeat = RepeatGuard(db, jobs, drive, bus, archive.root)
     pause = Pause(db, bus)
@@ -165,7 +168,7 @@ def build_services(
         video_rip=VideoRipper(drive, jobs, bus, makemkvcon=lambda: tool("makemkvcon"),
                               streamer=streamer, repeat=repeat, scratch=scratch,
                               pause=pause, disc_root=disc_root,
-                              guess=lambda label: film_guess(tmdb, covers, label)),
+                              guesses=film_guesses),
         archive=archive,
         musicbrainz=mb,
         cd_archive=CdArchiver(jobs, cd_tracks, nas, mb, archive, plex, bus,
@@ -184,6 +187,7 @@ def build_services(
         sets=DiscSets(db),
         covers=covers,
         media=media,
+        film_guesses=film_guesses,
         backfill=Backfill(db, jobs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
         pause=pause,

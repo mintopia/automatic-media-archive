@@ -34,7 +34,8 @@ from ama.pause import Pause
 from ama.proc import Streamer
 from ama.repeat import RepeatGuard, video_fingerprint
 from ama.scratch import ScratchGate
-from ama.media import Screen
+from ama.film_guess import FilmGuesses
+from ama.tmdb import Candidate
 from ama.tmdb import DiscHints, bd_meta_title, save_hints
 from ama.tools import ToolUnavailable, makemkv_headline
 
@@ -111,10 +112,14 @@ class VideoRipper:
                  scratch: ScratchGate, pause: Pause,
                  clock: Callable[[], float] = time.monotonic,
                  disc_root: Callable[[], Path | None] = lambda: None,
-                 guess: Callable[[str], Screen | None] | None = None) -> None:
+                 guesses: FilmGuesses | None = None) -> None:
         self._pause = pause
-        self._guesser = guess  # a likely film from the volume label (Tmdb.guess)
-        self.likely: Screen | None = None  # a guessed film while ripping; only for show
+        self._guesses = guesses  # the Job's Best guess (film_guess.py)
+        self.guessing = False  # TMDB is being asked for the Best guess
+        self._films: list[Candidate] = []  # TMDB's films for the Disc's label
+        self._longest_s: int | None = None  # the longest Title, once the Title scan has it
+        self._settling: asyncio.Lock | None = None  # one guess settled at a time (per Rip)
+        self._reranking: asyncio.Task | None = None
         self._drive = drive
         self._scratch = scratch
         self._disc_root = disc_root  # the Disc's filesystem root, for its BD metadata title
@@ -196,10 +201,11 @@ class VideoRipper:
         self._repeat.remember(job.id, fingerprint)
         shutil.rmtree(job.scratch_dir, ignore_errors=True)
         job.scratch_dir.mkdir(parents=True, exist_ok=True)
-        self.job, self.progress, self.likely = job, RipProgress(), None
+        self.job, self.progress = job, RipProgress()
+        self._films, self._longest_s, self._settling = [], None, asyncio.Lock()
         self._store.log(job.id, f"Ripping {inserted.disc_type.long_name} “{job.name}”")
         self._publish()
-        guessing = asyncio.create_task(self._guess(job.label))             if self._guesser and job.label else None
+        guessing = asyncio.create_task(self._guess(job)) if self._guesses else None
         try:
             failure = await self._rip_titles(job)
         except asyncio.CancelledError:
@@ -225,17 +231,40 @@ class VideoRipper:
             self._store.log(job.id, f"Couldn't eject the Disc: {e}", error=True)
         if guessing:
             guessing.cancel()
-        self.job, self.progress, self.likely = self._store.get(job.id), None, None
+        self.guessing = False
+        self.job, self.progress = self._store.get(job.id), None
         self._publish()
 
-    async def _guess(self, label: str) -> None:
-        assert self._guesser is not None
+    async def _guess(self, job: JobRecord) -> None:
+        """The Best guess from the volume label (film_guess.py)."""
+        assert self._guesses is not None
+        self.guessing = True
         try:
-            self.likely = await asyncio.to_thread(self._guesser, label)
+            self._films = await asyncio.to_thread(self._guesses.candidates, job.label)
+            await self._settle(job.id)
+        except Exception:
+            log.exception("film guess failed")
+        finally:
+            self.guessing = False
+        if self.progress is not None:
+            self._publish()
+
+    async def _settle(self, job_id: int) -> None:
+        """Keep the film closest to the longest Title known so far as the Best guess. One at a
+        time, so a guess made before the Title scan can't land after the re-ranked one."""
+        assert self._guesses is not None and self._settling is not None
+        async with self._settling:
+            if self._films:
+                await asyncio.to_thread(self._guesses.settle, job_id, self._films,
+                                        self._longest_s)
+
+    async def _rerank(self, job_id: int) -> None:
+        try:
+            await self._settle(job_id)
         except Exception:
             log.exception("film guess failed")
             return
-        if self.likely is not None and self.progress is not None:
+        if self.progress is not None:
             self._publish()
 
     async def _rip_titles(self, job: JobRecord) -> Failure | None:
@@ -277,6 +306,9 @@ class VideoRipper:
                                          f"Title {number[of.id]}")
             self._store.log(job.id, f"{len(titles)} Titles to rip")
             self._refresh(job.id)
+            self._longest_s = max(t.duration_s for t in titles)
+            if self._guesses and self._films:  # else _guess ranks them once TMDB answers
+                self._reranking = asyncio.create_task(self._rerank(job.id))
             total = sum(t.size_bytes for t in titles) or 1
             done = 0
             started: float | None = None

@@ -36,6 +36,7 @@ class FilmChoice:
     film: Candidate
     note: str   # "Michael Mann · 2 h 50 m · matches the Disc"
     fits: bool
+    best: bool = False  # the Job's Best guess (film_guess.py)
 
 
 @dataclass(frozen=True)
@@ -103,12 +104,12 @@ def _more_label(hidden: list[TitleRecord], found: decoys.Decoys | None) -> str:
     return "Show " + " and ".join(parts)
 
 
-def _film_choice(film: Candidate, duration_s: int) -> FilmChoice:
+def _film_choice(film: Candidate, duration_s: int, best: bool = False) -> FilmChoice:
     parts = [film.director] if film.director else []
     if film.runtime_min:
         parts.append(short_duration(film.runtime_min * 60))
     parts.append(runtime_note(film, duration_s))
-    return FilmChoice(film, " · ".join(parts), fits(film, duration_s))
+    return FilmChoice(film, " · ".join(parts), fits(film, duration_s), best)
 
 
 def _find_film(services, rec: JobRecord, film_id: int) -> Candidate:
@@ -125,6 +126,8 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
     main = found.likely if found else main_feature(rec.titles)
     main_s = main.duration_s if main else 0
     saved = moviereview.saved_search(rec.scratch_dir)
+    guess = services.film_guesses.get(rec.id)
+    best = guess.film if guess else None
     q = request.query_params.get("q")
     search_error = None
     if q is not None and q.strip():
@@ -135,8 +138,11 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
     else:
         q = (saved.terms or search_terms(load_hints(rec.scratch_dir, rec.label)) or [""])[0]
         films = sorted(saved.candidates, key=lambda c: not fits(c, main_s))
-    choices = [_film_choice(f, main_s) for f in films]
-    picked_film = next((c.film for c in choices if c.fits), films[0] if films else None)
+        if best is not None:  # Review starts from the Best guess
+            films = [best, *(f for f in films if f.id != best.id)]
+    choices = [_film_choice(f, main_s, best is not None and f.id == best.id) for f in films]
+    picked_film = (best if best is not None and any(c.best for c in choices) else
+                   next((c.film for c in choices if c.fits), films[0] if films else None))
     ordered = _ordered(titles, main, found)
     shown = 3 if found else 4
     ctx = view_context(services) | {
