@@ -7,7 +7,7 @@ from ama.app import create_app
 from ama.drive import DiscType
 from ama import web
 from ama.web import TEMPLATES, fragments_for
-from tests.conftest import eventually, make_harness
+from tests.conftest import make_harness
 from tests.test_web_now import _read_event
 
 

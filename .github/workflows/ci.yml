@@ -1,0 +1,35 @@
+# Lint and tests on every PR into main: release PRs from develop and hotfix PRs (ADR 0013).
+# The steps are the ones CONTRIBUTING.md gives for local runs.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and test
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.7"
+
+      - name: Install from the lockfile
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run --locked ruff check
+
+      - name: Test
+        run: uv run --locked pytest

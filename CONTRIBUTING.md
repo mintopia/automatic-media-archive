@@ -1,0 +1,67 @@
+# Contributing
+
+## Where things live
+
+- **Code**: GitHub, [`mintopia/automatic-media-archive`](https://github.com/mintopia/automatic-media-archive).
+  This is the `origin` remote. Clone it with
+  `git clone https://github.com/mintopia/automatic-media-archive.git`.
+- **Issues**: still on the Forgejo at
+  [`git.mintopia.net/mintopia/automatic-media-archive`](https://git.mintopia.net/mintopia/automatic-media-archive/issues).
+  GitHub Issues are turned off until issues move (ADR 0013).
+- The Forgejo repo mirrors GitHub. Never push to it by hand. If you have it as a
+  remote, call it `forgejo`.
+
+## Citing issues
+
+Cite an issue by its **full Forgejo URL**, in commit messages and PR bodies:
+
+```
+Cancel a Job from its page
+
+https://git.mintopia.net/mintopia/automatic-media-archive/issues/62
+```
+
+Never write a bare `#62`: GitHub links that to its own tracker, which is empty.
+
+## Branches (gitflow, no release branches)
+
+| Branch | Holds | Created from | Merges into |
+| --- | --- | --- | --- |
+| `develop` | the integration branch; GitHub's default | | `main`, by a release PR |
+| `main` | released code only; every release is a tag on it | | `develop`, by a back-merge |
+| `feature/*` | one piece of work | `develop` | `develop` |
+| `hotfix/*` | an urgent fix to a release | `main` | `main`, by a PR; then back-merged into `develop` |
+
+### Features
+
+1. Branch `feature/<name>` from `develop`.
+2. Merge it into `develop` when done (a PR or a local merge). A small change may be
+   committed straight to `develop`.
+
+### Releases
+
+1. Open a PR from `develop` to `main`. CI runs the lint and the tests on it.
+2. Merge it once CI passes.
+3. Tag the merge on `main` with the next semver version, `vX.Y.Z`, and push the tag.
+   The tag drives the release.
+4. Back-merge `main` into `develop`, so `develop` holds the release merge and tag.
+
+### Hotfixes
+
+1. Branch `hotfix/<name>` from `main`.
+2. Open a PR from it to `main`; CI runs on it. Merge, then tag `vX.Y.Z` as for a release.
+3. Back-merge `main` into `develop`.
+
+## Lint and tests
+
+```powershell
+uv sync
+uv run ruff check
+uv run pytest
+```
+
+No hardware is needed. The lint is Ruff with only its error rules (syntax, unused
+and undefined names); the rule list is in `pyproject.toml`. There is no formatter.
+
+CI (`.github/workflows/ci.yml`) runs these same three commands, from the lockfile, on a
+Windows runner for every PR into `main`. A lint error or a failing test fails the check.
