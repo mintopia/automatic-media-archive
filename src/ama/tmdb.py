@@ -135,7 +135,10 @@ def search_terms(hints: DiscHints) -> list[str]:
 
 
 def _norm(title: str) -> str:
-    t = re.sub(r"[\W_]+", " ", title.casefold()).strip()
+    """For comparing titles: apostrophes dropped (OCEANS is Ocean's), other punctuation to
+    spaces, a leading article dropped."""
+    t = re.sub(r"['’]", "", title.casefold())  # straight and curly
+    t = re.sub(r"[\W_]+", " ", t).strip()
     return re.sub(r"^(the|a|an) ", "", t)
 
 
