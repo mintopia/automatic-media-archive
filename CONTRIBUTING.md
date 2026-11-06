@@ -56,7 +56,8 @@ Never write a bare `#62`: GitHub links that to its own tracker, which is empty.
    The tag drives the release (`.github/workflows/release.yml`). The workflow fails,
    and creates nothing, unless the tag is exactly `vX.Y.Z`, matches the
    `pyproject.toml` version and is on `main`. Otherwise it creates a GitHub Release
-   with notes generated from the merged PRs, plus GitHub's source archives.
+   with notes generated from the merged PRs, `AMA-Setup-X.Y.Z.exe` built from the
+   tagged commit on a Windows runner, plus GitHub's source archives.
    If the tag is wrong, delete it (`git push origin :refs/tags/vX.Y.Z`), fix the
    cause and tag again. `cyanrip-*` tags (cyanrip builds) never start a release.
 5. Back-merge `main` into `develop`, so `develop` holds the release merge and tag:
@@ -89,6 +90,8 @@ Inno Setup's `ISCC.exe` on `tools/installer/ama.iss`. It finds `ISCC.exe` throug
 `--iscc`, `$ISCC`, `PATH` or Inno Setup's usual install folders. Inno Setup installs
 without admin rights when its own installer runs with `/CURRENTUSER`. The script needs no
 input and exits non-zero on any failure. `--stage-only` stops before Inno Setup.
+The release workflow installs the Inno Setup version pinned in `release.yml`
+(`INNO_VERSION`, `INNO_SHA256`) rather than the runner's own.
 
 The installer is unsigned for now. At install time `install-env.cmd` has uv install
 the Python pinned in `build.py` and the locked requirements into the app folder
