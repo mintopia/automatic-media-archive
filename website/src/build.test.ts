@@ -61,6 +61,18 @@ test("the Settings reference marks secrets, restarts and defaults", () => {
   assert.match(html, /id="web\.port"[\s\S]*?<code>8080<\/code>/);
 });
 
+test("Third-party tools & licences lists every row of THIRD_PARTY_NOTICES.md with its licence", () => {
+  const html = unescape(readFileSync(dist("docs/third-party/index.html"), "utf8"));
+  const notices = readFileSync(new URL("../../THIRD_PARTY_NOTICES.md", import.meta.url), "utf8");
+  const rows = [...notices.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|/gm)]
+    .map(([, name, licence]) => [name, licence.replace(/ \(.*/, "")])
+    .filter(([name]) => !/^(Package|Tool|File|-+)$/.test(name));
+  assert.ok(rows.length > 20);
+  for (const [name, licence] of rows) {
+    assert.match(html, new RegExp(`<td>${name}</td>\\s*<td>${licence}`), `${name} (${licence})`);
+  }
+});
+
 test("/docs/ sends you to the first docs page under the site's base path", () => {
   const html = readFileSync(dist("docs/index.html"), "utf8");
   assert.match(html, /url=\/automatic-media-archive\/docs\/install\/"/);

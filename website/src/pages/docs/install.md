@@ -32,9 +32,22 @@ Get the installer from the latest release on GitHub. It’s one file, `AMA-Setup
 <ol class="num">
   <li>Open the file you downloaded.</li>
   <li>Leave <b>Start AMA when I sign in</b> ticked unless you want to start it yourself from the Start menu.</li>
-  <li>Choose <b>Install</b>. The installer sets up a private copy of Python and AMA’s libraries inside the app folder, so nothing else on the PC changes.</li>
-  <li>When it finishes, AMA starts and opens <a href="../setup/">Setup</a> in your browser at <code>http://127.0.0.1</code>.</li>
+  <li>Choose <b>Install</b>. The installer sets up a private copy of Python and AMA’s libraries in its app folder, <code>%LOCALAPPDATA%\Programs\AMA</code>, so nothing else on the PC changes. This needs the internet and can take a few minutes.</li>
+  <li>Leave <b>Start AMA now</b> ticked and choose <b>Finish</b>. AMA starts and opens <a href="../setup/">Setup</a> in your browser at <code>http://127.0.0.1:8080/</code>.</li>
 </ol>
+
+If the installer says AMA’s Python and dependencies couldn’t be installed, check the PC is online and run it again. The details are in <code>install.log</code> in the app folder.
+
+## Install MakeMKV
+
+AMA reads DVDs and Blu-rays with MakeMKV, which you install yourself. CDs don’t need it, so you can skip this if you only archive music.
+
+<ol class="num">
+  <li>Download MakeMKV for Windows from <a href="https://www.makemkv.com/download/">makemkv.com</a> and install it, signed in as the Windows user AMA runs as.</li>
+  <li>Open MakeMKV, choose <b>Help</b>, then <b>Register</b>, and enter your key. While MakeMKV is in beta you can use the free beta key posted on the MakeMKV forum; it changes every month or two, and AMA tells you when it has run out.</li>
+</ol>
+
+AMA looks for MakeMKV in <code>C:\Program Files (x86)\MakeMKV</code> and <code>C:\Program Files\MakeMKV</code>. Installed somewhere else? Set <a href="../settings/#tools.makemkvcon"><code>makemkvcon</code></a> to the full path of <code>makemkvcon64.exe</code>. Setup shows whether AMA found it, and you can install it before or after AMA.
 
 ## Where AMA keeps its files
 
