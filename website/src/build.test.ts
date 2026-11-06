@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PAGES, sectionOf } from "./docs.ts";
+import { parseExample } from "./settings.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dist = (path: string) => fileURLToPath(new URL(`../dist/${path}`, import.meta.url));
@@ -41,6 +42,23 @@ test("every root-relative link and asset in the built site is under the repo sub
       assert.ok(existsSync(dist(onDisk)), `${page}: ${ref} points at nothing in dist/`);
     }
   }
+});
+
+test("the Settings reference shows every table and key of ama.example.toml", () => {
+  const html = readFileSync(dist("docs/settings/index.html"), "utf8");
+  const { tables } = parseExample(readFileSync(new URL("../../ama.example.toml", import.meta.url), "utf8"));
+  for (const t of tables) {
+    assert.match(html, new RegExp(`<h2 id="${t.name}"[^>]*>\\[{1,2}${t.name}\\]{1,2}</h2>`));
+    for (const k of t.groups.flatMap((g) => g.keys)) assert.ok(html.includes(`id="${t.name}.${k.name}"`), `${t.name}.${k.name}`);
+  }
+});
+
+test("the Settings reference marks secrets, restarts and defaults", () => {
+  const html = readFileSync(dist("docs/settings/index.html"), "utf8");
+  assert.match(html, /id="tmdb\.api_key"[\s\S]*?<span class="mark">Secret<\/span>/);
+  assert.match(html, /id="web"[^>]*>\[web\]<\/h2>\s*<p class="mark">Needs a restart<\/p>/);
+  assert.doesNotMatch(html, /id="cd"[^>]*>\[cd\]<\/h2>\s*<p class="mark">/);
+  assert.match(html, /id="web\.port"[\s\S]*?<code>8080<\/code>/);
 });
 
 test("/docs/ sends you to the first docs page under the site's base path", () => {

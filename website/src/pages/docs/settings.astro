@@ -1,0 +1,36 @@
+---
+// Generated at build time from ama.example.toml (ADR 0014): edit its comments, not this page.
+import source from "../../../../ama.example.toml?raw";
+import Docs from "../../layouts/Docs.astro";
+import { inline, parseExample, type Block } from "../../settings.ts";
+
+const { intro, tables } = parseExample(source);
+const headings = tables.map((t) => ({ depth: 2, slug: t.name, text: `[${t.name}]` }));
+const header = (name: string, array: boolean) => (array ? `[[${name}]]` : `[${name}]`);
+const html = (b: Block) => ("code" in b ? `<pre><code>${inline(b.code)}</code></pre>` : `<p>${inline(b.text)}</p>`);
+---
+<Docs frontmatter={{ slug: "settings", description: "Every setting in ama.toml, what it does and its default." }} headings={headings}>
+  <div class="intro" set:html={intro.map(html).join("")} />
+  {tables.map((t) => (
+    <>
+      <h2 id={t.name}>{header(t.name, t.array)}</h2>
+      {t.restart && <p class="mark">Needs a restart</p>}
+      <Fragment set:html={t.intro.map(html).join("")} />
+      {t.groups.map((g) => (
+        <div class="setting">
+          <ul class="keys">
+            {g.keys.map((k) => (
+              <li id={`${t.name}.${k.name}`}>
+                <code class="key">{k.name}</code>
+                {t.array ? " e.g. " : " = "}
+                {k.values.map((v, i) => <>{i > 0 && " · "}<code>{v}</code></>)}
+              </li>
+            ))}
+          </ul>
+          {g.secret && <span class="mark">Secret</span>}
+          <Fragment set:html={g.comment.map(html).join("")} />
+        </div>
+      ))}
+    </>
+  ))}
+</Docs>

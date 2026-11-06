@@ -1,172 +1,217 @@
-# Automatic Media Archive configuration.
+# AMA keeps its settings in `ama.toml`, in %LOCALAPPDATA%\AMA unless you start it
+# with `--config` or the AMA_CONFIG environment variable pointing at another file.
+# The Settings page in the web UI edits it for you, or you can edit it by hand.
+# Every setting is listed here with its default. A misspelt or unknown setting
+# stops AMA at startup with an error naming it.
 #
-# Copy this file to `ama.toml` next to it (that copy is git-ignored, because it
-# holds secrets) and fill it in. Every setting is listed here. Unknown or
-# misspelt settings stop the app at startup with an error naming them.
-# Relative paths are relative to this file's folder.
-# In TOML, single-quoted strings are literal, so Windows paths need no escaping.
+# Relative paths are relative to the folder `ama.toml` is in. Strings in single
+# quotes are taken literally, so Windows paths need no escaping.
 
 [web]
-# Address and port of the LAN web UI. 0.0.0.0 = reachable from the whole LAN.
+# The web UI you use from any device on your network. Changes apply after a restart.
+
+# Address and port the web UI listens on. 0.0.0.0 makes it reachable from your
+# whole network; 127.0.0.1 keeps it to this PC.
 host = "0.0.0.0"
 port = 8080
-# Shared password for the web UI. SECRET.
-# Empty = no sign-in (anyone on the LAN can use it). Set = the UI asks for it.
+# Password for the web UI, shared by everyone who uses it. SECRET. Empty = no
+# sign-in, so anyone on your network can use AMA.
 password = ""
 
 [drive]
-# Optical drive letter, e.g. "D:". Empty = the first optical drive Windows reports.
+# The optical drive AMA watches for Discs. Changes apply after a restart.
+
+# Drive letter, e.g. "D:". Empty = the first optical drive Windows reports.
 letter = ""
-# How often to check the drive for a Disc being inserted or removed (seconds).
+# How often to check the drive for a Disc being inserted or removed, in seconds.
 poll_seconds = 3
 
 [tools]
-# External programs (ADR-0006). AMA downloads its own pinned, hash-checked
-# ffmpeg/ffprobe (Encodes) and cyanrip (CD Rips) at startup into `dir`
-# (empty = %LOCALAPPDATA%\AMA\tools). The first start needs internet and ~0.5 GB.
+# The programs AMA runs. AMA downloads its own checked copies of ffmpeg and
+# ffprobe (for Encodes) and cyanrip (for CD Rips) when it starts; the first start
+# needs internet and about 0.5 GB. Changes apply after a restart.
+
+# Folder for AMA's own copies. Empty = %LOCALAPPDATA%\AMA\tools.
 dir = ""
-# Full path to use instead of AMA's own copy. Used as-is: no download, no
-# version or hash check. Empty = AMA's pinned copy.
+# Full path to a program to use instead of AMA's own copy. It's used as it is, with
+# no download or version check. Empty = AMA's own copy.
 ffmpeg = ""
 ffprobe = ""
 cyanrip = ""
-# MakeMKV is yours to install and register; AMA never does either (docs/deploy.md).
-# Empty = look in C:\Program Files (x86)\MakeMKV and C:\Program Files\MakeMKV.
+# Full path to MakeMKV's `makemkvcon.exe`. MakeMKV is yours to install and
+# register; AMA never does either. Empty = look in C:\Program Files (x86)\MakeMKV
+# and C:\Program Files\MakeMKV.
 makemkvcon = ""
 
 [cd]
-# Drive read offset in samples (EAC convention). +667 is the AccurateRip value
-# for the PIONEER BDR-S11JX; confirm once with `cyanrip -f`.
+# How audio CDs are read.
+
+# Your drive's read offset in samples (EAC convention). The default, +667, suits a
+# PIONEER BDR-S11JX; look yours up in the AccurateRip drive list, or confirm it once
+# with `cyanrip -f`.
 offset = 667
-# How many times cyanrip re-reads a frame before counting it as an error.
+# How many times to re-read a part of the CD that read badly before counting it
+# as an error.
 retries = 10
 
 [paths]
-# Local scratch folder for Rips awaiting Identification, Review and Encode.
-# Needs at least 256 GB free (ADR-0005). Created if missing.
+# Where AMA keeps its working files. Changes apply after a restart.
+
+# Scratch folder for Rips waiting for Identification, Review and Encode. Put it on
+# a fast local drive with at least 256 GB free. Created if missing.
 scratch = 'D:\ama-scratch'
-# SQLite state database. Relative paths here are relative to this file.
+# AMA's database of Jobs and History.
 state_db = "ama.sqlite3"
-# Log file (rotated). The app also logs to the console when it has one.
+# AMA's log file, rotated as it grows. AMA also logs to its console window when
+# it has one.
 log_file = 'logs\ama.log'
 
 [scratch]
-# Free scratch space (GB) each Disc Type needs before its Rip starts. With less
-# free, an inserted Disc is ejected unripped and the UI shows what is holding
-# scratch (finishing a Review, or an Encode being filed, frees space).
+# How AMA keeps the scratch folder from filling up.
+
+# Free space (GB) each Disc Type needs before its Rip starts. With less free, an
+# inserted Disc is ejected unripped and the UI shows what is using scratch space
+# (finishing a Review, or an Encode being filed, frees some).
 cd = 1
 dvd = 10
 bd = 50
 uhd = 100
-# Days a failed Encode's Rip is kept on scratch for a retry; 0 keeps it until you
+# Days to keep a failed Encode's Rip, so you can retry it; 0 keeps it until you
 # remove it. Older ones are removed, oldest first, at startup, every hour and when
-# a Job finishes; each cleanup is listed in Logs.
+# a Job finishes. Each removal is listed in Logs.
 retention_days = 0
-# Free scratch (GB) to keep: with less free, kept Rips are removed whatever their
-# age, oldest first, until there's more; 0 turns it off.
+# Free space (GB) to keep on scratch. With less free, kept Rips are removed
+# whatever their age, oldest first, until there's enough; 0 turns this off.
 floor_gb = 0
 
 [rip.min_title_seconds]
-# Shortest video Title ripped, in whole seconds, per Disc Type. Shorter Titles
-# are menus, logos and warnings. Each Job records the minimum its Rip used.
+# Which video Titles are ripped.
+
+# The shortest Title ripped, in whole seconds, per Disc Type. Shorter Titles are
+# menus, logos and warnings. Each Job records the minimum its Rip used.
 dvd = 30
 bd = 30
 uhd = 30
 
 [tmdb]
-# TMDB API key (v3 "API Key") for movie and TV Identification. SECRET.
+# The Movie Database (TMDB), which AMA uses to identify films and TV series.
+
+# Your TMDB API key (the v3 "API Key" from your TMDB account settings). SECRET.
 api_key = ""
 
 [plex]
-# Plex Media Server URL, used to trigger a partial scan of each filed folder
-# and to list Plex's libraries in Settings > Archive > Libraries.
+# Plex Media Server, which AMA tells to scan each folder it files.
+
+# Your Plex server's address. AMA uses it to start a scan of each filed folder,
+# and to list your Plex libraries in Settings > Archive > Libraries.
 url = "http://nas:32400"
-# Plex token (X-Plex-Token). SECRET. Empty url or token = no scans: Plex finds
-# filed folders on its own next scan.
+# Your Plex token (X-Plex-Token). SECRET. With no address or no token, AMA starts
+# no scans and Plex finds new folders at its next scheduled scan.
 token = ""
-# Plex sees Libraries at: where the Plex server sees the Library folders, when
-# Plex runs on another machine. Each Library folder is this path plus the folder's
-# own name, e.g. '/volume1/media' for Plex on a NAS that sees
-# \\nas\media\Movies as /volume1/media/Movies. Empty = Plex sees each folder at the same path as AMA.
+# Where the Plex server sees your Library folders, when Plex runs on another
+# machine. Each Library folder is this path plus the folder's own name: e.g.
+# '/volume1/media' when Plex on a NAS sees \\nas\media\Movies as
+# /volume1/media/Movies. Empty = Plex sees each folder at the same path AMA does.
 libraries_path = ""
 
 [discord]
-# Discord webhook URL for notifications. SECRET. Empty = Discord notifications off.
+# Alerts in a Discord channel.
+
+# The channel's webhook URL. SECRET. Empty = no Discord alerts.
 webhook_url = ""
 
 [ntfy]
-# ntfy server and topic for push notifications. Anyone who knows the topic can
-# read it, so treat the topic as a SECRET. Empty topic = ntfy notifications off.
+# Push alerts to your phone through ntfy.
+
+# The ntfy server: the public one, or your own.
 url = "https://ntfy.sh"
+# The topic to post to. Anyone who knows it can read your alerts, so treat it as
+# a SECRET. Empty = no ntfy alerts.
 topic = ""
 
 [webhook]
-# Any URL that takes a JSON POST per alert, e.g. Home Assistant or your own script.
-# SECRET. Empty = webhook alerts off. The body is versioned JSON:
+# Alerts sent to anything that takes a JSON POST, e.g. Home Assistant or your own
+# script.
+
+# The URL to POST each alert to. SECRET. Empty = no webhook alerts. The body is
+# versioned JSON:
 #   {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
 #    "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
-# event: rip_done, review_needed, job_filed, job_failed, or test ("Send test"; job is null).
+# `event` is rip_done, review_needed, job_filed, job_failed, or test (from "Send
+# test", with `job` null).
 url = ""
-# An optional header sent with every POST, e.g. a token the receiver checks.
-# The value is a SECRET. Both must be set for the header to be sent.
+# A header to send with every POST, e.g. one holding a token the receiver checks.
+# It's only sent when both its name and its value are set.
 header_name = ""
+# The header's value. SECRET.
 header_value = ""
 
 [encode]
-# How video Discs are Encoded (ADR 0010). Applies to Jobs whose Encode hasn't
-# started. Archives are always MKV at a constant quality.
+# How video Discs are Encoded. Archives are always MKV at a constant quality.
+# Changes apply to Jobs whose Encode hasn't started.
+
 # Encoder: hevc_nvenc (NVIDIA HEVC), av1_nvenc (NVIDIA AV1), hevc_qsv (Intel Quick
-# Sync HEVC) or libx265 (software HEVC, very slow for UHD). AMA test-encodes each
-# at startup and on save; one that fails can't be picked in Settings.
+# Sync HEVC) or libx265 (HEVC on the processor, very slow for UHD). AMA
+# test-encodes with each one at startup and when you save; one that fails can't be
+# picked in Settings.
 encoder = "hevc_nvenc"
-# Speed, the same four steps on every encoder: faster, balanced, slower, slowest.
-# Slower makes smaller files at the same quality.
+# Speed, in the same four steps on every encoder: faster, balanced, slower,
+# slowest. Slower makes smaller files at the same quality.
 speed = "slower"
-# Sound: all (copy every track), first_plus_stereo (the first track plus an AAC
-# stereo copy that plays everywhere) or languages (tracks in the preferred
+# Sound tracks: all (copy every track), first_plus_stereo (the first track plus an
+# AAC stereo copy that plays everywhere) or languages (tracks in your preferred
 # languages, commentaries too, plus the film's original language).
 audio = "languages"
-# Subtitles: all, languages (the preferred languages, plus untagged forced ones)
+# Subtitles: all, languages (your preferred languages, plus untagged forced ones)
 # or none.
 subtitles = "languages"
-# Preferred languages, most preferred first: names (English, Japanese) or codes (en, ja).
+# Your preferred languages, most preferred first: names (English, Japanese) or
+# codes (en, ja), separated by commas.
 languages = "English"
 
 [encode.cq]
-# Constant-quality level (CQ, or CRF for libx265; 0-51, lower = better and
-# bigger) per Disc Type. CDs are never Encoded. Encodes are the permanent
-# Archive (ADR-0002), so lock these in during the pilot calibration (ticket #17).
+# Picture quality of each Encode.
+
+# Constant-quality level per Disc Type (CQ, or CRF for libx265): 0 to 51, where
+# lower is better quality and bigger files. Encodes are your permanent Archive,
+# so settle these before archiving your collection. CDs are never Encoded.
 dvd = 20
 bd = 22
 uhd = 22
 
 [encode.max_resolution]
+# Picture size of each Encode.
+
 # The tallest picture kept per Disc Type: keep (the Disc's own), or 720p for
-# Blu-ray, 1080p for UHD Blu-ray (scaled down, HDR kept).
+# Blu-ray and 1080p for UHD Blu-ray (scaled down, HDR kept).
 dvd = "keep"
 bd = "keep"
 uhd = "keep"
 
 [logs]
-# Days to keep each step's output in Logs; 0 keeps it forever. Older output is
-# removed at startup and once a day. Jobs, History and run summaries are kept.
+# How long Logs keep each step's output.
+
+# Days to keep each step's output; 0 keeps it forever. Older output is removed at
+# startup and once a day. Jobs, History and run summaries are always kept.
 keep_days = 0
 
-# Libraries: named folders of the Archive, one entry per Library. Each kind
-# ("films", "tv" or "music") needs exactly one default = true; a Job is filed
-# to its kind's default unless it picked another Library of that kind.
-# `path` is the Library's full folder path: a local folder, a mapped drive or a
-# UNC path (created when first filed to). AMA doesn't connect or mount anything:
-# when a folder isn't reachable, its Jobs wait and filing is retried every minute.
-# `plex` is the name of the Plex library that holds it, scanned after each
-# filing; empty = whichever Plex library's folder contains it.
-# Leave out every [[libraries]] entry to use Videos\Movies, Videos\TV and Music
-# in your user folder.
+# Libraries: the named folders of your Archive, one [[libraries]] entry each.
+# Each kind (films, tv or music) needs exactly one default Library; a Job is filed
+# to its kind's default unless you pick another Library of that kind. Leave out
+# every entry to use Videos\Movies, Videos\TV and Music in your user folder.
 [[libraries]]
+# The Library's name, shown in AMA.
 name = "Movies"
+# What it holds: films, tv or music.
 kind = "films"
+# Its full folder path: a local folder, a mapped drive or a network (UNC) path,
+# created when AMA first files to it. AMA doesn't connect or mount anything: while
+# the folder can't be reached, its Jobs wait and filing is retried every minute.
 path = '\\nas\media\Movies'
+# The Plex library that holds it, scanned after each filing. Empty = whichever
+# Plex library's folder contains it.
 plex = "Movies"
+# Whether it's the default Library for its kind.
 default = true
 
 [[libraries]]
