@@ -2,6 +2,7 @@
 name = "ama"
 version = "0.1.0"
 description = "Automatic Media Archive: rip, identify, encode and file optical Discs into a Plex library"
+license = "MIT"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.115",
