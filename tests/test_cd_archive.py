@@ -10,10 +10,9 @@ from __future__ import annotations
 import json
 from urllib.parse import parse_qs
 
-from mutagen.flac import FLAC
-
 from ama import musicbrainz
 from ama.archive import extended_path
+from ama.flactags import read_tags
 from ama.cdarchive import track_tags
 from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
@@ -68,7 +67,7 @@ def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(ha
     assert f"{ALBUM} (Disc 1).cue" in names and f"{ALBUM} (Disc 1).log" in names
     assert (album / "cover.jpg").read_bytes() == COVER
 
-    tags = FLAC(album / flacs[0])
+    tags = read_tags(album / flacs[0])
     assert tags["TITLE"] == ["The Unknown Journey Continues"]
     assert tags["ARTIST"] == ["島翔太朗 & 西木康智"]
     assert tags["ALBUM"] == [ALBUM]
@@ -131,7 +130,7 @@ def test_discs_of_a_multi_disc_release_file_into_one_album_folder(harness, clien
     disc2 = [n for n in names if n.endswith(".flac") and n.startswith("2")]
     assert (len(disc1), len(disc2)) == (24, 23)
     assert f"{ALBUM} (Disc 2).cue" in names
-    tags = FLAC(_album(harness) / sorted(disc2)[0])
+    tags = read_tags(_album(harness) / sorted(disc2)[0])
     assert (tags["DISCNUMBER"], tags["DISCTOTAL"], tags["TRACKNUMBER"]) == (["2"], ["8"], ["1"])
     assert tags["MUSICBRAINZ_DISCID"] == [DISC_2]
 
