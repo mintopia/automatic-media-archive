@@ -6,7 +6,7 @@
   <h1>Settings</h1>
   <div class="notice restart" role="status" data-restarting data-boot="{{ boot }}" data-boot-url="{{ boot_url }}" data-after="{{ after }}"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg><div class="rbody"><div><b>Restarting AMA…</b>
     <p class="rmeta">This page goes back to <a href="{{ after }}">{{ after }}</a> when AMA is running again, usually within a minute.</p>
-    <p class="rmeta" data-slow hidden>AMA hasn't come back yet. If it doesn't, look in <code>logs\ama.log</code> on the AMA PC.</p></div></div></div>
+    <p class="rmeta" data-slow hidden>AMA hasn't come back yet. If it doesn't, look in <code>%LOCALAPPDATA%\AMA\logs\ama.log</code> on the AMA PC.</p></div></div></div>
 </main>
 <script src="/static/restarting.js"></script>
 {% endblock %}

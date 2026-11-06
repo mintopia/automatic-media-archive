@@ -11,6 +11,7 @@ a typo can't silently fall back to a default. Every setting must also appear in
 
 from __future__ import annotations
 
+import os
 import re
 import tomllib
 from collections.abc import Callable, Sequence
@@ -87,7 +88,7 @@ class DriveConfig(_Section):
 class ToolsConfig(_Section):
     """External programs (ADR 0006). Empty = AMA's default for that tool."""
 
-    dir: str = ""  # where AMA keeps its portable tools; empty = %LOCALAPPDATA%\ama\tools
+    dir: str = ""  # where AMA keeps its portable tools; empty = %LOCALAPPDATA%\AMA\tools
     ffmpeg: str = ""
     ffprobe: str = ""
     cyanrip: str = ""
@@ -337,6 +338,17 @@ def secret_values(model: BaseModel) -> list[str]:
 
 class ConfigError(Exception):
     pass
+
+
+def data_dir() -> Path:
+    r"""Where AMA keeps its settings file, database, logs and tools: %LOCALAPPDATA%\AMA (ADR 0017)."""
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "AMA"
+
+
+def default_config_path() -> Path:
+    """The settings file when neither `--config` nor `AMA_CONFIG` names one."""
+    return data_dir() / "ama.toml"
 
 
 def load_config(path: Path) -> Config:
