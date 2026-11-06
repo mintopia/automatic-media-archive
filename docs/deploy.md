@@ -64,7 +64,7 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
 2. Clone and install (uv fetches Python 3.13 itself):
 
    ```powershell
-   git clone https://git.mintopia.net/mintopia/automatic-media-archive.git C:\ama
+   git clone https://github.com/mintopia/automatic-media-archive.git C:\ama
    cd C:\ama
    uv sync --frozen --no-dev
    copy ama.example.toml ama.toml   # then edit ama.toml: Libraries, secrets, scratch...
