@@ -172,16 +172,18 @@ def decide_pick(pick: Candidate, main_feature_s: int
     return None, ReviewReason.PICK_RUNTIME_MISMATCH
 
 
-def movie_folder(c: Candidate) -> Path:
-    """`Movies/Title (Year) {tmdb-ID}` (Plex naming)."""
-    return MOVIES / naming.folders(naming.DEFAULTS[Kind.FILM], Kind.FILM, _film_values(c, None))
+def movie_folder(c: Candidate, pattern: str = naming.DEFAULTS[Kind.FILM]) -> Path:
+    """The film's folder by its Library's `pattern`: `Movies/Title (Year) {tmdb-ID}` by
+    default (Plex naming)."""
+    return MOVIES / naming.folders(pattern, Kind.FILM, _film_values(c, None))
 
 
-def movie_path(c: Candidate, version: str | None) -> Path:
-    """Where the film is filed: `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`,
-    its Plex version name (`moviearchive.plex_version`) after the dash."""
-    return MOVIES / naming.render(naming.DEFAULTS[Kind.FILM], Kind.FILM,
-                                  _film_values(c, version), ".mkv")
+def movie_path(c: Candidate, version: str | None,
+               pattern: str = naming.DEFAULTS[Kind.FILM]) -> Path:
+    """Where the film is filed by its Library's `pattern`; by default
+    `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`, its Plex version name
+    (`moviearchive.plex_version`) after the dash."""
+    return MOVIES / naming.render(pattern, Kind.FILM, _film_values(c, version), ".mkv")
 
 
 def _film_values(c: Candidate, version: str | None) -> dict[str, naming.Value]:

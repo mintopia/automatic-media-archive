@@ -1,5 +1,6 @@
 """Settings edits write ama.toml in place (ADR 0008): the file stays the one source of truth."""
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -177,6 +178,46 @@ def test_a_library_that_doesnt_validate_names_its_fields_and_the_file_is_unchang
         f.save_library(LibraryKind.FILMS, None, {"name": "Films", "plex": "", "path": "Films"})
     assert set(e.value.errors) == {"path"} and "full folder path" in e.value.errors["path"]
     assert toml.read_bytes() == original
+
+
+FILMS_DEFAULT = (
+    "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}")
+
+
+def _films_pattern(toml) -> str:
+    return next(lib.pattern for lib in load_config(toml).libraries if lib.name == "Movies")
+
+
+def test_a_films_pattern_is_saved_to_its_library_and_absent_means_the_default(toml):
+    from ama import naming
+    movies = next(lib for lib in load_config(toml).libraries if lib.name == "Movies")
+    assert movies.pattern == "" and naming.pattern_of(movies) == FILMS_DEFAULT
+    f = SettingsFile(toml)
+    f.save_library(LibraryKind.FILMS, "Movies", {"pattern": "{title} ({year})/{title} - {version}"})
+    assert "pattern = \"{title} ({year})/{title} - {version}\"" in toml.read_text(encoding="utf-8")
+    assert _films_pattern(toml) == "{title} ({year})/{title} - {version}"
+    f.save_library(LibraryKind.FILMS, "Movies", {"name": "Films"})  # an edit keeps the pattern
+    assert next(lib.pattern for lib in load_config(toml).libraries if lib.name == "Films")
+    # Saving the default keeps it implicit, so the file says "the default" again.
+    f.save_library(LibraryKind.FILMS, "Films", {"pattern": FILMS_DEFAULT})
+    raw = tomllib.loads(toml.read_text(encoding="utf-8"))["libraries"][0]
+    assert raw["name"] == "Films" and raw.get("pattern", "") == ""
+
+
+def test_a_pattern_that_cant_name_every_film_is_rejected_and_the_file_is_unchanged(toml):
+    original = toml.read_bytes()
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(toml).save_library(LibraryKind.FILMS, "Movies", {"pattern": "{title}"})
+    assert set(e.value.errors) == {"pattern"}
+    assert "Needs {version}" in e.value.errors["pattern"]
+    assert toml.read_bytes() == original
+
+
+def test_a_hand_edited_pattern_with_errors_stops_the_file_loading(toml):
+    toml.write_text(toml.read_text(encoding="utf-8").replace(
+        'pattern = ""', 'pattern = "{title}/{nope}"'), encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"The pattern of Movies: \{nope\} isn't a field here"):
+        load_config(toml)
 
 
 # --- the one-time rewrite to plain Library paths (ADR 0011) -------------------------------

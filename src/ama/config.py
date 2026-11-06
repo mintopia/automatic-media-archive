@@ -268,6 +268,20 @@ class Library(_Section):
     path: Annotated[str, AfterValidator(library_folder)]
     plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
     default: bool = False
+    pattern: str = ""  # its Naming Pattern (`naming.pattern_of`); empty = the kind's default
+
+    @model_validator(mode="after")
+    def _check_pattern(self) -> Library:
+        if not self.pattern:
+            return self
+        from ama import naming  # it imports this module
+        kind = naming.EDITABLE.get(self.kind)
+        if kind is None:
+            raise ValueError(f"{self.kind.label} Libraries can't have a pattern yet")
+        errors = naming.check(self.pattern, kind).errors
+        if errors:
+            raise ValueError(f"The pattern of {self.name}: {'; '.join(errors)}")
+        return self
 
 
 class Config(_Section):

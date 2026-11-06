@@ -15,6 +15,7 @@ from enum import StrEnum
 from pathlib import PurePosixPath
 
 from ama.archive import safe_chars, safe_name
+from ama.config import Library, LibraryKind
 
 SEGMENT_LIMIT = 240  # a whole folder or file name, under NTFS's 255 with room for an extension
 
@@ -90,6 +91,38 @@ DEFAULTS: dict[Kind, str] = {
 def examples(kind: Kind) -> dict[str, Value]:
     """Each field's example value, for a preview."""
     return {f.name: f.example for f in FIELDS[kind]}
+
+
+# The Libraries whose pattern Settings edits (the `pattern` key), and what it names.
+EDITABLE: dict[LibraryKind, Kind] = {LibraryKind.FILMS: Kind.FILM}
+# A named file's extension, for the editor's preview.
+EXTENSIONS: dict[Kind, str] = {Kind.FILM: ".mkv", Kind.TV: ".mkv",
+                               Kind.MUSIC_SINGLE_DISC: ".flac", Kind.MUSIC_MULTI_DISC: ".flac"}
+
+
+@dataclass(frozen=True)
+class Preset:
+    """A starting point the editor offers."""
+
+    label: str
+    pattern: str
+
+
+PRESETS: dict[Kind, tuple[Preset, ...]] = {
+    Kind.FILM: (
+        Preset("Plex, with the TMDB ID (default)", DEFAULTS[Kind.FILM]),
+        Preset("Plex, title and year", "{title} ({year})/{title} ({year}) - {version}"),
+        Preset("By year", "{year}/{title} ({year})/{title} ({year}) - {version}"),
+    ),
+}
+
+
+def pattern_of(library: Library) -> str:
+    """The pattern `library` files by: its own, or its kind's default when it has none."""
+    kind = EDITABLE.get(library.kind)
+    if kind is None:
+        raise ValueError(f"{library.kind.label} Libraries have no editable pattern")
+    return library.pattern or DEFAULTS[kind]
 
 # Each file's name is unique when the pattern has a field from every group.
 _UNIQUE: dict[Kind, tuple[tuple[str, ...], ...]] = {

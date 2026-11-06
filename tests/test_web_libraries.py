@@ -165,3 +165,55 @@ def test_without_plex_the_list_is_disabled_and_saving_still_works(setup):
     client.post(PAGE + "/save", data={"lib.original": "Family Films", "lib.kind": "films",
                                       "lib.name": "Family", "lib.path": str(h.libraries_root / "F")})
     assert ("films", "Family", "Family Films", False) in _libraries(toml)  # Plex pick kept
+
+
+# --- the Naming Pattern (#67) -----------------------------------------------------------------
+
+FILMS_DEFAULT = "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}"
+
+
+def _pattern(client, kind, pattern):
+    r = client.get(PAGE + "/pattern", params={"lib.kind": kind, "lib.pattern": pattern})
+    assert r.status_code == 200
+    return html.unescape(r.text)
+
+
+def test_a_film_librarys_editor_shows_its_pattern_fields_presets_and_a_preview(setup):
+    client, *_ = setup
+    films = _group(_page(client, "?edit=Movies"), "Films")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape(FILMS_DEFAULT) + '"', films)
+    for field, example in [("{title}", "Ocean's Eleven"), ("{year}", "2001"),
+                           ("{tmdb_id}", "161"), ("{version}", "4K")]:
+        assert re.search(re.escape(field) + r"</code>.*?" + re.escape(example), films, re.S)
+    assert 'data-preset="{title} ({year})/{title} ({year}) - {version}"' in films
+    assert "Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 4K.mkv" in films
+    tv = _group(_page(client, "?edit=TV"), "TV")
+    assert 'id="lib-pattern"' not in tv  # TV and music patterns come later (#68, #69)
+
+
+def test_the_preview_follows_the_pattern_with_its_errors_and_plex_warnings(setup):
+    client, *_ = setup
+    out = _pattern(client, "films", "{title}/{title} - {version}")
+    assert "Ocean's Eleven/Ocean's Eleven - 4K.mkv" in out
+    assert "Without {year}, Plex may match the wrong film" in out
+    assert "Without {tmdb_id}, Plex may match the wrong film" in out
+    bad = _pattern(client, "films", "{title}/{nope}")
+    assert "{nope} isn't a field here" in bad and "Needs {version}" in bad
+    assert ".mkv" not in bad  # no preview of a pattern that can't be used
+
+
+def test_saving_a_pattern_files_later_films_by_it_and_a_bad_one_is_shown_again(setup):
+    client, toml, h = setup
+    data = {"lib.original": "Movies", "lib.kind": "films", "lib.name": "Movies",
+            "lib.plex": "Movies", "lib.path": str(h.libraries_root / "Movies")}
+    good = "{title} ({year})/{title} - {version}"
+    r = client.post(PAGE + "/save", data=data | {"lib.pattern": good}, follow_redirects=False)
+    assert r.status_code == 303
+    assert load_config(toml).libraries[0].pattern == good
+    r = client.post(PAGE + "/save", data=data | {"lib.pattern": "{title}"})
+    assert r.status_code == 422
+    films = _group(html.unescape(r.text), "Films")
+    assert re.search(r'id="lib-pattern"[^>]*value="\{title\}"[^>]*aria-invalid="true"', films)
+    assert "Needs {version}, so every file gets its own name" in films
+    assert load_config(toml).libraries[0].pattern == good

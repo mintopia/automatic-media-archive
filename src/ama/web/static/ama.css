@@ -495,6 +495,18 @@ main.settings{max-width:1100px}
 .libedit .full{grid-column:1/-1}
 .libedit .actions{grid-column:1/-1;justify-content:flex-end}
 .libedit .hint a{color:var(--ink);text-underline-offset:2px}
+.libedit .hint code,.patout code,.patfields code{font:12px ui-monospace,Consolas,monospace}
+.libedit .input.pat{font:13px ui-monospace,Consolas,monospace}
+.pattern .k{color:var(--ink2);font-size:12px;font-weight:600}
+.patout{display:grid;gap:8px;margin-top:4px}
+.patprev{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:var(--sheet);border:1px solid var(--rule);border-radius:3px}
+.patprev code{overflow-wrap:anywhere;font-size:13px}
+.patmsgs{display:grid;gap:6px;list-style:none;margin:0;padding:0}
+.presets{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
+.patfields{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.patfields caption{text-align:left;padding-bottom:4px}
+.patfields th{text-align:left;color:var(--ink2);font-weight:600;font-size:12px;padding:4px 12px 4px 0;border-bottom:1px solid var(--rule)}
+.patfields td{padding:5px 12px 5px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 .libconfirm{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding:6px 24px 18px;font-size:14px}
 .libconfirm b{display:block;font-size:15px;margin-bottom:2px}
 .libconfirm span{color:var(--ink2);max-width:62ch;display:block}

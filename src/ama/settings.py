@@ -24,6 +24,7 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
+from ama import naming
 from ama.config import EDITED, Config, ConfigError, LibraryKind, library_folder, load_config
 
 log = logging.getLogger(__name__)
@@ -145,7 +146,9 @@ def _write_atomic(path: Path, text: str) -> None:
 
 
 # A Library's keys that the file can leave out, and their value then.
-_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False}
+_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False, "pattern": ""}
+# What the Library editor types.
+_LIBRARY_TYPED = ("name", "plex", "path", "pattern")
 
 
 class SettingsFile:
@@ -213,18 +216,22 @@ class SettingsFile:
     def save_library(self, kind: LibraryKind, original: str | None,
                      typed: Mapping[str, str]) -> None:
         """Add a `kind` Library (`original` None) or edit the one called `original`, from
-        `{"name", "plex", "path"}`; leaving out "plex" keeps the one it has. Raises
-        SettingsRejected keyed by those names."""
+        `{"name", "plex", "path", "pattern"}`; an edit keeps the value of any it leaves out.
+        Raises SettingsRejected keyed by those names."""
         doc, libraries = self._libraries()
         index = (len(libraries) if original is None
                  else next((i for i, lib in enumerate(libraries) if lib["name"] == original),
                            None))
         if index is None:
             raise SettingsRejected({}, [f"There's no Library called {original}"])
-        kept = libraries[index]["plex"] if original is not None else ""
-        fields = {k: str(typed.get(k, kept if k == "plex" else "")).strip()
-                  for k in ("name", "plex", "path")}
+        kept = libraries[index] if original is not None else {}
+        fields = {k: str(typed.get(k, kept.get(k, ""))).strip() for k in _LIBRARY_TYPED}
         errors: dict[str, str] = {}
+        if (naming_kind := naming.EDITABLE.get(kind)) is not None:
+            if fields["pattern"] == naming.DEFAULTS[naming_kind]:
+                fields["pattern"] = ""  # the default stays implicit, as in a new file
+            elif fields["pattern"] and (bad := naming.check(fields["pattern"], naming_kind).errors):
+                errors["pattern"] = "; ".join(bad)
         for k in ("name", "path"):
             if not fields[k]:
                 errors[k] = "This can't be empty"
@@ -241,8 +248,7 @@ class SettingsFile:
         if errors:
             raise SettingsRejected(errors, [])
         if original is None:
-            libraries.append({"name": fields["name"], "kind": kind.value, "path": fields["path"],
-                              "plex": fields["plex"], "default": False})
+            libraries.append(fields | {"kind": kind.value, "default": False})
         else:
             libraries[index] = libraries[index] | fields
         self._write_libraries(doc, libraries)
@@ -294,7 +300,7 @@ class SettingsFile:
             if i >= len(aot):
                 aot.append(tomlkit.table())
             entry = aot[i]
-            for key in ("name", "kind", "path", "plex", "default"):
+            for key in ("name", "kind", "path", "plex", "default", "pattern"):
                 value = want[key]
                 optional = key in _LIBRARY_OPTIONAL  # left out of the file when empty
                 if entry.get(key, _LIBRARY_OPTIONAL.get(key)) == value:

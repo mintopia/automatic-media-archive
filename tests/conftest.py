@@ -99,6 +99,13 @@ class Harness:
         if away.is_dir():
             away.rename(path)
 
+    def films_pattern(self, pattern: str) -> None:
+        """Give every Films Library `pattern`, as a Settings save applies it live."""
+        cfg = self.services.config
+        self.services.apply_live(Config.model_validate(cfg.model_dump() | {"libraries": [
+            lib.model_dump() | ({"pattern": pattern} if lib.kind == LibraryKind.FILMS else {})
+            for lib in cfg.libraries]}))
+
 
 def write_config(tmp_path, extra: str = "") -> Path:
     """An ama.toml like `make_config`'s, with comments, for the Settings tests."""

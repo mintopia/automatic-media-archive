@@ -160,6 +160,11 @@ keep_days = 0
 # when a folder isn't reachable, its Jobs wait and filing is retried every minute.
 # `plex` is the name of the Plex library that holds it, scanned after each
 # filing; empty = whichever Plex library's folder contains it.
+# `pattern` (films only, for now) is the Library's Naming Pattern: the folders and
+# file name inside it, from {title}, {year}, {tmdb_id} and {version} (4K, 1080p,
+# or nothing for a DVD), "/" between folders. Empty or left out = Plex's naming,
+# "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}".
+# Changing it names only what is filed afterwards; nothing filed is renamed.
 # Leave out every [[libraries]] entry to use Videos\Movies, Videos\TV and Music
 # in your user folder.
 [[libraries]]
@@ -168,6 +173,7 @@ kind = "films"
 path = '\\nas\media\Movies'
 plex = "Movies"
 default = true
+pattern = ""
 
 [[libraries]]
 name = "TV"

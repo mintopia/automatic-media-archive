@@ -403,3 +403,51 @@ def test_a_4k_main_feature_is_encoded_as_uhd_even_if_the_disc_looked_like_a_blu_
     assert args[args.index("-cq") + 1] == "24"
     log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
     assert "its Main Feature is 4K, so it is encoded as a UHD" in log
+
+
+def _with_films_pattern(tmp_path, pattern: str):
+    """A harness whose default Films Library has `pattern`, saved as Settings saves it."""
+    from tests.conftest import write_config
+    harness = make_harness(tmp_path, config_file=write_config(tmp_path))
+    harness.services.settings.save_library(LibraryKind.FILMS, "Movies", {"pattern": pattern})
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    return harness
+
+
+def test_a_film_is_filed_by_its_librarys_pattern_with_its_extras_inside_that_folder(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    harness = _with_films_pattern(tmp_path, "{year}/{title} [{tmdb_id}]/{title} - {version}")
+    with TestClient(create_app(harness.services)):
+        _rip(harness)
+        rec = _wait_for(harness, JobStatus.FILED)
+    folder = harness.libraries_root / "Movies" / "2016" / "Example Movie [1234]"
+    assert sorted(p.name for p in extended_path(folder).iterdir()) == [
+        "Example Movie - 1080p.mkv", "Other"]
+    assert [p.name for p in extended_path(folder / "Other").iterdir()] == [
+        "EXAMPLE_MOVIE - Title 2.mkv"]
+    assert rec.archive_dir == folder
+
+
+def test_changing_the_pattern_never_renames_a_filed_film(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    from tests.conftest import write_config
+    harness = make_harness(tmp_path, config_file=write_config(tmp_path))
+    harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
+    with TestClient(create_app(harness.services)):
+        _rip(harness)
+        first = _wait_for(harness, JobStatus.FILED)
+        harness.services.settings.save_library(
+            LibraryKind.FILMS, "Movies", {"pattern": "{title}/{title} - {version}"})
+        _uhd_source(harness)
+        harness.drive.insert(DiscType.UHD, "EXAMPLE_MOVIE_UHD")
+        eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=5)
+
+    old = extended_path(harness.libraries_root / "Movies" / FOLDER)
+    assert sorted(p.name for p in old.iterdir()) == [f"{FOLDER} - 1080p.mkv", "Other"]
+    assert harness.services.jobs.get(first.id).archive_dir == first.archive_dir
+    new = extended_path(harness.libraries_root / "Movies" / "Example Movie")
+    assert sorted(p.name for p in new.iterdir()) == ["Example Movie - 4K.mkv", "Other"]
