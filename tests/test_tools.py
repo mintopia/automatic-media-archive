@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import io
 import zipfile
+from pathlib import Path
 
 import pytest
 
