@@ -238,8 +238,12 @@ def test_any_video_disc_in_review_can_be_marked_as_tv_and_back(harness, client):
     eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=5)
     [rec] = harness.services.jobs.list(JobStatus.REVIEW)
     assert "It's TV episodes" in _page(client, f"/review/{rec.id}")
+    queue = _page(client, "/review")  # one click from the queue, not only from the film page
+    assert f'action="/review/{rec.id}/kind"' in queue and "It's TV episodes" in queue
     r = client.post(f"/review/{rec.id}/kind", data={"kind": "tv"}, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == f"/review/{rec.id}"
+    queue = _page(client, "/review")
+    assert "Match episodes" in queue and "It's TV episodes" not in queue
     page = _page(client, f"/review/{rec.id}?q=THE OFFICE")
     assert "Which episode is each Title?" in page and "The Office (2001)" in page
     client.post(f"/review/{rec.id}/kind", data={"kind": "film"})

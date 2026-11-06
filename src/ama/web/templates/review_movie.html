@@ -8,6 +8,7 @@
       <h1>Which film is on this Disc?</h1>
       <p class="sub">{{ record.disc_type.long_name }}{% if record.label %} labelled “{{ record.label }}”{% endif %} · main Title runs {{ main_length }}</p>
     </div>
+    <div class="actions"><button class="btn quiet" type="submit" form="as-tv">It's TV episodes</button></div>
   </div>
   {% include "partials/review_done.html" %}
   <form id="search" method="get" action="/review/{{ record.id }}"></form>
@@ -66,7 +67,6 @@
       <section class="alt" aria-labelledby="alt-h">
         <h2 class="alt-h" id="alt-h">Not a film?</h2>
         <div class="actions">
-          <button class="btn" type="submit" form="as-tv">It's TV episodes</button>
           <a class="btn" href="/review/{{ record.id }}/set">It's an Extras Disc</a>
         </div>
         <p class="ts">An Extras Disc holds the Extras of a film that's already filed.</p>

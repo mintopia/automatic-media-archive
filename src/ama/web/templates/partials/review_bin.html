@@ -3,7 +3,9 @@
   <h2 class="tab" id="rev-h">Needs Review <span class="c">{{ review | length }}</span></h2>
   <div class="box">
   {%- for item in review %}
-    <div class="row"><div class="dtype">{{ item.record.disc_type }}</div><div><div class="tt"><a href="/jobs/{{ item.record.id }}">{{ item.title }}</a></div><div class="ts">{{ item.summary }}</div></div><a class="btn{% if loop.first %} pri{% endif %}" href="{{ item.href }}">{{ item.action }}</a></div>
+    <div class="row"><div class="dtype">{{ item.record.disc_type }}</div><div><div class="tt"><a href="/jobs/{{ item.record.id }}">{{ item.title }}</a></div><div class="ts">{{ item.summary }}</div></div>
+    {%- set go %}<a class="btn{% if loop.first %} pri{% endif %}" href="{{ item.href }}">{{ item.action }}</a>{% endset %}
+    {%- if item.offer_tv %}<div class="actions"><form method="post" action="/review/{{ item.record.id }}/kind"><input type="hidden" name="kind" value="tv"><button class="btn quiet" type="submit">It's TV episodes</button></form>{{ go }}</div>{% else %}{{ go }}{% endif %}</div>
   {%- endfor %}
   {%- if not review %}
     <p class="pad ts">Nothing needs you right now. You'll get a notification when a Disc needs a decision.</p>

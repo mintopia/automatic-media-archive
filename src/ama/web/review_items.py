@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 
-from ama import cdreview, decoys, review
+from ama import cdreview, decoys, review, tvreview
 from ama.cyanrip import ArStatus
 from ama.jobs import JobRecord, ReviewReason, TitleStatus
 from ama.drive import DiscType
@@ -27,6 +27,7 @@ class ReviewItem:
     title: str
     summary: str  # why it's here, e.g. "3 editions match this CD · pick yours"
     action: str   # the button, e.g. "Choose edition"
+    offer_tv: bool = False  # a film Review that may really be episodes: offer "It's TV episodes"
 
     @property
     def href(self) -> str:
@@ -78,16 +79,21 @@ def review_items(services: Services) -> list[ReviewItem]:
     return items
 
 
+_FILM_UNSURE = frozenset({ReviewReason.NO_MATCH, ReviewReason.RUNTIME_MISMATCH,
+                          ReviewReason.MULTIPLE_MATCHES, ReviewReason.PICK_RUNTIME_MISMATCH})
+
+
 def _video_item(services: Services, rec: JobRecord) -> ReviewItem:
-    summary, action = _GENERIC[rec.review_reason or ReviewReason.NO_RELEASE]
-    if rec.review_reason == ReviewReason.DECOY_PLAYLISTS and (
+    tv = tvreview.wants_tv(rec)
+    reason = ReviewReason.EPISODES if tv else rec.review_reason or ReviewReason.NO_MATCH
+    summary, action = _GENERIC[reason]
+    if reason == ReviewReason.DECOY_PLAYLISTS and (
             found := decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)):
         summary = (f"{len(found.versions)} near-identical versions of the film "
                    "(a copy-protection trick) · check which is right")
-    tv = rec.review_reason == ReviewReason.EPISODES
     if guess := (services.series_guesses if tv else services.film_guesses).get(rec.id):
         summary = f"Best guess {guess.name} · {summary}"
-    return ReviewItem(rec, rec.name, summary, action)
+    return ReviewItem(rec, rec.name, summary, action, offer_tv=reason in _FILM_UNSURE)
 
 
 def cd_title(services: Services, rec: JobRecord) -> str:

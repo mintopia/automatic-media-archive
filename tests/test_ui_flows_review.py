@@ -94,8 +94,8 @@ def test_movie_review_marks_and_choices(harness, client):
     page = _page(client, f"/review/{rec.id}")
     assert "stk fil" not in page and 'class="mark"' in page  # "Same length" isn't a sticker
     assert '<div id="summary" aria-live="polite">' in page
-    assert re.search(r'<button class="btn" type="submit" form="as-tv">It\'s TV episodes</button>',
-                     page)
+    head = page[:page.index('id="decide"')]  # in the page head, not below the Titles
+    assert '<button class="btn quiet" type="submit" form="as-tv">It\'s TV episodes</button>' in head
     row = page[page.index('class="title-row"'):]
     row = row[:row.index('class="shots"')]
     assert "frames" not in row  # the radio's label is the Title, not its pictures
