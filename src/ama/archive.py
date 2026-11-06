@@ -28,6 +28,11 @@ class FilingError(Exception):
     """A file couldn't be put into the Archive intact."""
 
 
+def safe_chars(text: str) -> str:
+    """`text` with the characters Windows forbids in a name (`/` too) -> `_`."""
+    return _ILLEGAL.sub("_", text)
+
+
 def safe_name(text: str, limit: int = NAME_LIMIT) -> str:
     """`text` as a Windows/SMB-safe file or folder name (characters Windows forbids -> `_`)."""
     name = _ILLEGAL.sub("_", text).strip()
