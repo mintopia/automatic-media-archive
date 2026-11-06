@@ -52,11 +52,16 @@ Never write a bare `#62`: GitHub links that to its own tracker, which is empty.
 2. Open a PR from it to `main`; CI runs on it. Merge, then tag `vX.Y.Z` as for a release.
 3. Back-merge `main` into `develop`.
 
-## Tests
+## Lint and tests
 
 ```powershell
 uv sync
+uv run ruff check
 uv run pytest
 ```
 
-No hardware is needed.
+No hardware is needed. The lint is Ruff with only its error rules (syntax, unused
+and undefined names); the rule list is in `pyproject.toml`. There is no formatter.
+
+CI (`.github/workflows/ci.yml`) runs these same three commands, from the lockfile, on a
+Windows runner for every PR into `main`. A lint error or a failing test fails the check.
