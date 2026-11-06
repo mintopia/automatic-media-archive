@@ -54,7 +54,7 @@ def _prefilled(html: str) -> dict[str, str]:
 
 
 def test_setup_goes_through_its_steps_in_order_then_ready(client):
-    assert _walk(client) == ["Welcome to AMA", "Where things go",
+    assert _walk(client) == ["Welcome to AMA", "Where things go", "TMDB key",
                              "Reach AMA from other devices?"]
     assert "<h1>Ready</h1>" in client.get("/setup/ready").text
 

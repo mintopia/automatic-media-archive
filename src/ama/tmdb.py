@@ -212,6 +212,10 @@ class TmdbError(Exception):
     """TMDB couldn't be asked (network, bad key). The message never contains the key."""
 
 
+class TmdbKeyRefused(TmdbError):
+    """TMDB answered 401: the API key is wrong."""
+
+
 class Tmdb:
     def __init__(self, http: httpx.Client, api_key: str) -> None:
         self._http = http
@@ -233,10 +237,14 @@ class Tmdb:
         except httpx.HTTPError as e:
             raise TmdbError(f"Couldn't reach TMDB ({type(e).__name__})") from None
         if r.status_code == 401:
-            raise TmdbError("TMDB refused the API key in ama.toml")
+            raise TmdbKeyRefused("TMDB refused the API key in ama.toml")
         if r.status_code != 200:
             raise TmdbError(f"TMDB answered HTTP {r.status_code}")
         return r.json()
+
+    def authenticate(self) -> None:
+        """Raises TmdbKeyRefused if TMDB won't take the key, TmdbError if it can't be asked."""
+        self._get("/authentication", {})
 
     def movie(self, movie_id: int, found: dict | None = None) -> Candidate:
         """One film's details (`found`: its search result, for fields the details lack)."""
