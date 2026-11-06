@@ -6,6 +6,8 @@ AMA's own code is MIT-licensed (see `LICENSE`). This file lists everything else 
 - **Downloaded**: AMA downloads a pinned, hash-checked build at runtime (ADR 0006, 0007). AMA does not redistribute it.
 - **Vendored**: the file ships inside AMA, with its licence text next to it.
 - **User-installed**: you install it yourself. AMA never ships it.
+- **Installer**: the Windows installer carries it, with its licence text next to it in the app folder ([ADR 0017](docs/decisions/0017-windows-installer-uv-bootstrap.md)).
+- **Installed by uv**: the Windows installer has uv download a pinned build at install time. AMA does not redistribute it.
 
 A new dependency needs a new row here, and a GPL dependency cannot be added.
 
@@ -50,6 +52,8 @@ pystray is LGPL-3.0. AMA only imports it, and it is installed from PyPI rather t
 | ffmpeg | GPL-3.0 | Downloaded (Gyan "full" build, run as a separate program) | https://github.com/GyanD/codexffmpeg |
 | cyanrip | GPL-3.0 (statically linked against GPL-3.0 libcdio/paranoia) | Downloaded (AMA's own build, run as a separate program) | https://github.com/cyanreg/cyanrip |
 | MakeMKV | Proprietary | User-installed | https://www.makemkv.com |
+| uv | MIT or Apache-2.0 | Installer (`uv.exe`, pinned in `tools/installer/build.py`; licence texts in `tools/installer/licenses/`) | https://github.com/astral-sh/uv |
+| Python | PSF-2.0 | Installed by uv (a pinned CPython build, into the app folder) | https://www.python.org |
 
 ## Vendored files
 

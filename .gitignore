@@ -10,3 +10,7 @@ ama-startup-error.log
 logs/
 .claude
 .visual-companion/
+
+# Installer build (tools/installer/build.py)
+/build/
+/dist/

@@ -38,7 +38,9 @@ jobs:
           fi
 
   # Release assets (https://git.mintopia.net/mintopia/automatic-media-archive/issues/76):
-  # add a job here that builds the Windows installer and
+  # add a job here that builds the Windows installer on a Windows runner
+  # (`uv run python tools/installer/build.py`, which needs Inno Setup 6.7 or later
+  # and writes dist/AMA-Setup-X.Y.Z.exe; see CONTRIBUTING.md) and
   # uploads it with actions/upload-artifact, add it to `release`'s `needs`, then
   # download it in `release` and pass the file to `gh release create` (or
   # `gh release upload --clobber` when the Release already exists).

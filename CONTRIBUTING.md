@@ -74,6 +74,33 @@ Never write a bare `#62`: GitHub links that to its own tracker, which is empty.
 3. Open a PR from it to `main`; CI runs on it. Merge, then tag `vX.Y.Z` as for a release.
 4. Back-merge `main` into `develop`.
 
+## The Windows installer
+
+`AMA-Setup-X.Y.Z.exe` (ADR 0017) is built by one script, on Windows, with
+[Inno Setup](https://jrsoftware.org/isinfo.php) 6.7 or later:
+
+```powershell
+uv run python tools/installer/build.py      # writes dist\AMA-Setup-X.Y.Z.exe
+```
+
+It takes the version from `pyproject.toml`, builds AMA's wheel, exports the locked
+requirements (`uv export --frozen`), downloads the pinned `uv.exe` (hash-checked) and runs
+Inno Setup's `ISCC.exe` on `tools/installer/ama.iss`. It finds `ISCC.exe` through
+`--iscc`, `$ISCC`, `PATH` or Inno Setup's usual install folders. Inno Setup installs
+without admin rights when its own installer runs with `/CURRENTUSER`. The script needs no
+input and exits non-zero on any failure. `--stage-only` stops before Inno Setup.
+
+The installer is unsigned for now. At install time `install-env.cmd` has uv install
+the Python pinned in `build.py` and the locked requirements into the app folder
+(`%LOCALAPPDATA%\Programs\AMA`). To bump uv or Python, change `UV_VERSION`,
+`UV_SHA256` (from the release's `.sha256` file) or `PYTHON_VERSION` in `build.py`, and
+replace the uv licence texts in `tools/installer/licenses/`.
+
+Silent installs take Inno Setup's usual switches (`/VERYSILENT`, `/TASKS=""` to leave
+"Start AMA when I sign in" off) and exit 1 if Python or the requirements couldn't be
+installed. The uninstaller (`unins000.exe` in the app folder) takes `/REMOVEDATA` to
+remove `%LOCALAPPDATA%\AMA` when silent too; Libraries are never touched.
+
 ## Lint and tests
 
 ```powershell
