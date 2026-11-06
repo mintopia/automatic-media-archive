@@ -282,8 +282,8 @@ class MovieArchiver:
         self._jobs.log(rec.id, "Queued for Encode")
 
     def _to_tv_review(self, rec: JobRecord, why: str) -> None:
-        self._jobs.mark_review(rec.id, ReviewReason.EPISODES)
         self._jobs.log(rec.id, f"{why}. Needs Review: match the Titles to Episodes")
+        self._jobs.mark_review(rec.id, ReviewReason.EPISODES)
 
     def _series_named(self, terms: list[str]) -> Series | None:
         """The first TMDB series titled exactly like one of `terms`. Raises TmdbError."""
