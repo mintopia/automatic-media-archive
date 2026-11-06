@@ -19,8 +19,8 @@
       {%- if errors %}
       <div class="errors" role="alert">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
       {%- endif %}
-      {%- if pick_notice %}
-      <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Your pick doesn't match the Disc's length</b>{{ pick_notice }} Check it's the right film, or pick another.</div></div>
+      {%- if notice %}
+      <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>{{ notice.head }}</b>{{ notice.body }}</div></div>
       {%- endif %}
       <section class="bin rev" aria-labelledby="films-h">
         <h2 class="tab" id="films-h">{% if searched %}Search results{% else %}Likely films{% endif %} <span class="c">{{ films | length }}</span></h2>

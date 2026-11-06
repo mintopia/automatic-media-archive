@@ -79,7 +79,7 @@ def review_items(services: Services) -> list[ReviewItem]:
     return items
 
 
-_FILM_UNSURE = frozenset({ReviewReason.NO_MATCH, ReviewReason.RUNTIME_MISMATCH,
+FILM_UNSURE = frozenset({ReviewReason.NO_MATCH, ReviewReason.RUNTIME_MISMATCH,
                           ReviewReason.MULTIPLE_MATCHES, ReviewReason.PICK_RUNTIME_MISMATCH})
 
 
@@ -93,7 +93,7 @@ def _video_item(services: Services, rec: JobRecord) -> ReviewItem:
                    "(a copy-protection trick) · check which is right")
     if guess := (services.series_guesses if tv else services.film_guesses).get(rec.id):
         summary = f"Best guess {guess.name} · {summary}"
-    return ReviewItem(rec, rec.name, summary, action, offer_tv=reason in _FILM_UNSURE)
+    return ReviewItem(rec, rec.name, summary, action, offer_tv=reason in FILM_UNSURE)
 
 
 def cd_title(services: Services, rec: JobRecord) -> str:
