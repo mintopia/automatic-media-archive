@@ -90,6 +90,10 @@ _Avoid_: Purge, pruning
 AMA ignores newly inserted Discs; a Rip already under way finishes and every other Phase carries on.
 _Avoid_: Stopped, disabled, idle
 
+**Setup**:
+The guided first run AMA shows, in the browser, whenever it has no settings file: it asks only what is needed to start archiving and takes defaults for everything else. Finishing it writes the settings file; after that, Settings is the only place to change them.
+_Avoid_: Onboarding, first-run wizard, install
+
 ## Output
 
 **Archive**:
@@ -99,6 +103,10 @@ _Avoid_: Backup, master
 **Library**:
 A named folder, anywhere the PC can reach, holding the Archive for one kind of media (films, TV, music), matching one Plex library. Each kind has a default Library; a Job may be sent to another of the same kind.
 _Avoid_: Destination, section, collection
+
+**Naming Pattern**:
+A Library's rule for the folder and file names of what is filed into it, built from the Identification (title, year, disc number, track, episode…). Each kind of media has a Plex-friendly default. Changing it affects only Jobs filed afterwards; the Archive already in the Library is never renamed.
+_Avoid_: Filename format, naming scheme, template
 
 **History**:
 The UI section listing every Job filed to the Archive, newest first, with what it was filed as (cover or poster, tracks or overview, sources). A Job's page is in History once it is Ripped. Only the UI wording: the Job statuses (`ripped`, `filed`) keep their names.
