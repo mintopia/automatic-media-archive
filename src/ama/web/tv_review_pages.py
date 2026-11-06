@@ -22,7 +22,7 @@ from ama.jobs import JobRecord, JobStatus
 from ama.moviereview import ripped_titles
 from ama.sets import SetKind, SetKey
 from ama.tmdb import Episode, Series, TmdbError, load_hints
-from ama.tv import play_alls, season_folder, series_folder, series_terms
+from ama.tv import play_alls, season_path, series_terms
 from ama.tvarchive import planned
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
@@ -124,7 +124,7 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         "results": results, "series": series, "season": season or 0,
         "seasons": series.seasons if series and series.seasons else ([season] if series else []),
         "episodes": episodes, "specials": specials, "tmdb_error": tmdb_error,
-        "folder": (series_folder(series) / season_folder(season or 0)).as_posix()
+        "folder": season_path(series, season or 0).as_posix()
         if series else "",
         "titles": [TvTitle(_title_choice(services, rec, t, None), t.number in joined,
                            picks.get(t.number, tvreview.EXTRA)) for t in titles],

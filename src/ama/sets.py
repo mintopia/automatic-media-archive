@@ -28,7 +28,7 @@ from ama import extras
 from ama.db import Database
 from ama.jobs import JobRecord, TitleRecord
 from ama.tmdb import Candidate, Series, load_hints, movie_folder
-from ama.tv import season_folder, series_folder
+from ama.tv import season_path
 
 ANSWER_FILE = "set.json"
 
@@ -82,7 +82,7 @@ class DiscSet:
         """The set's Plex folder, relative to the Archive root."""
         if self.key.season is None:
             return PurePosixPath(*movie_folder(film(self.show)).parts)
-        return series_folder(self.show) / season_folder(self.key.season)
+        return season_path(self.show, self.key.season)
 
     @property
     def numbers(self) -> list[int]:

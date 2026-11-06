@@ -19,8 +19,9 @@ from pathlib import Path
 
 import httpx
 
-from ama.archive import safe_name
+from ama import naming
 from ama.jobs import ReviewReason
+from ama.naming import Kind
 
 BASE = "https://api.themoviedb.org/3"
 IMAGES = "https://image.tmdb.org/t/p"
@@ -173,11 +174,18 @@ def decide_pick(pick: Candidate, main_feature_s: int
 
 def movie_folder(c: Candidate) -> Path:
     """`Movies/Title (Year) {tmdb-ID}` (Plex naming)."""
-    return MOVIES / movie_file_stem(c)
+    return MOVIES / naming.folders(naming.DEFAULTS[Kind.FILM], Kind.FILM, _film_values(c, None))
 
 
-def movie_file_stem(c: Candidate) -> str:
-    return f"{safe_name(c.name)} {{tmdb-{c.id}}}"
+def movie_path(c: Candidate, version: str | None) -> Path:
+    """Where the film is filed: `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`,
+    its Plex version name (`moviearchive.plex_version`) after the dash."""
+    return MOVIES / naming.render(naming.DEFAULTS[Kind.FILM], Kind.FILM,
+                                  _film_values(c, version), ".mkv")
+
+
+def _film_values(c: Candidate, version: str | None) -> dict[str, naming.Value]:
+    return {"title": c.title, "year": c.year, "tmdb_id": c.id, "version": version}
 
 
 _BDMT_NAME = re.compile(r"<di:name>(.*?)</di:name>", re.S)

@@ -30,8 +30,9 @@ from pathlib import Path
 import httpx
 from mutagen.flac import FLAC
 
-from ama import cdreview, cyanrip, filing, musicbrainz
+from ama import cdreview, cyanrip, filing, musicbrainz, naming
 from ama.archive import Archive, safe_name
+from ama.naming import Kind
 from ama.cdguess import CdPick
 from ama.config import LibraryKind
 from ama.cdrip import CdTracks, Track
@@ -86,13 +87,30 @@ def review_reason(tracks: list[Track], candidates: list[Match],
 
 # ---- naming and tags (Plex conventions) --------------------------------------
 
+def _music_kind(match: Match) -> Kind:
+    return Kind.MUSIC_MULTI_DISC if match.release.disc_total > 1 else Kind.MUSIC_SINGLE_DISC
+
+
+def _music_values(match: Match, number: int = 0, title: str = "") -> dict[str, naming.Value]:
+    r = match.release
+    year = r.date[:4] if r.date and r.date[:4].isdigit() else None
+    artist = next((t.artist for t in match.tracks if t.number == number), "")
+    return {"artist": r.artist, "album": r.title, "year": year, "track": number,
+            "track_title": title, "track_artist": artist, "disc": match.disc_number,
+            "disc_total": r.disc_total, "disc_title": match.disc_title}
+
+
 def album_folder(match: Match) -> Path:
-    return MUSIC / safe_name(match.release.artist) / safe_name(match.release.title)
+    """`Music/Artist/Album`: one folder for all of a release's discs."""
+    kind = _music_kind(match)
+    return MUSIC / naming.folders(naming.DEFAULTS[kind], kind, _music_values(match))
 
 
 def track_file(match: Match, number: int, title: str) -> str:
-    prefix = f"{match.disc_number}{number:02d}" if match.release.disc_total > 1 else f"{number:02d}"
-    return f"{prefix} - {safe_name(title)}.flac"
+    """`NN - Track.flac`, or `DNN - Track.flac` in a multi-disc release."""
+    kind = _music_kind(match)
+    return naming.render(naming.DEFAULTS[kind], kind, _music_values(match, number, title),
+                         ".flac").name
 
 
 def disc_file_stem(match: Match) -> str:
