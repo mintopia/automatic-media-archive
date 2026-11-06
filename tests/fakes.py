@@ -361,6 +361,9 @@ class FakeWeb:
         self.tmdb_seasons: dict[tuple[int, int], dict] = {}
         # TMDB images (image.tmdb.org) by poster path, e.g. "/abc.jpg".
         self.tmdb_images: dict[str, bytes] = {}
+        # GitHub's list-releases answer for AMA's repo (updates.py); none by default.
+        self.github_releases: list[dict] = []
+        self.github_offline = False
 
     def add_series(self, query: str, id_: int, name: str, year: int,
                    seasons: dict[int, list[tuple[int, str, int]]],
@@ -447,6 +450,12 @@ class FakeWeb:
             if self.notify_status == 0:
                 raise httpx.ConnectError("no network", request=request)
             return httpx.Response(self.notify_status, json={})
+        if url.host == "api.github.com":
+            if self.github_offline:
+                raise httpx.ConnectError("no network", request=request)
+            if url.path == "/repos/mintopia/automatic-media-archive/releases":
+                return httpx.Response(200, json=self.github_releases)
+            return httpx.Response(404)
         if url.host == "plex":
             self.plex_requests.append(request)
             if self.plex_offline:
