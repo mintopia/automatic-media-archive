@@ -1,7 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PAGES, sectionOf } from "./docs.ts";
 
@@ -27,6 +27,21 @@ for (const page of PAGES) {
     assert.match(html, new RegExp(`aria-current="true"[^>]*>${sectionOf(page.slug).label}<`));
   });
 }
+
+test("every root-relative link and asset in the built site is under the repo sub-path and exists", () => {
+  const base = "/automatic-media-archive/";
+  const pages = readdirSync(dist(""), { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".html"));
+  assert.ok(pages.length > 1);
+  for (const page of pages) {
+    const html = readFileSync(dist(page), "utf8");
+    for (const [, ref] of html.matchAll(/(?:href|src|srcset)="(\/[^"\s]*)/g)) {
+      assert.ok(ref.startsWith(base), `${page}: ${ref} is outside ${base}`);
+      const target = decodeURI(ref.slice(base.length).split(/[?#]/)[0]);
+      const onDisk = target === "" || target.endsWith("/") ? `${target}index.html` : target;
+      assert.ok(existsSync(dist(onDisk)), `${page}: ${ref} points at nothing in dist/`);
+    }
+  }
+});
 
 test("/docs/ sends you to the first docs page under the site's base path", () => {
   const html = readFileSync(dist("docs/index.html"), "utf8");
