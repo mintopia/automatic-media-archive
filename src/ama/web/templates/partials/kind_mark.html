@@ -1,0 +1,2 @@
+{#- The rip card's Film/TV mark (POST /jobs/{id}/kind), inline at the end of its guess line. Needs `job`, `tv` (tv_mark_of), `on_page`. -#}
+<form class="linkform" method="post" action="/jobs/{{ job.id }}/kind"><input type="hidden" name="kind" value="{{ 'film' if tv else 'tv' }}"><input type="hidden" name="next" value="{{ ('/jobs/' ~ job.id) if on_page else '/' }}"><button type="submit">{{ "It's a film, not TV" if tv else "It's TV, not a film" }}</button></form>

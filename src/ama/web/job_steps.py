@@ -145,7 +145,8 @@ def _rip(services: Services, rec: JobRecord) -> Step:
         return Step("Rip", StepState.RUNNING, "Copying the Disc to scratch",
                     started=rec.started_at, colour="rip")
     if rec.status == JobStatus.FAILED and rec.failure is not None \
-            and rec.failure.kind not in (FailureKind.DISCARDED, FailureKind.SCRATCH_CLEANED):
+            and rec.failure.kind not in (FailureKind.DISCARDED, FailureKind.CANCELLED,
+                                     FailureKind.SCRATCH_CLEANED):
         return Step("Rip", StepState.FAILED, rec.failure.headline, **times)
     return Step("Rip", StepState.DONE, what, **times)
 

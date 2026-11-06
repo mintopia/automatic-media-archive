@@ -15,7 +15,7 @@ from typing import Protocol
 import httpx
 
 from ama.config import Config, WebConfig
-from ama.jobs import JobRecord, JobStatus, JobStore, FailureKind
+from ama.jobs import USER_STOPPED, JobRecord, JobStatus, JobStore
 from ama.events import EventBus
 from ama.problems import Problem, Problems
 
@@ -251,8 +251,8 @@ class Notifier:
             if rec is None:
                 continue
             if event == Event.JOB_FAILED and rec.failure \
-                    and rec.failure.kind == FailureKind.DISCARDED:
-                continue  # the user's own decision in Review
+                    and rec.failure.kind in USER_STOPPED:
+                continue  # the user's own decision
             if rec.all_skipped:
                 continue  # the user's own decision during the Rip: nothing to go back for
             notes.append(notification(event, rec))

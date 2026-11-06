@@ -196,6 +196,8 @@ DRIVE = _f(FailureKind.DRIVE, "cyanrip couldn't read the drive.",
            "Check the drive is connected, then insert the Disc again.")
 INTERRUPTED = _f(FailureKind.INTERRUPTED, "AMA stopped while this CD was ripping.",
                  "Insert the Disc again to rip it from the start.")
+CANCELLED = _f(FailureKind.RIP_CANCELLED, "You cancelled the Rip.",
+               "The partial Rip was thrown away. Insert the Disc again to rip it from the start.")
 GENERIC = _f(FailureKind.RIP_ERROR, "The Rip stopped before it finished.",
              "Insert the Disc again to try once more. If it fails again, the log below says why.")
 
@@ -269,6 +271,7 @@ class CdRipper:
         self.reading_toc = False
         self.last_job_id: int | None = None
         self._handled: int | None = None  # the `DriveMonitor.insertion` already dealt with
+        self._cancelled: int | None = None  # the Job whose Rip the user cancelled
 
     # -- queries for the UI --
     def job(self, job_id: int) -> CdJob | None:
@@ -285,6 +288,15 @@ class CdRipper:
     async def cover(self, match: Match) -> str | None:
         """A release's cached front cover, fetched if need be (None: none, or unreachable)."""
         return await self._guesser.cover(match) if self._guesser else None
+
+    def cancel(self, job_id: int) -> bool:
+        """Stop the Rip under way of `job_id`: cyanrip is killed at its next line, the Job
+        fails as cancelled and the Disc is ejected. False if it isn't ripping."""
+        if self.current is None or self.current.job_id != job_id:
+            return False
+        self._cancelled = job_id
+        self._jobs.log(job_id, "Cancelling the Rip")
+        return True
 
     async def pick(self, job_id: int, release: str) -> CdPick:
         """The user picks `release` ("<release id>:<disc number>") for the CD being ripped: the
@@ -353,7 +365,8 @@ class CdRipper:
         stopped = threading.Event()
 
         def line(ln: str) -> None:
-            if stopped.is_set():
+            if stopped.is_set() or (self.current is not None
+                                    and self._cancelled == self.current.job_id):
                 raise _Stopped  # proc.stream kills cyanrip on the way out
             on_line(ln)
 
@@ -460,6 +473,10 @@ class CdRipper:
                                     cfg.retries), on_line, cwd)
         except FileNotFoundError:
             code = None
+        except _Stopped:
+            self._jobs.step_exit(rec.id, None)
+            await self._fail(rec, CANCELLED)
+            return
         self._jobs.step_exit(rec.id, code)
 
         # 3. Result: the .log is authoritative; stdout is the fallback.

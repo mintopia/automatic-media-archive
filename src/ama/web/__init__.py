@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 
+from ama import tvreview
 from ama.cdrip import CdJob
 from ama.jobs import JobStatus
 from ama.extras import ExtraStatus
@@ -155,6 +156,8 @@ def view_context(services: Services) -> dict[str, Any]:
         "rip_progress": services.video_rip.progress,
         "jobset_of": lambda job: _jobset_view(services, job),  # per-Job settings panel (#30)
         "guess_of": services.film_guesses.get,  # Job id -> its Best guess (film_guess.py)
+        "series_guess_of": services.series_guesses.get,  # Job id -> its TV Best guess
+        "tv_mark_of": tvreview.marked,  # JobRecord -> the user's TV (True) / film mark
         "guessing": services.video_rip.guessing,  # TMDB is still being asked for it
         "guess_search": services.film_guesses.configured,  # a TMDB key: the guess can change
         "rip_failure": next(iter(services.jobs.list(JobStatus.FAILED, types=VIDEO_DISC_TYPES)),

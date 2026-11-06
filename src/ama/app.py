@@ -34,6 +34,7 @@ from ama.encoder_probe import EncoderProbe
 from ama.drive import DiscType, DriveMonitor, DriveProbe, default_probe
 from ama.events import EventBus
 from ama.film_guess import FilmGuesses
+from ama.series_guess import SeriesGuesses
 from ama.media import MediaStore
 from ama.extras import STILLS, Extras
 from ama.moviearchive import MovieArchiver, Movies
@@ -87,6 +88,7 @@ class Services:
     covers: Covers
     media: MediaStore
     film_guesses: FilmGuesses  # a video Job's Best guess
+    series_guesses: SeriesGuesses  # a TV Job's Best guess
     backfill: Backfill
     pause: Pause
     plex: Plex
@@ -223,6 +225,7 @@ def build_services(
         covers=covers,
         media=media,
         film_guesses=film_guesses,
+        series_guesses=SeriesGuesses(db, tmdb, covers),
         backfill=Backfill(db, jobs, media, mb, covers, tmdb, movie_archive.movies,
                           tv_titles),
         pause=pause,

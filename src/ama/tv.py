@@ -79,15 +79,28 @@ def _segments(segments_map: str) -> frozenset[str]:
     return frozenset(out)
 
 
+def _disjoint(sets: Iterable[frozenset[str]]) -> int:
+    """How many of `sets` (largest first) don't overlap those taken before them."""
+    taken: set[str] = set()
+    n = 0
+    for s in sorted(sets, key=len, reverse=True):
+        if not s & taken:
+            taken |= s
+            n += 1
+    return n
+
+
 def play_alls(titles: Iterable[TitleRecord]) -> set[int]:
-    """Numbers of the ripped Titles that are other Titles joined together."""
+    """Numbers of the ripped Titles that are other Titles joined together: two or more
+    Titles that don't overlap each other inside it. (A DVD numbers cells afresh per title
+    set, so two episodes can both look like `1-12` inside a pilot's `1-20`.)"""
     ripped = _ripped(titles)
     found = set()
     for t in ripped:
         mine = _segments(t.segments)
         others = [o for o in ripped if o.number != t.number]
-        inside = [o for o in others if (s := _segments(o.segments)) and s < mine]
-        if len(inside) >= 2:
+        inside = [s for o in others if (s := _segments(o.segments)) and s < mine]
+        if _disjoint(inside) >= 2:
             found.add(t.number)
             continue
         if any(o.segments for o in others) and t.segments:

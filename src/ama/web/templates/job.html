@@ -10,6 +10,7 @@
     <div class="aside stack">
       {#- Beside the drive card, so the Step running now (an Encode's progress) is in view. #}
       {% include "partials/job_steps.html" %}
+      {% include "partials/job_cancel.html" %}
       {%- if job.scratch_cleaned_at %}
       <p class="ts">Scratch cleaned up {{ job.scratch_cleaned_at.day }} {{ job.scratch_cleaned_at.strftime("%b %Y") }}. {{ job.failure.advice }}</p>
       {%- endif %}

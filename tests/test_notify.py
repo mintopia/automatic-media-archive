@@ -104,6 +104,19 @@ def test_discarding_a_rip_in_review_is_not_a_failure_to_report(app):
     assert _titles(h) == ([DONE, "Review needed"],) * 2
 
 
+def test_cancelling_a_job_is_not_a_failure_to_report(app):
+    h, client = app
+    h.cyanrip.hold_at = 2
+    h.drive.insert(DiscType.CD, "KID_A")
+    h.cyanrip.wait_until_held()
+    rec = h.services.jobs.list(JobStatus.RIPPING)[0]
+    client.post(f"/jobs/{rec.id}/cancel", follow_redirects=False)
+    h.cyanrip.release()
+    eventually(lambda: h.services.jobs.get(rec.id).status == JobStatus.FAILED)
+    time.sleep(0.3)
+    assert _titles(h) == ([], [])
+
+
 def test_a_job_whose_scratch_was_cleaned_up_is_a_failure_to_report(notified):
     jobs = notified.services.jobs
     old = jobs.create(DiscType.BD, "OLD_FILM", "video")

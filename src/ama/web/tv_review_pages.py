@@ -1,8 +1,8 @@
 """TV Review: pick the series on TMDB, then each Title's Episode (or Extra/Discard).
 
 `GET /review/{id}` for a TV Disc renders `page()` (dispatched from review_pages).
-The series is the first TMDB match for the Disc's names unless `?series=` picks
-one; `?q=` (or `?change`) shows a series search instead; `?season=` picks the
+The series is the one picked or guessed while it ripped (series_guess.py), else the
+first TMDB match for the Disc's names, unless `?series=` picks one; `?q=` (or `?change`) shows a series search instead; `?season=` picks the
 season whose Episodes are offered (specials are always offered as well). Each
 Title shows the Thumbnailer's stills. `POST /review/{id}/episodes` queues the
 kept Titles for Encode (`TvTitles.enqueue`) and hands the Disc back to the
@@ -90,6 +90,8 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
     if (attached and attached.key and attached.key.kind == SetKind.TV and not searching
             and series_id is None):
         series_id, season = attached.key.tmdb_id, attached.key.season
+    if series_id is None and not searching and (guess := services.series_guesses.get(rec.id)):
+        series_id = guess.series.id
     results: list[Series] = []
     series: Series | None = None
     episodes: list[Episode] = []

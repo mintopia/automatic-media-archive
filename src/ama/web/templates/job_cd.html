@@ -9,5 +9,6 @@
   {% include "partials/cd_rip.html" %}
   {%- endif %}
   {% include "partials/job_steps.html" %}
+  {% with job = record %}{% include "partials/job_cancel.html" %}{% endwith %}
 </main>
 {% endblock %}

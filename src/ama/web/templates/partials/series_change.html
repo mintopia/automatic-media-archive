@@ -1,0 +1,11 @@
+{#- The TV rip card's "Change": search TMDB and pick the series (POST /jobs/{id}/series). Needs `job`, `sg`, `on_page`.
+    hx-preserve keeps it open, with its results, while the card re-renders live. -#}
+<details class="change" id="series-change-{{ job.id }}" hx-preserve>
+  <summary>{{ "Change the show" if sg else "Search for the show" }}</summary>
+  <form class="search" role="search" action="/jobs/{{ job.id }}/series/search" hx-get="/jobs/{{ job.id }}/series/search" hx-target="#series-results-{{ job.id }}" hx-push-url="false">
+    <label class="sr" for="series-q-{{ job.id }}">Search TV shows</label><svg class="i" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+    <input class="input" id="series-q-{{ job.id }}" name="q" type="search" value="{{ sg.series.name if sg else '' }}" placeholder="Show title" enterkeyhint="search" required>
+    <input type="hidden" name="next" value="{{ ('/jobs/' ~ job.id) if on_page else '/' }}">
+  </form>
+  <div id="series-results-{{ job.id }}" aria-live="polite"></div>
+</details>

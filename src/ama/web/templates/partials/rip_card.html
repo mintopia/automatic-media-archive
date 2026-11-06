@@ -4,17 +4,22 @@
     `phase_of_job(job)` is the Job's Phase from its Steps (job_steps.job_phase).
     `guess_of(job.id)` (film_guess.FilmGuess), the Job's Best guess, fills in the film and poster
     until the Job is identified; while it rips, "Change" searches TMDB for another
-    (`guess_search`: a TMDB key is set). -#}
+    (`guess_search`: a TMDB key is set). Marked TV (`tv_mark_of`), the series guess
+    (`series_guess_of`, series_guess.py) takes its place. -#}
 {%- set n = job.titles | length -%}
 {%- set k = job.to_rip | length -%}
 {%- set failed = job.status == JobStatus.FAILED -%}
 {%- set p = Phase.FAILED if failed else (phase if progress and phase is defined and phase else phase_of_job(job)) -%}
-{%- set g = guess_of(job.id) if p in (Phase.RIPPING, Phase.REVIEW) else none -%}
-{%- set name = g.name if g else job_name | default(job.name) -%}
-{%- set source = ("Disc " ~ job.name) if g else ("Disc name from the drive" if on_page else "In the drive") -%}
+{%- set tv = tv_mark_of(job) if p in (Phase.RIPPING, Phase.REVIEW) else none -%}
+{%- set g = guess_of(job.id) if p in (Phase.RIPPING, Phase.REVIEW) and not tv else none -%}
+{%- set sg = series_guess_of(job.id) if tv else none -%}
+{%- set best = sg or g -%}
+{%- set name = best.name if best else job_name | default(job.name) -%}
+{%- set source = ("Disc " ~ job.name) if best else ("Disc name from the drive" if on_page else "In the drive") -%}
+{%- set mark = progress and job.status == JobStatus.RIPPING -%}
 <div class="drive">
-  {%- if g and g.poster %}
-  <div class="cell art poster"><img src="/covers/{{ g.poster }}" alt="Poster of {{ g.name }}"><span>{{ job.disc_type.long_name }}</span></div>
+  {%- if best and best.poster %}
+  <div class="cell art poster"><img src="/covers/{{ best.poster }}" alt="Poster of {{ best.name }}"><span>{{ job.disc_type.long_name }}</span></div>
   {%- else %}
   <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>{{ job.disc_type.long_name }}</span></div>
   {%- endif %}
@@ -24,15 +29,19 @@
     {%- else %}
     <div class="title"><a href="/jobs/{{ job.id }}">{{ name }}</a></div>
     {%- endif %}
-    {%- if g %}
-    <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · {{ "checked again after the Rip" if progress else "Disc " ~ job.name }}</div>
+    {%- if tv %}
+    <div class="guess"><b>{{ "TV, best guess" if sg else "TV" }}</b>, {{ "your pick" if sg and sg.picked else ("from the Disc label" if sg else "your mark") }} · Episodes are matched in Review{% if mark %} · {% include "partials/kind_mark.html" %}{% endif %}</div>
+    {%- if mark and guess_search %}{% include "partials/series_change.html" %}{% endif %}
+    {%- elif g %}
+    <div class="guess"><b>Best guess</b>, {{ "your pick" if g.picked else "from the Disc label" }} · {{ "checked again after the Rip" if progress else "Disc " ~ job.name }}{% if mark %} · {% include "partials/kind_mark.html" %}{% endif %}</div>
+    {%- if mark and guess_search %}{% include "partials/guess_change.html" %}{% endif %}
+    {%- elif mark and guess_search and not guessing %}
+    <div class="guess"><b>Pick a title</b>, the Disc label doesn't say which film this is · {% include "partials/kind_mark.html" %}</div>
+    {%- include "partials/guess_change.html" %}
+    {%- elif mark %}
+    <div class="guess">{% include "partials/kind_mark.html" %}</div>
     {%- endif %}
     {%- if progress %}
-    {%- if g and guess_search %}{% include "partials/guess_change.html" %}
-    {%- elif not g and guess_search and not guessing %}
-    <div class="guess"><b>Pick a title</b>, the Disc label doesn't say which film this is</div>
-    {%- include "partials/guess_change.html" %}
-    {%- endif %}
     {%- if progress.title_number %}
     <div class="meta">{{ source }} · {{ k }} Title{{ "s" if k != 1 }} to rip · <span class="nw">{{ job.total_size }}</span></div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Title {{ progress.title_number }} of {{ n }}</span></div>

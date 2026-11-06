@@ -119,8 +119,19 @@ class Encoder:
         self.current: TitleEncode | None = None
         self.lock = asyncio.Lock()  # one Encode at a time, whoever asks
         self._abort = False
+        self._cancelled: set[int] = set()  # Jobs the user cancelled: never Encoded again
         self._last_publish = 0.0
         self._loop: asyncio.AbstractEventLoop | None = None
+
+    def cancel(self, job_id: int) -> None:
+        """Encode nothing more of `job_id`, stopping its Title Encode under way (ffmpeg is
+        killed at its next line). `encoding(job_id)` says when it has stopped."""
+        self._cancelled.add(job_id)
+        if self.current is not None and self.current.job.id == job_id:
+            self._abort = True
+
+    def encoding(self, job_id: int) -> bool:
+        return self.current is not None and self.current.job.id == job_id
 
     def tools(self) -> tuple[Path, Path]:
         """(ffmpeg, ffprobe); RetryLater while they aren't ready."""
@@ -140,8 +151,17 @@ class Encoder:
         async with self.lock:
             while self._hold():
                 await asyncio.sleep(0.5)
-            return await self._encode_title(rec, title, name, original_language, done,
-                                            ffmpeg, ffprobe, extra)
+            if rec.id in self._cancelled:
+                return None
+            try:
+                return await self._encode_title(rec, title, name, original_language, done,
+                                                ffmpeg, ffprobe, extra)
+            except _Aborted:
+                done.with_name(f"{done.stem}.tmp.mkv").unlink(missing_ok=True)
+                self._jobs.log(rec.id, f"Encode of Title {title.number} stopped: you "
+                                        "cancelled the Job", error=True)
+                self._jobs.end_step(rec.id, failed=True, result="Cancelled")
+                return None
 
     async def _encode_title(self, rec: JobRecord, title: TitleRecord, name: str,
                             original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,

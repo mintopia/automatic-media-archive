@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ama import tvreview
 from ama.cdrip import CdRip
 from ama.jobs import JobRecord
 from ama.drive import DiscType
@@ -18,6 +19,7 @@ from ama.video_rip import RipProgress
 if TYPE_CHECKING:
     from ama.app import Services
     from ama.film_guess import FilmGuess
+    from ama.series_guess import SeriesGuess
 
 
 @dataclass(frozen=True)
@@ -45,7 +47,9 @@ def current_rip(services: Services) -> CurrentRip | None:
         return CurrentRip(DiscType.CD, DiscType.CD.long_name, "Starting", None, None)
     video = services.video_rip
     if video.active is not None and video.progress is not None:
-        return _video(video.active, video.progress, services.film_guesses.get(video.active.id))
+        job = video.active
+        guesses = services.series_guesses if tvreview.marked(job) else services.film_guesses
+        return _video(job, video.progress, guesses.get(job.id))
     return None
 
 
@@ -57,7 +61,8 @@ def _cd(rip: CdRip) -> CurrentRip:
                       cover=g.cover if g else None, cd=rip)
 
 
-def _video(job: JobRecord, progress: RipProgress, guess: FilmGuess | None) -> CurrentRip:
+def _video(job: JobRecord, progress: RipProgress,
+           guess: FilmGuess | SeriesGuess | None) -> CurrentRip:
     detail = (f"Title {progress.title_number} of {len(job.titles)}" if progress.title_number
               else "Reading the Disc")
     return CurrentRip(job.disc_type, guess.name if guess else job.name, detail,

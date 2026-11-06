@@ -257,3 +257,41 @@ def test_the_user_can_search_for_another_series(harness, client):
     assert "TV/The Office (2005) {tmdb-2316}/Season 01" in picked
     harness.web.tmdb_offline = True
     assert "Couldn't reach TMDB" in _page(client, f"/review/{rec.id}?series=2316")
+
+
+def _marked_disc(harness, label: str, titles, tv: bool, disc_type=DiscType.DVD):
+    """A ripped Disc the user marked as TV (or a film) while it ripped."""
+    from ama import tvreview
+    jobs = harness.services.jobs
+    rec = jobs.create(disc_type, label, "video")
+    rec.scratch_dir.mkdir(parents=True)
+    records = []
+    for n, seconds, segments in titles:
+        name = f"{label}_t{n - 1:02d}.mkv"
+        (rec.scratch_dir / name).write_bytes(b"mkv")
+        records.append(TitleRecord(n, n - 1, seconds, 1_000_000_000, 2, 1, segments, name,
+                                   TitleStatus.RIPPED))
+    jobs.set_titles(rec.id, records, 0, 0)
+    tvreview.mark(rec, tv)
+    jobs.mark_ripped(rec.id)
+    return rec
+
+
+FIREFLY = [(1, 4981, "1-20"), (2, 2460, "1-12"), (3, 2524, "1-12")]
+
+
+def test_a_disc_marked_as_tv_while_it_ripped_goes_to_tv_review_though_a_film_fits(
+        harness, client):
+    harness.web.add_film("FIREFLY", 777, "Firefly", runtime=83)  # fits the pilot
+    rec = _in_review(harness, _marked_disc(harness, "FIREFLY_DISC1", FIREFLY, tv=True))
+    assert rec.review_reason == ReviewReason.EPISODES
+    assert harness.services.movie_archive.movies.get(rec.id) is None
+    assert "You marked this Disc as TV" in "\n".join(
+        map(str, harness.services.jobs.log_lines(rec.id)))
+    assert "Match episodes" in _page(client, "/review")
+
+
+def test_a_disc_marked_as_a_film_is_never_taken_for_tv(harness, client):
+    episodes = [(n, 22 * 60, str(n)) for n in range(1, 5)]
+    rec = _in_review(harness, _marked_disc(harness, "SPACED_D1", episodes, tv=False))
+    assert rec.review_reason != ReviewReason.EPISODES

@@ -260,6 +260,8 @@ a.radio.pick{color:inherit;text-decoration:none;align-items:center}
 .guess{color:var(--ink2);font-size:13px}
 /* The video rip card's "Change the film" (#22): search TMDB, pick the Best guess */
 details.change{margin-top:4px}
+.linkform{display:inline}.linkform button{min-height:24px;padding:0;border:0;background:none;font:600 13px Archivo,sans-serif;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+details.cancel>summary{color:var(--rev-ink)}details.cancel form{margin-top:6px;max-width:420px}
 details.change>summary{display:inline-flex;padding:0;min-height:32px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px;border:0}
 details.change[open]{margin-bottom:10px}details.change[open]>summary{border:0}
 .change .search{margin-top:6px;max-width:420px}
