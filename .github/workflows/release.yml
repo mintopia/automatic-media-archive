@@ -37,17 +37,69 @@ jobs:
             exit 1
           fi
 
-  # Release assets (https://git.mintopia.net/mintopia/automatic-media-archive/issues/76):
-  # add a job here that builds the Windows installer on a Windows runner
-  # (`uv run python tools/installer/build.py`, which needs Inno Setup 6.7 or later
-  # and writes dist/AMA-Setup-X.Y.Z.exe; see CONTRIBUTING.md) and
-  # uploads it with actions/upload-artifact, add it to `release`'s `needs`, then
-  # download it in `release` and pass the file to `gh release create` (or
-  # `gh release upload --clobber` when the Release already exists).
+  # The installer (ADR 0017), built from the tagged commit. `verify` has already
+  # checked that the tag matches pyproject.toml, which build.py takes the version from.
+  installer:
+    name: Build the installer
+    needs: [verify]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      TAG: ${{ github.ref_name }}
+      # ama.iss needs Inno Setup 6.7 or later (RedirectionGuard). The runner's own
+      # copy isn't pinned, so install this one. To bump it, take the version and
+      # sha256 of innosetup-X.Y.Z.exe from github.com/jrsoftware/issrc/releases.
+      INNO_VERSION: "6.7.4"
+      INNO_SHA256: a549929319f9120716677c685535ca4671e4b937b5fdc87e2585f32d8eb30e8c
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.7"
+
+      - name: Install Inno Setup ${{ env.INNO_VERSION }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = "is-" + $env:INNO_VERSION.Replace(".", "_")
+          $setup = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+          Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/$tag/innosetup-$env:INNO_VERSION.exe" -OutFile $setup
+          $actual = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLowerInvariant()
+          if ($actual -ne $env:INNO_SHA256) {
+            throw "innosetup-$env:INNO_VERSION.exe: sha256 is $actual, expected $env:INNO_SHA256"
+          }
+          $dir = Join-Path $env:RUNNER_TEMP "InnoSetup"
+          $p = Start-Process -FilePath $setup -Wait -PassThru -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/CURRENTUSER", "/DIR=`"$dir`"")
+          if ($p.ExitCode -ne 0) { throw "Inno Setup's installer exited with $($p.ExitCode)" }
+          $iscc = Join-Path $dir "ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "$iscc wasn't installed" }
+          "ISCC=$iscc" >> $env:GITHUB_ENV
+
+      - name: Build AMA-Setup
+        run: uv run --locked python tools/installer/build.py
+
+      - name: Installer name matches the tag
+        shell: bash
+        run: |
+          expected="AMA-Setup-${TAG#v}.exe"
+          built="$(cd dist && ls AMA-Setup-*.exe)"
+          if [ "$built" != "$expected" ]; then
+            echo "::error::Built ${built:-nothing}, expected $expected for $TAG."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: dist/AMA-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 7
 
   release:
     name: Create the GitHub Release
-    needs: [verify]
+    needs: [verify, installer]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -57,13 +109,20 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TAG: ${{ github.ref_name }}
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: installer
+          path: dist
+
       # Notes come from the merged PRs since the previous tag; GitHub attaches
-      # the source archives itself. Re-running the workflow leaves an existing
-      # Release alone.
+      # the source archives itself. Re-running the workflow keeps an existing
+      # Release's notes and replaces its installer.
       - name: Create the Release
         run: |
+          installer="dist/AMA-Setup-${TAG#v}.exe"
           if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG already exists."
+            echo "Release $TAG already exists; uploading the installer."
+            gh release upload "$TAG" "$installer" --clobber
           else
-            gh release create "$TAG" --verify-tag --generate-notes --title "AMA $TAG"
+            gh release create "$TAG" "$installer" --verify-tag --generate-notes --title "AMA $TAG"
           fi
