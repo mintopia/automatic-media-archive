@@ -40,17 +40,39 @@ Never write a bare `#62`: GitHub links that to its own tracker, which is empty.
 
 ### Releases
 
-1. Open a PR from `develop` to `main`. CI runs the lint and the tests on it.
-2. Merge it once CI passes.
-3. Tag the merge on `main` with the next semver version, `vX.Y.Z`, and push the tag.
-   The tag drives the release.
-4. Back-merge `main` into `develop`, so `develop` holds the release merge and tag.
+1. Bump `version` in `pyproject.toml` to the next semver version, `X.Y.Z`, on
+   `develop`, and run `uv lock` so `uv.lock` carries it too. Commit both.
+2. Open a PR from `develop` to `main`. CI runs the lint and the tests on it.
+3. Merge it once CI passes.
+4. Tag the merge on `main` and push the tag:
+
+   ```powershell
+   git switch main
+   git pull
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+   The tag drives the release (`.github/workflows/release.yml`). The workflow fails,
+   and creates nothing, unless the tag is exactly `vX.Y.Z`, matches the
+   `pyproject.toml` version and is on `main`. Otherwise it creates a GitHub Release
+   with notes generated from the merged PRs, plus GitHub's source archives.
+   If the tag is wrong, delete it (`git push origin :refs/tags/vX.Y.Z`), fix the
+   cause and tag again. `cyanrip-*` tags (cyanrip builds) never start a release.
+5. Back-merge `main` into `develop`, so `develop` holds the release merge and tag:
+
+   ```powershell
+   git switch develop
+   git merge main
+   git push origin develop
+   ```
 
 ### Hotfixes
 
 1. Branch `hotfix/<name>` from `main`.
-2. Open a PR from it to `main`; CI runs on it. Merge, then tag `vX.Y.Z` as for a release.
-3. Back-merge `main` into `develop`.
+2. Bump the patch version in `pyproject.toml` (and `uv lock`) on the hotfix branch.
+3. Open a PR from it to `main`; CI runs on it. Merge, then tag `vX.Y.Z` as for a release.
+4. Back-merge `main` into `develop`.
 
 ## Lint and tests
 

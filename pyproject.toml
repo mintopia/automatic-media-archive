@@ -37,7 +37,7 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.ruff]
-include = ["src/**/*.py", "tests/**/*.py"]
+include = ["src/**/*.py", "tests/**/*.py", "tools/**/*.py"]
 
 [tool.ruff.lint]
 # Errors only: syntax, pyflakes (unused names, undefined names) and the error-class
