@@ -37,7 +37,8 @@ jobs:
             exit 1
           fi
 
-  # Release assets (#76): add a job here that builds the Windows installer and
+  # Release assets (https://git.mintopia.net/mintopia/automatic-media-archive/issues/76):
+  # add a job here that builds the Windows installer and
   # uploads it with actions/upload-artifact, add it to `release`'s `needs`, then
   # download it in `release` and pass the file to `gh release create` (or
   # `gh release upload --clobber` when the Release already exists).
