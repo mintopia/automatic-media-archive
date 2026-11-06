@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from ama.config import ToolsConfig
+from ama.config import ToolsConfig, data_dir
 from ama.events import EventBus, Topic
 from ama.makemkv import parse_scan
 from ama.proc import Runner, run
@@ -105,8 +105,7 @@ def default_makemkv_candidates() -> tuple[Path, ...]:
 
 
 def default_tools_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(base) / "ama" / "tools"
+    return data_dir() / "tools"
 
 
 # --- statuses ---------------------------------------------------------------

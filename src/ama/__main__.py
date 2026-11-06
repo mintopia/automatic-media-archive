@@ -20,7 +20,7 @@ from pathlib import Path
 import uvicorn
 
 from ama.app import build_services, create_app
-from ama.config import ConfigError, load_config
+from ama.config import ConfigError, default_config_path, load_config
 from ama.settings import upgrade
 from ama.supervisor import RESTART_EXIT_CODE, run
 from ama.tray import CONTROL_ENV
@@ -62,8 +62,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.environ.get("AMA_CONFIG", "ama.toml")),
-        help="config file (default: $AMA_CONFIG or ./ama.toml)",
+        default=Path(os.environ.get("AMA_CONFIG") or default_config_path()),
+        help=r"config file (default: $AMA_CONFIG or %%LOCALAPPDATA%%\AMA\ama.toml)",
     )
     args = parser.parse_args(argv)
     if args.command == "run":
@@ -80,6 +80,7 @@ def serve(config: Path) -> None:
             print(f"ama: {e}", file=sys.stderr)
         else:  # no console under pythonw: leave the reason next to the config, and say so
             log = config.resolve().with_name("ama-startup-error.log")
+            log.parent.mkdir(parents=True, exist_ok=True)
             log.write_text(f"{e}\n", encoding="utf-8")
             _message_box("AMA couldn't start", f"{e}\n\nThis is also in {log}.")
         sys.exit(2)

@@ -365,7 +365,7 @@ SECTIONS: list[Section] = [
                   status=_tool_status("makemkvcon")),
             Field("tools.dir", "Tools folder",
                   "Where AMA keeps its copies. The first start needs internet and about 0.5 GB.",
-                  _key("[tools] dir"), placeholder=r"%LOCALAPPDATA%\ama\tools"),
+                  _key("[tools] dir"), placeholder=r"%LOCALAPPDATA%\AMA\tools"),
         ), note="Checked when AMA starts · used after a restart", advanced=True,
             intro="AMA downloads its own checked copies of ffmpeg and cyanrip. Give a full path "
                   "only to use your own copy instead; it's used as-is."),

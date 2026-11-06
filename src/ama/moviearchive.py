@@ -47,7 +47,7 @@ from ama.proc import Streamer
 from ama.problems import Problem, Problems
 from ama.retry import Backoff, RetryLater
 from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, decide_pick, load_hints, \
-    movie_file_stem, movie_folder, search_terms, title_matches
+    movie_path, search_terms, title_matches
 from ama.tv import looks_like_tv, might_be_tv, series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 
@@ -386,8 +386,8 @@ class MovieArchiver:
         """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
         self._jobs.begin_step(rec.id, "file", "File")
         version = plex_version(rec.disc_type, movie.video_height)
-        name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
-        rel = movie_folder(movie.film)
+        path = movie_path(movie.film, version)
+        rel, name = path.parent, path.name
         library = self._library(rec, LibraryKind.FILMS)
         with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)

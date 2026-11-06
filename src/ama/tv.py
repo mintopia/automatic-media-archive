@@ -13,9 +13,9 @@ import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
-from ama import decoys, extras
-from ama.archive import safe_name
+from ama import decoys, extras, naming
 from ama.jobs import TitleRecord, TitleStatus
+from ama.naming import Kind
 from ama.tmdb import DiscHints, Episode, Series, clean_term
 
 TV = PurePosixPath("TV")
@@ -28,19 +28,25 @@ PLAY_ALL_SLACK_S = 90  # or 3%: a Play-all's length vs. the Titles it joins
 
 def series_folder(series: Series) -> PurePosixPath:
     """`TV/Show (Year) {tmdb-ID}`."""
-    return TV / f"{safe_name(series.title)} {{tmdb-{series.id}}}"
+    return TV / naming.folders(naming.DEFAULTS[Kind.TV], Kind.TV, _show_values(series), 1)
 
 
-def season_folder(season: int) -> str:
-    return f"Season {season:02d}"
+def season_path(series: Series, season: int) -> PurePosixPath:
+    """`TV/Show (Year) {tmdb-ID}/Season 01`."""
+    return TV / naming.folders(naming.DEFAULTS[Kind.TV], Kind.TV,
+                               _show_values(series) | {"season": season}, 2)
 
 
 def episode_path(series: Series, ep: Episode) -> PurePosixPath:
-    """Where the Episode is filed, relative to the Archive root."""
-    stem = f"{safe_name(series.name)} - s{ep.season:02d}e{ep.number:02d}"
-    if ep.name:
-        stem += f" - {safe_name(ep.name)}"
-    return series_folder(series) / season_folder(ep.season) / f"{stem}.mkv"
+    """Where the Episode is filed, relative to the Archive root:
+    `TV/Show (Year) {tmdb-ID}/Season 01/Show - s01e02 - Episode Name.mkv`."""
+    values = _show_values(series) | {"season": ep.season, "episode": ep.number,
+                                     "episode_title": ep.name}
+    return TV / naming.render(naming.DEFAULTS[Kind.TV], Kind.TV, values, ".mkv")
+
+
+def _show_values(series: Series) -> dict[str, naming.Value]:
+    return {"show": series.name, "year": series.year, "tmdb_id": series.id}
 
 
 def extra_path(series: Series, name: str) -> PurePosixPath:
