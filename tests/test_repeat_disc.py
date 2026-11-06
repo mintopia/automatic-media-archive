@@ -11,7 +11,7 @@ import html
 import json
 
 from ama.jobs import JobStatus
-from ama.drive import DiscType
+from ama.drive import DiscType, has_disc
 from ama.repeat import video_fingerprint
 from tests.conftest import eventually
 from tests.fakes import DATA
@@ -137,7 +137,8 @@ def test_a_different_cd_is_ripped_without_asking(harness, client):
 def test_a_cd_ripped_but_not_yet_filed_is_a_repeat_waiting_to_be_filed(harness, client):
     harness.cyanrip.mb_disc_id = DISC_1  # MusicBrainz offline: Ripped, never filed
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.drive.ejected == 1)
+    # AMA saw the drive empty, not just the tray open: else the Disc never left, to AMA
+    eventually(lambda: harness.drive.ejected == 1 and not has_disc(harness.services.drive.state))
     rips = _rips(harness)
     harness.drive.insert(DiscType.CD)
     eventually(lambda: "You've ripped this Disc already" in _page(client))
