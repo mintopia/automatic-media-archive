@@ -23,7 +23,7 @@ poll_seconds = 3
 [tools]
 # External programs (ADR-0006). AMA downloads its own pinned, hash-checked
 # ffmpeg/ffprobe (Encodes) and cyanrip (CD Rips) at startup into `dir`
-# (empty = %LOCALAPPDATA%\ama\tools). The first start needs internet and ~0.5 GB.
+# (empty = %LOCALAPPDATA%\AMA\tools). The first start needs internet and ~0.5 GB.
 dir = ""
 # Full path to use instead of AMA's own copy. Used as-is: no download, no
 # version or hash check. Empty = AMA's pinned copy.
@@ -45,7 +45,7 @@ retries = 10
 # Local scratch folder for Rips awaiting Identification, Review and Encode.
 # Needs at least 256 GB free (ADR-0005). Created if missing.
 scratch = 'D:\ama-scratch'
-# SQLite state database.
+# SQLite state database. Relative paths here are relative to this file.
 state_db = "ama.sqlite3"
 # Log file (rotated). The app also logs to the console when it has one.
 log_file = 'logs\ama.log'
