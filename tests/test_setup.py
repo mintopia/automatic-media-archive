@@ -10,10 +10,14 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from ama.config import LibraryKind, load_config
+from ama.config import LibraryKind, ToolsConfig, load_config
+from ama.events import EventBus
 from ama.setup import Setup, create_setup_app, run_setup
+from ama.setup.machine import Machine
+from ama.tools import Tools
 from ama.web.auth import CONTROL_HEADER
 from tests.conftest import eventually
+from tests.fakes import FakeRunner
 
 
 @pytest.fixture
@@ -26,7 +30,10 @@ def home(tmp_path, monkeypatch) -> Path:
 
 @pytest.fixture
 def setup(tmp_path, home) -> Setup:
-    return Setup(tmp_path / "AMA" / "ama.toml")
+    """No tools to download, no MakeMKV, no drive: this PC is left alone."""
+    tools = Tools(ToolsConfig(dir=str(tmp_path / "tools")), EventBus(), runner=FakeRunner(),
+                  pins=(), makemkv_candidates=())
+    return Setup(tmp_path / "AMA" / "ama.toml", machine=Machine(tools, drives=lambda: ()))
 
 
 @pytest.fixture
@@ -54,8 +61,8 @@ def _prefilled(html: str) -> dict[str, str]:
 
 
 def test_setup_goes_through_its_steps_in_order_then_ready(client):
-    assert _walk(client) == ["Welcome to AMA", "Where things go", "TMDB key",
-                             "Reach AMA from other devices?"]
+    assert _walk(client) == ["Welcome to AMA", "Drive and MakeMKV", "Where things go",
+                             "TMDB key", "Reach AMA from other devices?"]
     assert "<h1>Ready</h1>" in client.get("/setup/ready").text
 
 
@@ -162,7 +169,7 @@ def _start(setup: Setup, **kw) -> tuple[threading.Thread, list[str], list[bool]]
     opened: list[str] = []
     result: list[bool] = []
     t = threading.Thread(target=lambda: result.append(
-        run_setup(setup.config, port=0, open_url=opened.append, **kw)))
+        run_setup(setup.config, port=0, open_url=opened.append, machine=setup.machine, **kw)))
     t.start()
     eventually(lambda: opened)
     return t, opened, result
