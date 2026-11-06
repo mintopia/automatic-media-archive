@@ -1,7 +1,7 @@
 /* Landing page. The website speaks in plain text on the ground; anything that shows the app sits inside an .appwin frame. */
 .lead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:end;padding:64px 0 40px}
-.lead h1{font:800 76px/.98 Archivo;letter-spacing:-.03em;text-wrap:balance;max-width:14ch}
-.lead .lede{color:var(--ink2);font-size:20px;max-width:52ch;margin-top:24px}
+.lead h1{font:800 76px/.98 Archivo;letter-spacing:-.03em;text-wrap:balance}
+.lead .lede{color:var(--ink2);font-size:20px;margin-top:24px}
 .cta{display:flex;flex-direction:column;gap:10px;min-width:300px}
 .cta small{color:var(--ink2);font-size:13px}
 .cta .btn+small{margin-bottom:8px}
@@ -22,14 +22,14 @@
 
 /* website sections */
 .block{padding-top:112px}
-.block>h2,.h2{font:800 40px/1.08 Archivo;letter-spacing:-.02em;text-wrap:balance;max-width:20ch}
-.intro{color:var(--ink2);font-size:18px;max-width:62ch;margin-top:14px}
+.block>h2,.h2{font:800 40px/1.08 Archivo;letter-spacing:-.02em;text-wrap:balance}
+.intro{color:var(--ink2);font-size:18px;margin-top:14px}
 .more-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;font-weight:600;text-underline-offset:3px}
 
 .stages{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;margin-top:40px}
 .stages li{border-top:3px solid var(--c);padding-top:18px}
 .stages h3{font:700 20px/1.2 Archivo}
-.stages p{color:var(--ink2);margin-top:8px;max-width:40ch}
+.stages p{color:var(--ink2);margin-top:8px}
 .stages .you{color:var(--ink);font-weight:600;margin-top:14px}
 
 .asks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px);gap:64px;align-items:start}
@@ -60,7 +60,7 @@
 .handles td:first-child{font:800 20px/1.2 Archivo;width:120px}
 .handles b{font-weight:600}
 .handles small{display:block;color:var(--ink2);font-size:14px;margin-top:2px}
-.reqs{color:var(--ink2);margin-top:20px;max-width:80ch}
+.reqs{color:var(--ink2);margin-top:20px}
 .reqs b{color:var(--ink);font-weight:600}
 
 .install{list-style:none;counter-reset:s;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:40px}
