@@ -65,6 +65,11 @@ def test_the_password_is_stored_as_the_web_password(client, setup):
     assert load_config(setup.config).web.password == "hunter2"
 
 
+def test_the_password_is_kept_exactly_as_typed(client, setup):
+    _finish(client, remote="yes", password="  hunter2 ")
+    assert load_config(setup.config).web.password == "  hunter2 "
+
+
 def test_ready_lists_the_choice_but_never_the_password(client):
     client.post("/setup/remote", data={"remote": "yes", "password": "hunter2"})
     page = html.unescape(client.get("/setup/ready").text)
