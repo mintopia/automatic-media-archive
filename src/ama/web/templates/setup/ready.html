@@ -1,0 +1,7 @@
+<p>AMA saves these settings and starts. You can change any of them later in Settings.</p>
+<dl class="facts">
+  {%- for label, value in summary %}
+  <dt>{{ label }}</dt><dd>{{ value | path }}</dd>
+  {%- endfor %}
+</dl>
+<p class="hint">Settings file: <code>{{ config | path }}</code></p>

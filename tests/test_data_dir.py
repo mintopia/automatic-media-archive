@@ -50,16 +50,17 @@ def test_config_flag_overrides_ama_config(local_app_data, started, monkeypatch, 
     assert started == [tmp_path / "mine.toml"]
 
 
-def test_startup_error_under_pythonw_is_logged_in_the_data_folder_even_before_it_exists(
-        local_app_data, monkeypatch):
+def test_startup_error_under_pythonw_is_logged_in_the_data_folder(local_app_data, monkeypatch):
     monkeypatch.setattr(sys, "stderr", None)  # pythonw: no console
     shown: list[str] = []
     monkeypatch.setattr(main, "_message_box", lambda title, text: shown.append(text))
     config = local_app_data / "AMA" / "ama.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text("[web]\nport = 'eighty'\n", encoding="utf-8")
     with pytest.raises(SystemExit):
         main.serve(config)
     log = local_app_data / "AMA" / "ama-startup-error.log"
-    assert "No config file" in log.read_text(encoding="utf-8")
+    assert "web.port" in log.read_text(encoding="utf-8")
     assert str(log) in shown[0]
 
 

@@ -24,7 +24,7 @@ from pathlib import Path
 
 import httpx
 
-from ama.config import ConfigError, load_config
+from ama.config import SETUP_HOST, ConfigError, WebConfig, load_config
 from ama.settings import upgrade
 from ama.start_at_login import StartAtLogin, WindowsRunKey, command_line
 from ama.tray import CONTROL_ENV, ServerControl, Tray, local_urls, make_icon
@@ -104,6 +104,9 @@ def run(config: Path, platform: str = sys.platform,
                 ui_url="", open_url=webbrowser.open, quit=quit)
 
     def launch() -> int:
+        if not config.exists():  # the child serves Setup, on localhost (ADR 0016)
+            http.base_url, tray.ui_url = local_urls(SETUP_HOST, WebConfig().port)
+            return server.launch()
         try:  # the file the child is about to read, so the address it will listen on
             upgrade(config)
             web = load_config(config).web

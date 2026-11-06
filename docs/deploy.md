@@ -70,9 +70,12 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    git clone https://git.mintopia.net/mintopia/automatic-media-archive.git C:\ama
    cd C:\ama
    uv sync --frozen --no-dev
-   mkdir $env:LOCALAPPDATA\AMA
-   copy ama.example.toml $env:LOCALAPPDATA\AMA\ama.toml   # then edit it: Libraries, secrets, scratch...
    ```
+
+   The first `uv run ama` finds no settings file and opens Setup in the browser on
+   http://127.0.0.1:8080/ (ADR 0016). It asks where the Libraries and Scratch go and
+   writes `%LOCALAPPDATA%\AMA\ama.toml`; change anything else on the Settings page. To
+   skip Setup, copy `ama.example.toml` there and edit it.
 
    Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
    if a Library is on a network share, make sure the Windows user AMA runs as can

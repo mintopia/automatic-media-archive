@@ -205,3 +205,10 @@ def test_without_libraries_each_kind_defaults_to_a_folder_in_the_users_home(tmp_
 def test_each_video_disc_type_has_its_own_minimum_title_length():
     mins = MinTitleConfig(dvd=10, bd=20, uhd=40)
     assert [mins.seconds(t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [10, 20, 40]
+
+
+def test_encode_cq_has_built_in_defaults_so_a_file_can_leave_it_out(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text("[paths]\nscratch = 'scratch'\n", encoding="utf-8")
+    cq = load_config(p).encode.cq
+    assert (cq.dvd, cq.bd, cq.uhd) == (20, 22, 22)

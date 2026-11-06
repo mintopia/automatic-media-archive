@@ -20,8 +20,9 @@ from pathlib import Path
 import uvicorn
 
 from ama.app import build_services, create_app
-from ama.config import ConfigError, default_config_path, load_config
+from ama.config import ConfigError, PathsConfig, default_config_path, load_config
 from ama.settings import upgrade
+from ama.setup import run_setup
 from ama.supervisor import RESTART_EXIT_CODE, run
 from ama.tray import CONTROL_ENV
 
@@ -72,6 +73,11 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def serve(config: Path) -> None:
+    control_token = os.environ.pop(CONTROL_ENV, "")  # from `ama run`; tools don't inherit it
+    if not config.exists():  # first run: Setup writes the file (ADR 0016)
+        _setup_logging(config.resolve().parent / PathsConfig.model_fields["log_file"].default)
+        if not run_setup(config, control_token=control_token):
+            return  # stopped before it finished
     try:
         upgrade(config)
         cfg = load_config(config)
@@ -88,7 +94,6 @@ def serve(config: Path) -> None:
     logging.getLogger("ama").info("starting; config %s", config.resolve())
     services = build_services(cfg, config_path=config)
     # A streaming /events response never finishes on its own: give shutdown a deadline.
-    control_token = os.environ.pop(CONTROL_ENV, "")  # from `ama run`; tools don't inherit it
     server = uvicorn.Server(uvicorn.Config(create_app(services, control_token), host=cfg.web.host,
                                            port=cfg.web.port, log_config=None,
                                            timeout_graceful_shutdown=3))
