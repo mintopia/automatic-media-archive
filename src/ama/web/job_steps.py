@@ -1,4 +1,4 @@
-"""A Job's Steps as its page lists them: Rip, Identification, one Encode per Title, File.
+"""A Job's Steps as its page lists them: Rip, Identification, one Encode per Title, Archive.
 
 Each Step says whether it is done, running, waiting, failed or won't run, with its
 timings; the Encode running now carries its live progress. Built from the stores
@@ -36,7 +36,7 @@ class StepState(StrEnum):
 
 @dataclass(frozen=True)
 class Step:
-    name: str          # "Rip" | "Identification" | "Encode" | "File" (GLOSSARY: Step)
+    name: str          # "Rip" | "Identification" | "Encode" | "Archive" (GLOSSARY: Step)
     state: StepState
     detail: str        # the line under the name
     subject: str = ""  # what it acts on: "Main Feature, Title 1", "Example Movie (2016)"
@@ -51,7 +51,7 @@ class Step:
         """The Step's key in its Job's Run (runs.py), which holds its output."""
         if self.name == "Encode":
             return f"encode:{self.number}" if self.number is not None else "encode"
-        return {"Rip": "rip", "Identification": "identify", "File": "file"}[self.name]
+        return {"Rip": "rip", "Identification": "identify", "Archive": "archive"}[self.name]
 
     def took(self, now: datetime) -> str:
         """How long it took, or has taken so far; "" when it hasn't started."""
@@ -67,7 +67,7 @@ class Step:
 
 @dataclass(frozen=True)
 class Section:
-    """Where a Job's page sits, by its Phase: Now while active, Review, History once Filed."""
+    """Where a Job's page sits, by its Phase: Now while active, Review, History once Archived."""
 
     label: str
     href: str
@@ -79,7 +79,7 @@ HISTORY = Section("History", "/history")
 
 
 def section(rec: JobRecord) -> Section:
-    if rec.status == JobStatus.FILED:
+    if rec.status == JobStatus.ARCHIVED:
         return HISTORY
     if rec.status == JobStatus.REVIEW:
         return REVIEW
@@ -105,7 +105,7 @@ def job_phase(rec: JobRecord, steps: Sequence[_StepLike]) -> Phase:
 
     `ripped` spans more than one Phase: the Job is Ripping until it is identified, then
     Encoding while its Title Encodes (and the File after them) run. A CD has no Encode,
-    so it stays Ripping until it is filed."""
+    so it stays Ripping until it is archived."""
     if rec.status == JobStatus.RIPPED and any(
             s.name == "Identification" and s.state == StepState.DONE for s in steps) \
             and any(s.name == "Encode" for s in steps):
@@ -121,11 +121,11 @@ def phase_now(services: Services, rec: JobRecord) -> Phase:
 def job_steps(services: Services, rec: JobRecord) -> list[Step]:
     lines = services.jobs.log_lines(rec.id)
     rip = _rip(services, rec)
-    if rec.all_skipped and rec.status == JobStatus.FILED:
+    if rec.all_skipped and rec.status == JobStatus.ARCHIVED:
         return [rip, Step("Identification", StepState.NOT_RUN, "Every Title was skipped"),
                 Step("Encode", StepState.NOT_RUN, "Every Title was skipped"),
-                Step("File", StepState.DONE, "Nothing to file: every Title was skipped",
-                     finished=rec.filed_at)]
+                Step("Archive", StepState.DONE, "Nothing to archive: every Title was skipped",
+                     finished=rec.archived_at)]
     ident = _identification(services, rec, rip, lines)
     encodes = [] if rec.disc_type == DiscType.CD else _encodes(services, rec, ident)
     return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.shown)]
@@ -176,9 +176,9 @@ def _identification(services: Services, rec: JobRecord, rip: Step,
     if rec.status == JobStatus.REVIEW:
         reason = reason_summary(rec.review_reason) if rec.review_reason else "Needs a decision"
         return Step(name, StepState.WAITING, f"Needs Review: {reason}", started=started)
-    as_ = (rec.title if rec.status == JobStatus.FILED and rec.disc_type == DiscType.CD
+    as_ = (rec.title if rec.status == JobStatus.ARCHIVED and rec.disc_type == DiscType.CD
            else "" if rec.disc_type == DiscType.CD else _identified_as(services, rec))
-    if as_ or why is not None or rec.status == JobStatus.FILED:
+    if as_ or why is not None or rec.status == JobStatus.ARCHIVED:
         return Step(name, StepState.DONE, why.text if why else "", subject=as_ or rec.title,
                     started=started, finished=why.at if why else None)
     source = "MusicBrainz" if rec.disc_type == DiscType.CD else "TMDB"
@@ -186,10 +186,11 @@ def _identification(services: Services, rec: JobRecord, rip: Step,
 
 
 _STATE = {EncodeStatus.QUEUED: StepState.WAITING, EncodeStatus.ENCODING: StepState.RUNNING,
-          EncodeStatus.ENCODED: StepState.DONE, EncodeStatus.FILED: StepState.DONE,
+          EncodeStatus.ENCODED: StepState.DONE, EncodeStatus.ARCHIVED: StepState.DONE,
           EncodeStatus.FAILED: StepState.FAILED}
 _DETAIL = {EncodeStatus.QUEUED: "Waiting its turn", EncodeStatus.ENCODING: "Encoding",
-           EncodeStatus.ENCODED: "Encoded · waiting to be filed", EncodeStatus.FILED: "Filed",
+           EncodeStatus.ENCODED: "Encoded · waiting to be archived",
+           EncodeStatus.ARCHIVED: "Archived",
            EncodeStatus.FAILED: "The Encode didn't work · retried when the app restarts"}
 
 
@@ -236,11 +237,11 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
             steps.append(Step("Encode", StepState.NOT_RUN if note.startswith("Not run")
                               else StepState.WAITING, note, subject, number=number))
             continue
-        if rec.status == JobStatus.FILED and status == EncodeStatus.ENCODED:
-            status = EncodeStatus.FILED  # a film's row stays "encoded" once it is filed
+        if rec.status == JobStatus.ARCHIVED and status == EncodeStatus.ENCODED:
+            status = EncodeStatus.ARCHIVED  # a film's row stays "encoded" once it is archived
         live = encode is not None and encode.job.id == rec.id and encode.title_number == number
         state = StepState.RUNNING if live else _STATE[status]
-        if rec.status == JobStatus.FILED and state == StepState.WAITING:
+        if rec.status == JobStatus.ARCHIVED and state == StepState.WAITING:
             state = StepState.NOT_RUN
         detail = note or _DETAIL[EncodeStatus.ENCODING if live else status]
         if rec.status == JobStatus.FAILED and status == EncodeStatus.FAILED:
@@ -254,15 +255,15 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
 
 def _file(rec: JobRecord, ident: Step, encodes: list[Step],
           shown: Callable[[Path], str]) -> Step:
-    if rec.status == JobStatus.FILED:
+    if rec.status == JobStatus.ARCHIVED:
         where = "the Archive" if rec.archive_dir is None else shown(rec.archive_dir)
         before = [s.finished for s in (ident, *encodes) if s.finished]
-        return Step("File", StepState.DONE, f"Filed to {where}",
-                    started=max(before) if before else None, finished=rec.filed_at)
+        return Step("Archive", StepState.DONE, f"Archived to {where}",
+                    started=max(before) if before else None, finished=rec.archived_at)
     if rec.status == JobStatus.FAILED:
-        return Step("File", StepState.NOT_RUN, "Not filed")
+        return Step("Archive", StepState.NOT_RUN, "Not archived")
     ready = ident.state == StepState.DONE and all(
         s.state in (StepState.DONE, StepState.FAILED, StepState.NOT_RUN) for s in encodes)
     if ready:
-        return Step("File", StepState.RUNNING, "Filing to the Library, then a Plex scan")
-    return Step("File", StepState.WAITING, "To the Library, then a Plex scan")
+        return Step("Archive", StepState.RUNNING, "Archiving to the Library, then a Plex scan")
+    return Step("Archive", StepState.WAITING, "To the Library, then a Plex scan")

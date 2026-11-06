@@ -1,4 +1,4 @@
-"""Asking Plex Media Server to partially scan a folder just filed into the Archive.
+"""Asking Plex Media Server to partially scan a folder just archived into the Archive.
 
 Plex may run elsewhere (often on a NAS), so the folder is translated into the
 server's own path: "Plex sees Libraries at" (`plex.libraries_path`) plus the folder

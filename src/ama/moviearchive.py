@@ -1,4 +1,4 @@
-"""Movie Identification, Encode and filing to the Archive.
+"""Movie Identification, Encode and archiving to the Archive.
 
 `MovieArchiver.run()` runs two loops side by side, both independent of Rips:
 
@@ -9,7 +9,7 @@
   leaves the Disc for Review with its reason, and the TMDB candidates are kept in
   scratch (`tmdb.json`) for Review to choose from.
 - Encode: one at a time, oldest queued first, through the shared `Encoder`; then
-  every other ripped Title as an Extra (one that fails is left out). Filed to
+  every other ripped Title as an Extra (one that fails is left out). Archived to
   `Movies/Title (Year) {tmdb-ID}/` with its Extras under `Other/`; the Disc's
   scratch (the lossless Rip, ADR-0002) is deleted and Plex asked to scan.
 
@@ -29,7 +29,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ama import decoys, filing, naming, tvreview
+from ama import archiving, decoys, naming, tvreview
 from ama import extras as extras_mod
 from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
@@ -107,7 +107,7 @@ class Movies:
         return self._movie(row) if row else None
 
     def queue(self) -> list[Movie]:
-        """Movies not yet filed, first in first out."""
+        """Movies not yet archived, first in first out."""
         cols = ", ".join("q." + c.strip() for c in self._COLS.split(","))
         return [self._movie(r) for r in self._queue.waiting(cols, "q.queued_at, q.job_id")]
 
@@ -123,12 +123,12 @@ class Movies:
 
 
 @dataclass(frozen=True)
-class FiledMovie:
-    """A filed movie Disc, for the UI."""
+class ArchivedMovie:
+    """An archived movie Disc, for the UI."""
 
     record: JobRecord
     movie: Movie
-    extras: int = 0  # Extras filed with it
+    extras: int = 0  # Extras archived with it
 
 
 def main_feature(titles: tuple[TitleRecord, ...]) -> TitleRecord | None:
@@ -155,7 +155,7 @@ class MovieArchiver:
                  problems: Problems | None = None,
                  library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
-        # The Library a Job files to; asking locks its pick (job_settings). None = default.
+        # The Library a Job archives to; asking locks its pick (job_settings). None = default.
         self._library = library
         self._media = media
         self._picked = picked  # the film the user picked while it ripped (film_guess.py)
@@ -313,8 +313,9 @@ class MovieArchiver:
                 self._later(key, str(e), e.problem, e.detail)
                 continue
             except Exception:
-                log.exception("Encode/filing of Job %s crashed", rec.id)
-                self._later(key, "The Encode or filing went wrong (see the app's log file)")
+                log.exception("Encode/archiving of Job %s crashed", rec.id)
+                self._later(key,
+                            "The Encode or archiving went wrong (see the app's log file)")
                 continue
             finally:
                 self._publish()
@@ -380,32 +381,32 @@ class MovieArchiver:
             else:
                 tmp.unlink(missing_ok=True)
 
-    # -- filing -------------------------------------------------------------
+    # -- archiving -------------------------------------------------------------
 
     def file(self, rec: JobRecord, movie: Movie) -> None:
-        """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
-        self._jobs.begin_step(rec.id, "file", "File")
+        """Put `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
+        self._jobs.begin_step(rec.id, "archive", "Archive")
         version = plex_version(rec.disc_type, movie.video_height)
         library = self._library(rec, LibraryKind.FILMS)
         pattern = naming.pattern_of(library_for(self._archive.libraries, LibraryKind.FILMS,
                                                 library))
         path = movie_path(movie.film, version, pattern)
         rel, name = path.parent, path.name
-        with filing.to_library(self._archive, rel, library):
+        with archiving.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
             extras = self._file_extras(rec, rel, library)
         film = movie.film
         self._media.save(rec.id, screen(self._tmdb, self._covers, False, film.id, film.title,
                                         film.year, lambda text: self._jobs.log(rec.id, text)))
-        self._jobs.mark_filed(rec.id, movie.film.name, folder)
-        self._jobs.log(rec.id, f"Filed {name} to {folder}; scratch deleted")
+        self._jobs.mark_archived(rec.id, movie.film.name, folder)
+        self._jobs.log(rec.id, f"Archived {name} to {folder}; scratch deleted")
         if extras:
-            self._jobs.log(rec.id, f"Filed {extras} Extra{'s' if extras != 1 else ''} to "
+            self._jobs.log(rec.id, f"Archived {extras} Extra{'s' if extras != 1 else ''} to "
                                     f"{Category.OTHER.value}")
-        filing.scan(self._plex, self._jobs, rec.id, folder)
+        archiving.scan(self._plex, self._jobs, rec.id, folder)
 
     def _file_extras(self, rec: JobRecord, rel: Path, library: str | None) -> int:
-        """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are filed.
+        """Put the Disc's Encoded Extras into the film's `Other/` folder; how many are archived.
         Each name is saved before copying so a retry reuses it."""
         film = self._archive.folder(rel, library)
         taken = {e.file.casefold() for e in self.extras.of(rec.id) if e.file}
@@ -421,8 +422,8 @@ class MovieArchiver:
                 sub = Path(e.file)
                 self._archive.place(rel / sub.parent, {sub.name: rec.scratch_dir / e.encoded},
                                     library)
-                self.extras.set_status(rec.id, e.title_number, ExtraStatus.FILED)
-        return sum(e.status == ExtraStatus.FILED for e in self.extras.of(rec.id))
+                self.extras.set_status(rec.id, e.title_number, ExtraStatus.ARCHIVED)
+        return sum(e.status == ExtraStatus.ARCHIVED for e in self.extras.of(rec.id))
 
     def sort_extras(self, rec: JobRecord, changes: dict[int, tuple[str, Category]]) -> int:
         """Move each Extra the user re-sorted ({Title: (name, category)}) to its Plex folder
@@ -430,12 +431,12 @@ class MovieArchiver:
         if rec.archive_dir is None:
             raise RetryLater("The Disc has no folder in the Archive")
         film = rec.archive_dir
-        filed = {e.title_number: e for e in self.extras.of(rec.id)
-                 if e.status == ExtraStatus.FILED}
-        taken = {e.file.casefold() for e in filed.values()}
+        archived = {e.title_number: e for e in self.extras.of(rec.id)
+                 if e.status == ExtraStatus.ARCHIVED}
+        taken = {e.file.casefold() for e in archived.values()}
         moved = 0
         for number, (name, category) in changes.items():
-            e = filed.get(number)
+            e = archived.get(number)
             name = " ".join(name.split()) or (e.name if e else "")
             if e is None or (name, category) == (e.name, e.category):
                 continue
@@ -452,14 +453,14 @@ class MovieArchiver:
             moved += 1
         self.extras.mark_reviewed(rec.id)
         if moved:
-            filing.scan(self._plex, self._jobs, rec.id, film)
+            archiving.scan(self._plex, self._jobs, rec.id, film)
         return moved
 
     # -- for the UI ---------------------------------------------------------
 
-    def filed(self, limit: int = 100) -> list[FiledMovie]:
-        recs = self._jobs.list(JobStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
-        return [FiledMovie(r, m, sum(e.status == ExtraStatus.FILED
+    def archived(self, limit: int = 100) -> list[ArchivedMovie]:
+        recs = self._jobs.list(JobStatus.ARCHIVED, types=VIDEO_DISC_TYPES)[:limit]
+        return [ArchivedMovie(r, m, sum(e.status == ExtraStatus.ARCHIVED
                                      for e in self.extras.of(r.id)))
                 for r in recs if (m := self.movies.get(r.id))]
 

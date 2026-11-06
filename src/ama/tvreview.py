@@ -7,7 +7,7 @@ A mark made while the Disc rips decides Identification: TV goes to TV Review,
 a film is never taken for TV.
 
 Each ripped Title gets a *choice*: an Episode code (`S01E04`, from the series'
-seasons on TMDB, specials are season 0), `extra` (kept, filed to the show's
+seasons on TMDB, specials are season 0), `extra` (kept, archived to the show's
 `Other/`) or `discard` (not Encoded). `suggest` pre-fills them: episode-length
 Titles get the season's Episodes in Title order, Play-alls are discarded and
 anything else is kept as an Extra.

@@ -1,5 +1,5 @@
 """TV's pure parts: when a video Disc looks like TV, which Title is a "Play all",
-and where an Episode is filed (Plex TV naming)."""
+and where an Episode is archived (Plex TV naming)."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def test_a_play_all_needs_two_titles_inside_it_that_dont_overlap():
     assert play_alls(disjoint) == {3}
 
 
-def test_episodes_are_filed_with_plex_tv_naming_and_specials_in_season_00():
+def test_episodes_are_archived_with_plex_tv_naming_and_specials_in_season_00():
     assert episode_path(OFFICE, Episode(1, 4, "The Quiz")) == PurePosixPath(
         "TV/The Office (2001) {tmdb-2996}/Season 01/The Office - s01e04 - The Quiz.mkv")
     assert episode_path(OFFICE, Episode(0, 2, "Christmas Special: Part 2")) == PurePosixPath(

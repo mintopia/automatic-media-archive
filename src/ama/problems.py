@@ -32,7 +32,7 @@ class Problem(StrEnum):
     TMDB_KEY = "tmdb_key"
     PLEX = "plex"          # the last Plex scan request failed
     NOTIFY = "notify"      # the last notification couldn't be sent
-    LIBRARY_FOLDER = "library_folder"  # a Library folder a Job files to isn't reachable
+    LIBRARY_FOLDER = "library_folder"  # a Library folder a Job archives to isn't reachable
 
 
 @dataclass(frozen=True)

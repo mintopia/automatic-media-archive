@@ -1,6 +1,6 @@
-"""One-off fill-in of History details for Discs filed before they were kept (migration 0012).
+"""One-off fill-in of History details for Discs archived before they were kept (migration 0012).
 
-Runs once at every start and only touches filed Discs with no `media_info` row, so it
+Runs once at every start and only touches archived Discs with no `media_info` row, so it
 converges and is a no-op once done. A CD's release comes from its Job log (the
 "MusicBrainz release <id>" line written when it was identified) and its Disc ID from
 its fingerprint; a film or series from the `movies` / `tv_titles` rows. Anything that
@@ -47,9 +47,9 @@ class Backfill:
         await asyncio.to_thread(self.fill)
 
     def fill(self) -> int:
-        """Fill in every filed Disc missing its details; how many were filled."""
+        """Fill in every archived Disc missing its details; how many were filled."""
         filled = 0
-        for rec in self._jobs.list(JobStatus.FILED, include_dismissed=True):
+        for rec in self._jobs.list(JobStatus.ARCHIVED, include_dismissed=True):
             if self._media.get(rec.id) is not None:
                 continue
             try:
@@ -83,7 +83,7 @@ class Backfill:
             tv, tmdb_id, title, year = False, movie.film.id, movie.film.title, movie.film.year
         elif rows := self._tv.for_job(rec.id):
             series = rows[0].series
-            # An Extras Disc's rows are its film's Extras, filed under Movies/.
+            # An Extras Disc's rows are its film's Extras, archived under Movies/.
             tv = any(r.episode for r in rows) or rows[0].path.parts[0] != "Movies"
             tmdb_id, title, year = series.id, series.name, series.year
         else:
@@ -103,7 +103,7 @@ class Backfill:
         return row[0][len(prefix):] if row and row[0].startswith(prefix) else None
 
     def _release(self, job_id: int) -> tuple[str, int] | None:
-        """The release and disc number the CD was filed as, from its Job log."""
+        """The release and disc number the CD was archived as, from its Job log."""
         for line in reversed(self._jobs.log_lines(job_id)):
             if m := _RELEASE.search(line.text):
                 n = _DISC_NUMBER.search(line.text)

@@ -21,7 +21,7 @@ class Topic(StrEnum):
     TOOLS = "tools"
     RIP = "rip"          # a Rip, and the Ripping bin
     ENCODE = "encode"    # the Encode queue
-    FILED = "filed"      # History
+    ARCHIVED = "archived"      # History
     REVIEW = "review"    # the Review queue
     SCRATCH = "scratch"
     PAUSE = "pause"      # Paused or accepting new Discs: the top-bar mark and menu

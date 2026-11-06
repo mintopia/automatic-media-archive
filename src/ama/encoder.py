@@ -32,7 +32,7 @@ from ama.tools import ToolLookup, ToolUnavailable
 PUBLISH_EVERY_SECONDS = 0.5
 LOG_TAIL = 15  # ffmpeg warning lines kept for the Job log when an Encode fails
 # What the Encode pipeline's progress shows on: the queue, the Job pages, History, Review.
-PIPELINE_TOPICS = (Topic.ENCODE, Topic.RIP, Topic.FILED, Topic.REVIEW)
+PIPELINE_TOPICS = (Topic.ENCODE, Topic.RIP, Topic.ARCHIVED, Topic.REVIEW)
 
 
 class EncodeStatus(StrEnum):
@@ -40,9 +40,9 @@ class EncodeStatus(StrEnum):
 
     QUEUED = "queued"
     ENCODING = "encoding"
-    ENCODED = "encoded"  # waiting to be filed
+    ENCODED = "encoded"  # waiting to be archived
     FAILED = "failed"
-    FILED = "filed"
+    ARCHIVED = "archived"
 
 
 class EncodeQueue:
@@ -166,7 +166,7 @@ class Encoder:
     async def _encode_title(self, rec: JobRecord, title: TitleRecord, name: str,
                             original_language: str, done: Path, ffmpeg: Path, ffprobe: Path,
                             extra: bool) -> int | None:
-        then = (f"The Extra “{name}” is left out; the film is filed without it" if extra
+        then = (f"The Extra “{name}” is left out; the film is archived without it" if extra
                 else "The Rip is kept; the Encode will be tried again when the app restarts")
         cfg = self._job_config(rec)  # fixed for this Job once its Encode starts (#30)
         src = rec.scratch_dir / title.file

@@ -1,7 +1,7 @@
 """CD Review, end to end: the real app with a fake drive, cyanrip, Library folders and web.
 
 The FFVII Rebirth OST disc 1 capture has 3 MusicBrainz releases, so it lands in
-Review; the user picks one (or enters the details) and it is filed.
+Review; the user picks one (or enters the details) and it is archived.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def test_picking_an_edition_files_the_cd(harness, client):
                     follow_redirects=False)
     assert r.status_code == 303
 
-    filed = _wait_for(harness, JobStatus.FILED)
+    archived = _wait_for(harness, JobStatus.ARCHIVED)
     album = extended_path(harness.libraries_root / "Music" / "Various Artists"
                           / "FINAL FANTASY VII REBIRTH Original Soundtrack")
     flacs = sorted(p.name for p in album.iterdir() if p.name.endswith(".flac"))
@@ -113,11 +113,11 @@ def test_picking_an_edition_files_the_cd(harness, client):
     assert tags["MUSICBRAINZ_ALBUMID"] == [STANDARD]
     assert (tags["DISCNUMBER"], tags["DISCTOTAL"]) == (["1"], ["7"])
     assert (album / "cover.jpg").read_bytes() == COVER
-    assert filed.title == "FINAL FANTASY VII REBIRTH Original Soundtrack — Various Artists"
+    assert archived.title == "FINAL FANTASY VII REBIRTH Original Soundtrack — Various Artists"
     assert "Nothing needs you right now" in _page(client, "/review")
 
 
-def test_picking_an_edition_waits_for_the_library_folder_like_automatic_filing(harness, client):
+def test_picking_an_edition_waits_for_the_library_folder_like_automatic_archiving(harness, client):
     harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response())
     rec = _wait_for(harness, JobStatus.REVIEW)
@@ -126,7 +126,7 @@ def test_picking_an_edition_waits_for_the_library_folder_like_automatic_filing(h
                            for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     harness.restore_library(LibraryKind.MUSIC)
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     assert (_album(harness)).exists()
 
 
@@ -138,7 +138,7 @@ def test_an_edition_that_isnt_offered_is_refused(harness, client):
     assert harness.services.jobs.get(rec.id).status == JobStatus.REVIEW
 
 
-def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(harness, client):
+def test_a_disc_musicbrainz_doesnt_know_is_archived_from_details_entered_by_hand(harness, client):
     _insert(harness, DISC_1, 3, 404)
     rec = _wait_for(harness, JobStatus.REVIEW)
     assert rec.review_reason == ReviewReason.NO_RELEASE
@@ -153,7 +153,7 @@ def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(ha
         follow_redirects=False)
     assert r.status_code == 303
 
-    filed = _wait_for(harness, JobStatus.FILED)
+    archived = _wait_for(harness, JobStatus.ARCHIVED)
     album = extended_path(harness.libraries_root / "Music" / "Radiohead" / "Kid A")
     names = sorted(p.name for p in album.iterdir())
     assert names == ["01 - Everything in Its Right Place.flac", "02 - Kid A.flac",
@@ -163,7 +163,7 @@ def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(ha
     assert tags["ALBUM"] == ["Kid A"] and tags["DATE"] == ["2000"]
     assert tags["MUSICBRAINZ_DISCID"] == [DISC_1]
     assert "MUSICBRAINZ_ALBUMID" not in tags and "MUSICBRAINZ_TRACKID" not in tags
-    assert filed.title == "Kid A — Radiohead"
+    assert archived.title == "Kid A — Radiohead"
     assert not any("coverartarchive" in str(r.url) for r in harness.web.requests)
 
 
@@ -212,19 +212,19 @@ def test_accepting_an_unverified_rip_with_one_edition_files_it(harness, client):
     rec = _mismatch(harness, _response(only=SPECIAL))
     r = client.post(f"/review/{rec.id}/accept", follow_redirects=False)
     assert r.status_code == 303
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     assert _album(harness).exists()
     assert any("accepted" in ln.text.lower() for ln in harness.services.jobs.log_lines(rec.id))
     history = _page(client, "/history")
     assert "accepted with 2 tracks not matching" in history and "verified" not in history
 
 
-def test_history_says_when_a_filed_cd_was_not_in_accuraterip(harness, client):
+def test_history_says_when_an_archived_cd_was_not_in_accuraterip(harness, client):
     harness.cyanrip.in_accuraterip = False
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.REVIEW)
     client.post(f"/review/{rec.id}/accept")
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     assert "24 tracks · not in AccurateRip" in _page(client, "/history")
 
 
@@ -264,7 +264,7 @@ def test_a_decision_on_a_disc_no_longer_in_review_is_ignored(harness, client):
     _insert(harness, DISC_1, 24, _response())
     rec = _wait_for(harness, JobStatus.REVIEW)
     client.post(f"/review/{rec.id}/release", data={"release": f"{STANDARD}:1"})
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     r = client.post(f"/review/{rec.id}/release", data={"release": f"{SPECIAL}:1"},
                     follow_redirects=False)
     assert r.status_code == 303

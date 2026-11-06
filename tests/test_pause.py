@@ -56,7 +56,7 @@ def test_a_rip_under_way_finishes_when_paused(client, harness):
     assert len(harness.makemkv.ripped_ids) == 2  # both Titles, not cut short
 
 
-def test_filing_carries_on_while_paused(tmp_path):
+def test_archiving_carries_on_while_paused(tmp_path):
     from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
 
     harness = make_harness(tmp_path)
@@ -66,7 +66,7 @@ def test_filing_carries_on_while_paused(tmp_path):
         _wait_for(harness, JobStatus.RIPPED)
         _pause(client)
         harness.restore_library(LibraryKind.MUSIC)
-        _wait_for(harness, JobStatus.FILED)
+        _wait_for(harness, JobStatus.ARCHIVED)
 
 
 def test_paused_survives_a_restart(tmp_path):

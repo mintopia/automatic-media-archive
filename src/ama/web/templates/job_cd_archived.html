@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{#- A filed CD in History: what it was filed as (`album`, media.Album, kept at filing), its tracks with AccurateRip results, where it went, and its sources. `view`: a CdJob. -#}
+{#- An archived CD in History: what it was archived as (`album`, media.Album, kept at archiving), its tracks with AccurateRip results, where it went, and its sources. `view`: a CdJob. -#}
 {% block title %}{{ album.title }} · History{% endblock %}
 {% block main %}
 {%- set rec = view.record %}
@@ -20,7 +20,7 @@
           {%- if album.disc_total > 1 %}
           <div class="meta">Disc {{ album.disc_number }} of {{ album.disc_total }}{% if album.disc_title %} · {{ album.disc_title }}{% endif %}</div>
           {%- endif %}
-          <div class="status"><span class="stk fil">Filed</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips{% if rec.filed_at %} · filed {{ rec.filed_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
+          <div class="status"><span class="stk arc">Archived</span><span class="ts">{{ verified }} of {{ view.tracks | length }} tracks verified against other people's rips{% if rec.archived_at %} · archived {{ rec.archived_at.strftime("%d %b %Y, %H:%M") }}{% endif %}</span></div>
         </div>
       </div>
       {%- with js = jobset_of(rec.id), jobset_live = false %}{% include "partials/job_settings.html" %}{% endwith %}
@@ -51,7 +51,7 @@
             {%- if album.mb_disc_id %}<dt>Lookup code</dt><dd style="overflow-wrap:anywhere"><span class="mono">{{ album.mb_disc_id }}</span><div class="ts">The CD's MusicBrainz Disc ID</div></dd>{% endif %}
             {%- if view.hidden_track %}<dt>Hidden track</dt><dd>{{ view.hidden_track.seconds | mmss }} before track 1, kept as track 0</dd>{% endif %}
             {%- if view.preemphasis %}<dt>Pre-emphasis</dt><dd>Yes; the files are marked</dd>{% endif %}
-            <dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ rec.archive_dir }}</dd>
+            <dt>Archived to</dt><dd style="overflow-wrap:anywhere">{{ rec.archive_dir }}</dd>
           </dl>
         </div></div>
       </section>
@@ -65,7 +65,7 @@
       {%- else %}
       <p class="ts">Details entered by hand in Review, so there are no MusicBrainz links.</p>
       {%- endif %}
-      <p class="ts">Every group of this Job's settings locks once it's Filed: these are the values this CD was ripped and filed with.</p>
+      <p class="ts">Every group of this Job's settings locks once it's Archived: these are the values this CD was ripped and archived with.</p>
     </div>
   </div>
 </main>

@@ -60,7 +60,7 @@ def test_the_encoding_row_opens_the_job_page_showing_the_encode_in_progress(clie
     assert "st running" in main and "40%" in main and "2.0×" in main and "left" in main
     extra = _step(steps, "Extra, Title 2")
     assert "st waiting" in extra
-    assert "st waiting" in _step(steps, ">File<")
+    assert "st waiting" in _step(steps, ">Archive<")
     # It follows the pipeline live.
     assert 'hx-trigger="sse:encode' in page
     assert _steps(_page(client, f"/jobs/{rec.id}/steps")) == steps
@@ -109,10 +109,10 @@ def test_the_crumb_follows_the_phase_and_review_and_history_link_to_the_job_page
     ident = _step(_steps(page), "Identification")
     assert "st waiting" in ident and "Needs Review: Found in the film database" in ident
     assert "One per Title kept" in _step(_steps(page), ">Encode<")
-    assert "To the Library, then a Plex scan" in _step(_steps(page), ">File<")
+    assert "To the Library, then a Plex scan" in _step(_steps(page), ">Archive<")
 
     client.post(f"/review/{rec.id}/film", data={"film": "1234", "title": "1"})
-    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED, timeout=5)
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED, timeout=5)
     assert f'href="/jobs/{rec.id}"' in _page(client, "/history")
     page = _page(client, f"/jobs/{rec.id}")
     assert '<a href="/history">History</a>' in _crumb(page)
@@ -120,8 +120,8 @@ def test_the_crumb_follows_the_phase_and_review_and_history_link_to_the_job_page
     assert steps.count('class="step') == 5 and steps.count("st done") == 5
     assert "Review: identified as Example Movie (2016)" in _step(steps, "Identification")
     assert "Extra: " in _step(steps, "Title 2") and " s<" in _step(steps, "Title 2")  # timed
-    assert "Filed to Movies/Example Movie (2016) {tmdb-1234}" in _step(steps, ">File<")
-    assert "waiting to be filed" not in steps
+    assert "Archived to Movies/Example Movie (2016) {tmdb-1234}" in _step(steps, ">Archive<")
+    assert "waiting to be archived" not in steps
 
 
 def test_the_rip_card_opens_the_job_page_live_while_it_rips(client, harness):
@@ -180,7 +180,7 @@ def test_a_tv_jobs_page_lists_an_encode_per_episode(client, harness):
     assert "st waiting" in _step(steps, "Episode S01E03 · The Quiz, Title 3")
     assert "Title 5" in _step(steps, "Encode <span class=\"subj\">· Extra: ") and "Title 4" not in steps
     harness.ffmpeg.release()
-    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED, timeout=10)
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED, timeout=10)
     assert _steps(_page(client, f"/jobs/{rec.id}")).count("st done") == 7
 
 
@@ -190,7 +190,7 @@ def test_an_extras_discs_job_page_lists_its_extras(client, harness):
     _file_example_movie(harness)
     rec = _in_review(harness, _tv_disc(harness, "EXAMPLE_MOVIE_BONUS", BONUS, DiscType.BD))
     client.post(f"/review/{rec.id}/set", data={"part": "yes", "set": "movie:1234", "disc": "2"})
-    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED, timeout=10)
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED, timeout=10)
     steps = _steps(_page(client, f"/jobs/{rec.id}"))
     assert "Extras of Example Movie (2016)" in _step(steps, "Identification")
     for n in (1, 2, 3):
@@ -210,7 +210,7 @@ def test_a_job_page_links_to_its_run_while_it_rips_and_in_history(client, harnes
 
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     harness.makemkv.release()
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
     page = _page(client, f"/jobs/{rec.id}")
     assert '<a href="/history">History</a>' in _crumb(page)
     assert _links_to_its_run(page, rec.id)

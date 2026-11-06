@@ -15,7 +15,7 @@ class Phase(StrEnum):
     RIPPING = "Ripping"
     REVIEW = "Review"
     ENCODING = "Encoding"
-    FILED = "Filed"
+    ARCHIVED = "Archived"
     FAILED = "Failed"
 
     @property
@@ -25,11 +25,11 @@ class Phase(StrEnum):
 
 
 _CSS = {Phase.RIPPING: "rip", Phase.REVIEW: "rev", Phase.ENCODING: "enc",
-        Phase.FILED: "fil", Phase.FAILED: "fail"}
+        Phase.ARCHIVED: "arc", Phase.FAILED: "fail"}
 
 # `ripped` = waiting for Identification, which is still part of Ripping on the Now page.
 _OF_STATUS = {JobStatus.RIPPING: Phase.RIPPING, JobStatus.RIPPED: Phase.RIPPING,
-              JobStatus.REVIEW: Phase.REVIEW, JobStatus.FILED: Phase.FILED,
+              JobStatus.REVIEW: Phase.REVIEW, JobStatus.ARCHIVED: Phase.ARCHIVED,
               JobStatus.FAILED: Phase.FAILED}
 
 

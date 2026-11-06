@@ -2,7 +2,7 @@
 
 Runs AMA with the test fakes (tests/conftest.py) in a throwaway folder, never your own
 settings or History, and feeds it the example Discs: Queen's Greatest Hits and Firefly
-Disc 1 filed, Ocean's Thirteen answered in Review and filed, Ocean's Twelve encoding,
+Disc 1 archived, Ocean's Thirteen answered in Review and archived, Ocean's Twelve encoding,
 Firefly Disc 2 waiting in Review and Ocean's Eleven ripping. Then headless Chrome
 (capture.mjs) shoots Now, both Reviews and History into website/public/screenshots/.
 Posters, the cover and the Title stills are plain generated pictures.
@@ -199,12 +199,12 @@ def main() -> None:
         web = httpx.Client(base_url=url, follow_redirects=False, timeout=30)
         jobs = harness.services.jobs
         try:
-            # Queen, Greatest Hits: ripped, verified by AccurateRip, filed.
+            # Queen, Greatest Hits: ripped, verified by AccurateRip, archived.
             harness.drive.insert(DiscType.CD, "")
-            eventually(lambda: jobs.list(JobStatus.FILED), timeout=30)
+            eventually(lambda: jobs.list(JobStatus.ARCHIVED), timeout=30)
             harness.drive.eject()
 
-            # Firefly Disc 1: TV always goes to Review; the Episodes are answered, then filed.
+            # Firefly Disc 1: TV always goes to Review; the Episodes are answered, then archived.
             disc1 = _tv_disc(harness, "FIREFLY_D1", [(1, 86 * 60 + 12, "1"), (2, 44 * 60 + 5, "2"),
                                                      (3, 43 * 60 + 51, "3"), (4, 44 * 60 + 20, "4"),
                                                      (5, 4 * 60 + 2, "9")])
@@ -212,7 +212,7 @@ def main() -> None:
                 "series": str(FIREFLY), "season": "1", "t1": "S01E01", "t2": "S01E02",
                 "t3": "S01E03", "t4": "S01E04", "t5": "discard"})
             assert r.status_code == 303, r.text
-            eventually(lambda: jobs.get(disc1.id).status == JobStatus.FILED, timeout=30)
+            eventually(lambda: jobs.get(disc1.id).status == JobStatus.ARCHIVED, timeout=30)
 
             # Ocean's Thirteen, labelled just "OCEANS": Twelve and Thirteen both fit its
             # length, so AMA asks which it is.
@@ -225,7 +225,7 @@ def main() -> None:
             _capture(shots)
             r = web.post(f"/review/{thirteen.id}/film", data={"film": "298", "title": "1"})
             assert r.status_code == 303, r.text
-            eventually(lambda: jobs.get(thirteen.id).status == JobStatus.FILED, timeout=30)
+            eventually(lambda: jobs.get(thirteen.id).status == JobStatus.ARCHIVED, timeout=30)
 
             # Ocean's Twelve: a confident match, held mid-Encode.
             harness.ffmpeg.hold = True

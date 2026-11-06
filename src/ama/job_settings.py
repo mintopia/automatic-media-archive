@@ -5,7 +5,7 @@ overridden, so a changed default reaches it. When the Phase starts the group loc
 its effective values (with the defaults of the moment) are stored on the Job, used
 from then on, and further edits are refused (`Locked`). Rip locks when the Rip starts,
 Encode when the Job's first Title Encode starts, Library and Identification when
-filing starts.
+archiving starts.
 
 Only settings that exist in ama.toml are here (the #29 review): a group with no
 setting for a Job's Disc Type is left out of its page.
@@ -43,17 +43,17 @@ class Group(StrEnum):
     @property
     def phase(self) -> str:
         """The Phase whose start locks the group, as the lock line names it."""
-        return {"rip": "Ripping", "encode": "Encoding"}.get(self.value, "Filed")
+        return {"rip": "Ripping", "encode": "Encoding"}.get(self.value, "Archived")
 
     @property
     def locked_line(self) -> str:
         p = self.phase
-        return "Locked when Filed" if p == "Filed" else f"Locked at {p} start"
+        return "Locked when Archived" if p == "Archived" else f"Locked at {p} start"
 
     @property
     def until(self) -> str:
         p = self.phase
-        return "Can change until Filed." if p == "Filed" else f"Can change until {p} starts."
+        return "Can change until Archived." if p == "Archived" else f"Can change until {p} starts."
 
 
 class Locked(Exception):
@@ -71,7 +71,7 @@ class Scope:
 
     cfg: Config
     disc_type: DiscType
-    kind: LibraryKind  # the Library kind the Job files to (as far as is known)
+    kind: LibraryKind  # the Library kind the Job archives to (as far as is known)
 
 
 Choices = tuple[tuple[str, str], ...]  # (value, label)
@@ -162,7 +162,7 @@ SETTINGS: tuple[Setting, ...] = (
             _video),
     Setting("encode.languages", Group.ENCODE, "Preferred languages",
             lambda s: s.cfg.encode.languages, None, _languages_text, _video, _languages),
-    Setting("library", Group.LIBRARY, "Files to",
+    Setting("library", Group.LIBRARY, "Archives to",
             lambda s: library_for(s.cfg.libraries, s.kind).name,
             lambda s: tuple((lib.name, lib.name) for lib in
                             sorted((lib for lib in s.cfg.libraries if lib.kind == s.kind),
@@ -354,14 +354,14 @@ class JobSettings:
         return enc.model_copy(update=update)
 
     def library(self, job: JobRecord, kind: LibraryKind) -> str:
-        """The Library a Job of `kind` files to; locks Library and Identification (filing
+        """The Library a Job of `kind` archives to; locks Library and Identification (archiving
         is starting)."""
         self.lock(job, Group.IDENTIFICATION, kind)
         return self.lock(job, Group.LIBRARY, kind).get(
             "library", library_for(self._config().libraries, kind).name)
 
     def files_to(self, job: JobRecord, kind: LibraryKind) -> Library:
-        """The Library a Job of `kind` would file to now, locking nothing (for a preview)."""
+        """The Library a Job of `kind` would archive to now, locking nothing (for a preview)."""
         stored = self._stored(job.id, Group.LIBRARY)
         picked = (stored[1].get("library", [None])[0] if stored
                   else self._overrides(job.id).get("library"))

@@ -101,16 +101,16 @@ def test_skipping_every_title_files_the_job_with_nothing_in_it(client, harness, 
 
     assert harness.makemkv.ripped_ids == []
     rec = jobs.get(1)
-    assert rec.status == JobStatus.FILED and rec.failure is None
+    assert rec.status == JobStatus.ARCHIVED and rec.failure is None
     page = page_text(client, "/jobs/1")
     assert "All 2 Titles skipped by you." in page
-    assert "Nothing to file: every Title was skipped" in page
-    assert "Filed to" not in page and "once it is identified" not in page
+    assert "Nothing to archive: every Title was skipped" in page
+    assert "Archived to" not in page and "once it is identified" not in page
     assert "Couldn't rip" not in page_text(client, "/")
     assert not rec.scratch_dir.exists()
     changed_at, = harness.services.db.execute(
         "SELECT changed_at FROM jobs WHERE id = 1").fetchone()
-    assert changed_at > "2000-01-01T00:00:00"  # filing it is a status change
+    assert changed_at > "2000-01-01T00:00:00"  # archiving it is a status change
 
 
 def test_skipping_every_title_sends_no_alert(tmp_path, monkeypatch):
@@ -134,6 +134,6 @@ def test_skipping_every_title_sends_no_alert(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "set_titles", untick_all_before_the_first_turn)
     with TestClient(create_app(h.services)):
         h.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-        eventually(lambda: jobs.get(1) is not None and jobs.get(1).status == JobStatus.FILED)
+        eventually(lambda: jobs.get(1) is not None and jobs.get(1).status == JobStatus.ARCHIVED)
         time.sleep(0.3)
         assert h.web.discord == [] and h.web.ntfy == []

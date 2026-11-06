@@ -1,5 +1,5 @@
 """Logs (#32): every Job's Run with its Steps and their output, and app events as Runs.
-The real app with fakes: a film ripped, identified, Encoded and filed; a CD that fails;
+The real app with fakes: a film ripped, identified, Encoded and archived; a CD that fails;
 startup, tool downloads and an old NAS Run."""
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ def _film(harness) -> int:
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
-    job = harness.services.jobs.list(JobStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED))
+    job = harness.services.jobs.list(JobStatus.ARCHIVED)[0]
     run = harness.services.runs.job_run(job.id)
     eventually(lambda: harness.services.runs.get_run(run).finished_at is not None)
     return job.id
@@ -41,14 +41,14 @@ def _step(page: str, anchor: str) -> str:
     return m.group(0)
 
 
-def test_a_filed_films_run_lists_each_step_with_its_tool_result_and_stored_output(
+def test_an_archived_films_run_lists_each_step_with_its_tool_result_and_stored_output(
         client, harness):
     job_id = _film(harness)
     r = client.get(f"/logs/jobs/{job_id}", follow_redirects=True)
     assert r.status_code == 200
     page = r.text
     assert "Example Movie (2016)" in page
-    assert '<span class="stk fil"' in page or 'class="stk fil"' in page
+    assert '<span class="stk arc"' in page or 'class="stk arc"' in page
     rip = _text(_step(page, "step-rip"))
     assert "Rip" in rip and "makemkvcon" in rip
     encode = _step(page, "step-encode-1")
@@ -62,7 +62,7 @@ def test_a_filed_films_run_lists_each_step_with_its_tool_result_and_stored_outpu
     assert "Encoding Title 1 as Example Movie (2016)" in text
     ident = _text(_step(page, "step-identify"))
     assert "Identified as Example Movie (2016)" in ident
-    assert "Filed" in _text(_step(page, "step-file"))
+    assert "Archived" in _text(_step(page, "step-archive"))
 
 
 def test_finished_steps_show_their_stored_output_after_a_restart(tmp_path):
@@ -131,7 +131,7 @@ def test_a_running_steps_output_is_streamed_from_its_ring(client, harness):
     assert f"s{step}-L{last + 1}" in live.text and f"s{step}-L{last}\"" not in live.text
     # once the page's Steps are out of date, it reloads
     harness.ffmpeg.release()
-    eventually(lambda: harness.services.jobs.get(job.id).status == JobStatus.FILED)
+    eventually(lambda: harness.services.jobs.get(job.id).status == JobStatus.ARCHIVED)
     stale = client.get(f"/logs/runs/{run}/live", params={"sig": sig})
     assert stale.headers.get("HX-Refresh") == "true"
 
@@ -160,13 +160,13 @@ def test_testing_the_encoders_again_is_a_run_of_its_own(client, harness):
 def test_a_nas_run_from_before_still_shows_in_logs(client, harness):
     runs = harness.services.runs
     run = runs.start_run(RunKind.NAS, "Lost the NAS", item="nas")
-    step = runs.begin(run, "hold", "Hold filing")
-    runs.line(step, "Filing waits until the NAS is back")
+    step = runs.begin(run, "hold", "Hold archiving")
+    runs.line(step, "Archiving waits until the NAS is back")
     runs.end(step)
     runs.finish_run(run, failed=False, title="Lost the NAS, then reconnected")
     assert "Lost the NAS, then reconnected" in _text(client.get("/logs").text)
     page = _text(client.get(f"/logs/runs/{run}").text)
-    assert "Hold filing" in page and "Filing waits until the NAS is back" in page
+    assert "Hold archiving" in page and "Archiving waits until the NAS is back" in page
     assert "/settings/nas" not in page
 
 
@@ -193,7 +193,7 @@ def test_no_command_line_or_secret_reaches_any_step_output(tmp_path):
     h = make_harness(tmp_path, password="hunter2-pass")
     with TestClient(create_app(h.services)):
         _film(h)
-        job = h.services.jobs.list(JobStatus.FILED)[0]
+        job = h.services.jobs.list(JobStatus.ARCHIVED)[0]
         h.services.jobs.log(job.id, "oops: hunter2-pass")  # even if something says it
         out = []
         for run in h.services.runs.list_runs():

@@ -21,10 +21,10 @@ from ama.cdrip import CdJob
 from ama.jobs import JobStatus
 from ama.extras import ExtraStatus
 from ama.media import Album
-from ama.moviearchive import FiledMovie
+from ama.moviearchive import ArchivedMovie
 from ama.drive import DiscType
 from ama.phase import Phase, phase_of
-from ama.tvarchive import FiledTv
+from ama.tvarchive import ArchivedTv
 from ama.web import auth
 from ama.web.current_rip import current_rip
 from ama.web.job_steps import phase_now
@@ -69,7 +69,7 @@ FRAGMENTS: dict[str, str] = {
     "ripping": "partials/ripping_bin.html",
     "rip-failed": "partials/rip_failed.html",
     "cd-rip": "partials/cd_rip_live.html",
-    "filed": "partials/filed_bin.html",
+    "archived": "partials/archived_bin.html",
     "encode": "partials/encoding_bin.html",
     "review": "partials/review_bin.html",
     "review-count": "partials/review_count.html",
@@ -141,12 +141,12 @@ def view_context(services: Services) -> dict[str, Any]:
                          and not services.tv_archive.titles.has(d.id)],
         "waiting_for": services.problems.why,  # Job id -> Waiting (why it can't move on) | None
         "problems": services.problems.banners(),
-        "filed": [d for d in filed_jobs(services)
-                  if d.record.filed_at and d.record.filed_at.date() == date.today()],
-        "media_of": services.media.get,  # what a filed Disc is (cover, poster), media.py
+        "archived": [d for d in archived_jobs(services)
+                  if d.record.archived_at and d.record.archived_at.date() == date.today()],
+        "media_of": services.media.get,  # what an archived Disc is (cover, poster), media.py
         "contents_of": lambda d: contents_of(services, d),
         **services.movie_archive.queue_view(),
-        **services.tv_archive.queue_view(),  # TV Episodes not yet filed
+        **services.tv_archive.queue_view(),  # TV Episodes not yet archived
         "drive": services.drive.state,
         "repeat": services.repeat.pending,  # an archived Disc waiting for the user
         "encoder_problem": services.encoders.problem(),  # the configured encoder failed its test
@@ -173,24 +173,24 @@ def _jobset_view(services: Services, job: Any) -> Any:
     return jobset_view(services, job)
 
 
-def filed_jobs(services: Services, limit: int = 100) -> list:
-    """Filed Discs, newest first, as CdJobs, FiledMovies and FiledTv (History)."""
-    return sorted([*services.cd.jobs(JobStatus.FILED, limit=limit),
-                   *services.movie_archive.filed(limit), *services.tv_archive.filed(limit)],
-                  key=lambda d: (d.record.filed_at or d.record.started_at, d.record.id),
+def archived_jobs(services: Services, limit: int = 100) -> list:
+    """Archived Discs, newest first, as CdJobs, ArchivedMovies and ArchivedTv (History)."""
+    return sorted([*services.cd.jobs(JobStatus.ARCHIVED, limit=limit),
+                   *services.movie_archive.archived(limit), *services.tv_archive.archived(limit)],
+                  key=lambda d: (d.record.archived_at or d.record.started_at, d.record.id),
                   reverse=True)[:limit]
 
 
 def contents_of(services: Services, d: Any) -> list[str]:
-    """What a filed Disc holds, by name, for its History row: tracks, Episodes or Extras."""
+    """What an archived Disc holds, by name, for its History row: tracks, Episodes or Extras."""
     if isinstance(d, CdJob):
         album = services.media.get(d.record.id)
         return [f"{t.number}. {album.track_title(t.number) or f'Track {t.number}'}"
                 for t in d.tracks if t.number] if isinstance(album, Album) else []
-    if isinstance(d, FiledMovie):
+    if isinstance(d, ArchivedMovie):
         return [e.name for e in services.movie_archive.extras.of(d.record.id)
-                if e.status == ExtraStatus.FILED]
-    if isinstance(d, FiledTv):
+                if e.status == ExtraStatus.ARCHIVED]
+    if isinstance(d, ArchivedTv):
         return [f"{t.episode.code} · {t.episode.name}" if t.episode else f"Extra · {t.path.stem}"
                 for t in d.episodes]
     return []

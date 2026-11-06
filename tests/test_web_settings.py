@@ -238,6 +238,6 @@ def test_the_alerts_page_names_the_events_actually_sent(setup):
     client, _, _ = setup
     page = _page(client, "/settings/alerts")
     assert ("Alerts go out when a Rip is done (“insert the next one”) and when a Job needs "
-            "Review, is filed or failed.") in page
+            "Review, is archived or failed.") in page
     assert ("Posts to a Discord channel when a Rip is done and when a Job needs Review, "
-            "is filed or failed.") in page
+            "is archived or failed.") in page

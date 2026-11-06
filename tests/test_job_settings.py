@@ -92,7 +92,7 @@ def test_a_value_that_isnt_offered_is_refused(h):
         settings.set(job.id, "cd.offset", "6")  # a video Job has no Rip settings
 
 
-def test_the_library_pick_locks_when_filing_starts(h):
+def test_the_library_pick_locks_when_archiving_starts(h):
     root = h.libraries_root
     cfg = h.services.config
     h.services.apply_live(Config.model_validate(cfg.model_dump() | {"libraries": [
@@ -153,7 +153,7 @@ def test_a_film_job_encodes_and_files_with_the_settings_changed_while_it_ripped(
         with pytest.raises(Locked):
             settings.set(job.id, "encode.quality", "18")
         h.ffmpeg.release()
-        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
+        eventually(lambda: h.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
     encodes = h.ffmpeg.encodes()
     assert len(encodes) == 2  # the Main Feature and its Extra
     for args in encodes:

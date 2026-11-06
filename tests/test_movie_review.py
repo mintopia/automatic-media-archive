@@ -75,7 +75,7 @@ def test_the_review_page_offers_the_films_found_with_how_their_runtime_fits(harn
     assert "2 h 1 m 33 s · the longest, likely the film" in page and "2 m 31 s" in page
     assert "Pick a film" in page
     facts = _page(client, f"/review/{rec.id}/decision?film=78&title=1")
-    assert "Movies/Example Movie (2020) {tmdb-78}" in facts  # where it will be filed
+    assert "Movies/Example Movie (2020) {tmdb-78}" in facts  # where it will be archived
 
 
 def test_the_user_can_search_tmdb_for_another_film(harness, client):
@@ -110,8 +110,8 @@ def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_f
     movie = harness.services.movie_archive.movies.get(rec.id)
     assert movie.film.name == "Arrival (2016)" and movie.title_number == 2
 
-    filed = _wait_for(harness, JobStatus.FILED)
-    assert filed.title == "Arrival (2016)"
+    archived = _wait_for(harness, JobStatus.ARCHIVED)
+    assert archived.title == "Arrival (2016)"
     folder = "Arrival (2016) {tmdb-329865}"
     [path] = extended_path(harness.libraries_root / "Movies" / folder).glob(f"{folder}*.mkv")
     assert path.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # the Title the user chose
@@ -135,5 +135,5 @@ def test_a_decision_is_ignored_once_the_disc_has_left_review_and_checked_otherwi
                         follow_redirects=False)
     assert again.status_code == 303
     assert harness.services.movie_archive.movies.get(rec.id).film.id == 1234
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     assert client.get(f"/review/{rec.id}", follow_redirects=False).status_code == 303

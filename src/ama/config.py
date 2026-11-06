@@ -338,7 +338,7 @@ class Config(_Section):
 
 def library_for(libraries: Sequence[Library], kind: LibraryKind,
                 picked: str | None = None) -> Library:
-    """The Library a Job of `kind` files to: the one it picked if that still exists, else
+    """The Library a Job of `kind` archives to: the one it picked if that still exists, else
     the kind's default (a removed pick falls back to it)."""
     ofkind = [lib for lib in libraries if lib.kind == kind]
     return (next((lib for lib in ofkind if picked and lib.name == picked), None)

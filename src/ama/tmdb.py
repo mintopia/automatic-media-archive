@@ -69,7 +69,7 @@ class Candidate:
 
     @property
     def name(self) -> str:
-        """How it is filed and shown: "Arrival (2016)"."""
+        """How it is archived and shown: "Arrival (2016)"."""
         return f"{self.title} ({self.year})" if self.year else self.title
 
     def to_json(self) -> dict:
@@ -88,7 +88,7 @@ class Series:
 
     @property
     def title(self) -> str:
-        """How it is shown and filed: "The Office (2001)"."""
+        """How it is shown and archived: "The Office (2001)"."""
         return f"{self.name} ({self.year})" if self.year else self.name
 
 
@@ -183,7 +183,7 @@ def movie_folder(c: Candidate, pattern: Pattern = naming.default(Subject.FILM)) 
 
 def movie_path(c: Candidate, version: str | None,
                pattern: Pattern = naming.default(Subject.FILM)) -> Path:
-    """Where the film is filed by its Library's `pattern`; by default
+    """Where the film is archived by its Library's `pattern`; by default
     `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`, its Plex version name
     (`moviearchive.plex_version`) after the dash."""
     return MOVIES / pattern.render(_film_values(c, version), ".mkv")
@@ -306,7 +306,7 @@ class Tmdb:
                        for e in d.get("episodes") or [] if e.get("episode_number") is not None),
                       key=lambda e: e.number)
 
-    # -- History (what a filed Disc is) ---------------------------------------
+    # -- History (what an archived Disc is) ---------------------------------------
 
     def overview(self, tv: bool, tmdb_id: int) -> tuple[str, str | None]:
         """A film's or series' overview and poster path ("/abc.jpg"). Raises TmdbError."""

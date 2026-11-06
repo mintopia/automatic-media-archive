@@ -1,4 +1,4 @@
-"""The steps every archiver takes around filing into a Library folder."""
+"""The steps every archiver takes around archiving into a Library folder."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import httpx
 
-from ama.archive import Archive, FilingError
+from ama.archive import Archive, ArchivingError
 from ama.jobs import JobStore
 from ama.plex import Plex
 from ama.problems import Problem
@@ -22,8 +22,8 @@ def to_library(archive: Archive, rel: Path, library: str | None) -> Iterator[Non
     where = archive.folder(Path(rel.parts[0]), library)
     try:
         yield
-    except FilingError as e:
-        raise RetryLater(f"Couldn't file to {where} ({e})") from e
+    except ArchivingError as e:
+        raise RetryLater(f"Couldn't archive to {where} ({e})") from e
     except OSError as e:
         if isinstance(e, FileNotFoundError) and not _within(e.filename, where):
             raise  # a source gone from Scratch: no wait for the Library folder fixes that
@@ -31,7 +31,7 @@ def to_library(archive: Archive, rel: Path, library: str | None) -> Iterator[Non
             raise RetryLater(f"Can't reach the Library folder {where}", Problem.LIBRARY_FOLDER,
                              f"Can't reach {where}") from e
         cause = e.strerror or str(e)
-        raise RetryLater(f"Couldn't file to the Library folder {where}: {cause}",
+        raise RetryLater(f"Couldn't archive to the Library folder {where}: {cause}",
                          Problem.LIBRARY_FOLDER, f"{where}: {cause}") from e
 
 

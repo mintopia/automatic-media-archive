@@ -132,13 +132,13 @@ def test_jobs_still_on_their_way_are_never_touched(tmp_path):
     assert w.runs.list_runs([RunKind.SCRATCH]) == []
 
 
-def test_a_tv_job_whose_kept_titles_are_all_filed_or_failed_is_removed(tmp_path):
+def test_a_tv_job_whose_kept_titles_are_all_archived_or_failed_is_removed(tmp_path):
     w = World(tmp_path)
     tv = w.ripped("TV_DONE")
     w.tv.enqueue(tv, Series(9, "Show", 2001, "en"),
                  [(1, Episode(1, 1, "A"), PurePosixPath("TV/Show/a.mkv")),
                   (2, Episode(1, 2, "B"), PurePosixPath("TV/Show/b.mkv"))])
-    w.tv.set_status(tv, 1, EncodeStatus.FILED)
+    w.tv.set_status(tv, 1, EncodeStatus.ARCHIVED)
     w.tv.set_status(tv, 2, EncodeStatus.FAILED)
     w.jobs.encode_failed(tv)
     w.later(days=15)

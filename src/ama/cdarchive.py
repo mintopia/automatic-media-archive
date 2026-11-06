@@ -1,17 +1,17 @@
-"""CD Identification and filing to the Archive.
+"""CD Identification and archiving to the Archive.
 
 `CdArchiver.run()` takes each `ripped` CD (oldest first), looks its Disc ID up
-in MusicBrainz and either files it or leaves it for Review. It files only when
+in MusicBrainz and either archives it or leaves it for Review. It archives only when
 every track was verified by AccurateRip (ADR-0004) and exactly one release
 (one disc of one release) carries the Disc ID. Anything else goes to Review
 with its reason. The MusicBrainz answer is kept in scratch
 (`musicbrainz.json`) for Review to choose from.
 
-Filing: tag the scratch FLACs (incl. MusicBrainz IDs), fetch the cover, and
+Archiving: tag the scratch FLACs (incl. MusicBrainz IDs), fetch the cover, and
 place FLACs + cue + log + cover into `<album artist>/<album>/` in its Library
 (temp name -> rename, verified; see `archive.py`). Discs of a multi-disc
 release share the album folder: track files are `<disc><track:02> - <title>.flac`
-and the cue/log are named per disc. Then the Job is marked filed, its scratch
+and the cue/log are named per disc. Then the Job is marked archived, its scratch
 deleted, and Plex asked to scan the folder.
 
 Network trouble or an unreachable Library folder leaves the Job `ripped`; it is retried every
@@ -29,7 +29,7 @@ from pathlib import Path
 
 import httpx
 
-from ama import cdreview, cyanrip, filing, musicbrainz, naming
+from ama import archiving, cdreview, cyanrip, musicbrainz, naming
 from ama.archive import Archive, safe_name
 from ama.naming import Pattern, Subject
 from ama.cdguess import CdPick
@@ -64,8 +64,9 @@ def picked_match(tracks: list[Track], candidates: list[Match], pick: CdPick) -> 
 
 def review_reason(tracks: list[Track], candidates: list[Match],
                   rip_accepted: bool = False, pick: CdPick | None = None) -> ReviewReason | None:
-    """Why this Rip and these matches can't be filed automatically (None = file it); an accepted
-    Rip skips AccurateRip. A pick that fits is filed even when other releases fit too."""
+    """Why this Rip and these matches can't be archived automatically (None = archive it);
+    an accepted Rip skips AccurateRip. A pick that fits is archived even when other releases
+    fit too."""
     audio = cdreview.audio_tracks(tracks)  # AccurateRip doesn't cover a hidden track
     verdicts = {t.ar.status if t.ar else ArStatus.UNAVAILABLE for t in audio}
     if not rip_accepted:
@@ -166,7 +167,7 @@ _CUE_FILE = re.compile(r'^(\s*FILE\s+)"([^"]+)"(.*)$')
 
 
 def rename_cue_files(cue: str, names: dict[str, str]) -> str:
-    """Point the cue's FILE lines at the filed names ({scratch name: filed name})."""
+    """Point the cue's FILE lines at the archived names ({scratch name: archived name})."""
     def fix(line: str) -> str:
         m = _CUE_FILE.match(line)
         if m and m.group(2) in names:
@@ -186,7 +187,7 @@ class CdArchiver:
                  library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
         self._picked = picked  # the release the user picked while it ripped (cdguess.py)
-        # The Library a Job files to; asking locks its pick (job_settings). None = default.
+        # The Library a Job archives to; asking locks its pick (job_settings). None = default.
         self._library = library
         self._covers = covers
         self._media = media
@@ -200,7 +201,7 @@ class CdArchiver:
         self.backoff = Backoff(retry_seconds, problems=problems)
 
     async def run(self) -> None:
-        await asyncio.to_thread(self._jobs.clean_filed_scratch)
+        await asyncio.to_thread(self._jobs.clean_archived_scratch)
         while True:
             await self.check_once()
             await asyncio.sleep(self._interval)
@@ -216,14 +217,14 @@ class CdArchiver:
                 if self.backoff.later(rec.id, str(e), e.problem, e.detail):
                     self._jobs.log(rec.id, f"{e}; trying again in a while", error=True)
             except Exception:
-                log.exception("CD Identification/filing of Job %s crashed", rec.id)
+                log.exception("CD Identification/archiving of Job %s crashed", rec.id)
                 self.backoff.later(rec.id, "Identification went wrong (see the app's log file)")
             else:
                 self.backoff.done(rec.id)
             self._publish()
 
     def _publish(self) -> None:
-        for topic in (Topic.RIP, Topic.FILED, Topic.REVIEW):
+        for topic in (Topic.RIP, Topic.ARCHIVED, Topic.REVIEW):
             self._bus.publish(topic)
 
     # -- one Disc (runs in a worker thread) --
@@ -276,7 +277,7 @@ class CdArchiver:
 
     def file(self, rec: JobRecord, match: Match, mb_disc_id: str) -> None:
         """Tag, file and verify this Disc as `match`, then delete its scratch and tell Plex."""
-        self._jobs.begin_step(rec.id, "file", "File")
+        self._jobs.begin_step(rec.id, "archive", "Archive")
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}
         renamed: dict[str, str] = {}
@@ -292,10 +293,10 @@ class CdArchiver:
         stem = disc_file_stem(match)
         cue = scratch / "rip.cue"
         if cue.exists():
-            filed_cue = scratch / "filed.cue"
-            filed_cue.write_text(rename_cue_files(cue.read_text(encoding="utf-8"), renamed),
+            archived_cue = scratch / "archived.cue"
+            archived_cue.write_text(rename_cue_files(cue.read_text(encoding="utf-8"), renamed),
                                  encoding="utf-8")
-            files[f"{stem}.cue"] = filed_cue
+            files[f"{stem}.cue"] = archived_cue
         files[f"{stem}.log"] = scratch / "rip.log"
         art = None
         if not match.release.id:
@@ -312,10 +313,10 @@ class CdArchiver:
             assert cached is not None
             files[f"cover{cached.suffix}"] = cached
         rel = album_folder(match, patterned)  # the tracks' folder: cue, log and cover too
-        with filing.to_library(self._archive, rel, library):
+        with archiving.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, files, library)
         title = f"{match.release.title} — {match.release.artist}"
         self._media.save(rec.id, Album.of(match, mb_disc_id, art))
-        self._jobs.mark_filed(rec.id, title, folder)
-        self._jobs.log(rec.id, f"Filed {len(files)} files to {folder}; scratch deleted")
-        filing.scan(self._plex, self._jobs, rec.id, folder)
+        self._jobs.mark_archived(rec.id, title, folder)
+        self._jobs.log(rec.id, f"Archived {len(files)} files to {folder}; scratch deleted")
+        archiving.scan(self._plex, self._jobs, rec.id, folder)

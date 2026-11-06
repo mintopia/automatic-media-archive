@@ -414,7 +414,7 @@ SECTIONS: list[Section] = [
             Field("plex.url", "Plex server",
                   "Where Plex runs, with its port. Plex normally uses 32400."),
             Field("plex.token", "Plex sign-in token",
-                  "Lets AMA tell Plex to look for new files as soon as a Job is filed. "
+                  "Lets AMA tell Plex to look for new files as soon as a Job is archived. "
                   "Without it, Plex finds them on its next scheduled scan.",
                   "Plex calls it the X-Plex-Token."),
             Field("plex.libraries_path", "Plex sees Libraries at",
@@ -424,7 +424,7 @@ SECTIONS: list[Section] = [
                   placeholder="Same paths as AMA"),
         ), live=True, status=_plex_status),
     ), note=Markup("A Job goes to its kind's default unless you pick another Library in its "
-                   "settings before it's filed. Each Library saves on its own, to "
+                   "settings before it's archived. Each Library saves on its own, to "
                    "<code>ama.toml</code>."), note_only=True,
         template="partials/settings_libraries.html", context=settings_libraries.context,
         owns=("libraries",), foot="Plex connection"),
@@ -440,7 +440,7 @@ SECTIONS: list[Section] = [
         Group("Discord", (
             Field("discord.webhook_url", "Webhook URL",
                   "Posts to a Discord channel when a Rip is done and when a Job needs Review, "
-                  "is filed or failed. Empty turns Discord off."),
+                  "is archived or failed. Empty turns Discord off."),
         ), live=True, note="Used from the next alert"),
         Group("ntfy", (
             Field("ntfy.url", "Server",
@@ -463,7 +463,7 @@ SECTIONS: list[Section] = [
             Field("webhook.header_value", "Header value", "Once saved it's never shown again."),
         ), live=True, note="Used from the next alert"),
     ), note=Markup("Alerts go out when a Rip is done (“insert the next one”) and when a Job "
-                   "needs Review, is filed or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
+                   "needs Review, is archived or failed. Plex scans are set under <a href=\"/settings/archive/libraries\">"
                    "Archive › Libraries</a>.")),
     Section("logs", "logs", "Logs", (
         Group("Step output", (

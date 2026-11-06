@@ -10,7 +10,7 @@
         <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
         <div><b>{{ job.failure.headline }}</b>{{ job.failure.advice }}</div>
       </div>
-      <p class="ts">Nothing was filed. The partial Rip has been deleted from scratch, so it isn't using any space.</p>
+      <p class="ts">Nothing was archived. The partial Rip has been deleted from scratch, so it isn't using any space.</p>
       <form class="actions" method="post" action="/jobs/{{ job.id }}/dismiss">
         <button class="btn pri" type="submit">OK, I'll put it back in</button>
       </form>

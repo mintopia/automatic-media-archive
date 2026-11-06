@@ -71,7 +71,7 @@ log_file = 'logs\ama.log'
 
 # Free space (GB) each Disc Type needs before its Rip starts. With less free, an
 # inserted Disc is ejected unripped and the UI shows what is using scratch space
-# (finishing a Review, or an Encode being filed, frees some).
+# (finishing a Review, or an Encode being archived, frees some).
 cd = 1
 dvd = 10
 bd = 50
@@ -102,7 +102,7 @@ api_key = ""
 [plex]
 # Plex Media Server, which AMA tells to scan each folder it files.
 
-# Your Plex server's address. AMA uses it to start a scan of each filed folder,
+# Your Plex server's address. AMA uses it to start a scan of each archived folder,
 # and to list your Plex libraries in Settings > Archive > Libraries.
 url = "http://nas:32400"
 # Your Plex token (X-Plex-Token). SECRET. With no address or no token, AMA starts
@@ -135,9 +135,9 @@ topic = ""
 
 # The URL to POST each alert to. SECRET. Empty = no webhook alerts. The body is
 # versioned JSON:
-#   {"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
-#    "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
-# `event` is rip_done, review_needed, job_filed, job_failed, or test (from "Send
+#   {"version": 1, "event": "job_archived", "at": "2026-11-05T12:00:00Z",
+#    "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "archived", "url": "..."}}
+# `event` is rip_done, review_needed, job_archived, job_failed, or test (from "Send
 # test", with `job` null).
 url = ""
 # A header to send with every POST, e.g. one holding a token the receiver checks.
@@ -196,7 +196,7 @@ uhd = "keep"
 keep_days = 0
 
 # Libraries: the named folders of your Archive, one [[libraries]] entry each.
-# Each kind (films, tv or music) needs exactly one default Library; a Job is filed
+# Each kind (films, tv or music) needs exactly one default Library; a Job is archived
 # to its kind's default unless you pick another Library of that kind. Leave out
 # every entry to use Videos\Movies, Videos\TV and Music in your user folder.
 [[libraries]]
@@ -205,10 +205,10 @@ name = "Movies"
 # What it holds: films, tv or music.
 kind = "films"
 # Its full folder path: a local folder, a mapped drive or a network (UNC) path,
-# created when AMA first files to it. AMA doesn't connect or mount anything: while
-# the folder can't be reached, its Jobs wait and filing is retried every minute.
+# created when AMA first archives to it. AMA doesn't connect or mount anything: while
+# the folder can't be reached, its Jobs wait and archiving is retried every minute.
 path = '\\nas\media\Movies'
-# The Plex library that holds it, scanned after each filing. Empty = whichever
+# The Plex library that holds it, scanned after each archiving. Empty = whichever
 # Plex library's folder contains it.
 plex = "Movies"
 # Whether it's the default Library for its kind.
@@ -218,7 +218,7 @@ default = true
 # nothing for a DVD). Film, TV and music Libraries each have one (see the TV and
 # Music Libraries below). Empty = Plex's naming,
 # "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}".
-# Changing it names only what is filed afterwards; nothing filed is renamed.
+# Changing it names only what is archived afterwards; nothing archived is renamed.
 pattern = ""
 
 [[libraries]]
@@ -232,7 +232,7 @@ default = true
 # {episode_title}. The first folder is the show's, where its Extras go in Other;
 # {episode} and {episode_title} only in the file name. Empty = Plex's naming,
 # "{show} ({year}) {{tmdb-{tmdb_id}}}/Season {season:02}/{show} - s{season:02}e{episode:02} - {episode_title}".
-# Changing it names only what is filed afterwards; nothing filed is renamed.
+# Changing it names only what is archived afterwards; nothing archived is renamed.
 pattern = ""
 
 [[libraries]]
@@ -246,10 +246,10 @@ default = true
 # it), {track_title}, {track_artist}, {disc}, {disc_total} and {disc_title}. The
 # folders can't use the track fields: each disc's tracks, cue, log and cover.jpg
 # share one folder. Empty = "{artist}/{album}/{track:02} - {track_title}".
-# Changing it names only what is filed afterwards; nothing filed is renamed.
+# Changing it names only what is archived afterwards; nothing archived is renamed.
 pattern = ""
 # Music only: the Naming Pattern for releases of more than one disc, from the same
 # fields as the single-disc one, and it needs {disc}. Empty =
 # "{artist}/{album}/{disc}{track:02} - {track_title}" (101, 102 … 201). Changing
-# it names only what is filed afterwards; nothing filed is renamed.
+# it names only what is archived afterwards; nothing archived is renamed.
 multi_disc_pattern = ""

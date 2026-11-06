@@ -85,7 +85,7 @@ locked toolchain package, run `build.ps1 -Relock` and commit the new
    Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
    if a Library is on a network share, make sure the Windows user AMA runs as can
    reach it (a mapped drive, or credentials saved in Windows). While a folder
-   isn't reachable, its Jobs wait at "Encoded · filing" and filing is retried
+   isn't reachable, its Jobs wait at "Encoded · archiving" and archiving is retried
    every minute. An `ama.toml` from v1/v2 is rewritten once at startup (its
    `[nas]` table is dropped and each Library gets its full path; a `.bak` is kept).
 
@@ -134,13 +134,13 @@ locked toolchain package, run `build.ps1 -Relock` and commit the new
 With `[webhook] url` set, every alert is one POST of versioned JSON:
 
 ```json
-{"version": 1, "event": "job_filed", "at": "2026-11-05T12:00:00Z",
- "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "filed", "url": "..."}}
+{"version": 1, "event": "job_archived", "at": "2026-11-05T12:00:00Z",
+ "job": {"id": 7, "disc_type": "bd", "title": "...", "status": "archived", "url": "..."}}
 ```
 
-`event` is `rip_done`, `review_needed`, `job_filed` or `job_failed`, or `test` from
+`event` is `rip_done`, `review_needed`, `job_archived` or `job_failed`, or `test` from
 Settings' "Send test", whose `job` is null. `at` is UTC. `title` is what the Job was
-filed as, else its Disc label; `url` is the Job's page. Ignore keys you don't know; a
+archived as, else its Disc label; `url` is the Job's page. Ignore keys you don't know; a
 change to existing keys gets a new `version`.
 
 ## Deploying an update

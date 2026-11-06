@@ -38,7 +38,7 @@ const shot = (name: string) => url(`screenshots/${name}.png`);
       <li><h3>Ripping</h3><p>AMA copies the Disc to Scratch and ejects it, so the drive is free for the next one. CDs are checked against AccurateRip as they rip.</p><p class="you">You: put the next Disc in.</p></li>
       <li><h3>Review</h3><p>Only when it can’t tell: two films that fit the Disc equally well, a CD AccurateRip can’t verify, or which Titles are which Episodes.</p><p class="you">You: answer one question.</p></li>
       <li><h3>Encoding</h3><p>Films and TV are encoded to HEVC at the quality you set, on your graphics card if it can. CDs stay lossless FLAC.</p><p class="you">You: nothing.</p></li>
-      <li><h3>Filed</h3><p>AMA names it with your Library’s Naming Pattern and moves it into the folder your Plex Library reads.</p><p class="you">You: press play.</p></li>
+      <li><h3>Archived</h3><p>AMA names it with your Library’s Naming Pattern and moves it into the folder your Plex Library reads.</p><p class="you">You: press play.</p></li>
     </ol>
     <a class="more-link" href={url("docs/how-a-disc-flows/")}>Read the full walkthrough<svg class="i" aria-hidden="true"><use href={i("chevron")}/></svg></a>
   </section>
@@ -49,8 +49,8 @@ const shot = (name: string) => url(`screenshots/${name}.png`);
         <h2 id="asks-h" class="h2">It asks one question at a time</h2>
         <p class="intro">When AMA isn’t sure, it says so rather than guessing. It tells you on Discord, ntfy or your own Webhook:</p>
         <ul class="alerts">
-          <li><svg class="i" aria-hidden="true" style="color:var(--rev-ink)"><use href={i("alert")}/></svg><div><b>When a Disc needs you</b><span>DVD “FIREFLY_D2” needs Review before it can be filed.</span></div></li>
-          <li><svg class="i" aria-hidden="true" style="color:var(--fil-ink)"><use href={i("check")}/></svg><div><b>When a Rip is done</b><span>Blu-ray “OCEANS_ELEVEN” is ripped and ejected. Insert the next Disc.</span></div></li>
+          <li><svg class="i" aria-hidden="true" style="color:var(--rev-ink)"><use href={i("alert")}/></svg><div><b>When a Disc needs you</b><span>DVD “FIREFLY_D2” needs Review before it can be archived.</span></div></li>
+          <li><svg class="i" aria-hidden="true" style="color:var(--arc-ink)"><use href={i("check")}/></svg><div><b>When a Rip is done</b><span>Blu-ray “OCEANS_ELEVEN” is ripped and ejected. Insert the next Disc.</span></div></li>
           <li><svg class="i" aria-hidden="true" style="color:var(--fail)"><use href={i("eject")}/></svg><div><b>When a Job fails</b><span>What went wrong, and what to try next.</span></div></li>
         </ul>
       </div>
@@ -68,7 +68,7 @@ const shot = (name: string) => url(`screenshots/${name}.png`);
     <h2 id="look-h">Works at the drive and at the desk</h2>
     <p class="intro">Feed Discs with your phone in your hand, and do the odd Review on the big screen later.</p>
     <div class="gallery">
-      <div><figure class="appwin" aria-labelledby="g1"><div class="chrome"><b>AMA</b> · Review page<span class="tag">Example</span></div><picture><source srcset={shot("review-film-desktop-dark")} media="(prefers-color-scheme: dark)"><img src={shot("review-film-desktop-light")} alt="Film Review for a Blu-ray labelled OCEANS: AMA’s best guess, Ocean’s Thirteen, beside stills from each Title and where it will be filed." width="1440" height="850" loading="lazy"></picture></figure><p class="wcap" id="g1"><b>Review</b>, confirming a film and its Main Feature from stills of each Title.</p></div>
+      <div><figure class="appwin" aria-labelledby="g1"><div class="chrome"><b>AMA</b> · Review page<span class="tag">Example</span></div><picture><source srcset={shot("review-film-desktop-dark")} media="(prefers-color-scheme: dark)"><img src={shot("review-film-desktop-light")} alt="Film Review for a Blu-ray labelled OCEANS: AMA’s best guess, Ocean’s Thirteen, beside stills from each Title and where it will be archived." width="1440" height="850" loading="lazy"></picture></figure><p class="wcap" id="g1"><b>Review</b>, confirming a film and its Main Feature from stills of each Title.</p></div>
       <div><figure class="appwin" aria-labelledby="g2"><div class="chrome"><b>AMA</b> · History page<span class="tag">Example</span></div><picture><source srcset={shot("history-desktop-dark")} media="(prefers-color-scheme: dark)"><img src={shot("history-desktop-light")} alt="History: Ocean’s Thirteen, four Episodes of Firefly and Queen’s Greatest Hits, newest first, each with where its details came from." width="1440" height="850" loading="lazy"></picture></figure><p class="wcap" id="g2"><b>History</b>, every Disc and what it became.</p></div>
     </div>
   </section>

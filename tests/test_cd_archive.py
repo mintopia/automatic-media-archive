@@ -1,4 +1,4 @@
-"""CD Identification and filing to the Archive, end to end: the real app with a fake
+"""CD Identification and archiving to the Archive, end to end: the real app with a fake
 drive, cyanrip, Library folders and web (MusicBrainz, Cover Art Archive, Plex).
 
 The MusicBrainz answers are the real capture for FFVII Rebirth OST disc 1
@@ -53,12 +53,12 @@ def _album(harness):
     return extended_path(harness.libraries_root / "Music" / "Various Artists" / ALBUM)
 
 
-def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(harness, client):
+def test_a_single_release_match_is_tagged_and_archived_with_no_human_interaction(harness, client):
     harness.web.covers[SPECIAL] = COVER
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
 
-    rec = _wait_for(harness, JobStatus.FILED)
-    eventually(lambda: not rec.scratch_dir.exists())  # deleted right after filing is verified
+    rec = _wait_for(harness, JobStatus.ARCHIVED)
+    eventually(lambda: not rec.scratch_dir.exists())  # deleted right after archiving is verified
     album = _album(harness)
     names = sorted(p.name for p in album.iterdir())
     flacs = [n for n in names if n.endswith(".flac")]
@@ -98,7 +98,7 @@ def test_a_single_release_match_is_tagged_and_filed_with_no_human_interaction(ha
 
 def test_musicbrainz_is_asked_politely_for_the_disc(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     mb = next(r for r in harness.web.requests if r.url.host == "musicbrainz.org")
     assert mb.url.path == f"/ws/2/discid/{DISC_1}"
     assert "recordings" in mb.url.params["inc"] and mb.url.params["fmt"] == "json"
@@ -107,9 +107,9 @@ def test_musicbrainz_is_asked_politely_for_the_disc(harness, client):
     assert "(" in mb.headers["user-agent"]  # MusicBrainz requires contact info
 
 
-def test_plex_partially_scans_the_filed_folder(harness, client):
+def test_plex_partially_scans_the_archived_folder(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     eventually(lambda: any(r.url.path.endswith("/refresh") for r in harness.web.plex_requests))
     scan = next(r for r in harness.web.plex_requests if r.url.path.endswith("/refresh"))
     assert scan.url.path == "/library/sections/3/refresh"   # the Music library
@@ -121,9 +121,9 @@ def test_plex_partially_scans_the_filed_folder(harness, client):
 
 def test_discs_of_a_multi_disc_release_file_into_one_album_folder(harness, client):
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     _insert(harness, DISC_2, 23, _response(only=SPECIAL))
-    _wait_for(harness, JobStatus.FILED, count=2)
+    _wait_for(harness, JobStatus.ARCHIVED, count=2)
 
     names = [p.name for p in _album(harness).iterdir()]
     disc1 = [n for n in names if n.endswith(".flac") and n.startswith("1")]
@@ -177,10 +177,10 @@ def test_identification_waits_for_musicbrainz_to_be_reachable(harness, client):
     eventually(lambda: any("MusicBrainz" in ln.text for ln in
                            harness.services.jobs.log_lines(rec.id)))
     harness.web.musicbrainz[DISC_1] = _response(only=SPECIAL)
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
 
 
-def test_filing_waits_for_an_unreachable_library_folder(harness, client):
+def test_archiving_waits_for_an_unreachable_library_folder(harness, client):
     folder = harness.drop_library(LibraryKind.MUSIC)
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.RIPPED)
@@ -188,7 +188,7 @@ def test_filing_waits_for_an_unreachable_library_folder(harness, client):
                            for ln in harness.services.jobs.log_lines(rec.id)))
     assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
     harness.restore_library(LibraryKind.MUSIC)
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)
     assert _album(harness).exists()
 
 
@@ -235,7 +235,7 @@ def _patterned(tmp_path):
     return harness
 
 
-def test_a_multi_disc_release_is_filed_by_the_multi_disc_pattern_with_its_cue_log_and_cover(
+def test_a_multi_disc_release_is_archived_by_the_multi_disc_pattern_with_its_cue_log_and_cover(
         tmp_path):
     from fastapi.testclient import TestClient
 
@@ -244,7 +244,7 @@ def test_a_multi_disc_release_is_filed_by_the_multi_disc_pattern_with_its_cue_lo
     harness.web.covers[SPECIAL] = COVER
     with TestClient(create_app(harness.services)):
         _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-        rec = _wait_for(harness, JobStatus.FILED)
+        rec = _wait_for(harness, JobStatus.ARCHIVED)
     folder = extended_path(harness.libraries_root / "Music" / f"Various Artists - {ALBUM} (2024)"
                            / "Disc 1")
     names = sorted(p.name for p in folder.iterdir())
@@ -255,18 +255,18 @@ def test_a_multi_disc_release_is_filed_by_the_multi_disc_pattern_with_its_cue_lo
         f"Various Artists - {ALBUM} (2024)") / "Disc 1"
 
 
-def test_changing_the_pattern_never_renames_a_filed_album(tmp_path):
+def test_changing_the_pattern_never_renames_an_archived_album(tmp_path):
     from fastapi.testclient import TestClient
 
     from ama.app import create_app
     harness = _patterned(tmp_path)
     with TestClient(create_app(harness.services)):
         _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-        first = _wait_for(harness, JobStatus.FILED)
+        first = _wait_for(harness, JobStatus.ARCHIVED)
         harness.services.settings.save_library(LibraryKind.MUSIC, "Music", {
             "multi_disc_pattern": "{artist}/{album}/{disc}-{track:02} {track_title}"})
         _insert(harness, DISC_2, 23, _response(only=SPECIAL))
-        _wait_for(harness, JobStatus.FILED, count=2)
+        _wait_for(harness, JobStatus.ARCHIVED, count=2)
     old = extended_path(first.archive_dir)
     assert len([p for p in old.iterdir() if p.suffix == ".flac"]) == 24
     assert harness.services.jobs.get(first.id).archive_dir == first.archive_dir

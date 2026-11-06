@@ -5,12 +5,12 @@
   {%- if errors[name] %}<span class="hint err" id="f-{{ name }}-err">{{ errors[name] }}</span>{% endif %}
 </div>
 {%- endmacro %}
-<p>AMA files each Disc into a Library: a folder for films, TV or music. Point Plex at the same folders. A folder that doesn't exist yet is created when AMA first files into it.</p>
+<p>AMA archives each Disc into a Library: a folder for films, TV or music. Point Plex at the same folders. A folder that doesn't exist yet is created when AMA first archives into it.</p>
 {{ folder("films", "Films", "Where films go.") }}
 {{ folder("tv", "TV", "Where TV series go.") }}
 {{ folder("music", "Music", "Where CDs go.") }}
 <details class="adv setup-adv"{% if errors["scratch"] %} open{% endif %}>
   <summary><span class="advh">Scratch<span class="advtag">Advanced</span></span><svg class="i chev" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg>
-    <span class="advsub">Where Discs are ripped to before they're filed. It needs room: about 100 GB for a UHD Disc.</span></summary>
+    <span class="advsub">Where Discs are ripped to before they're archived. It needs room: about 100 GB for a UHD Disc.</span></summary>
   {{ folder("scratch", "Scratch folder", "A local disk is fastest. Use a fast drive with plenty of free space.") }}
 </details>

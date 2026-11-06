@@ -11,7 +11,7 @@ from tests.conftest import eventually
 from tests.test_cd_archive import SPECIAL, _response
 from tests.test_cd_review import _mismatch
 from tests.test_movie_review import _ambiguous
-from tests.test_sets import EPISODES, _file_first_office_disc, _file_example_movie, _filed
+from tests.test_sets import EPISODES, _file_first_office_disc, _file_example_movie, _archived
 from tests.test_tv_review import OFFICE, _in_review, _page, _the_office, _tv_disc
 
 
@@ -29,7 +29,7 @@ def test_discarding_a_cd_rip_asks_first_then_says_what_happened(harness, client)
     r = client.post(f"/review/{rec.id}/discard", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
     after = _page(client, r.headers["location"])
-    assert "Discarded the Rip of" in after and "Nothing was filed" in after
+    assert "Discarded the Rip of" in after and "Nothing was archived" in after
     assert "Discarded the Rip" not in _page(client, "/review")  # only right after
 
 
@@ -43,7 +43,7 @@ def test_a_decision_goes_on_to_the_next_disc_in_review_and_confirms_the_last(har
     assert r.headers["location"] == f"/review/{second.id}?done={first.id}"
     page = _page(client, r.headers["location"])
     assert "Done: The Office (2001) · 3 Episodes" in page
-    assert "filed to TV" in page and "The next Disc that needs you is below." in page
+    assert "archived to TV" in page and "The next Disc that needs you is below." in page
     assert 'role="status"' in page
 
 
@@ -61,17 +61,17 @@ def test_a_failed_rip_offers_one_way_out(harness, client):
     assert "Dismiss" not in page and "Try again" not in page
 
 
-def test_a_filed_films_titles_say_what_each_became(harness, client):
+def test_an_archived_films_titles_say_what_each_became(harness, client):
     rec = _file_example_movie(harness)
     page = _page(client, f"/jobs/{rec.id}")
     titles = page[page.index('id="titles-h"') - 80:]
     titles = titles[:titles.index("</section>")]
-    assert 'class="bin ink"' in titles and "Filed as" in titles
+    assert 'class="bin ink"' in titles and "Archived as" in titles
     assert "Main Feature" in titles
     assert "Ripped</span>" not in titles
 
 
-def test_history_rows_show_set_position_and_no_filed_sticker(harness, client):
+def test_history_rows_show_set_position_and_no_archived_sticker(harness, client):
     _the_office(harness)
     _file_first_office_disc(harness, client)
     rec = _in_review(harness, _tv_disc(harness, "THE_OFFICE_S1_D2", EPISODES))
@@ -79,12 +79,12 @@ def test_history_rows_show_set_position_and_no_filed_sticker(harness, client):
                                                  "disc": "2"})
     client.post(f"/review/{rec.id}/episodes", data={
         "series": str(OFFICE), "season": "1", "t1": "S01E04", "t2": "S01E05", "t3": "S01E06"})
-    _filed(harness, rec)
+    _archived(harness, rec)
 
     history = _page(client, "/history")
     history = history[history.index("<main"):]
     assert "Disc 1 of 2" in history and "Disc 2 of 2" in history
-    assert "stk fil" not in history
+    assert "stk arc" not in history
     for summary in re.findall(r"<summary.*?</summary>", history, re.S):
         assert "<a " not in summary
 
@@ -92,7 +92,7 @@ def test_history_rows_show_set_position_and_no_filed_sticker(harness, client):
 def test_movie_review_marks_and_choices(harness, client):
     rec = _ambiguous(harness)
     page = _page(client, f"/review/{rec.id}")
-    assert "stk fil" not in page and 'class="mark"' in page  # "Same length" isn't a sticker
+    assert "stk arc" not in page and 'class="mark"' in page  # "Same length" isn't a sticker
     assert '<div id="summary" aria-live="polite">' in page
     head = page[:page.index('id="decide"')]  # in the page head, not below the Titles
     assert '<button class="btn quiet" type="submit" form="as-tv">It\'s TV episodes</button>' in head

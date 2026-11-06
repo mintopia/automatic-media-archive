@@ -24,16 +24,16 @@ def test_every_page_has_a_skip_link_and_a_theme_menu(client):
 def test_now_has_an_h1_and_its_bins_are_headings(client):
     page = client.get("/").text
     assert '<h1 class="sr">Now</h1>' in page
-    for h in ("ripping-h", "encoding-h", "filed-h", "rev-h"):
+    for h in ("ripping-h", "encoding-h", "archived-h", "rev-h"):
         assert f'id="{h}"' in page
-    assert page.count('<h2 class="tab') >= 3 and '<h2 class="tab-h" id="filed-h">' in page
+    assert page.count('<h2 class="tab') >= 3 and '<h2 class="tab-h" id="archived-h">' in page
     assert 'aria-live="polite">' not in page.split('sse-swap="drive"')[1].split(">")[0]
 
 
 def test_now_with_no_jobs_shows_all_five_bins_empty_and_no_idle_line(client):
     page = client.get("/").text
     assert page.count(' empty" aria-labelledby') == 5
-    for h in ("rev-h", "ripping-h", "encoding-h", "filed-h", "failed-h"):
+    for h in ("rev-h", "ripping-h", "encoding-h", "archived-h", "failed-h"):
         assert f'id="{h}"' in page
     assert "Didn't work <span class=\"c\">0</span>" in page
     assert 'class="idle' not in page

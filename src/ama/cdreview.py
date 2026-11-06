@@ -1,8 +1,8 @@
-"""CD Review: what a human decided about a CD that couldn't be filed automatically.
+"""CD Review: what a human decided about a CD that couldn't be archived automatically.
 
 A CD in Review has its Rip and MusicBrainz answer (`musicbrainz.json`) in scratch.
 The user's `Decision` is saved next to them (`review.json`) and the Disc goes back
-to `ripped`; `CdArchiver` then files it exactly as it files automatically, with
+to `ripped`; `CdArchiver` then archives it exactly as it archives automatically, with
 the same retries while the network or its Library folder is away. Any decision accepts the Rip
 as it is, so AccurateRip problems don't send it back to Review.
 """
@@ -27,7 +27,7 @@ MB_FILE = "musicbrainz.json"
 
 @dataclass(frozen=True)
 class AcceptRip:
-    """File it even though AccurateRip didn't verify every track."""
+    """Archive it even though AccurateRip didn't verify every track."""
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ def audio_tracks(tracks: list[Track]) -> list[Track]:
 
 
 def fitting(tracks: list[Track], candidates: list[Match]) -> list[Match]:
-    """The matches whose disc has as many tracks as were ripped: the ones that can be filed."""
+    """The matches whose disc has as many tracks as were ripped: the ones that can be archived."""
     n = len(audio_tracks(tracks))
     return [m for m in candidates if len(m.tracks) == n]
 
@@ -107,7 +107,7 @@ def unverified(tracks: list[Track], status: ArStatus) -> list[int]:
 
 
 def manual_match(details: ManualDetails) -> Match:
-    """A Match for filing from details entered by hand: disc 1 of 1, no MusicBrainz IDs."""
+    """A Match for archiving from details entered by hand: disc 1 of 1, no MusicBrainz IDs."""
     release = Release(id="", title=details.album, artist=details.artist, artist_ids=(),
                       disc_total=1, date=details.year or None)
     return Match(release, 1, "", tuple(

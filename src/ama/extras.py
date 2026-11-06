@@ -1,6 +1,6 @@
 """Extras: every ripped Title of a movie Disc that isn't the Main Feature.
 
-`MovieArchiver` Encodes them after the Main Feature and files them with it, to
+`MovieArchiver` Encodes them after the Main Feature and archives them with it, to
 `<film folder>/Other/<name>.mkv`, named from the Title's name on the Disc (Plex's
 "Other" local extras folder). No Review is needed. Afterwards the user may sort
 them (`/jobs/{id}/extras`): a new category or name moves the file to that Plex
@@ -36,7 +36,7 @@ class Category(StrEnum):
     TRAILERS = "Trailers"
 
 
-ExtraStatus = EncodeStatus  # a FAILED Extra is left out; the film is filed without it
+ExtraStatus = EncodeStatus  # a FAILED Extra is left out; the film is archived without it
 
 
 @dataclass(frozen=True)
@@ -88,7 +88,7 @@ def default_names(titles: Iterable[TitleRecord], not_names: Iterable[str],
 
 
 def plex_path(folder: PurePosixPath, name: str) -> PurePosixPath:
-    """Where a newly filed Extra goes: `<film or show folder>/Other/<name>.mkv`."""
+    """Where a newly archived Extra goes: `<film or show folder>/Other/<name>.mkv`."""
     return folder / file_name(Category.OTHER, name, lambda _: False)
 
 
@@ -148,10 +148,10 @@ class Extras:
         self._db.execute("UPDATE extras SET reviewed = 1 WHERE job_id = ?", (job_id,))
 
     def to_sort(self) -> list[int]:
-        """Filed Discs whose Extras nobody has looked at yet, oldest first."""
+        """Archived Discs whose Extras nobody has looked at yet, oldest first."""
         rows = self._db.execute("SELECT DISTINCT job_id FROM extras WHERE status = ? "
                                 "AND reviewed = 0 ORDER BY job_id",
-                                (EncodeStatus.FILED,)).fetchall()
+                                (EncodeStatus.ARCHIVED,)).fetchall()
         return [r[0] for r in rows]
 
     def requeue_unfinished(self) -> None:

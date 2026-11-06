@@ -36,7 +36,7 @@
   </section>
   {%- else %}
   <div class="box" style="margin-bottom:28px"><div class="pad tv-series">
-    <dl class="facts"><dt>Series</dt><dd><b>{{ series.title }}</b> · <a href="/review/{{ record.id }}?change=1">Change series</a></dd><dt>Filed to</dt><dd style="overflow-wrap:anywhere">{{ folder }}</dd></dl>
+    <dl class="facts"><dt>Series</dt><dd><b>{{ series.title }}</b> · <a href="/review/{{ record.id }}?change=1">Change series</a></dd><dt>Archived to</dt><dd style="overflow-wrap:anywhere">{{ folder }}</dd></dl>
     <form class="field" method="get" action="/review/{{ record.id }}" style="min-width:200px">
       <input type="hidden" name="series" value="{{ series.id }}">
       <label for="season">Season</label>

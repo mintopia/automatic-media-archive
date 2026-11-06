@@ -1,4 +1,4 @@
 {#- What happens to the Disc just decided in Review (`done`: headline, detail from review_items.after_decision). -#}
 {%- if done %}
-<div class="notice ok filed-note" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>{{ done[0] }}</b>{{ done[1] }}{% if record is defined %} The next Disc that needs you is below.{% endif %}</div></div>
+<div class="notice ok archived-note" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>{{ done[0] }}</b>{{ done[1] }}{% if record is defined %} The next Disc that needs you is below.{% endif %}</div></div>
 {%- endif %}

@@ -1,7 +1,7 @@
 {#- One plain sentence for screen readers about the drive, changing only with the Phase. Topic "drive". -#}
 {%- set kind = drive | kind -%}
 {%- if repeat -%}
-You've {{ "archived" if repeat.filed else "ripped" }} {{ repeat.name }} before. Choose what to do with it.
+You've {{ "archived" if repeat.archived else "ripped" }} {{ repeat.name }} before. Choose what to do with it.
 {%- elif current_rip and current_rip.disc_type == "CD" -%}
 {{ "Ripping" if current_rip.cd else "Reading" }} the Audio CD.
 {%- elif current_rip -%}

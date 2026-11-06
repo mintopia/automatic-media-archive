@@ -188,7 +188,7 @@ def test_while_ripping_the_disc_can_be_marked_as_tv_and_back(client, harness):
 def test_a_disc_is_marked_tv_only_before_identification(client, harness):
     jobs = harness.services.jobs
     rec = jobs.create(DiscType.DVD, "DONE", "video")
-    jobs.mark_filed_empty(rec.id)
+    jobs.mark_archived_empty(rec.id)
     assert client.post(f"/jobs/{rec.id}/kind", data={"kind": "tv"}).status_code == 409
 
 

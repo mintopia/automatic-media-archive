@@ -16,7 +16,7 @@
         <p style="margin-top:12px"><b>Finish a Review to free space,</b> then put the Disc back in.</p>
         <div class="actions" style="margin-top:20px"><a class="btn pri" href="{{ review[0].href }}">Go to Review</a></div>
         {%- elif encoding %}
-        <p style="margin-top:12px"><b>Space frees up as each Encode is filed;</b> then put the Disc back in.</p>
+        <p style="margin-top:12px"><b>Space frees up as each Encode is archived;</b> then put the Disc back in.</p>
         {%- else %}
         <p style="margin-top:12px"><b>Free some space on the scratch drive,</b> then put the Disc back in.</p>
         {%- endif %}
@@ -27,7 +27,7 @@
       <div class="cell"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#disc"/></svg><span>Scratch</span></div>
       <div class="body">
         <h1 id="sf-h" class="title">{% if scratch %}{{ scratch.used_gb }} of {{ scratch.total_gb }} GB in use{% else %}Scratch{% endif %}</h1>
-        <div class="meta">{% if other and s.scratch_items_gb %}{{ s.scratch_items_gb }} GB of that is Rips; the other {{ other }} GB is other files on this drive. {% elif other %}None of it is Rips: it's other files on this drive. {% endif %}Each Rip stays on scratch until it's filed. A Disc that wouldn't fit is ejected unripped.</div>
+        <div class="meta">{% if other and s.scratch_items_gb %}{{ s.scratch_items_gb }} GB of that is Rips; the other {{ other }} GB is other files on this drive. {% elif other %}None of it is Rips: it's other files on this drive. {% endif %}Each Rip stays on scratch until it's archived. A Disc that wouldn't fit is ejected unripped.</div>
       </div>
     </div>
   {%- endif %}

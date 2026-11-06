@@ -131,7 +131,7 @@ class Tray:
 
 
 def _disc_image():
-    """A Disc in DESIGN.md's ink and filed-teal, drawn at 64 px (Windows scales it)."""
+    """A Disc in DESIGN.md's ink and archived-teal, drawn at 64 px (Windows scales it)."""
     from PIL import Image, ImageDraw
 
     image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))

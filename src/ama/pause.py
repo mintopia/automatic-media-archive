@@ -1,6 +1,6 @@
 """Paused (GLOSSARY.md): AMA ignores newly inserted Discs until resumed.
 
-Only the rippers ask; a Rip under way, Encodes, filing and Review never look at it.
+Only the rippers ask; a Rip under way, Encodes, archiving and Review never look at it.
 A Disc that went in while paused is not marked handled, so resuming picks it up.
 Kept in SQLite (not `ama.toml`), so it survives a restart.
 """

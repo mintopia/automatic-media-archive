@@ -70,7 +70,7 @@ class Spec:
     """Everything about naming one Subject."""
 
     fields: tuple[Field, ...]
-    # Plex-friendly, and exactly the names AMA filed by before patterns could be edited.
+    # Plex-friendly, and exactly the names AMA archived by before patterns could be edited.
     default: str
     extension: str  # a named file's, for the editor's preview
     # Each file's name is unique when the pattern has a field from every group.
@@ -422,7 +422,7 @@ def _fill(segment: _Segment, values: Mapping[str, Value]) -> str:
 
 
 def _safe(name: str) -> str:
-    """`name` made safe part by part, as filing always has: `Title (Year)`, `Show`,
+    """`name` made safe part by part, as archiving always has: `Title (Year)`, `Show`,
     `Episode` and `Track` each cut to the name limit, without trailing dots or a
     reserved name ("S.W.A.T - s01e01"); then the whole name (`archive.safe_name`)."""
     parts = _PART_BREAK.split(name)

@@ -60,14 +60,14 @@ def test_a_finished_rip_posts_versioned_json_about_the_job(app):
                            "url": f"http://{socket.gethostname()}:8080/jobs/{rec.id}"}
 
 
-def test_filing_posts_job_filed_with_what_it_was_filed_as(app):
+def test_archiving_posts_job_archived_with_what_it_was_archived_as(app):
     h, _ = app
     _insert(h, DISC_1, 24, _response(only=SPECIAL))
-    eventually(lambda: [p["event"] for p in _posts(h)] == ["rip_done", "job_filed"])
+    eventually(lambda: [p["event"] for p in _posts(h)] == ["rip_done", "job_archived"])
 
-    rec = h.services.jobs.list(JobStatus.FILED)[0]
+    rec = h.services.jobs.list(JobStatus.ARCHIVED)[0]
     job = _posts(h)[1]["job"]
-    assert job["status"] == "filed" and job["title"] == rec.title and job["id"] == rec.id
+    assert job["status"] == "archived" and job["title"] == rec.title and job["id"] == rec.id
 
 
 def test_set_under_alerts_it_applies_at_once_and_its_secrets_stay_on_the_server(tmp_path):

@@ -61,7 +61,7 @@ class Choice(StrEnum):
     AGAIN = "again"  # archive it again
 
 
-KNOWN = (JobStatus.FILED, JobStatus.REVIEW, JobStatus.RIPPED)  # filed, or on the way
+KNOWN = (JobStatus.ARCHIVED, JobStatus.REVIEW, JobStatus.RIPPED)  # archived, or on the way
 _OTHER_FORMAT = {DiscType.BD: "UHD Blu-ray", DiscType.UHD: "Blu-ray", DiscType.DVD: "Blu-ray"}
 
 
@@ -71,22 +71,22 @@ class RepeatDisc:
 
     disc_type: DiscType
     previous: JobRecord  # the known Disc it matches
-    folder: str           # where that was filed, relative to the Archive root ("" if not yet)
+    folder: str           # where that was archived, relative to the Archive root ("" if not yet)
 
     @property
     def name(self) -> str:
         return self.previous.title or self.previous.name
 
     @property
-    def filed(self) -> bool:
-        return self.previous.status == JobStatus.FILED
+    def archived(self) -> bool:
+        return self.previous.status == JobStatus.ARCHIVED
 
     @property
     def waiting(self) -> str:
-        """Where the known Disc is on its way to the Archive ("" once filed)."""
+        """Where the known Disc is on its way to the Archive ("" once archived)."""
         if self.previous.status == JobStatus.REVIEW:
             return "Already ripped, waiting for Review"
-        return "" if self.filed else "Already ripped, waiting to be filed"
+        return "" if self.archived else "Already ripped, waiting to be archived"
 
     @property
     def note(self) -> str:
@@ -113,7 +113,7 @@ class RepeatGuard:
                              "VALUES (?, ?)", (job_id, fingerprint))
 
     def known(self, fingerprint: str) -> JobRecord | None:
-        """The latest Disc with this fingerprint that is filed or on its way there."""
+        """The latest Disc with this fingerprint that is archived or on its way there."""
         row = self._db.execute(
             "SELECT d.id FROM disc_fingerprints f JOIN jobs d ON d.id = f.job_id "
             "WHERE f.fingerprint = ? AND d.status IN (?, ?, ?) "

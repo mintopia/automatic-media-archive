@@ -29,8 +29,8 @@ def test_the_rip_card_sums_up_the_changes_and_opens_the_panel(client, harness):
     assert "This Job's settings" in text
     assert "For this Job:" in text and "Default settings" in text  # nothing changed yet
     assert f'aria-controls="jobset-{job.id}"' in page.text
-    assert "Can change until Encoding starts." in text and "Can change until Filed." in text
-    assert "Quality" in text and "Files to" in text
+    assert "Can change until Encoding starts." in text and "Can change until Archived." in text
+    assert "Quality" in text and "Archives to" in text
     assert "<h3>Rip</h3>" not in page.text  # nothing in ama.toml for a video Rip
     assert "<h3>Identification</h3>" not in page.text
     assert "Slower, smaller (default)" in text
@@ -81,12 +81,12 @@ def test_the_logs_run_lists_the_settings_locked_so_far(client, harness):
     harness.makemkv.release()
 
 
-def test_a_filed_cd_shows_every_group_locked_with_its_stored_values(client, harness):
+def test_an_archived_cd_shows_every_group_locked_with_its_stored_values(client, harness):
     from tests.test_cd_archive import COVER, DISC_1, SPECIAL, _insert, _response, _wait_for
     harness.web.covers[SPECIAL] = COVER
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
-    job = _wait_for(harness, JobStatus.FILED)
+    job = _wait_for(harness, JobStatus.ARCHIVED)
     text = _text(client.get(f"/jobs/{job.id}"))
     assert "Locked at Ripping start" in text and "+667 samples" in text
-    assert "Locked when Filed" in text and "Files to Music" in text
+    assert "Locked when Archived" in text and "Archives to Music" in text
     assert "Can change until" not in text

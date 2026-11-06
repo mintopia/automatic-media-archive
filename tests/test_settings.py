@@ -383,7 +383,7 @@ def test_live_keys_apply_without_a_restart(app):
     assert app.settings.pending() == []
 
 
-def test_library_changes_apply_from_the_next_filing(app, tmp_path):
+def test_library_changes_apply_from_the_next_archiving(app, tmp_path):
     app.settings.save_library(LibraryKind.MUSIC, None, {"name": "Lossless", "plex": "",
                                                  "path": str(tmp_path / "libraries" / "Lossless")})
     app.settings.make_default("Lossless")

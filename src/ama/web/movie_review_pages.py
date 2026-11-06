@@ -209,12 +209,12 @@ def _summary(services, film: Candidate | None, title: TitleRecord | None,
     n = len(extra_titles(rec.titles, title.number)) if title else 0
     return {"film": film.name if film else "",
             "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
-            "extras": f"{n} Extra{'s' if n != 1 else ''}, filed under Other" if n else "",
+            "extras": f"{n} Extra{'s' if n != 1 else ''}, archived under Other" if n else "",
             "folder": movie_folder(film, film_pattern(services, rec)).as_posix() if film else ""}
 
 
 def film_pattern(services, rec: JobRecord) -> naming.Pattern:
-    """The Naming Pattern of the Films Library `rec` would file to now."""
+    """The Naming Pattern of the Films Library `rec` would archive to now."""
     library = (services.job_settings.files_to(rec, LibraryKind.FILMS) if services.job_settings
                else library_for(services.archive.libraries, LibraryKind.FILMS))
     return naming.pattern_of(library)
@@ -287,5 +287,5 @@ def confirm(request: Request, job_id: int, film: Annotated[int, Form()] = 0,
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return after_decision(request, rec.id, f"Done: {candidate.name}",
-                          "It's encoded next, then filed to Movies. Follow it under Encoding "
+                          "It's encoded next, then archived to Movies. Follow it under Encoding "
                           "on Now.")

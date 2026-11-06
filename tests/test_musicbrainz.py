@@ -28,7 +28,7 @@ def test_every_release_containing_the_disc_is_a_match():
     ]
 
 
-def test_a_match_carries_what_tagging_and_filing_need():
+def test_a_match_carries_what_tagging_and_archiving_need():
     m = musicbrainz.matches(_response(), DISC_1)[0]
     r = m.release
     assert r.title == "FINAL FANTASY VII REBIRTH Original Soundtrack ～Special edit version～"

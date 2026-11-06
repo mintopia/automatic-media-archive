@@ -10,7 +10,7 @@ Each Disc you put in becomes a **Job**: one pass from the drive to your Library.
   <li><b>Ripping</b>: AMA copies the Disc to Scratch and ejects it.</li>
   <li><b>Review</b>: only when AMA can’t tell what the Disc is.</li>
   <li><b>Encoding</b>: films and TV are made into their final, smaller files.</li>
-  <li><b>Filed</b>: named, moved into the Library and listed in History.</li>
+  <li><b>Archived</b>: named, moved into the Library and listed in History.</li>
 </ol>
 
 A Job that can’t go on is **Failed** and shows under **Didn’t work** on the Now page, with what went wrong.
@@ -62,7 +62,7 @@ Review is AMA asking rather than guessing. The Review page lists every Disc wait
 
 The Disc is long gone from the drive by now: Review works from the Rip in Scratch, so you can answer it whenever suits you, from any device.
 
-**Sets.** When a Disc looks like part of something already filed, such as Firefly Disc 2 after Disc 1, Review first asks whether it is, and which Disc of the set. A TV Disc then carries on from the Episodes the earlier Discs filed. A film’s **Extras Disc** has its Titles filed as Extras of that film.
+**Sets.** When a Disc looks like part of something already archived, such as Firefly Disc 2 after Disc 1, Review first asks whether it is, and which Disc of the set. A TV Disc then carries on from the Episodes the earlier Discs archived. A film’s **Extras Disc** has its Titles archived as Extras of that film.
 
 ## Encoding
 
@@ -77,7 +77,7 @@ CDs are not encoded: their FLAC files are the Archive, with tags written from Mu
 
 Encode settings live in Settings and apply to every Job whose Encode hasn’t started. The [Settings reference](../settings/#encode) lists them.
 
-## Filed
+## Archived
 
 AMA names each file with the Library’s [Naming Pattern](../libraries/), moves it into the Library, and, if Plex is connected, asks Plex to scan that folder. The Rip is then deleted from Scratch: for video, the Encode is the Archive and no full-size copy is kept.
 
@@ -85,7 +85,7 @@ AMA names each file with the Library’s [Naming Pattern](../libraries/), moves 
 - **TV Episodes** go into the show’s season folder, and its Extras into the show’s `Other` folder.
 - A **CD** goes into the album’s folder: its Tracks, plus the rip log, cue sheet and `cover.jpg`.
 
-The Job joins **History**, which lists every filed Disc, newest first, with its cover or poster, its Tracks or Episodes, and where its details came from.
+The Job joins **History**, which lists every archived Disc, newest first, with its cover or poster, its Tracks or Episodes, and where its details came from.
 
 If the Library’s folder can’t be reached, for example a NAS that’s asleep, the Job waits and AMA tries again every minute.
 

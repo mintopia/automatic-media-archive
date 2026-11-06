@@ -397,7 +397,7 @@ class Runs:
 
     def job_end(self, job_id: int, failed: bool = False, exit_code: int | None = None,
                 result: str | None = None, finish: bool = False) -> None:
-        """End the Job's running Step; `finish` also ends its Run (Filed or Failed)."""
+        """End the Job's running Step; `finish` also ends its Run (Archived or Failed)."""
         with self._lock:
             step = self._open.pop(job_id, None)
         if step is not None:

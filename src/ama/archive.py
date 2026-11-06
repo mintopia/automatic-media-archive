@@ -1,9 +1,9 @@
-"""Filing to the Archive: putting finished files into a Library's folder.
+"""Archiving to the Archive: putting finished files into a Library's folder.
 
 Each file is copied under a temporary name Plex doesn't recognise as media
 (`<name>.ama-partial`), checked against its source, then renamed into place, so
-Plex never sees a partially written file. Filing the same files again is a
-no-op for files already in place, so an interrupted filing is simply re-run.
+Plex never sees a partially written file. Archiving the same files again is a
+no-op for files already in place, so an interrupted archiving is simply re-run.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ _ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _RESERVED = re.compile(r"^(CON|PRN|AUX|NUL|COM\d|LPT\d)(\..*)?$", re.I)
 
 
-class FilingError(Exception):
+class ArchivingError(Exception):
     """A file couldn't be put into the Archive intact."""
 
 
@@ -52,7 +52,7 @@ def extended_path(path: Path) -> Path:
 
 
 def move(src: Path, dest: Path) -> None:
-    """Move a filed file to `dest` inside the Archive (a rename on the share), removing
+    """Move an archived file to `dest` inside the Archive (a rename on the share), removing
     `src`'s folder if that leaves it empty. Done already (src gone, dest there) = no-op.
     `dest` must not be another file: it would be replaced."""
     s, d = extended_path(src), extended_path(dest)
@@ -131,7 +131,7 @@ class Archive:
 
     def place(self, folder: Path, files: Mapping[str, Path], library: str | None = None) -> Path:
         """Copy `files` ({name: source}) into `folder` (see `folder`), verified byte-identical;
-        the folder. Raises FilingError or OSError."""
+        the folder. Raises ArchivingError or OSError."""
         folder_path = self.folder(folder, library)
         dest = extended_path(folder_path)
         dest.mkdir(parents=True, exist_ok=True)
@@ -144,10 +144,10 @@ class Archive:
             self.copy(src, temp)
             if _digest(temp) != expected[name]:
                 temp.unlink(missing_ok=True)
-                raise FilingError(f"{name} didn't copy intact to {folder_path}")
+                raise ArchivingError(f"{name} didn't copy intact to {folder_path}")
             os.replace(temp, final)
         for name in files:
             final = dest / name
             if not final.exists() or _digest(final) != expected[name]:
-                raise FilingError(f"{name} isn't intact in {folder_path}")
+                raise ArchivingError(f"{name} isn't intact in {folder_path}")
         return folder_path

@@ -27,11 +27,11 @@ TIMEOUT = 10.0
 class Event(StrEnum):
     RIP_DONE = "rip_done"
     REVIEW_NEEDED = "review_needed"
-    JOB_FILED = "job_filed"
+    JOB_ARCHIVED = "job_archived"
     JOB_FAILED = "job_failed"
 
 
-_DONE = {JobStatus.RIPPED, JobStatus.REVIEW, JobStatus.FILED}
+_DONE = {JobStatus.RIPPED, JobStatus.REVIEW, JobStatus.ARCHIVED}
 
 
 def changes(before: Mapping[int, JobStatus],
@@ -46,8 +46,8 @@ def changes(before: Mapping[int, JobStatus],
             out.append((job_id, Event.RIP_DONE))
         if cur == JobStatus.REVIEW:
             out.append((job_id, Event.REVIEW_NEEDED))
-        if cur == JobStatus.FILED:
-            out.append((job_id, Event.JOB_FILED))
+        if cur == JobStatus.ARCHIVED:
+            out.append((job_id, Event.JOB_ARCHIVED))
         if cur == JobStatus.FAILED:
             out.append((job_id, Event.JOB_FAILED))
     return out
@@ -73,10 +73,10 @@ def notification(event: Event, rec: JobRecord) -> Notification:
             message = f"{_subject(rec)} is ripped and ejected. Insert the next Disc."
         case Event.REVIEW_NEEDED:
             title = "Review needed"
-            message = f"{_subject(rec)} needs Review before it can be filed."
-        case Event.JOB_FILED:
-            title = "Filed"
-            message = f"{_subject(rec)} is filed as {rec.title}."
+            message = f"{_subject(rec)} needs Review before it can be archived."
+        case Event.JOB_ARCHIVED:
+            title = "Archived"
+            message = f"{_subject(rec)} is archived as {rec.title}."
         case Event.JOB_FAILED:
             why = " ".join(p for p in (rec.failure.headline, rec.failure.advice) if p) \
                 if rec.failure else ""
@@ -93,11 +93,11 @@ class Channel(Protocol):
 
 
 # Discord embed colours / ntfy tags+priority per event.
-_COLOUR = {Event.RIP_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.JOB_FILED: 0x1565C0,
+_COLOUR = {Event.RIP_DONE: 0x2E7D32, Event.REVIEW_NEEDED: 0xF9A825, Event.JOB_ARCHIVED: 0x1565C0,
            Event.JOB_FAILED: 0xC62828}
 _TAGS = {Event.RIP_DONE: "white_check_mark", Event.REVIEW_NEEDED: "eyes",
-         Event.JOB_FILED: "file_folder", Event.JOB_FAILED: "warning"}
-_PRIORITY = {Event.RIP_DONE: 3, Event.REVIEW_NEEDED: 4, Event.JOB_FILED: 3, Event.JOB_FAILED: 4}
+         Event.JOB_ARCHIVED: "file_folder", Event.JOB_FAILED: "warning"}
+_PRIORITY = {Event.RIP_DONE: 3, Event.REVIEW_NEEDED: 4, Event.JOB_ARCHIVED: 3, Event.JOB_FAILED: 4}
 
 
 @dataclass

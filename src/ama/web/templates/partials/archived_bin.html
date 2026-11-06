@@ -1,0 +1,15 @@
+{#- Now page: History, today's part. Topic "archived". `archived`: CdJobs, ArchivedMovies and ArchivedTv archived today, newest first. -#}
+<section class="bin arc{% if not archived %} empty{% endif %}" aria-labelledby="archived-h">
+  <h2 class="tab-h" id="archived-h"><a class="tab" href="/history">History <span class="c">{{ archived | length }}</span></a></h2>
+  <div class="box">
+  {%- for d in archived[:3] %}
+    {%- with dated=False %}{% include "partials/history_row.html" %}{% endwith %}
+  {%- endfor %}
+  {%- if archived | length > 3 %}
+    <p class="more"><a href="/history">{{ archived | length - 3 }} more archived today</a></p>
+  {%- endif %}
+  {%- if not archived %}
+    <p class="pad ts">Nothing archived yet today. <a href="/history">Everything archived before</a></p>
+  {%- endif %}
+  </div>
+</section>

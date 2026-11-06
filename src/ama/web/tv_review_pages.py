@@ -69,8 +69,8 @@ def _after_earlier_discs(services, rec: JobRecord, series: Series | None, season
     earlier: set[int] | None = None
     ans = sets.answer(rec)
     if ans and ans.key == SetKey(SetKind.TV, series.id, season):
-        filed = services.sets.find(ans.key)
-        earlier = {d for d, n in filed.members if n < ans.number} if filed else set()
+        archived = services.sets.find(ans.key)
+        earlier = {d for d, n in archived.members if n < ans.number} if archived else set()
     taken = [t.episode.number for t in services.tv_archive.titles.in_season(series.id, season)
              if t.episode and t.job_id != rec.id and (earlier is None or t.job_id in earlier)]
     last = max(taken, default=0)
@@ -78,7 +78,7 @@ def _after_earlier_discs(services, rec: JobRecord, series: Series | None, season
 
 
 def tv_pattern(services, rec: JobRecord) -> naming.Pattern:
-    """The Naming Pattern of the TV Library `rec` would file to now."""
+    """The Naming Pattern of the TV Library `rec` would archive to now."""
     library = (services.job_settings.files_to(rec, LibraryKind.TV) if services.job_settings
                else library_for(services.archive.libraries, LibraryKind.TV))
     return naming.pattern_of(library)
@@ -191,5 +191,5 @@ async def episodes(request: Request, job_id: int) -> Response:
         for topic in (Topic.REVIEW, Topic.RIP, Topic.ENCODE):
             services.bus.publish(topic)
     return after_decision(request, rec.id, f"Done: {series.title} · {plural(n, 'Episode')}",
-                          "They're encoded next, then filed to TV. Follow them under Encoding "
+                          "They're encoded next, then archived to TV. Follow them under Encoding "
                           "on Now.")

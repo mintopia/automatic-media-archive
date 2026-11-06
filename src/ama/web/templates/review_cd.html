@@ -27,7 +27,7 @@
           <div class="confirm" id="discard-confirm" role="alertdialog" aria-labelledby="discard-h" aria-describedby="discard-d" tabindex="-1" hidden
                onkeydown="if(event.key==='Escape'){this.querySelector('[data-cancel]').click()}">
             <b id="discard-h">Discard this Rip?</b>
-            <p id="discard-d">All {{ track_count }} ripped tracks are deleted from scratch and nothing is filed. Clean the CD and insert it again to rip it from the start. This can't be undone.</p>
+            <p id="discard-d">All {{ track_count }} ripped tracks are deleted from scratch and nothing is archived. Clean the CD and insert it again to rip it from the start. This can't be undone.</p>
             <form method="post" action="/review/{{ record.id }}/discard" class="actions">
               <button class="btn danger" type="submit">Discard the Rip</button>
               <button class="btn quiet" type="button" data-cancel
@@ -65,7 +65,7 @@
               <div class="field"><label for="artist">Artist</label><input class="input" id="artist" name="artist" value="{{ form.artist }}"></div>
               <div class="field" style="max-width:160px"><label for="year">Year</label><input class="input" id="year" name="year" inputmode="numeric" placeholder="e.g. 1997" value="{{ form.year }}"></div>
               <div class="field"><label for="tracks">Track titles</label><span class="hint">One per line, in order. This CD has {{ track_count }} tracks.</span><textarea class="input" id="tracks" name="tracks" rows="6">{{ form.tracks }}</textarea></div>
-              <div class="actions"><button class="btn{% if not editions %} pri{% endif %}" type="submit" formaction="/review/{{ record.id }}/manual">File with these details</button></div>
+              <div class="actions"><button class="btn{% if not editions %} pri{% endif %}" type="submit" formaction="/review/{{ record.id }}/manual">Archive with these details</button></div>
             </div>
           </details>
           {%- if editions %}

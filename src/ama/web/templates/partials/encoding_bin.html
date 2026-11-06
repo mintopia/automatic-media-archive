@@ -1,5 +1,5 @@
-{#- Now page: the Encoding bin. Topic "encode". `encoding`: Movies not yet filed, FIFO;
-    `tv_encoding`: kept TV Titles not yet filed; `title_encode`: the Encode running
+{#- Now page: the Encoding bin. Topic "encode". `encoding`: Movies not yet archived, FIFO;
+    `tv_encoding`: kept TV Titles not yet archived; `title_encode`: the Encode running
     now (live progress), or None; `encode_next`: the Job id that encodes next.
     A row queued behind another Encode is plain "Waiting"; `waiting_for(id)` lines are problems. -#}
 {%- from "partials/waiting_line.html" import line -%}
@@ -17,7 +17,7 @@
     {%- if encode %}{{ running(encode, "/jobs/" ~ m.job_id, m.film.name) }}
     {%- else %}
     <div class="row compact"><div class="dtype">{{ disc_types[m.job_id] }}</div><div><div class="tt"><a href="/jobs/{{ m.job_id }}">{{ m.film.name }}</a></div><div class="ts">
-      {%- if m.status == "encoded" %}Encoded · filing
+      {%- if m.status == "encoded" %}Encoded · archiving
       {%- elif m.status == "failed" %}The Encode didn't work · retried when the app restarts
       {%- elif m.job_id == encode_next %}Next in line
       {%- else %}Waiting{% endif %}</div>{{ line(waiting_for(m.job_id)) }}</div>
@@ -29,7 +29,7 @@
     {%- if encode %}{{ running(encode, "/jobs/" ~ e.job_id, e.name) }}
     {%- else %}
     <div class="row compact"><div class="dtype">{{ tv_disc_types[e.job_id] }}</div><div><div class="tt"><a href="/jobs/{{ e.job_id }}">{{ e.name }}</a></div><div class="ts">
-      {%- if e.status == "encoded" %}Encoded · filing
+      {%- if e.status == "encoded" %}Encoded · archiving
       {%- elif e.status == "failed" %}The Encode didn't work · retried when the app restarts
       {%- else %}Waiting{% endif %}</div>{{ line(waiting_for(e.job_id)) }}</div>
       {%- if e.status == "failed" %}<span class="stk fail">Failed</span>{% else %}<span class="stk enc">Encoding</span>{% endif %}</div>

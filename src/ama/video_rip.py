@@ -4,7 +4,7 @@ Every Title at or above its Disc Type's minimum length (`[rip.min_title_seconds]
 recorded on the Job) is ripped (exact duplicates dropped) into
 `scratch/video/<Job id>/`, one `makemkvcon mkv` run per Title, regardless of
 Identification (ADR-0005), except those the user Skips (unticks) before their turn;
-with every Title Skipped the Job is Filed with nothing in it. On any failure the
+with every Title Skipped the Job is Archived with nothing in it. On any failure the
 Disc is ejected, marked failed with its log, and its partial files are deleted. Nothing is retried on its own:
 a Disc is ripped once per insertion.
 """
@@ -239,7 +239,7 @@ class VideoRipper:
             self._store.mark_failed(job.id, failure)
         elif (ripped := self._store.get(job.id)) is not None and ripped.all_skipped:
             self._store.log(job.id, ripped.skipped_summary or "Every Title skipped")
-            self._store.mark_filed_empty(job.id)
+            self._store.mark_archived_empty(job.id)
             shutil.rmtree(job.scratch_dir, ignore_errors=True)
         else:
             self._store.log(job.id, "Rip complete")

@@ -9,7 +9,7 @@ from ama.drive import DiscType
 from ama.web import render_fragment
 from tests.conftest import eventually
 
-PHASES = ("Ripping", "Review", "Encoding", "Filed", "Failed")
+PHASES = ("Ripping", "Review", "Encoding", "Archived", "Failed")
 
 
 def _frag(harness, name: str) -> str:

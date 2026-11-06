@@ -1,6 +1,6 @@
-"""Sorting a filed film's Extras: optional, never blocks filing.
+"""Sorting an archived film's Extras: optional, never blocks archiving.
 
-`GET /jobs/{id}/extras` lists the Extras filed to the film's folder with their
+`GET /jobs/{id}/extras` lists the Extras archived to the film's folder with their
 stills (taken before scratch was deleted), a name and a Plex category each.
 Saving moves the changed ones to their Plex folder (`MovieArchiver.sort_extras`);
 "Leave as they are" just takes the Disc off the Review page's optional list.
@@ -43,7 +43,7 @@ class ExtraRow:
 
 @dataclass(frozen=True)
 class ToSort:
-    """A filed film whose Extras nobody has looked at yet (the Review page's optional list)."""
+    """An archived film whose Extras nobody has looked at yet (the Review page's optional list)."""
 
     record: JobRecord
     extras: int
@@ -57,8 +57,8 @@ def to_sort(services) -> list[ToSort]:
     out = []
     for job_id in services.movie_archive.extras.to_sort():
         rec = services.jobs.get(job_id)
-        if rec is not None and rec.status == JobStatus.FILED:
-            out.append(ToSort(rec, len(_filed(services, job_id))))
+        if rec is not None and rec.status == JobStatus.ARCHIVED:
+            out.append(ToSort(rec, len(_archived(services, job_id))))
     return out
 
 
@@ -66,16 +66,16 @@ def _services(request: Request):
     return request.app.state.services
 
 
-def _filed(services, job_id: int) -> list[Extra]:
+def _archived(services, job_id: int) -> list[Extra]:
     return [e for e in services.movie_archive.extras.of(job_id)
-            if e.status == ExtraStatus.FILED]
+            if e.status == ExtraStatus.ARCHIVED]
 
 
-def _filed_movie(services, job_id: int) -> JobRecord:
+def _archived_movie(services, job_id: int) -> JobRecord:
     rec = services.jobs.get(job_id)
-    if (rec is None or rec.disc_type not in VIDEO_DISC_TYPES or rec.status != JobStatus.FILED
-            or not _filed(services, job_id)):
-        raise HTTPException(404, "This Disc has no filed Extras")
+    if (rec is None or rec.disc_type not in VIDEO_DISC_TYPES or rec.status != JobStatus.ARCHIVED
+            or not _archived(services, job_id)):
+        raise HTTPException(404, "This Disc has no archived Extras")
     return rec
 
 
@@ -87,7 +87,7 @@ def _page(request: Request, services, rec: JobRecord, errors: list[str] | None =
                 (pct, f"/jobs/{rec.id}/extras/{e.title_number}/{pct}.jpg"
                  if store.still(rec.id, e.title_number, pct).is_file() else None)
                 for pct in POSITIONS))
-            for e in _filed(services, rec.id)]
+            for e in _archived(services, rec.id)]
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "rows": rows, "categories": list(Category),
         "errors": errors or []}
@@ -98,7 +98,7 @@ def _page(request: Request, services, rec: JobRecord, errors: list[str] | None =
 @router.get("/jobs/{job_id}/extras", response_class=HTMLResponse)
 def extras_page(request: Request, job_id: int) -> Response:
     services = _services(request)
-    return _page(request, services, _filed_movie(services, job_id))
+    return _page(request, services, _archived_movie(services, job_id))
 
 
 @router.get("/jobs/{job_id}/extras/{number}/{pct}.jpg")
@@ -112,10 +112,10 @@ def still(request: Request, job_id: int, number: int, pct: int) -> Response:
 @router.post("/jobs/{job_id}/extras", response_class=HTMLResponse)
 async def save(request: Request, job_id: int) -> Response:
     services = _services(request)
-    rec = _filed_movie(services, job_id)
+    rec = _archived_movie(services, job_id)
     form = await request.form()
     changes: dict[int, tuple[str, Category]] = {}
-    for e in _filed(services, job_id):
+    for e in _archived(services, job_id):
         n = e.title_number
         raw = str(form.get(f"category_{n}", e.category.value))
         try:
@@ -136,7 +136,7 @@ async def save(request: Request, job_id: int) -> Response:
 @router.post("/jobs/{job_id}/extras/leave")
 async def leave(request: Request, job_id: int) -> Response:
     services = _services(request)
-    _filed_movie(services, job_id)
+    _archived_movie(services, job_id)
     services.movie_archive.extras.mark_reviewed(job_id)
     services.bus.publish(Topic.REVIEW)
     return RedirectResponse("/review", status_code=303)

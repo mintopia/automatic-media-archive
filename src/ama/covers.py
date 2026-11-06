@@ -1,6 +1,6 @@
 """Cover art and posters, cached next to the state DB (`<state_db dir>/covers/`).
 
-Shown while a Disc rips and on its History page, so a filed Disc's page never
+Shown while a Disc rips and on its History page, so an archived Disc's page never
 needs scratch or a live web request. Files are named by source and id
 (`release-<MusicBrainz id>.jpg`, `tmdb-movie-<id>.jpg`, `tmdb-tv-<id>.jpg`) and
 written temp name -> rename, so a half-written image is never served.

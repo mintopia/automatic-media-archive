@@ -41,7 +41,7 @@ def test_a_picked_film_whose_runtime_matches_goes_straight_to_encoding(client, h
     harness.web.add_film("Collateral", 1539, "Collateral", runtime=120, year=2004)
     _rip_picking(harness, client, 1539)
 
-    rec = eventually_status(harness, JobStatus.FILED)
+    rec = eventually_status(harness, JobStatus.ARCHIVED)
     assert rec.title == "Collateral (2004)"
     log = _log(harness)
     assert "Identified as Collateral (2004) (your pick" in log
@@ -95,13 +95,13 @@ def _pick_release(harness, client, release: str) -> int:
     return job
 
 
-def test_a_picked_cd_release_that_fits_the_rip_is_filed_without_review(client, harness):
+def test_a_picked_cd_release_that_fits_the_rip_is_archived_without_review(client, harness):
     # Three releases carry this Disc ID: without the pick it would go to Review.
     _rip_held(harness, _response())
     job = _pick_release(harness, client, STANDARD)
     harness.cyanrip.release()
 
-    eventually_status(harness, JobStatus.FILED)
+    eventually_status(harness, JobStatus.ARCHIVED)
     log = _log(harness, job)
     assert f"(your pick, MusicBrainz release {STANDARD})" in log
     assert "Needs Review" not in log
@@ -121,7 +121,7 @@ def test_a_picked_cd_release_still_goes_to_review_when_accuraterip_fails(client,
     assert not re.search(rf'value="{SPECIAL}:1"[^>]*checked', review)
 
     client.post(f"/review/{job}/accept")  # keep these tracks: the pick then files
-    eventually_status(harness, JobStatus.FILED)
+    eventually_status(harness, JobStatus.ARCHIVED)
     assert harness.services.media.get(job).release_id == STANDARD
 
 

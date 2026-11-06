@@ -99,7 +99,7 @@ def test_with_no_tmdb_key_a_ripped_video_disc_is_one_warning_and_its_card_says_w
         assert "Waiting: No TMDB API key" in job_page
 
         h.services.tmdb.api_key = "tmdb-key"  # the key is set (Settings, #26)
-        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
+        eventually(lambda: h.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
         page = _now(c)
         assert "Identification is off" not in page and "Waiting:" not in page
         assert "Waiting:" not in html.unescape(c.get("/jobs/1/waiting").text)
@@ -138,15 +138,15 @@ def test_a_job_waiting_for_an_unreachable_library_folder_says_which_until_it_fil
         page = _now(c)
         encoding = page[page.index('id="encoding-h"'):]
         assert f"Waiting: Can't reach the Library folder {folder}" in encoding
-        assert "Encoded · filing" in encoding
+        assert "Encoded · archiving" in encoding
         banner = page[page.index('sse-swap="problems"'):page.index('class="split"')]
-        assert "Jobs can't be filed to a Library folder" in banner
+        assert "Jobs can't be archived to a Library folder" in banner
         assert f"Can't reach {folder}" in html.unescape(banner)
         rec = h.services.jobs.get(1)
         assert rec.status == JobStatus.RIPPED and (rec.scratch_dir / "encode.mkv").exists()
 
         h.restore_library(LibraryKind.FILMS)
-        eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
+        eventually(lambda: h.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
         eventually(lambda: "Waiting:" not in _now(c) and str(folder) not in _now(c))
         assert h.services.problems.banners() == []
 

@@ -1,4 +1,4 @@
-/* App-only rules (from src/ama/web/static/ama.css, line 178 on) used by the mockups made from the running app: history.html, disc-filed-*.html, disc-ripping-cd-guess.html, review-cd-editions.html, and the History bin thumbnails on now.html. */
+/* App-only rules (from src/ama/web/static/ama.css, line 178 on) used by the mockups made from the running app: history.html, disc-archived-*.html, disc-ripping-cd-guess.html, review-cd-editions.html, and the History bin thumbnails on now.html. */
 /* Disc pages (docs/mockups/disc-ripping-video.html, disc-ripping-cd.html, disc-failed.html, disc-licence.html) */
 .contents{display:contents}
 .tbl .num{text-align:right;color:var(--ink2);white-space:nowrap}
@@ -6,7 +6,7 @@
 .cdt .n{width:48px;color:var(--ink2)}
 .cdt .len{width:80px;color:var(--ink2)}
 .cdt .st{width:260px}
-.ok{display:inline-flex;align-items:center;gap:6px;color:var(--fil-ink);font-weight:600}
+.ok{display:inline-flex;align-items:center;gap:6px;color:var(--arc-ink);font-weight:600}
 .ok .i{width:16px;height:16px}
 .wait{color:var(--ink2)}
 .warn{color:var(--rev-ink);font-weight:600}
@@ -69,7 +69,7 @@ a.radio.pick{color:inherit;text-decoration:none;align-items:center}
 .radio .input{width:100%;height:auto;margin:0}
 .radio>div>label{display:block;cursor:pointer}
 .set-where{display:none}
-/* Cover art and posters (History, the live CD card): docs/mockups/history.html, disc-filed-cd.html */
+/* Cover art and posters (History, the live CD card): docs/mockups/history.html, disc-archived-cd.html */
 .drive .cell.art{padding:0;justify-content:flex-start;gap:0}
 .drive .cell.art img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--thumb)}
 .drive .cell.art.poster img{aspect-ratio:2/3}
@@ -122,7 +122,7 @@ td.diff{background:var(--notice);font-weight:600}
 .jobset .grp:first-child{border-top:0}
 .jobset .gh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
 .jobset .gh h3{font:700 15px/1.2 Archivo,sans-serif}
-.jobset .saved{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fil-ink);white-space:nowrap}
+.jobset .saved{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--arc-ink);white-space:nowrap}
 .jobset .lk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);white-space:nowrap}
 .jobset .saved .i,.jobset .lk .i{width:14px;height:14px}
 .jobset .until{margin-top:12px;font-size:13px;color:var(--ink2)}
@@ -204,12 +204,12 @@ main.settings{max-width:1100px}
 .rs.pending{border-color:var(--ink);color:var(--ink)}
 .secret{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .secret .state{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-right:auto;font-weight:600}
-.secret .state .i{width:16px;height:16px;color:var(--fil-ink)}
+.secret .state .i{width:16px;height:16px;color:var(--arc-ink)}
 .sf .input.bad{border-color:var(--rev-ink);outline:1px solid var(--rev-ink)}
 .ferr{display:flex;gap:6px;align-items:flex-start;color:var(--rev-ink);font-weight:600;font-size:13px}
 .ferr .i{width:15px;height:15px;margin-top:1px}
 .tstat{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
-.tstat .i{width:15px;height:15px;color:var(--fil-ink)}
+.tstat .i{width:15px;height:15px;color:var(--arc-ink)}
 .tstat.off{color:var(--rev-ink)}.tstat.off .i{color:var(--rev-ink)}
 .setfoot{display:flex;align-items:center;gap:16px;padding:16px 24px;border-top:1px solid var(--rule)}
 .setfoot .st{margin-right:auto;font-size:14px;color:var(--ink2)}
@@ -301,7 +301,7 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .strip i.notrun{border-style:dashed}
 .mark{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;white-space:nowrap}
 .mark .i{width:16px;height:16px}
-.mark.done{color:var(--fil-ink)}.mark.failed{color:var(--fail)}.mark.running{color:var(--ink2)}
+.mark.done{color:var(--arc-ink)}.mark.failed{color:var(--fail)}.mark.running{color:var(--ink2)}
 .mark.running .i,.step .st.running .i{animation:spin 1.2s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .older{display:flex;justify-content:center}
@@ -316,7 +316,7 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .step>summary:hover{background:var(--well)}
 .step[open]>summary{border-bottom:1px solid var(--rule)}
 .step .st{display:flex}.step .st .i{width:20px;height:20px}
-.step .st.done{color:var(--fil-ink)}.step .st.failed{color:var(--fail)}.step .st.waiting,.step .st.notrun{color:var(--ink3)}
+.step .st.done{color:var(--arc-ink)}.step .st.failed{color:var(--fail)}.step .st.waiting,.step .st.notrun{color:var(--ink3)}
 .step .st.running{color:var(--ink)}.step .st.running.rip{color:var(--rip-ink)}.step .st.running.enc{color:var(--enc-ink)}
 .step .nm{font-weight:600;font-size:16px;overflow-wrap:anywhere}
 .step .nm .subj{font-weight:400;color:var(--ink2)}
@@ -392,7 +392,7 @@ a.row.runrow:hover .tt{text-decoration:underline;text-decoration-thickness:2px;t
 .row.compact>.when{text-align:right;white-space:nowrap}
 .status-k{color:var(--ink2)}
 .status-k b{color:var(--ink);font-weight:600}
-.filed-note{margin-bottom:24px}
+.archived-note{margin-bottom:24px}
 .confirm{margin-top:14px;padding:14px 16px;background:var(--sheet);border:1px solid var(--ink);border-radius:3px}
 .confirm[hidden]{display:none}
 .top .paused[hidden]{display:none}

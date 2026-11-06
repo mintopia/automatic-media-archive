@@ -125,12 +125,12 @@ def test_the_review_page_suggests_the_series_and_an_episode_for_each_title(harne
     assert '<option value="S02E01" selected>S02E01 · Merger' in season2
 
 
-def _filed_names(harness) -> list[str]:
+def _archived_names(harness) -> list[str]:
     root = extended_path(harness.libraries_root / SHOW)
     return sorted(p.relative_to(root).as_posix() for p in root.rglob("*.mkv"))
 
 
-def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client):
+def test_mapped_titles_are_encoded_and_archived_with_plex_tv_naming(harness, client):
     _the_office(harness)
     rec = _in_review(harness, _tv_disc(harness))
     r = client.post(f"/review/{rec.id}/episodes", follow_redirects=False, data={
@@ -138,10 +138,10 @@ def test_mapped_titles_are_encoded_and_filed_with_plex_tv_naming(harness, client
         "t1": "S01E03", "t2": "S01E05", "t3": "S00E01", "t4": "discard", "t5": "extra"})
     assert r.status_code == 303 and r.headers["location"] == f"/review?done={rec.id}"
 
-    filed = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+    archived = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED,
                        timeout=10) or harness.services.jobs.get(rec.id)
-    assert filed.title == "The Office (2001) · 3 Episodes"
-    assert _filed_names(harness) == [
+    assert archived.title == "The Office (2001) · 3 Episodes"
+    assert _archived_names(harness) == [
         "Other/THE_OFFICE_S1_D2 - Title 5.mkv",
         "Season 00/The Office - s00e01 - Christmas Special (1).mkv",
         "Season 01/The Office - s01e03 - The Quiz.mkv",
@@ -177,7 +177,7 @@ def test_episodes_share_the_one_encoder_with_films_and_show_on_the_now_page(harn
     assert len(harness.ffmpeg.encodes()) == 1
 
     harness.ffmpeg.release()
-    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2, timeout=10)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.ARCHIVED)) == 2, timeout=10)
     assert len(harness.ffmpeg.encodes()) == 5  # 3 Episodes, the film and its Extra (#8)
     assert "TV · 3 Episodes" in html.unescape(client.get("/").text)  # History, on Now
 
@@ -196,7 +196,7 @@ def test_a_failed_episode_encode_keeps_the_rip_and_is_queued_again_at_restart(ha
 
     harness.ffmpeg.exit_code = 0
     harness.services.tv_archive.recover()  # what the next start does
-    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED,
                timeout=10)
 
 
@@ -225,7 +225,7 @@ def test_a_mapping_is_checked_and_ignored_once_the_disc_has_left_review(harness,
     assert again.status_code == 303
     [only] = harness.services.tv_archive.titles.for_job(rec.id)
     assert only.episode.code == "S01E01"
-    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+    eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED,
                timeout=10)
 
 
@@ -301,17 +301,17 @@ def test_a_disc_marked_as_a_film_is_never_taken_for_tv(harness, client):
     assert rec.review_reason != ReviewReason.EPISODES
 
 
-def test_episodes_are_filed_by_the_tv_librarys_pattern_and_a_later_change_moves_nothing(
+def test_episodes_are_archived_by_the_tv_librarys_pattern_and_a_later_change_moves_nothing(
         harness, client):
     _the_office(harness)
     harness.tv_pattern("{show}/{show} s{season:02}e{episode:02} {episode_title}")
     rec = _in_review(harness, _tv_disc(harness))
-    assert '<dt>Filed to</dt><dd style="overflow-wrap:anywhere">TV/The Office</dd>' in _page(
+    assert '<dt>Archived to</dt><dd style="overflow-wrap:anywhere">TV/The Office</dd>' in _page(
         client, f"/review/{rec.id}")  # no season folder
     client.post(f"/review/{rec.id}/episodes", data={
         "series": str(OFFICE), "season": "1",
         "t1": "S01E03", "t2": "S00E02", "t3": "discard", "t4": "discard", "t5": "extra"})
-    filed = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+    archived = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.ARCHIVED,
                        timeout=10) or harness.services.jobs.get(rec.id)
     show = extended_path(harness.libraries_root / "TV/The Office")
 
@@ -321,7 +321,7 @@ def test_episodes_are_filed_by_the_tv_librarys_pattern_and_a_later_change_moves_
     assert names() == ["Other/THE_OFFICE_S1_D2 - Title 5.mkv",
                        "The Office s00e02 Christmas Special (2).mkv",
                        "The Office s01e03 The Quiz.mkv"]
-    assert filed.archive_dir and filed.archive_dir.name == "The Office"
+    assert archived.archive_dir and archived.archive_dir.name == "The Office"
     harness.tv_pattern("{show} ({year})/Season {season}/{episode:02} {episode_title}")
     assert names() == ["Other/THE_OFFICE_S1_D2 - Title 5.mkv",
                        "The Office s00e02 Christmas Special (2).mkv",

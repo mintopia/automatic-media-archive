@@ -36,7 +36,7 @@
         <h2 class="tab" id="cd-h">This CD</h2>
         <div class="box"><div class="pad">
           <dl class="facts"><dt>Tracks</dt><dd>{{ cd.tracks | selectattr("number") | list | length }}</dd><dt>Length</dt><dd>{{ cd.total_seconds | minutes }}</dd><dt>Ripping</dt><dd>{{ cd.position() }} · {{ cd.percent | int }}%</dd></dl>
-          <p class="ts" style="margin-top:12px">Picking doesn't file anything by itself: after the Rip the CD is checked again before it's filed.</p>
+          <p class="ts" style="margin-top:12px">Picking doesn't file anything by itself: after the Rip the CD is checked again before it's archived.</p>
         </div></div>
       </section>
     </div>

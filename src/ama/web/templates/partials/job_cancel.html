@@ -3,7 +3,7 @@
 <details class="change cancel" id="cancel-{{ job.id }}" hx-preserve>
   <summary>Cancel this Job</summary>
   <form method="post" action="/jobs/{{ job.id }}/cancel">
-    <p class="ts">{{ "The Rip stops and the Disc is ejected." if job.status == JobStatus.RIPPING else "Its Encodes stop and nothing is filed." }} What's been ripped so far is thrown away; insert the Disc again to start over.</p>
+    <p class="ts">{{ "The Rip stops and the Disc is ejected." if job.status == JobStatus.RIPPING else "Its Encodes stop and nothing is archived." }} What's been ripped so far is thrown away; insert the Disc again to start over.</p>
     <button class="btn danger" type="submit">Cancel the Job</button>
   </form>
 </details>

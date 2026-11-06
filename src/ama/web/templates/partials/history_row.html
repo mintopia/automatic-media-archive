@@ -1,5 +1,5 @@
-{#- One filed Disc in History (the Now bin and /history). `d`: a CdJob, FiledMovie or FiledTv; `dated`: show the day it was filed, else the time.
-    `set_pos` (History only): Job id -> (Disc number, highest filed) for video sets. What the Disc holds opens below the meta line. -#}
+{#- One archived Disc in History (the Now bin and /history). `d`: a CdJob, ArchivedMovie or ArchivedTv; `dated`: show the day it was archived, else the time.
+    `set_pos` (History only): Job id -> (Disc number, highest archived) for video sets. What the Disc holds opens below the meta line. -#}
 {%- set m = media_of(d.record.id) -%}
 {%- set art = (m.cover if m.kind == "album" else m.poster) if m else none -%}
 {%- set names = contents_of(d) -%}
@@ -25,5 +25,5 @@
       {%- if d.tracks is defined %} · {{ d.accuraterip }}{% endif %}
       {%- if src %} <a class="src" href="{{ src[2] }}" rel="noreferrer" target="_blank">{{ "MusicBrainz" if src[1] == "MB" else src[1] }}</a>{% endif %}</div>
     {%- if names %}<details class="names"><summary class="ts">Show {{ held }}s<svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg></summary><ol class="ts">{% for n in names %}<li>{{ n }}</li>{% endfor %}</ol></details>{% endif %}</div>
-  {%- if d.record.filed_at %}<span class="ts nw when">{{ d.record.filed_at.strftime("%d %b %Y" if dated else "%H:%M") }}</span>{% else %}<span></span>{% endif %}
+  {%- if d.record.archived_at %}<span class="ts nw when">{{ d.record.archived_at.strftime("%d %b %Y" if dated else "%H:%M") }}</span>{% else %}<span></span>{% endif %}
 </div>

@@ -64,7 +64,7 @@ class StepView:
     name: str
     subject: str
     state: str          # done | running | waiting | failed | notrun
-    detail: str         # "ffmpeg 9.0.2 · Encoded · waiting to be filed"
+    detail: str         # "ffmpeg 9.0.2 · Encoded · waiting to be archived"
     duration: str       # "41 min" ("" when it hasn't started)
     stored: StepRecord | None = None
     progress: EncodeProgress | None = None
@@ -217,7 +217,7 @@ def _run_view(services: Services, run: RunRecord, now: datetime) -> RunView:
 def _job_meta(rec: JobRecord, steps: list[StepView], phase: Phase, errors: int,
               now: datetime) -> str:
     start = f"started {rec.started_at:%H:%M}"
-    end = rec.filed_at or (rec.finished_at if rec.status == JobStatus.FAILED else None)
+    end = rec.archived_at or (rec.finished_at if rec.status == JobStatus.FAILED else None)
     running = next((s for s in steps if s.state == "running"), None)
     failed = next((s for s in steps if s.state == "failed"), None)
     parts: list[str]

@@ -1,7 +1,7 @@
 {#- A Job's Steps (web/job_steps.py), live: re-fetched on every pipeline topic.
     `job`: the JobRecord, `steps`: its Steps, `now`: for "so far" timings. -#}
 {%- set icons = {"done": ("check", "Done"), "running": ("loader", "Running"), "waiting": ("circle", "Waiting"), "failed": ("x", "Failed"), "notrun": ("minus", "Won't run")} %}
-<section class="bin ink" id="steps" aria-labelledby="steps-h" hx-get="/jobs/{{ job.id }}/steps" hx-trigger="sse:encode, sse:rip, sse:review, sse:filed" hx-swap="outerHTML">
+<section class="bin ink" id="steps" aria-labelledby="steps-h" hx-get="/jobs/{{ job.id }}/steps" hx-trigger="sse:encode, sse:rip, sse:review, sse:archived" hx-swap="outerHTML">
   <h2 class="tab" id="steps-h">Steps <span class="c">{{ steps | length }}</span></h2>
   <div class="box">
   {%- for s in steps %}

@@ -8,7 +8,7 @@ its log survive a restart, and so a Rip cut short by a restart can be cleaned
 up. A record is `ripping` while the Rip runs, then `ripped` or `failed`. A
 failed record keeps its log for the UI until the user dismisses it; its partial
 scratch files are already gone. A `ripped` Job is then Identified: it goes to
-`review` (a human must confirm the Identification) or is `filed` into the
+`review` (a human must confirm the Identification) or is `archived` into the
 Archive, which deletes its scratch.
 """
 
@@ -32,9 +32,9 @@ log = logging.getLogger(__name__)
 
 class JobStatus(StrEnum):
     RIPPING = "ripping"
-    RIPPED = "ripped"  # waiting for Identification / filing
+    RIPPED = "ripped"  # waiting for Identification / archiving
     REVIEW = "review"  # Identification needs a human (see ReviewReason)
-    FILED = "filed"    # in the Archive; scratch deleted
+    ARCHIVED = "archived"    # in the Archive; scratch deleted
     FAILED = "failed"
 
 
@@ -154,9 +154,9 @@ class JobRecord:
     min_title_seconds: int = 30  # a video Rip's minimum Title length (ADR 0005)
     titles: tuple[TitleRecord, ...] = ()  # video Discs only
     review_reason: ReviewReason | None = None
-    title: str = ""                 # what it was filed as, e.g. "Kid A — Radiohead"
+    title: str = ""                 # what it was archived as, e.g. "Kid A — Radiohead"
     archive_dir: Path | None = None
-    filed_at: datetime | None = None
+    archived_at: datetime | None = None
     scratch_cleaned_at: datetime | None = None
 
     @property
@@ -174,7 +174,7 @@ class JobRecord:
 
     @property
     def all_skipped(self) -> bool:
-        """Every Title was Skipped: the Job is Filed with nothing in it."""
+        """Every Title was Skipped: the Job is Archived with nothing in it."""
         return bool(self.titles) and not self.to_rip
 
     @property
@@ -227,7 +227,7 @@ def _numbers(titles: tuple[TitleRecord, ...]) -> str:
 
 _COLS = ("id, disc_type, label, status, failure_kind, failure_headline, failure_advice, "
          "scratch_dir, started_at, finished_at, dismissed, skipped_short, skipped_duplicates, "
-         "review_reason, title, archive_dir, filed_at, min_title_seconds, scratch_cleaned_at")
+         "review_reason, title, archive_dir, archived_at, min_title_seconds, scratch_cleaned_at")
 
 
 def _when(value: str | None) -> datetime | None:
@@ -246,7 +246,7 @@ class JobStore:
         self._now = now
         # Logs (runs.py): each Job's Run follows its records here; None keeps no Run.
         self.runs = runs
-        # A Job may have finished (filed, failed, an Encode failed): Scratch cleanup looks again.
+        # A Job may have finished (archived, failed, an Encode failed): Scratch cleanup looks again.
         self.finished: Callable[[], None] = lambda: None
 
     def _ts(self) -> str:
@@ -264,7 +264,7 @@ class JobStore:
 
     def _record(self, row) -> JobRecord:
         (id_, dtype, label, status, fkind, fhead, fadv, scratch, started, finished, dismissed,
-         short, dupes, reason, title, archive_dir, filed_at, min_title, cleaned_at) = row
+         short, dupes, reason, title, archive_dir, archived_at, min_title, cleaned_at) = row
         titles = self._db.execute(
             "SELECT number, makemkv_id, duration_s, size_bytes, audio, subtitles, segments, file, "
             "status, source, name FROM titles WHERE job_id = ? ORDER BY number",
@@ -280,7 +280,7 @@ class JobStore:
                          for t in titles),
             review_reason=ReviewReason(reason) if reason else None, title=title,
             archive_dir=Path(archive_dir) if archive_dir else None,
-            filed_at=_when(filed_at), scratch_cleaned_at=_when(cleaned_at),
+            archived_at=_when(archived_at), scratch_cleaned_at=_when(cleaned_at),
         )
 
     def create(self, disc_type: DiscType, label: str, scratch_subdir: str,
@@ -377,16 +377,16 @@ class JobStore:
             self.runs.job_end(job_id, result="Needs Review")
 
     def requeue(self, job_id: int) -> bool:
-        """Review is decided: back to `ripped` for its worker to file. False if not in Review."""
+        """Review is decided: back to `ripped` for its worker to archive. False if not in Review."""
         return self._set_status(job_id, JobStatus.RIPPED, "review_reason = NULL",
                                 only_if="status = 'review'")
 
-    def mark_filed(self, job_id: int, title: str, archive_dir: Path) -> None:
-        """Record the Disc as filed, then delete its scratch (`clean_filed_scratch` finishes a
+    def mark_archived(self, job_id: int, title: str, archive_dir: Path) -> None:
+        """Record the Disc as archived, then delete its scratch (`clean_archived_scratch` finishes a
         cut-off delete)."""
         self._set_status(
-            job_id, JobStatus.FILED, "review_reason = NULL, title = ?, archive_dir = ?, "
-            "filed_at = COALESCE(filed_at, ?)", (title, str(archive_dir), self._ts()))
+            job_id, JobStatus.ARCHIVED, "review_reason = NULL, title = ?, archive_dir = ?, "
+            "archived_at = COALESCE(archived_at, ?)", (title, str(archive_dir), self._ts()))
         rec = self.get(job_id)
         if rec is not None:
             shutil.rmtree(rec.scratch_dir, ignore_errors=True)
@@ -410,7 +410,7 @@ class JobStore:
             "OR (EXISTS (SELECT 1 FROM tv_titles t WHERE t.job_id = j.id "
             "AND t.encode_status = 'failed') "
             "AND NOT EXISTS (SELECT 1 FROM tv_titles t WHERE t.job_id = j.id "
-            "AND t.encode_status NOT IN ('failed', 'filed')))) "
+            "AND t.encode_status NOT IN ('failed', 'archived')))) "
             "ORDER BY changed_at, id",
             (changed_before.isoformat(timespec="seconds"),)).fetchall()
         return [self._record(r) for r in rows]
@@ -433,11 +433,11 @@ class JobStore:
                                 "ORDER BY changed_at, id").fetchall()
         return [rec for r in rows if (rec := self._record(r)).scratch_dir.exists()]
 
-    def mark_filed_empty(self, job_id: int) -> None:
-        """Every Title was Skipped: Filed with nothing in it (its Scratch is the caller's)."""
+    def mark_archived_empty(self, job_id: int) -> None:
+        """Every Title was Skipped: Archived with nothing in it (its Scratch is the caller's)."""
         self._set_status(
-            job_id, JobStatus.FILED, "review_reason = NULL, "
-            "finished_at = COALESCE(finished_at, ?), filed_at = COALESCE(filed_at, ?)",
+            job_id, JobStatus.ARCHIVED, "review_reason = NULL, "
+            "finished_at = COALESCE(finished_at, ?), archived_at = COALESCE(archived_at, ?)",
             (self._ts(), self._ts()))
         rec = self.get(job_id)
         if rec is None:
@@ -446,8 +446,8 @@ class JobStore:
         if self.runs:
             self.runs.job_end(job_id, result=rec.skipped_summary, finish=True)
 
-    def clean_filed_scratch(self) -> None:
-        for rec in self.list(JobStatus.FILED, include_dismissed=True):
+    def clean_archived_scratch(self) -> None:
+        for rec in self.list(JobStatus.ARCHIVED, include_dismissed=True):
             if rec.scratch_dir.exists():
                 shutil.rmtree(rec.scratch_dir, ignore_errors=True)
 
@@ -465,12 +465,12 @@ class JobStore:
 
     def begin_step(self, job_id: int, key: str, name: str, tool: str = "",
                    subject: str = "", fresh: bool = True) -> None:
-        """`fresh=False`: a Step taken up again (TV files Title by Title) keeps its output."""
+        """`fresh=False`: a Step taken up again (TV archives Title by Title) keeps its output."""
         if self.runs:
             self.runs.job_begin(job_id, key, name, tool, subject, fresh)
 
     def finish_run(self, job_id: int) -> None:
-        """Filing is over (the Plex scan asked for): the Job's Run is done."""
+        """Archiving is over (the Plex scan asked for): the Job's Run is done."""
         if self.runs:
             self.runs.job_end(job_id, finish=True)
 

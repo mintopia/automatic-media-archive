@@ -1,4 +1,4 @@
-"""Plex is asked to scan a filed folder at the path the Plex server sees it."""
+"""Plex is asked to scan an archived folder at the path the Plex server sees it."""
 
 from __future__ import annotations
 

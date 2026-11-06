@@ -1,15 +1,15 @@
 """Set Review: "Is this Disc part of a set?", asked before a video Disc's Review.
 
 `GET /review/{id}` shows it (dispatched from review_pages) while the question is
-unanswered and a filed set's name matches the Disc's names; `GET /review/{id}/set`
-shows it any time, offering every filed set of the Disc's kind (TV seasons for a TV
+unanswered and an archived set's name matches the Disc's names; `GET /review/{id}/set`
+shows it any time, offering every archived set of the Disc's kind (TV seasons for a TV
 Disc, films otherwise). `POST /review/{id}/set`:
 
 - `part=no`: the Disc is identified on its own (its normal Review page next).
 - `part=yes&set=<key>&disc=N`, TV: recorded, then the Episode mapping, which starts at
   the set's series and season and carries on after the earlier Discs' Episodes.
 - the same for a film: an Extras Disc. Every ripped Title is queued as an Extra of the
-  film (`tv_titles`, filed by the TvArchiver into `<film folder>/Other/`) and the Disc
+  film (`tv_titles`, archived by the TvArchiver into `<film folder>/Other/`) and the Disc
   leaves Review.
 """
 
@@ -43,14 +43,14 @@ def kind_of(rec: JobRecord) -> SetKind:
 
 
 def offered(services, rec: JobRecord, everything: bool = False) -> list[DiscSet]:
-    """Filed sets the Disc could belong to: those named like it (then, with `everything`,
+    """Archived sets the Disc could belong to: those named like it (then, with `everything`,
     the rest)."""
     kind = kind_of(rec)
-    filed = services.sets.filed(kind)
+    archived = services.sets.archived(kind)
     terms = (series_terms if kind == SetKind.TV else search_terms)(
         load_hints(rec.scratch_dir, rec.label))
-    named = sets.matching(filed, terms)
-    return named + [s for s in filed if s not in named] if everything else named
+    named = sets.matching(archived, terms)
+    return named + [s for s in archived if s not in named] if everything else named
 
 
 def pending(services, rec: JobRecord) -> bool:
@@ -118,7 +118,7 @@ def answer(request: Request, job_id: int, part: Annotated[str, Form()] = "",
     elif number < 1:
         errors.append("Enter which Disc of the set this is (1 or more)")
     elif number in chosen.numbers:
-        errors.append(f"Disc {number} of {chosen.name} is already filed: "
+        errors.append(f"Disc {number} of {chosen.name} is already archived: "
                       "check the number on the Disc")
     if errors:
         return page(request, services, rec, everything=True, errors=errors, status_code=400,
@@ -131,7 +131,7 @@ def answer(request: Request, job_id: int, part: Annotated[str, Form()] = "",
         return RedirectResponse(f"/review/{rec.id}", status_code=303)
     _file_as_extras_disc(services, rec, chosen)
     return after_decision(request, rec.id, f"Done: Extras Disc for {chosen.name}",
-                          "Every Title on it is encoded next, then filed with the film's "
+                          "Every Title on it is encoded next, then archived with the film's "
                           "Extras.")
 
 

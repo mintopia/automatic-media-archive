@@ -110,7 +110,7 @@ class CdJob:
 
     record: JobRecord
     tracks: list[Track] = field(default_factory=list)
-    album: Album | None = None  # what it was filed as (media.py), once filed
+    album: Album | None = None  # what it was archived as (media.py), once archived
     pick: CdPick | None = None  # the release the user picked while it ripped (cdguess.py)
     picked_titles: dict[int, str] = field(default_factory=dict)  # that release's, by track
 

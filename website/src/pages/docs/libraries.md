@@ -15,16 +15,16 @@ Setup makes one of each. Change them, or add more, in **Settings › Archive ›
   <tbody>
     <tr><td>Name</td><td>What AMA calls it.</td></tr>
     <tr><td>Folder</td><td>The full path: a local folder, a mapped drive or a network share such as <code>\\nas\media\Movies</code>. AMA makes it if it’s missing, so check the spelling.<small>AMA doesn’t connect or mount anything. While the folder can’t be reached, Jobs for it wait, and AMA tries again every minute.</small></td></tr>
-    <tr><td>Plex library</td><td>The Plex library AMA asks to scan after filing into it. Left empty, it’s whichever Plex library’s folder holds this one.</td></tr>
+    <tr><td>Plex library</td><td>The Plex library AMA asks to scan after archiving into it. Left empty, it’s whichever Plex library’s folder holds this one.</td></tr>
     <tr><td>Naming Pattern</td><td>How the folders and files inside it are named. See below.</td></tr>
   </tbody>
 </table>
 
-Each kind has one **default** Library, where its Jobs are filed. If you have more than one of a kind, say films for the family and films for you, a Job can be sent to another one from its settings, until filing starts. Removing a Library leaves its folder and everything filed there alone.
+Each kind has one **default** Library, where its Jobs are archived. If you have more than one of a kind, say films for the family and films for you, a Job can be sent to another one from its settings, until archiving starts. Removing a Library leaves its folder and everything archived there alone.
 
 ## Naming Patterns
 
-A Naming Pattern is the Library’s rule for naming what is filed into it. It is written relative to the Library’s folder, with no file extension: AMA adds `.mkv` or `.flac`. The defaults are what Plex expects, so you only need to change them if you want something else.
+A Naming Pattern is the Library’s rule for naming what is archived into it. It is written relative to the Library’s folder, with no file extension: AMA adds `.mkv` or `.flac`. The defaults are what Plex expects, so you only need to change them if you want something else.
 
 - `{title}` is a **field**: AMA fills it in from the Identification.
 - `/` starts a new folder. The last part is the file name.
@@ -32,7 +32,7 @@ A Naming Pattern is the Library’s rule for naming what is filed into it. It is
 - `{track:02}` **pads** a number with zeros to two digits: Track 3 becomes `03`. `{episode:03}` pads to three. Padding works on any field and only with leading zeros.
 - `{{` and `}}` give a literal `{` and `}`. That’s how the defaults write `{tmdb-161}`, the tag Plex reads a TMDB ID from: `{{tmdb-{tmdb_id}}}`.
 
-Changing a Naming Pattern only affects Jobs filed afterwards. Nothing already in the Library is renamed.
+Changing a Naming Pattern only affects Jobs archived afterwards. Nothing already in the Library is renamed.
 
 ### Empty fields drop out
 
@@ -50,7 +50,7 @@ Some fields can be empty: a DVD has no `{version}`, an Episode may have no title
 
 ### Names Windows can use
 
-Characters Windows can’t have in a name, such as `:` and `?`, become `_`. Over-long names are cut short, and trailing dots are removed. So *Here’s How It Was: The Making of Firefly* is filed as `Here's How It Was_ The Making of Firefly`.
+Characters Windows can’t have in a name, such as `:` and `?`, become `_`. Over-long names are cut short, and trailing dots are removed. So *Here’s How It Was: The Making of Firefly* is archived as `Here's How It Was_ The Making of Firefly`.
 
 ### Checks
 
@@ -80,7 +80,7 @@ The default:
 ```
 
 <table class="kv">
-  <thead><tr><th scope="col">Disc</th><th scope="col">Filed as</th></tr></thead>
+  <thead><tr><th scope="col">Disc</th><th scope="col">Archived as</th></tr></thead>
   <tbody>
     <tr><td>Blu-ray</td><td><code>Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 1080p.mkv</code></td></tr>
     <tr><td>UHD Blu-ray</td><td><code>Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 4K.mkv</code></td></tr>
@@ -119,7 +119,7 @@ The default:
 ```
 
 <table class="kv">
-  <thead><tr><th scope="col">Episode</th><th scope="col">Filed as</th></tr></thead>
+  <thead><tr><th scope="col">Episode</th><th scope="col">Archived as</th></tr></thead>
   <tbody>
     <tr><td>Season 1, Episode 2</td><td><code>Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e02 - The Train Job.mkv</code></td></tr>
     <tr><td>A special</td><td><code>Firefly (2002) {tmdb-1437}/Season 00/Firefly - s00e01 - Here's How It Was_ The Making of Firefly.mkv</code></td></tr>
@@ -132,7 +132,7 @@ The other starting points:
 - **Plex, show name only**: `{show}/Season {season:02}/{show} - s{season:02}e{episode:02} - {episode_title}`
 - **No season folders**: `{show} ({year}) {{tmdb-{tmdb_id}}}/{show} - s{season:02}e{episode:02} - {episode_title}`
 
-The first folder must be the show’s own: it uses `{show}` or `{tmdb_id}` and no season or Episode field. That’s where the show’s Extras go, in an `Other` folder, and where every Disc of a season set files into.
+The first folder must be the show’s own: it uses `{show}` or `{tmdb_id}` and no season or Episode field. That’s where the show’s Extras go, in an `Other` folder, and where every Disc of a season set is archived.
 
 **Needs:** `{show}` or `{tmdb_id}`, `{season}` and `{episode}`, and a first folder for the show.<br>
 **Plex warning:** Plex finds Episodes by `s01e02`, `1x02` or `01x02` in the file name. A file name without `s{season}e{episode}` or `{season}x{episode}` gets *write s{season:02}e{episode:02}*.

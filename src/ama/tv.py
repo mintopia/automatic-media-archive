@@ -1,4 +1,4 @@
-"""What a TV Disc looks like, and where its Episodes are filed.
+"""What a TV Disc looks like, and where its Episodes are archived.
 
 A Disc *looks like TV* when, Play-alls aside, three or more Titles of episode length
 are about as long as the longest, and that is well under a feature's length: two cuts
@@ -42,7 +42,7 @@ def season_path(series: Series, season: int,
 
 def episode_path(series: Series, ep: Episode,
                  pattern: Pattern = naming.default(Subject.TV)) -> PurePosixPath:
-    """Where the Episode is filed by its TV Library's `pattern`, relative to the Archive
+    """Where the Episode is archived by its TV Library's `pattern`, relative to the Archive
     root; by default `TV/Show (Year) {tmdb-ID}/Season 01/Show - s01e02 - Episode Name.mkv`."""
     values = _show_values(series) | {"season": ep.season, "episode": ep.number,
                                      "episode_title": ep.name}

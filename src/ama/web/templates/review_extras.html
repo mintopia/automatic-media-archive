@@ -8,16 +8,16 @@
     <div>
       <div class="crumb"><a href="/">Now</a><svg class="i" aria-hidden="true"><use href="/static/icons.svg#chevron"/></svg><a href="/review">Review</a></div>
       <h1>Want to sort the Extras for {{ record.title }}?</h1>
-      <p class="sub">{{ rows | length }} Extra{{ "s" if rows | length != 1 }} from the {{ record.disc_type.long_name }}, filed to the film's {% if all_other %}Other {% endif %}folder.</p>
+      <p class="sub">{{ rows | length }} Extra{{ "s" if rows | length != 1 }} from the {{ record.disc_type.long_name }}, archived to the film's {% if all_other %}Other {% endif %}folder.</p>
     </div>
     <div class="actions"><button class="btn quiet" type="submit" form="leave">Leave as they are</button><button class="btn pri" type="submit" form="extras">Save changes</button></div>
   </div>
-  <div class="notice ok" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>Already filed. Changes are optional.</b>Plex can already see these. Picking a category moves the Extra into the matching Plex folder; nothing here blocks anything.</div></div>
+  <div class="notice ok" style="margin-bottom:28px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>Already archived. Changes are optional.</b>Plex can already see these. Picking a category moves the Extra into the matching Plex folder; nothing here blocks anything.</div></div>
   {%- if errors %}
   <div class="errors" role="alert" style="margin-bottom:20px">{% for e in errors %}<span>{{ e }}</span>{% endfor %}</div>
   {%- endif %}
   <form id="extras" method="post" action="/jobs/{{ record.id }}/extras">
-    <section class="bin fil" aria-labelledby="extras-h">
+    <section class="bin arc" aria-labelledby="extras-h">
       <h2 class="tab" id="extras-h">Extras <span class="c">{{ rows | length }}</span></h2>
       <div class="box">
         <div class="colhead" aria-hidden="true"><span>Pictures</span><span>Title</span><span></span></div>

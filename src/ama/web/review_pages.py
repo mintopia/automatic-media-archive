@@ -1,7 +1,7 @@
 """Review routes: the queue, and each Job's Review page and decisions.
 
 Each Disc Type has its own page and decision routes (CD here). A decision is
-saved, the Job goes back to `ripped` and its worker files it; a decision on a
+saved, the Job goes back to `ripped` and its worker archives it; a decision on a
 Job that is no longer in Review is ignored (double submit, second tab).
 """
 
@@ -54,7 +54,7 @@ def _decided(request: Request, services, rec: JobRecord, name: str) -> Response:
     if services.jobs.requeue(rec.id):
         _publish(services)
     return after_decision(request, rec.id, f"Done: {name}",
-                          "It's filed to Music next, then it shows in History.")
+                          "It's archived to Music next, then it shows in History.")
 
 
 def _publish(services) -> None:
@@ -210,11 +210,11 @@ def _cd_page(request: Request, services, rec: JobRecord, form: dict[str, str] | 
                "the one that matches.")
     elif first:
         heading = f"{first.release.title} — {first.release.artist}"
-        sub = "One edition matches this CD. Check the Rip, then file it."
+        sub = "One edition matches this CD. Check the Rip, then archive it."
     else:
         heading = "What is this CD?"
         sub = ("The music database (MusicBrainz) doesn't know this CD. Enter its details "
-               "and it's filed like any other.")
+               "and it's archived like any other.")
     mb_disc_id = cdreview.mb_disc_id(rec.scratch_dir)
     ctx = view_context(services) | {
         "current": "/review", "record": rec, "heading": heading, "sub": sub,
@@ -316,7 +316,7 @@ def accept(request: Request, job_id: int) -> Response:
     if services.jobs.requeue(rec.id):
         _publish(services)
     return after_decision(request, rec.id, f"Kept the Rip of {cd_title(services, rec)}",
-                          "It carries on to be named and filed to Music.")
+                          "It carries on to be named and archived to Music.")
 
 
 @router.post("/review/{job_id}/discard")
@@ -331,5 +331,5 @@ def discard(request: Request, job_id: int) -> Response:
     services.jobs.dismiss(rec.id)
     _publish(services)
     return after_decision(request, rec.id, f"Discarded the Rip of {name}",
-                          "Nothing was filed. Clean the CD and insert it again to rip it "
+                          "Nothing was archived. Clean the CD and insert it again to rip it "
                           "from the start.")

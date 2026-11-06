@@ -93,12 +93,12 @@ def test_a_cancelled_job_is_never_encoded_again(harness):
     assert out is None and harness.ffmpeg.calls == []
 
 
-def test_a_job_in_review_or_filed_cant_be_cancelled(client, harness):
+def test_a_job_in_review_or_archived_cant_be_cancelled(client, harness):
     jobs = harness.services.jobs
     rec = jobs.create(DiscType.BD, "IN_REVIEW", "video")
     jobs.mark_review(rec.id, ReviewReason.NO_MATCH)
     assert client.post(f"/jobs/{rec.id}/cancel").status_code == 409
     assert jobs.get(rec.id).status == JobStatus.REVIEW
     assert "Cancel this Job" not in _page(client, f"/jobs/{rec.id}")
-    jobs.mark_filed_empty(rec.id)
+    jobs.mark_archived_empty(rec.id)
     assert client.post(f"/jobs/{rec.id}/cancel").status_code == 409

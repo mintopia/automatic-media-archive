@@ -8,7 +8,7 @@
 - `saved_search`: the TMDB search Identification made (`tmdb.json`), the films offered first.
 
 A decision (film + Main Feature) joins the Encode queue (`Movies.enqueue`) and the
-Disc goes back to `ripped` (`JobStore.requeue`); `MovieArchiver` Encodes and files it.
+Disc goes back to `ripped` (`JobStore.requeue`); `MovieArchiver` Encodes and archives it.
 """
 
 from __future__ import annotations

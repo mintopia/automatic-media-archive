@@ -1,5 +1,5 @@
 """Extras (#8): every ripped Title of a movie Disc that isn't the Main Feature is Encoded
-and filed to the film's `Other/` folder with no Review; sorting them later is optional.
+and archived to the film's `Other/` folder with no Review; sorting them later is optional.
 
 The fake BD (tests/data/makemkv-info-bd.txt) rips makemkv Titles 0 and 1: AMA's Title 1
 (2:01:33) is the Main Feature, Title 2 (2:31) is an Extra. Every Title is named
@@ -26,15 +26,15 @@ def _film(harness) -> None:
 def _rip_and_file(harness):
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
-    return harness.services.jobs.list(JobStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
+    return harness.services.jobs.list(JobStatus.ARCHIVED)[0]
 
 
 def _film_folder(harness):
     return extended_path(harness.libraries_root / "Movies" / FOLDER)
 
 
-def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_review(
+def test_extras_are_encoded_and_archived_to_other_named_from_the_disc_without_review(
         client, harness):
     harness.makemkv.title_names = {1: "Making Of"}
     _film(harness)
@@ -43,7 +43,7 @@ def test_extras_are_encoded_and_filed_to_other_named_from_the_disc_without_revie
     extra = _film_folder(harness) / "Other" / "Making Of.mkv"
     assert extra.read_bytes() == b"HEVC Example_Movie_t01.mkv"  # Encoded from the Rip
     eventually(lambda: not rec.scratch_dir.exists())
-    eventually(lambda: "Filed 1 Extra to Other" in "\n".join(
+    eventually(lambda: "Archived 1 Extra to Other" in "\n".join(
         map(str, harness.services.jobs.log_lines(rec.id))))
 
 
@@ -58,7 +58,7 @@ def test_extras_are_named_from_the_disc_unless_the_name_is_just_the_discs():
                      4: "ARRIVAL_BD - Title 4", 5: "Trailer (Title 5)", 6: "Acoustic Design"}
 
 
-def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
+def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_archived(
         client, harness):
     harness.ffmpeg.fail_sources = {"Example_Movie_t01.mkv"}
     _film(harness)
@@ -68,15 +68,15 @@ def test_an_extra_that_fails_to_encode_is_left_out_and_the_film_is_still_filed(
     assert (folder / f"{FOLDER} - 1080p.mkv").exists()
     assert not (folder / "Other").exists()
     log = "\n".join(map(str, harness.services.jobs.log_lines(rec.id)))
-    assert "The Extra “EXAMPLE_MOVIE - Title 2” is left out; the film is filed without it" in log
+    assert "The Extra “EXAMPLE_MOVIE - Title 2” is left out; the film is archived without it" in log
 
 
-def test_movie_review_says_the_other_titles_will_be_filed_as_extras(client, harness):
+def test_movie_review_says_the_other_titles_will_be_archived_as_extras(client, harness):
     harness.makemkv.release()
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")  # no film on TMDB: Review
     eventually(lambda: harness.services.jobs.list(JobStatus.REVIEW), timeout=5)
     page = html.unescape(client.get("/review/1").text)
-    assert "<dt>Extras</dt><dd>1 Extra, filed under Other</dd>" in page
+    assert "<dt>Extras</dt><dd>1 Extra, archived under Other</dd>" in page
 
     harness.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     r = client.post("/review/1/film", data={"film": 1234, "title": 2})  # the short one, oddly
@@ -91,7 +91,7 @@ def test_decoy_versions_of_the_film_are_not_extras(client, harness):
 
     rec = _heat(harness)  # 14 near-identical versions of Heat, then 2 other Titles
     page = html.unescape(client.get(f"/review/{rec.id}").text)
-    assert "<dt>Extras</dt><dd>2 Extras, filed under Other</dd>" in page
+    assert "<dt>Extras</dt><dd>2 Extras, archived under Other</dd>" in page
     client.post(f"/review/{rec.id}/film", data={"film": "949", "title": "6"})
     _rip_and_file_wait(harness)
     other = extended_path(harness.libraries_root / "Movies" / "Heat (1995) {tmdb-949}" / "Other")
@@ -100,8 +100,8 @@ def test_decoy_versions_of_the_film_are_not_extras(client, harness):
 
 
 def _rip_and_file_wait(harness):
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
-    return harness.services.jobs.list(JobStatus.FILED)[0]
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
+    return harness.services.jobs.list(JobStatus.ARCHIVED)[0]
 
 
 def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_folder(
@@ -114,7 +114,7 @@ def test_sorting_the_extras_is_offered_in_review_and_moves_them_to_the_plex_fold
     assert f'href="/jobs/{rec.id}/extras"' in queue and "Example Movie (2016)" in queue
     page = html.unescape(client.get(f"/jobs/{rec.id}/extras").text)
     assert "Want to sort the Extras for Example Movie (2016)?" in page
-    assert "Already filed. Changes are optional." in page
+    assert "Already archived. Changes are optional." in page
     assert 'value="Making Of"' in page and "Title 2 on the Disc · 3 min" in page
     assert f'src="/jobs/{rec.id}/extras/2/50.jpg"' in page  # stills kept after scratch
     assert client.get(f"/jobs/{rec.id}/extras/2/50.jpg").content == b"\xff\xd8 fake jpeg"
@@ -144,7 +144,7 @@ def test_leaving_the_extras_as_they_are_takes_them_off_the_review_list(client, h
     assert extended_path(_film_folder(harness) / "Other" / "EXAMPLE_MOVIE - Title 2.mkv").exists()
 
 
-def test_a_filed_film_links_to_its_extras_from_now_and_its_disc_page(client, harness):
+def test_an_archived_film_links_to_its_extras_from_now_and_its_disc_page(client, harness):
     _film(harness)
     rec = _rip_and_file(harness)
     now = html.unescape(client.get("/").text)

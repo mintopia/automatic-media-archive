@@ -1,18 +1,18 @@
 """Video multi-disc sets.
 
-A *set* is the Discs that file into one Plex folder: a TV series' season
+A *set* is the Discs archived into one Plex folder: a TV series' season
 (`TV/Show (Year) {tmdb-ID}/Season NN`), or a film (`Movies/Title (Year) {tmdb-ID}`)
-with its Extras Discs. A set exists once one of its Discs is filed; Review asks a
+with its Extras Discs. A set exists once one of its Discs is archived; Review asks a
 later Disc whether it belongs to one ("Is this Disc part of a set?") and which Disc
 of the set it is. Attached, it reuses the set's Identification: a TV Disc's Episode
 mapping starts at the set's series and season and carries on after the Episodes
-earlier Discs filed; an Extras Disc's Titles are all filed as Extras in the film's
+earlier Discs archived; an Extras Disc's Titles are all archived as Extras in the film's
 `Other/` folder.
 
-Membership comes from what was filed (`tv_titles` Episodes, `movies`) plus the Disc
-numbers recorded in `disc_sets`. A filed Disc with no recorded number gets the
-lowest free number, in filing order. The answer to the question is kept in scratch
-`set.json` until the Disc is filed, so it is asked once.
+Membership comes from what was archived (`tv_titles` Episodes, `movies`) plus the Disc
+numbers recorded in `disc_sets`. An archived Disc with no recorded number gets the
+lowest free number, in archiving order. The answer to the question is kept in scratch
+`set.json` until the Disc is archived, so it is asked once.
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ class DiscSet:
     key: SetKey
     show: Series  # the series; for a film set, the film (id, title, year, language)
     members: tuple[tuple[int, int], ...]  # (Job id, Disc number), by number
-    filed_to: PurePosixPath | None = None  # where its film or season is (`Movies/...`)
+    archived_to: PurePosixPath | None = None  # where its film or season is (`Movies/...`)
 
     @property
     def name(self) -> str:
@@ -82,9 +82,9 @@ class DiscSet:
     def folder(self) -> PurePosixPath:
         """The set's Plex folder, relative to the Archive root."""
         if self.key.season is None:
-            # Where the film was filed, which a later pattern change doesn't move.
-            return self.filed_to or PurePosixPath(*movie_folder(film(self.show)).parts)
-        return self.filed_to or season_path(self.show, self.key.season)
+            # Where the film was archived, which a later pattern change doesn't move.
+            return self.archived_to or PurePosixPath(*movie_folder(film(self.show)).parts)
+        return self.archived_to or season_path(self.show, self.key.season)
 
     @property
     def numbers(self) -> list[int]:
@@ -95,14 +95,14 @@ class DiscSet:
         return max(self.numbers, default=0) + 1
 
     @property
-    def filed_text(self) -> str:
-        """"Disc 1 filed", "Discs 1–2 filed", "Discs 1, 3 filed"."""
+    def archived_text(self) -> str:
+        """"Disc 1 archived", "Discs 1–2 archived", "Discs 1, 3 archived"."""
         ns = self.numbers
         if len(ns) == 1:
-            return f"Disc {ns[0]} filed"
+            return f"Disc {ns[0]} archived"
         if ns == list(range(ns[0], ns[-1] + 1)):
-            return f"Discs {ns[0]}–{ns[-1]} filed"
-        return f"Discs {', '.join(map(str, ns))} filed"
+            return f"Discs {ns[0]}–{ns[-1]} archived"
+        return f"Discs {', '.join(map(str, ns))} archived"
 
     def number_of(self, job_id: int) -> int | None:
         return next((n for d, n in self.members if d == job_id), None)
@@ -110,7 +110,7 @@ class DiscSet:
 
 def extras_disc_paths(film_set: DiscSet, rec: JobRecord, titles: Iterable[TitleRecord]
                 ) -> dict[int, PurePosixPath]:
-    """Where an Extras Disc's Titles are filed: `<film folder>/Other/<name>.mkv`, named the
+    """Where an Extras Disc's Titles are archived: `<film folder>/Other/<name>.mkv`, named the
     way a film's Extras are."""
     hints = load_hints(rec.scratch_dir, rec.label)
     names = extras.default_names(titles, (hints.disc_name, hints.volume_name, rec.label,
@@ -167,7 +167,7 @@ class DiscSets:
     def __init__(self, db: Database,
                  logical: Callable[[Path], Path | None] = lambda folder: None) -> None:
         self._db = db
-        self._logical = logical  # `Archive.logical`: a filed folder as `Movies/...`
+        self._logical = logical  # `Archive.logical`: an archived folder as `Movies/...`
 
     def attach(self, job_id: int, key: SetKey, number: int) -> None:
         """Record the Disc as Disc `number` of the set (idempotent; replaces an earlier one)."""
@@ -181,50 +181,51 @@ class DiscSets:
     def detach(self, job_id: int) -> None:
         self._db.execute("DELETE FROM disc_sets WHERE job_id = ?", (job_id,))
 
-    def filed(self, kind: SetKind) -> list[DiscSet]:
-        """Every set with a filed Disc, most recently filed first."""
+    def archived(self, kind: SetKind) -> list[DiscSet]:
+        """Every set with an archived Disc, most recently archived first."""
         recorded = {(lib, tmdb_id, season, job_id): number
                     for lib, tmdb_id, season, job_id, number in self._db.execute(
                         "SELECT library, tmdb_id, season, job_id, disc_number FROM disc_sets"
                     ).fetchall()}
-        filed_to: dict[SetKey, PurePosixPath] = {}
+        archived_to: dict[SetKey, PurePosixPath] = {}
         if kind == SetKind.TV:
             rows = self._db.execute(
                 "SELECT DISTINCT t.tmdb_id, t.series, t.year, t.original_language, t.season, "
-                "t.job_id, d.filed_at FROM tv_titles t JOIN jobs d ON d.id = t.job_id "
-                "WHERE d.status = 'filed' AND t.season > 0 AND t.path LIKE 'TV/%'").fetchall()
+                "t.job_id, d.archived_at FROM tv_titles t JOIN jobs d ON d.id = t.job_id "
+                "WHERE d.status = 'archived' AND t.season > 0 AND t.path LIKE 'TV/%'").fetchall()
             found = [(SetKey(SetKind.TV, r[0], r[4]), Series(r[0], r[1], r[2], r[3]), r[5], r[6])
                      for r in rows]
-            # The season's folder: its first filed Episode's (the query lists it last).
-            filed_to = {SetKey(SetKind.TV, tmdb_id, season): PurePosixPath(path).parent
+            # The season's folder: its first archived Episode's (the query lists it last).
+            archived_to = {SetKey(SetKind.TV, tmdb_id, season): PurePosixPath(path).parent
                         for tmdb_id, season, path in self._db.execute(
                             "SELECT t.tmdb_id, t.season, t.path FROM tv_titles t "
-                            "JOIN jobs d ON d.id = t.job_id WHERE d.status = 'filed' "
+                            "JOIN jobs d ON d.id = t.job_id WHERE d.status = 'archived' "
                             "AND t.season > 0 AND t.path LIKE 'TV/%' "
-                            "ORDER BY d.filed_at DESC, d.id DESC, t.title_number DESC").fetchall()}
+                            "ORDER BY d.archived_at DESC, d.id DESC, t.title_number DESC"
+                            ).fetchall()}
         else:
             rows = self._db.execute(
-                "SELECT m.tmdb_id, m.title, m.year, m.original_language, m.job_id, d.filed_at, "
+                "SELECT m.tmdb_id, m.title, m.year, m.original_language, m.job_id, d.archived_at, "
                 "d.archive_dir FROM movies m JOIN jobs d ON d.id = m.job_id "
-                "WHERE d.status = 'filed' ORDER BY d.filed_at DESC, d.id DESC"
+                "WHERE d.status = 'archived' ORDER BY d.archived_at DESC, d.id DESC"
             ).fetchall()
             found = [(SetKey(SetKind.MOVIE, r[0]), Series(r[0], r[1], r[2], r[3]), r[4], r[5])
                      for r in rows]
-            # The film's folder: its first filed version's (the query lists it last).
-            filed_to = {SetKey(SetKind.MOVIE, r[0]): PurePosixPath(*folder.parts)
+            # The film's folder: its first archived version's (the query lists it last).
+            archived_to = {SetKey(SetKind.MOVIE, r[0]): PurePosixPath(*folder.parts)
                         for r in rows if r[6] and (folder := self._logical(Path(r[6])))}
-            # Extras Discs: attached to a film, filed as its Extras
+            # Extras Discs: attached to a film, archived as its Extras
             shows = {k: s for k, s, _, _ in found}
             for lib, tmdb_id, _, job_id in recorded:
                 key = SetKey(SetKind.MOVIE, tmdb_id)
                 if lib == SetKind.MOVIE.value and key in shows:
-                    row = self._db.execute("SELECT filed_at FROM jobs WHERE id = ? AND "
-                                           "status = 'filed'", (job_id,)).fetchone()
+                    row = self._db.execute("SELECT archived_at FROM jobs WHERE id = ? AND "
+                                           "status = 'archived'", (job_id,)).fetchone()
                     if row:
                         found.append((key, shows[key], job_id, row[0]))
         by_key: dict[SetKey, tuple[Series, dict[int, str]]] = {}
-        for key, show, job_id, filed_at in found:
-            by_key.setdefault(key, (show, {}))[1][job_id] = filed_at or ""
+        for key, show, job_id, archived_at in found:
+            by_key.setdefault(key, (show, {}))[1][job_id] = archived_at or ""
         sets = []
         for key, (show, jobs) in by_key.items():
             order = sorted(jobs, key=lambda d: (jobs[d], d))
@@ -236,8 +237,8 @@ class DiscSets:
                     numbers[d] = next(free)
             members = tuple(sorted(numbers.items(), key=lambda m: (m[1], m[0])))
             sets.append((max(jobs.values()),
-                         DiscSet(key, show, members, filed_to.get(key))))
+                         DiscSet(key, show, members, archived_to.get(key))))
         return [s for _, s in sorted(sets, key=lambda x: x[0], reverse=True)]
 
     def find(self, key: SetKey) -> DiscSet | None:
-        return next((s for s in self.filed(key.kind) if s.key == key), None)
+        return next((s for s in self.archived(key.kind) if s.key == key), None)

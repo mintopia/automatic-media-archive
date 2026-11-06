@@ -1,9 +1,9 @@
-"""What a filed Disc is, kept at filing time for its History page.
+"""What an archived Disc is, kept at archiving time for its History page.
 
-An `Album` (CD, from the MusicBrainz match it was filed as) or a `Screen` (film or
+An `Album` (CD, from the MusicBrainz match it was archived as) or a `Screen` (film or
 TV series, from TMDB). Stored as JSON in `media_info` (migration 0012), with any
 cover or poster cached by `covers.Covers`, so the page needs neither scratch
-(deleted on filing) nor a live web request.
+(deleted on archiving) nor a live web request.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class Album:
 
 @dataclass(frozen=True)
 class Screen:
-    """A film or TV series a video Disc was filed as."""
+    """A film or TV series a video Disc was archived as."""
 
     tmdb_id: int
     title: str
@@ -135,7 +135,7 @@ def from_json(text: str) -> Media:
 
 
 class MediaStore:
-    """The `media_info` table: one row per filed Job."""
+    """The `media_info` table: one row per archived Job."""
 
     def __init__(self, db: Database) -> None:
         self._db = db
@@ -153,8 +153,8 @@ class MediaStore:
 
 def screen(tmdb: Tmdb, covers: Covers, tv: bool, tmdb_id: int, title: str, year: int | None,
            log: Callable[[str], None]) -> Screen:
-    """A filed film's or series' TMDB overview and poster, best effort: trouble is logged, never
-    holds up filing."""
+    """An archived film's or series' TMDB overview and poster, best effort: trouble is logged, never
+    holds up archiving."""
     overview, poster = "", None
     try:
         overview, path = tmdb.overview(tv, tmdb_id)

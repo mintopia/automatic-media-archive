@@ -11,7 +11,7 @@ Scope: the public AMA site, built later in Astro in `website/` (ADR 0014). Mocku
 
 Audience: Plex self-hosters with a shelf of their own Discs, arriving from a link or forum. Primary action: Download for Windows (unsigned installer from GitHub Releases). Secondary: See how a Disc flows. Proof: live HTML bins in the app's language, plus mockup screenshots (labelled as examples). Docs wayfinding: pages grouped behind ink divider tabs (Get started / How it works / Reference), a page list beside the reading column, an on-page contents list on long pages; tabs scroll on phones.
 
-Terminology: the last stage reads Archived on the site (Forgejo #82 renames Filed in the app). History keeps its name.
+Terminology: the last stage reads Archived, on the site and in the app (Forgejo #82). History keeps its name.
 
 ## Direction contract
 

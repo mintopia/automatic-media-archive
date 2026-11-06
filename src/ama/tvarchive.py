@@ -1,10 +1,10 @@
-"""TV Encode and filing.
+"""TV Encode and archiving.
 
 Review keeps some of a TV Disc's Titles (`tvreview`): each is an Episode or an
 Extra, with where it goes in the Archive (`tv.episode_path` / `tv.extra_path`),
 queued in `tv_titles`. `TvArchiver` Encodes them one by one through the shared
 `Encoder` to scratch `tv/t<n>.mkv`, files each as soon as it is Encoded, and once
-every kept Title is filed marks the Disc filed (its scratch, the lossless Rip, is
+every kept Title is archived marks the Disc archived (its scratch, the lossless Rip, is
 deleted: ADR-0002) and asks Plex to scan the show. A failed Encode keeps the Rip;
 it and any Encode cut short by a restart are queued again at the next start.
 """
@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ama import filing
+from ama import archiving
 from ama.archive import Archive, kind_of_path
 from ama.config import LibraryKind
 from ama.covers import Covers
@@ -125,7 +125,7 @@ class TvTitles:
         return [self._row(r) for r in rows]
 
     def queue(self) -> list[TvTitle]:
-        """Kept Titles of Discs not yet filed, first in first out."""
+        """Kept Titles of Discs not yet archived, first in first out."""
         cols = ", ".join("q." + c.strip() for c in self._COLS.split(","))
         return [self._row(r) for r in
                 self._queue.waiting(cols, "q.queued_at, q.job_id, q.title_number")]
@@ -143,8 +143,8 @@ class TvTitles:
 
 
 @dataclass(frozen=True)
-class FiledTv:
-    """A filed TV Disc, for the UI."""
+class ArchivedTv:
+    """An archived TV Disc, for the UI."""
 
     record: JobRecord
     episodes: list[TvTitle]
@@ -162,7 +162,7 @@ class TvArchiver:
                  problems: Problems | None = None,
                  library: Callable[[JobRecord, LibraryKind], str | None] = lambda rec, kind: None
                  ) -> None:
-        # The Library a Job files to; asking locks its pick (job_settings). None = default.
+        # The Library a Job archives to; asking locks its pick (job_settings). None = default.
         self._library = library
         self._tmdb = tmdb
         self._media = media
@@ -199,10 +199,11 @@ class TvArchiver:
                 if self.backoff.later(job_id, str(e), e.problem, e.detail):
                     self._jobs.log(job_id, f"{e}; trying again in a while", error=True)
             except Exception:
-                log.exception("TV Encode/filing of Job %s crashed", job_id)
-                self._jobs.log(job_id, "The Encode or filing went wrong (see the app's log "
+                log.exception("TV Encode/archiving of Job %s crashed", job_id)
+                self._jobs.log(job_id, "The Encode or archiving went wrong (see the app's log "
                                          "file); trying again in a while", error=True)
-                self.backoff.later(job_id, "The Encode or filing went wrong (see the app's log file)")
+                self.backoff.later(job_id, "The Encode or archiving went wrong "
+                                           "(see the app's log file)")
             else:
                 self.backoff.done(job_id)
             finally:
@@ -231,25 +232,25 @@ class TvArchiver:
             if row.status == EncodeStatus.ENCODED:
                 await asyncio.to_thread(self._file_one, rec, row)
         rows = self.titles.for_job(rec.id)
-        if rows and all(r.status == EncodeStatus.FILED for r in rows):
+        if rows and all(r.status == EncodeStatus.ARCHIVED for r in rows):
             await asyncio.to_thread(self._finish, rec, rows)
 
     def _file_one(self, rec: JobRecord, row: TvTitle) -> None:
-        self._jobs.begin_step(rec.id, "file", "File", fresh=False)
+        self._jobs.begin_step(rec.id, "archive", "Archive", fresh=False)
         src = encoded_path(rec, row.title_number)
         library = self._library(rec, kind_of_path(row.path) or LibraryKind.TV)
-        with filing.to_library(self._archive, row.path, library):
+        with archiving.to_library(self._archive, row.path, library):
             folder = self._archive.place(Path(row.path.parent), {row.path.name: src}, library)
-        self.titles.set_status(rec.id, row.title_number, EncodeStatus.FILED)
+        self.titles.set_status(rec.id, row.title_number, EncodeStatus.ARCHIVED)
         src.unlink(missing_ok=True)
-        self._jobs.log(rec.id, f"Filed {row.path.name} to {folder}")
+        self._jobs.log(rec.id, f"Archived {row.path.name} to {folder}")
 
     def _finish(self, rec: JobRecord, rows: list[TvTitle]) -> None:
         series = rows[0].series
         n = sum(1 for r in rows if r.episode)
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
-        # An Extras Disc is filed as its film's Extras: keep the film, not the "series".
+        # An Extras Disc is archived as its film's Extras: keep the film, not the "series".
         film = n == 0 and rows[0].path.parts[0] == LibraryKind.FILMS.folder
         # The show's folder `TV/<show>`, or the film's for an Extras Disc (`<film>/Other/…`,
         # the film's folder as many levels deep as its pattern made it)
@@ -259,19 +260,19 @@ class TvArchiver:
         self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
                                         series.name, series.year,
                                         lambda text: self._jobs.log(rec.id, text)))
-        self._jobs.mark_filed(rec.id, f"{series.title} · {what}", show)
-        self._jobs.log(rec.id, f"All kept Titles filed to {show}; scratch deleted")
-        filing.scan(self._plex, self._jobs, rec.id, show)
+        self._jobs.mark_archived(rec.id, f"{series.title} · {what}", show)
+        self._jobs.log(rec.id, f"All kept Titles archived to {show}; scratch deleted")
+        archiving.scan(self._plex, self._jobs, rec.id, show)
 
     # -- for the UI ---------------------------------------------------------
 
-    def filed(self, limit: int = 100) -> list[FiledTv]:
-        recs = self._jobs.list(JobStatus.FILED, types=VIDEO_DISC_TYPES)[:limit]
-        return [FiledTv(r, rows) for r in recs if (rows := self.titles.for_job(r.id))]
+    def archived(self, limit: int = 100) -> list[ArchivedTv]:
+        recs = self._jobs.list(JobStatus.ARCHIVED, types=VIDEO_DISC_TYPES)[:limit]
+        return [ArchivedTv(r, rows) for r in recs if (rows := self.titles.for_job(r.id))]
 
     def queue_view(self) -> dict[str, Any]:
-        """For the Encoding bin: kept Titles not yet filed, and their Discs' Types."""
-        rows = [r for r in self.titles.queue() if r.status != EncodeStatus.FILED]
+        """For the Encoding bin: kept Titles not yet archived, and their Discs' Types."""
+        rows = [r for r in self.titles.queue() if r.status != EncodeStatus.ARCHIVED]
         types = {r.job_id: rec.disc_type for r in rows if (rec := self._jobs.get(r.job_id))}
         return {"tv_encoding": rows, "tv_disc_types": types}
 

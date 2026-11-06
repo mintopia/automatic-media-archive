@@ -52,7 +52,7 @@ class FieldView:
 class GroupView:
     state: GroupState
     fields: list[FieldView]
-    unrecorded: bool = False  # filed before AMA kept per-Job settings
+    unrecorded: bool = False  # archived before AMA kept per-Job settings
 
     @property
     def group(self) -> Group:
@@ -110,7 +110,7 @@ def jobset_view(services: Services, job: JobRecord | int | None) -> JobsetView |
                             _options(services, v, v.setting.choices(scope)),
                             _default_phrase(v, job)) for v in state.values]
         groups.append(GroupView(state, fields,
-                                unrecorded=not state.locked and job.status == JobStatus.FILED))
+                                unrecorded=not state.locked and job.status == JobStatus.ARCHIVED))
     return JobsetView(job, groups)
 
 

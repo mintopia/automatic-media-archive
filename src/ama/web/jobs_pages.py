@@ -86,10 +86,10 @@ def _cd_page(request: Request, services, rec: JobRecord) -> Response:
     cd = services.cd.current
     live = cd is not None and cd.job_id == rec.id
     view = cd if live else services.cd.job(rec.id)
-    album = services.media.get(rec.id) if rec.status == JobStatus.FILED else None
+    album = services.media.get(rec.id) if rec.status == JobStatus.ARCHIVED else None
     if isinstance(album, Album):
         ctx |= {"view": replace(view, album=album), "album": album}
-        return TEMPLATES.TemplateResponse(request, "job_cd_filed.html", ctx)
+        return TEMPLATES.TemplateResponse(request, "job_cd_archived.html", ctx)
     if not live and view.pick:
         match = next((m for m in cdreview.candidates(rec.scratch_dir, view.tracks)
                       if value(m) == view.pick.value), None)
@@ -110,28 +110,28 @@ def _video_page(request: Request, services, job: JobRecord) -> Response:
         licence = job.failure is not None and job.failure.kind == FailureKind.LICENCE
         return TEMPLATES.TemplateResponse(
             request, "job_licence.html" if licence else "job_failed.html", ctx)
-    filed = job.status == JobStatus.FILED
-    screen = services.media.get(job.id) if filed else None
+    archived = job.status == JobStatus.ARCHIVED
+    screen = services.media.get(job.id) if archived else None
     ctx |= {"rip_job": job, "rip_progress": None, "live": False,
-            "became": _what_titles_became(services, job.id) if filed else None,
+            "became": _what_titles_became(services, job.id) if archived else None,
             "screen": screen if isinstance(screen, Screen) else None,
-            "extras_href": f"/jobs/{job.id}/extras" if job.status == JobStatus.FILED
-            and any(e.status == ExtraStatus.FILED
+            "extras_href": f"/jobs/{job.id}/extras" if job.status == JobStatus.ARCHIVED
+            and any(e.status == ExtraStatus.ARCHIVED
                     for e in services.movie_archive.extras.of(job.id)) else None}
     return TEMPLATES.TemplateResponse(request, "job.html", ctx)
 
 
 def _what_titles_became(services, job_id: int) -> dict[int, str]:
-    """Title number -> what it was filed as; a Title left out isn't in it."""
+    """Title number -> what it was archived as; a Title left out isn't in it."""
     out: dict[int, str] = {}
     movie = services.movie_archive.movies.get(job_id)
     if movie is not None:
         out[movie.title_number] = "Main Feature"
     for e in services.movie_archive.extras.of(job_id):
-        if e.status == ExtraStatus.FILED:
+        if e.status == ExtraStatus.ARCHIVED:
             out[e.title_number] = f"Extra · {e.category.value}"
     for t in services.tv_archive.titles.for_job(job_id):
-        if t.status != EncodeStatus.FILED:
+        if t.status != EncodeStatus.ARCHIVED:
             continue
         ep = t.episode
         out[t.title_number] = (f"{ep.code} · {ep.name}" if ep.name else ep.code) if ep else "Extra"

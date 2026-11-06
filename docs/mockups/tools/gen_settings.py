@@ -357,7 +357,7 @@ def libedit(title, name, plex_opts, folder, button, kind_word, plex_off=False, n
                 '<span class="hint" id="lib-plex-h">AMA couldn\'t reach Plex at http://nas:32400. Save without one and Plex finds this folder on its next scheduled scan; pick one here once Plex is back. <a href="#plex-url">Check the Plex connection</a></span>')
     else:
         plex = (f'<select class="select" id="lib-plex" aria-describedby="lib-plex-h">' + "".join(f'<option{" selected" if s else ""}>{o}</option>' for o, s in plex_opts) +
-                f'</select><span class="hint" id="lib-plex-h">Plex\'s {kind_word} libraries. Plex scans this folder after each Job is filed here.</span>')
+                f'</select><span class="hint" id="lib-plex-h">Plex\'s {kind_word} libraries. Plex scans this folder after each Job is archived here.</span>')
     h = f'<b class="newh">{title}</b>' if new else ""
     return (f'<div class="libpanel{" new" if new else ""}">{h}<div class="libedit" role="group" aria-label="{title}">\n'
             f'  <div class="field"><label for="lib-name">Name</label><input class="input" id="lib-name" value="{name}"></div>\n'
@@ -379,7 +379,7 @@ def libraries(fname, mode=None):
         films.append(librow("Family Films", *fam))
     if mode == "remove":
         films.append(librow("Movies 4K", r"\\nas\media\Movies 4K", "Movies 4K", cls="rm"))
-        films.append('<div class="libpanel"><div class="libconfirm" role="alertdialog" aria-labelledby="rm-h" aria-describedby="rm-d" tabindex="-1"><div><b id="rm-h">Remove Movies 4K?</b><span id="rm-d">Its folder and the Jobs already filed there stay where they are and in Plex. Jobs that picked it and aren\'t filed yet go to Movies, the Films default.</span></div><div class="actions"><button class="btn quiet" type="button">Cancel</button><button class="btn danger" type="button">Remove Library</button></div></div></div>')
+        films.append('<div class="libpanel"><div class="libconfirm" role="alertdialog" aria-labelledby="rm-h" aria-describedby="rm-d" tabindex="-1"><div><b id="rm-h">Remove Movies 4K?</b><span id="rm-d">Its folder and the Jobs already archived there stay where they are and in Plex. Jobs that picked it and aren\'t archived yet go to Movies, the Films default.</span></div><div class="actions"><button class="btn quiet" type="button">Cancel</button><button class="btn danger" type="button">Remove Library</button></div></div></div>')
     else:
         films.append(librow("Movies 4K", r"\\nas\media\Movies 4K", "Movies 4K"))
     tv = [librow("TV", r"\\nas\media\TV", "TV Shows", default=True, kind="TV")]
@@ -392,7 +392,7 @@ def libraries(fname, mode=None):
         sf("plex-url", "Plex server", inp("plex-url", "http://nas:32400"),
            hint="Where Plex runs, with its port. Plex normally uses 32400."),
         sf("plex-token", "Plex sign-in token", secret_set("plex-token", "Plex sign-in token"), secret=True,
-           hint="Lets AMA tell Plex to look for new files as soon as a Job is filed. Without it, Plex finds them on its next scheduled scan.",
+           hint="Lets AMA tell Plex to look for new files as soon as a Job is archived. Without it, Plex finds them on its next scheduled scan.",
            tech="Plex calls it the X-Plex-Token."),
         sf("plex-path", "Plex sees Libraries at", inp("plex-path", "/volume1/media", placeholder="Same paths as AMA"),
            hint="Only if Plex runs on another machine: the folder where that machine sees your Library folders, each by its own name. Leave empty when Plex sees them at the same paths as AMA."),
@@ -411,7 +411,7 @@ def libraries(fname, mode=None):
         f'<div class="libadd"><button class="btn quiet" type="button">{plus}Add Music Library</button></div>',
     ]
     page(fname, "Archive", "archive", form("Libraries settings", rows), sub="Libraries",
-         note='<p class="ts setnote">A Job goes to its kind\'s default unless you pick another Library in its settings before it\'s filed. Each Library saves on its own, to <code>ama.toml</code>.</p>')
+         note='<p class="ts setnote">A Job goes to its kind\'s default unless you pick another Library in its settings before it\'s archived. Each Library saves on its own, to <code>ama.toml</code>.</p>')
 
 
 libraries("settings-libraries.html")
@@ -445,14 +445,14 @@ def alerts(fname, error=False):
                      '<input class="input bad" id="discord-url" type="password" name="discord-url" value="api/webhooks/1234" aria-describedby="discord-url-h discord-url-e" aria-invalid="true" spellcheck="false">'
                      f'<div class="ferr" id="discord-url-e">{ico("alert")}<span>Paste the whole webhook URL, starting with https://discord.com/api/webhooks/</span></div>'
                      '<button class="btn quiet" type="button">Keep the saved one</button>',
-                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is archived or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server",
                   '<input class="input bad" id="ntfy-url" type="text" name="ntfy-url" value="ntfy.sh" aria-describedby="ntfy-url-h ntfy-url-e" aria-invalid="true" spellcheck="false">'
                   f'<div class="ferr" id="ntfy-url-e">{ico("alert")}<span>Enter a full address starting with https:// or http://</span></div>',
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     else:
         discord = sf("discord-url", "Webhook URL", secret_set("discord-url", "Discord webhook URL"), secret=True,
-                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is filed or failed. Empty turns Discord off.")
+                     hint="Posts to a Discord channel when a Rip is done and when a Job needs Review, is archived or failed. Empty turns Discord off.")
         ntfy = sf("ntfy-url", "Server", inp("ntfy-url", "https://ntfy.sh"),
                   hint="The ntfy server your phone's ntfy app listens to. https://ntfy.sh is the free public one.")
     rows += [
@@ -465,7 +465,7 @@ def alerts(fname, error=False):
         foot("Alerts", "error" if error else "clean"),
     ]
     page(fname, "Alerts", "alerts", form("Alerts settings", rows),
-         note='<p class="ts setnote">Alerts go out when a Rip is done (“insert the next one”) and when a Job needs Review, is filed or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
+         note='<p class="ts setnote">Alerts go out when a Rip is done (“insert the next one”) and when a Job needs Review, is archived or failed. Plex scans are set under <a href="settings-libraries.html">Archive › Libraries</a>. Saved to <code>ama.toml</code>.</p>')
 
 
 alerts("settings-notifications.html")

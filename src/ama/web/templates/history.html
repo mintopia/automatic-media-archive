@@ -5,17 +5,17 @@
   <div class="page-head gap">
     <div>
       <h1>History</h1>
-      <p class="sub">Every Job filed to the Archive, newest first.</p>
+      <p class="sub">Every Job archived into the Archive, newest first.</p>
     </div>
   </div>
-  <section class="bin fil" aria-labelledby="history-h">
+  <section class="bin arc" aria-labelledby="history-h">
     <h2 class="tab" id="history-h">All Discs <span class="c">{{ history | length }}</span></h2>
     <div class="box">
     {%- for d in history %}
       {%- with dated=True %}{% include "partials/history_row.html" %}{% endwith %}
     {%- endfor %}
     {%- if not history %}
-      <p class="pad ts">Nothing filed yet. Insert a Disc; once it's filed it shows up here.</p>
+      <p class="pad ts">Nothing archived yet. Insert a Disc; once it's archived it shows up here.</p>
     {%- endif %}
     </div>
   </section>

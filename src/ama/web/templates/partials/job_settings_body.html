@@ -7,7 +7,7 @@
 {%- set extra = ', "summary": "1"' if summary else '' %}
 <div class="box" id="jobset-body-{{ id }}">
   {%- if refused %}
-  {%- set started = {"rip": "Ripping", "encode": "Encoding"}.get(refused.group.value, "Filing") %}
+  {%- set started = {"rip": "Ripping", "encode": "Encoding"}.get(refused.group.value, "Archiving") %}
   <div class="notice jobset-notice" role="alert">
     <svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
     <div><b>{{ refused.group.label }} wasn't changed</b>{{ started }} started at {{ refused.at.strftime("%H:%M") }}, so this Job's {{ refused.group.label }} settings were already locked. Your change to {{ changed }} wasn't saved.</div>
@@ -25,7 +25,7 @@
     <div class="grp locked">
       <div class="gh"><h3>{{ g.group.label }}</h3><span class="lk"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg>{{ g.group.locked_line }}</span></div>
       {%- if g.unrecorded %}
-      <p class="ts">Not recorded: this Job was filed before AMA kept each Job's settings.</p>
+      <p class="ts">Not recorded: this Job was archived before AMA kept each Job's settings.</p>
       {%- else %}
       <dl>
         {%- for f in g.fields %}

@@ -12,11 +12,11 @@ colors:
   ripping-cobalt: "#2C4FA3"
   review-tomato: "#C43D22"
   encoding-mustard: "#E8B730"
-  filed-teal: "#1F7A74"
+  archived-teal: "#1F7A74"
   failed-oxide: "#8E2A1B"
   ripping-ink: "#2C4FA3"
   review-ink: "#B23A20"
-  filed-ink: "#1B6B66"
+  archived-ink: "#1B6B66"
   encoding-ink: "#7A5A00"
   thumb: "#D6D8DC"
   thumb-ink: "#3E4146"
@@ -42,7 +42,7 @@ colors:
   failed-oxide-dark: "#E06A55"
   ripping-ink-dark: "#8FA9EC"
   review-ink-dark: "#F08A70"
-  filed-ink-dark: "#5CC2B8"
+  archived-ink-dark: "#5CC2B8"
   encoding-ink-dark: "#F0C85A"
   thumb-dark: "#2C2E33"
   thumb-ink-dark: "#B9BCC2"
@@ -166,8 +166,8 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.label-tab}"
     height: "34px"
-  tab-filed:
-    backgroundColor: "{colors.filed-teal}"
+  tab-archived:
+    backgroundColor: "{colors.archived-teal}"
     textColor: "{colors.white}"
     typography: "{typography.label-tab}"
     height: "34px"
@@ -190,8 +190,8 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.label-sticker}"
     height: "26px"
-  sticker-filed:
-    backgroundColor: "{colors.filed-teal}"
+  sticker-archived:
+    backgroundColor: "{colors.archived-teal}"
     textColor: "{colors.white}"
     typography: "{typography.label-sticker}"
     height: "26px"
@@ -233,7 +233,7 @@ The world is cool grey and printed, not glossy. A grey bin ground, near-white sh
 The interface is an Operate surface used on a phone at the drive and on a desktop for Review. Density is moderate. Targets are at least 44px on phones and at least 24px on desktop (controls stay 44px tall). It refuses the default sidebar, equal cards and status-badge table.
 
 **Key Characteristics:**
-- Four stage colours, each owning one stage: Ripping cobalt, Needs Review tomato, Encoding mustard, Filed teal.
+- Four stage colours, each owning one stage: Ripping cobalt, Needs Review tomato, Encoding mustard, Archived teal.
 - Die-cut divider tabs with an asymmetric cut (6px lead corner, 16px trailing corner).
 - One sticker per Disc, pill-left / square-right, with a dot.
 - One rule weight (1px `rule`), except a 3px stage-coloured top edge on bin sheets.
@@ -248,10 +248,10 @@ A cool neutral sheet-and-ink base with four saturated stage colours, plus a sepa
 - **Ripping Cobalt** (`ripping-cobalt`): Ripping tab, sticker and progress bar fill. Also the light-mode focus ring. Dark: `#3B62C4` (focus becomes `#8FA9EC`).
 - **Review Tomato** (`review-tomato`): Needs Review tab and sticker, the Review count badge in the top bar, and a full scratch meter. The colour that asks for the user.
 - **Encoding Mustard** (`encoding-mustard`): Encoding tab, sticker and progress bar. It always carries `ink` text, never white. Also the text-selection colour.
-- **Filed Teal** (`filed-teal`): Filed tab and sticker. Done.
+- **Archived Teal** (`archived-teal`): Archived tab and sticker. Done.
 
 ### Secondary (text-safe stage tones)
-- **Ripping / Review / Filed / Encoding Ink** (`ripping-ink`, `review-ink`, `filed-ink`, `encoding-ink`): used when a stage colour has to be text or an icon on a sheet, such as the danger button label, the notice alert icon or the "ok" check. They are darker in light mode and lighter in dark mode (`#8FA9EC`, `#F08A70`, `#5CC2B8`, `#F0C85A`).
+- **Ripping / Review / Archived / Encoding Ink** (`ripping-ink`, `review-ink`, `archived-ink`, `encoding-ink`): used when a stage colour has to be text or an icon on a sheet, such as the danger button label, the notice alert icon or the "ok" check. They are darker in light mode and lighter in dark mode (`#8FA9EC`, `#F08A70`, `#5CC2B8`, `#F0C85A`).
 - **Failed Oxide** (`failed-oxide`): outline-only Failed sticker. In dark mode it becomes `#E06A55`.
 
 ### Neutral
@@ -266,7 +266,7 @@ A cool neutral sheet-and-ink base with four saturated stage colours, plus a sepa
 - **Notice / Notice Line** (`notice`, `notice-line`): a warm tint for notices that need attention. Dark: `#2A1B17`, `#6B3426`.
 
 ### Named Rules
-**The One Stage, One Colour Rule.** Cobalt, tomato, mustard and teal each mean one pipeline stage. Never use them for decoration, links or generic emphasis. The primary button is `ink`, not a stage colour. Things that already happened (filed Titles and Tracks, "After the Rip") sit in `ink` bins, not stage-coloured ones.
+**The One Stage, One Colour Rule.** Cobalt, tomato, mustard and teal each mean one pipeline stage. Never use them for decoration, links or generic emphasis. The primary button is `ink`, not a stage colour. Things that already happened (archived Titles and Tracks, "After the Rip") sit in `ink` bins, not stage-coloured ones.
 
 **The Ink-3 Rule.** `ink-3` is never used for text that carries meaning. Use `ink-2`.
 
@@ -355,15 +355,15 @@ Plain, firm and printed.
 - **Breadcrumb:** 14px `ink-2` text, underlined on hover; each link is a 24px target (44px on phones).
 
 ### Divider Tab + Bin (signature)
-A bin is a stage. The tab is 34px tall, filled with the stage colour, and lettered in uppercase Archivo Narrow, with an optional count in Archivo 700 / 13px. It sits directly on a `sheet` box with a 1px rule border and a 3px top edge in the same stage colour. There are variants for Ripping, Review, Encoding (with `ink` lettering), Filed, and `ink`, used for "Didn't work", neutral groupings and anything that already happened ("After the Rip", a filed Disc's Titles or Tracks). A tab can be a link to that stage's screen. The tab is the bin's `h2` (`.tab-h` when it holds a link).
+A bin is a stage. The tab is 34px tall, filled with the stage colour, and lettered in uppercase Archivo Narrow, with an optional count in Archivo 700 / 13px. It sits directly on a `sheet` box with a 1px rule border and a 3px top edge in the same stage colour. There are variants for Ripping, Review, Encoding (with `ink` lettering), Archived, and `ink`, used for "Didn't work", neutral groupings and anything that already happened ("After the Rip", an archived Disc's Titles or Tracks). A tab can be a link to that stage's screen. The tab is the bin's `h2` (`.tab-h` when it holds a link).
 
-A filed Disc's Titles table ends in a "Filed as" column ("Kept as" for CD Tracks) naming what each became: Main Feature, Extra · category, S01E04 · name (600 weight), or Not kept / Didn't rip in `ink-2`.
+An archived Disc's Titles table ends in an "Archived as" column ("Kept as" for CD Tracks) naming what each became: Main Feature, Extra · category, S01E04 · name (600 weight), or Not kept / Didn't rip in `ink-2`.
 
 ### Sticker (signature)
-There is exactly one sticker per Disc, showing its current Phase: Ripping, Review, Encoding, Filed or Failed, nothing else. It is 26px tall, 11px / 700 / 0.08em uppercase, and filled with the stage colour (Encoding uses `ink` text). Failed is outline-only in `failed-oxide`, with no fill. A sticker can be a link (for example, Failed links to the failure screen).
+There is exactly one sticker per Disc, showing its current Phase: Ripping, Review, Encoding, Archived or Failed, nothing else. It is 26px tall, 11px / 700 / 0.08em uppercase, and filled with the stage colour (Encoding uses `ink` text). Failed is outline-only in `failed-oxide`, with no fill. A sticker can be a link (for example, Failed links to the failure screen).
 - A Disc queued for Encoding is ENCODING with "Next in line" in its meta; there is no Waiting sticker.
-- A finished Rip shows the Phase it moved to (Ripping, Review or Filed), never "Ripped".
-- History rows have no FILED sticker; the filed date sits in the trailing column.
+- A finished Rip shows the Phase it moved to (Ripping, Review or Archived), never "Ripped".
+- History rows have no ARCHIVED sticker; the archived date sits in the trailing column.
 - Non-Phase labels ("Same length", "Selected") are a **mark**: a 16px check icon in `ink` and 600 / 13px `ink-2` text (`.mark`; `.mark.sel` is `ink` text and shows only on the checked radio row).
 
 ### Disc-Type Cell
@@ -377,14 +377,14 @@ The drive card is not a live region. A visually hidden `role="status"` sentence 
 ### Notices
 State as a mark, never a toast. A notice has a 24px icon column, a bold first line, and the message below.
 - **Attention (default):** `notice` fill, `notice-line` border, and a `review-ink` alert icon. Use `role="alert"` or `role="status"`.
-- **OK (`.notice.ok`):** `sheet` fill, `rule` border and a `filed-ink` check icon. Use it for reassurance ("Already filed").
-- **Filing ending:** after a Review decision the page goes to the next Disc in Review (`?done=<id>`) with a `notice ok` strip (`role="status"`) reading "Done: <name>", what happens next, and "The next Disc that needs you is below."
+- **OK (`.notice.ok`):** `sheet` fill, `rule` border and an `archived-ink` check icon. Use it for reassurance ("Already archived").
+- **Archiving ending:** after a Review decision the page goes to the next Disc in Review (`?done=<id>`) with a `notice ok` strip (`role="status"`) reading "Done: <name>", what happens next, and "The next Disc that needs you is below."
 
 ### Inline Confirm
 A destructive or disruptive action asks in place, never in a modal: a `sheet` box with a 1px `ink` border under the trigger, a bold question, a 14px `ink-2` consequence, and Cancel plus the action (buttons share the width on phones). It is `role="alertdialog"`; focus moves into it, and Escape or Cancel returns focus to the trigger. Used by Discard in CD Review, Library Remove, Restart and the unsaved-changes guard.
 
 ### History Row
-A compact row: cover or disc-type cell, the title link, a meta line (kind, resolution, "Disc N of M" for sets, Extras or Episode count, a source chip), then a separate `<details>` "Show Tracks / Episodes / Extras" whose `<summary>` holds no links. The filed date sits in the trailing column. The **source chip** (`.src`) is rule-bordered, 3px corners, 600 / 12px, reading "Details on TMDB" or "Details on MusicBrainz" (the built v1 rows read "TMDB" / "MusicBrainz").
+A compact row: cover or disc-type cell, the title link, a meta line (kind, resolution, "Disc N of M" for sets, Extras or Episode count, a source chip), then a separate `<details>` "Show Tracks / Episodes / Extras" whose `<summary>` holds no links. The archived date sits in the trailing column. The **source chip** (`.src`) is rule-bordered, 3px corners, 600 / 12px, reading "Details on TMDB" or "Details on MusicBrainz" (the built v1 rows read "TMDB" / "MusicBrainz").
 
 ### Comparison Tables
 A differing cell (`td.diff`) is a `notice` tint at 600 weight, not a side stripe.
@@ -396,10 +396,10 @@ Title thumbnails in a 3-up grid of 16:9 tiles with 1px hairline gaps. Tiles come
 A Job's settings as overrides of the global ones (`docs/mockups/job-settings-*.html`).
 - **Summary line:** on the rip card, a hairline-topped line at the foot of the drive body names only what differs from the defaults in plain words ("Quality 20 (default 22)", never "CQ") and ends with a Settings / Hide settings toggle (44px target).
 - **Panel:** an `ink` bin, "This Job's settings", in two columns: Encode on the left, with Library and Identification stacked on the right for video Jobs. CD Jobs show Identification on the left, with Library and Rip on the right. One column under 720px, with labels above controls. A group lists only settings that exist in `ama.toml`, and a group with none is left out (video Rips have no Rip settings).
-- **Group:** a 700 / 15px heading with its state at the right, then label and control pairs. An editable group ends with "Can change until <Phase> starts" or "until Filed".
+- **Group:** a 700 / 15px heading with its state at the right, then label and control pairs. An editable group ends with "Can change until <Phase> starts" or "until Archived".
 - **Override:** the control gets an `ink` border and 600 weight, with "Default <value> · Reset" as a 13px `ink-2` hint under it; Reset keeps a 44px hit area. Beside a control on desktop, the label is 400 / 14px `ink-2`.
-- **Saving:** each control saves on change, and a `filed-ink` check reading "Saved" appears by the group heading (`role="status"`, inserted on save so it is announced).
-- **Locked:** a lock icon and "Locked at Ripping start", "Locked at Encoding start" or "Locked when Filed", with the stored values as a definition list in `ink-2` and no controls. An override stays named: "Changed for this Job · default <value>".
+- **Saving:** each control saves on change, and an `archived-ink` check reading "Saved" appears by the group heading (`role="status"`, inserted on save so it is announced).
+- **Locked:** a lock icon and "Locked at Ripping start", "Locked at Encoding start" or "Locked when Archived", with the stored values as a definition list in `ink-2` and no controls. An override stays named: "Changed for this Job · default <value>".
 - **Rejected edit:** an attention notice at the top of the panel says the group locked first and the change wasn't saved.
 
 ### Settings Page
@@ -423,20 +423,20 @@ Editing `ama.toml` (v2, `docs/mockups/settings-*.html`). Content is capped at 11
 - **Restart banner:** an attention notice (`role="status"`) between the h1 and the tabs listing the saved keys waiting for a restart (key and tab). It says what happens to running Jobs: a Rip that's cut off fails and needs the Disc put back in; Encodes start again. After a Port or Address change it links to the new address. "Restart…" opens an inline confirm defaulting to "Restart when idle" (secondary: "Restart now"); while waiting the banner reads "AMA restarts when nothing is Ripping or Encoding" with what it is waiting for.
 - **Field warning:** an inline `notice`-tinted warning under a control (`.fwarn`, `review-ink` alert icon), for example when Address is 127.0.0.1 ("Phones and other computers lose access").
 - **Leave guard:** leaving a tab with unsaved changes shows a `well` strip at the top of the sheet (`role="alertdialog"`): "Leave General without saving?", what changed, then Stay, Discard and go, and Save and go.
-- **Secret:** a saved secret is never rendered. It shows a `filed-ink` check and "Set" with quiet Replace and Remove buttons; an unset one is an empty password input reading "Not set".
-- **Save bar:** each section ends with a footer: status on the left ("No unsaved changes", "Unsaved changes" in `ink` 600, or a `filed-ink` "Saved at 21:14" status), then "Undo changes" and the primary "Save <tab>", disabled (well style) when clean.
+- **Secret:** a saved secret is never rendered. It shows an `archived-ink` check and "Set" with quiet Replace and Remove buttons; an unset one is an empty password input reading "Not set".
+- **Save bar:** each section ends with a footer: status on the left ("No unsaved changes", "Unsaved changes" in `ink` 600, or an `archived-ink` "Saved at 21:14" status), then "Undo changes" and the primary "Save <tab>", disabled (well style) when clean.
 - **Rejected save:** an attention notice at the top of the sheet says the tab wasn't saved and `ama.toml` is unchanged, with an error summary listing a link to each bad field; each bad input gets a `review-ink` border and outline, and an alert-icon message under it naming the fix.
 - **Choice list:** radio rows in a `well` box for the encoder, audio and subtitles. The radio is drawn, not native: an `ink-3` ring, filled `ink` with a `sheet` gap when chosen.
 - **Speed:** one generic scale on every encoder (Faster, bigger / Balanced / Slower, smaller / Slowest, smallest), always in that order; the per-Job panel marks the global value "(default)". An encoder that fails its test encode is disabled with "Not available on this PC"; a configured one that stops working stays selected with a `review-ink` note, and an attention notice offers "Test encoders again".
-- **Libraries:** the Plex connection is the top group, then the Libraries grouped by kind (Films, TV, Music), each group headed by its name with "Default: <Library>" at the right, the default listed first and an "Add <kind> Library" button at its foot. A row shows the name, then Folder and Plex library as small `ink-2` labels over their values, then a fixed-width actions column so columns align. The default row shows a lock and "Default, can't be removed" with Edit; others get Edit, Make default and Remove. Edit and Add open an inline `well` form (Name, Plex library, Folder, and the Naming Pattern for a kind that has one) under the row or at the group's foot. The Naming Pattern is a monospace field over its example: a `sheet` box with the name the example values get (for TV also a special and an Episode with no title), redrawn as the pattern is typed, or instead the reasons it can't be used (Field Error style); Plex warnings follow in `fwarn` boxes and don't stop a save. Under them, preset patterns as quiet buttons that fill the field, and a table of every field with its example and what it is; the Plex library list holds only Plex libraries of the group's type, and when Plex can't be reached it is disabled with a hint that saving still works. Remove opens an inline confirm under the row (see Inline Confirm) naming the default that unfiled Jobs fall back to. On phones a row stacks and its buttons share the width.
+- **Libraries:** the Plex connection is the top group, then the Libraries grouped by kind (Films, TV, Music), each group headed by its name with "Default: <Library>" at the right, the default listed first and an "Add <kind> Library" button at its foot. A row shows the name, then Folder and Plex library as small `ink-2` labels over their values, then a fixed-width actions column so columns align. The default row shows a lock and "Default, can't be removed" with Edit; others get Edit, Make default and Remove. Edit and Add open an inline `well` form (Name, Plex library, Folder, and the Naming Pattern for a kind that has one) under the row or at the group's foot. The Naming Pattern is a monospace field over its example: a `sheet` box with the name the example values get (for TV also a special and an Episode with no title), redrawn as the pattern is typed, or instead the reasons it can't be used (Field Error style); Plex warnings follow in `fwarn` boxes and don't stop a save. Under them, preset patterns as quiet buttons that fill the field, and a table of every field with its example and what it is; the Plex library list holds only Plex libraries of the group's type, and when Plex can't be reached it is disabled with a hint that saving still works. Remove opens an inline confirm under the row (see Inline Confirm) naming the default that unarchived Jobs fall back to. On phones a row stacks and its buttons share the width.
 
 ### Logs
 Every run's steps and their output, laid out like a CI run log (`docs/mockups/logs*.html`, `now-output.html`). Reached from the top-bar menu.
 - **Run list:** an h1, then filters: a search box (up to 380px, full width on phones) that filters runs by Disc, Job or kind, with a "No runs match" state and a match count; an All / Jobs / App segmented control (44px segments) and a "Problems only" toggle (rule-bordered, `failed-oxide` alert icon; filled `ink` when pressed), with the output-keeping note and a Change link at the right. Runs sit in `ink` bins, one per day (Today, Yesterday, then dates), newest first, with "Older runs" at the foot.
-- **Run row:** the whole row links to the run and fills `well` on hover. A Job row is a normal row: disc-type cell, title, a meta line (current step or step count, start time, duration, error lines in `failed-oxide`), the step strip, and the Job's one sticker. An app-event row (startup, tool downloads, Scratch cleanup, and NAS Runs kept from before ADR 0011) gets a disc-type cell holding an icon and its kind (App, Tools, Scratch, NAS), and a Done (`filed-ink` check) or Failed (`failed-oxide` alert) mark instead of a sticker, since stickers belong to Jobs.
+- **Run row:** the whole row links to the run and fills `well` on hover. A Job row is a normal row: disc-type cell, title, a meta line (current step or step count, start time, duration, error lines in `failed-oxide`), the step strip, and the Job's one sticker. An app-event row (startup, tool downloads, Scratch cleanup, and NAS Runs kept from before ADR 0011) gets a disc-type cell holding an icon and its kind (App, Tools, Scratch, NAS), and a Done (`archived-ink` check) or Failed (`failed-oxide` alert) mark instead of a sticker, since stickers belong to Jobs.
 - **Step strip:** one 24 × 6px segment per step, 3px apart: done `ink-3`, running in its Phase colour (cobalt for the Rip, mustard for an Encode, `ink` otherwise), failed `failed-oxide`, waiting an empty `well` box, not run dashed. It is `aria-hidden`; the meta line says the same in words.
 - **Run page:** a breadcrumb back to Logs, the h1 and a meta line, with the sticker (or the app mark) and a quiet "Job page" button at the right. The split layout holds an `ink` Steps bin on the left and, in the aside, "This run" as a definition list (Job, Disc, Phase, times, steps, how long output is kept) and "Settings used": the Job's locked groups with their lock line. A failed run puts an attention notice above the Steps bin.
-- **Step:** a `<details>` row: a 20px state icon (`filed-ink` check, a turning loader in the Phase's `-ink` colour, `failed-oxide` alert, `ink-3` circle for waiting, `ink-3` dash for "Didn't run"; each `role="img"` with its state as the label), the step name in 600 / 16px with its subject in `ink-2` ("Encode · Main Feature, Title 1"), the tool and a short result in 13px `ink-2`, the duration at the right and a chevron that turns when open. A running step adds a 6px Phase-colour bar, percentage and time left. The header carries the tool and a short result; the exit code is in the open step's meta strip, and the Job and Phase are in the aside. Waiting and not-run steps are plain rows, not disclosures, since they have no output. A step whose output was pruned keeps its header and opens to "Output removed after N days" in place of the log, on a `well` band with an `ink-3` log icon and a "Keep output longer" link to Settings › Logs; its run row says the same, and the aside's Output line gives the date it went. On phones the duration drops under the tool line.
+- **Step:** a `<details>` row: a 20px state icon (`archived-ink` check, a turning loader in the Phase's `-ink` colour, `failed-oxide` alert, `ink-3` circle for waiting, `ink-3` dash for "Didn't run"; each `role="img"` with its state as the label), the step name in 600 / 16px with its subject in `ink-2` ("Encode · Main Feature, Title 1"), the tool and a short result in 13px `ink-2`, the duration at the right and a chevron that turns when open. A running step adds a 6px Phase-colour bar, percentage and time left. The header carries the tool and a short result; the exit code is in the open step's meta strip, and the Job and Phase are in the aside. Waiting and not-run steps are plain rows, not disclosures, since they have no output. A step whose output was pruned keeps its header and opens to "Output removed after N days" in place of the log, on a `well` band with an `ink-3` log icon and a "Keep output longer" link to Settings › Logs; its run row says the same, and the aside's Output line gives the date it went. On phones the duration drops under the tool line.
 - **Step output:** a hairline-ruled meta strip (state and exit code, start and end times, line count, and buttons for "First error" and "Download log") over the dark log, up to 440px tall (360px on phones). A "Wrap lines" toggle (`aria-pressed`, on by default on phones) wraps long lines. Each line starts with its time in `log-dim`, which is the line's anchor (`#s1-L14`); the targeted line gets a `log-thumb` band, white time and a `log-dim` outline. Error lines are `log-error` on a `log-error-band` band that bleeds to the log's edges, and the failed step opens by default. Each step has an id, so other pages can link straight to it. Command-line arguments are never shown.
 - **Live output:** the log is `role="log"`. A running step's meta strip starts with a Phase-colour dot (`ink` for app runs) and "Following live output" (`role="status"`). The log follows the tail while scrolled to the bottom. Scrolling up stops following, the status reads "Scrolled up, not following", and a "Jump to latest" button appears at the log's bottom right.
 - **Inline output on Now:** a collapsed toggle on the rip card and on each running Encoding row. On the rip card it is a hairline-topped foot line (tool and step in `ink-2`, "Show output" / "Hide output", "Open in Logs" at the right), under the per-Job settings line when both show. On an Encoding row it sits under the row, indented to the title. Open, it shows the last ~20 lines in a compact log (12px, up to 200px on the card and 160px in the row; 150px for both on phones), scrolled to the newest line and updating live. "Open in Logs" goes to that step on its run page. A waiting Encoding row has no output, so no toggle.

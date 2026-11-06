@@ -44,7 +44,7 @@ AMA files each Disc into a **Library**: a folder for films, one for TV and one f
   </tbody>
 </table>
 
-Each can be a local folder, a mapped drive or a network share such as `\\nas\media\Movies`. A folder that doesn’t exist yet is made when AMA first files into it, but AMA has to be able to write where it would go: Setup checks each one and says if it can’t.
+Each can be a local folder, a mapped drive or a network share such as `\\nas\media\Movies`. A folder that doesn’t exist yet is made when AMA first archives into it, but AMA has to be able to write where it would go: Setup checks each one and says if it can’t.
 
 **Scratch**, under Advanced, is where Discs are ripped to while they wait to be identified, reviewed and encoded. It starts as `%LOCALAPPDATA%\AMA\Scratch`. Give it a fast local disk with plenty of room: a UHD Disc can need about 100 GB.
 

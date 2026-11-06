@@ -1,4 +1,4 @@
-"""Filing into a Library folder (#48): which failures wait for the folder, and why."""
+"""Archiving into a Library folder (#48): which failures wait for the folder, and why."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ama import filing
+from ama import archiving
 from ama.archive import Archive
 from ama.config import Library, LibraryKind
 from ama.problems import Problem
@@ -31,7 +31,7 @@ def _source(tmp_path) -> Path:
 
 
 def _file(archive: Archive, src: Path) -> None:
-    with filing.to_library(archive, REL, None):
+    with archiving.to_library(archive, REL, None):
         archive.place(REL, {"Example Movie (2016).mkv": src})
 
 
@@ -61,7 +61,7 @@ def test_a_reachable_library_folder_that_refuses_the_file_waits_and_says_why(tmp
     archive, movies = _archive(tmp_path, copy=failing_copy)
     with pytest.raises(RetryLater) as caught:
         _file(archive, _source(tmp_path))
-    assert str(caught.value) == (f"Couldn't file to the Library folder {movies}: "
+    assert str(caught.value) == (f"Couldn't archive to the Library folder {movies}: "
                                  f"{error.strerror}")
     assert caught.value.problem == Problem.LIBRARY_FOLDER
     assert caught.value.detail == f"{movies}: {error.strerror}"

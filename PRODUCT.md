@@ -16,7 +16,7 @@ The owner (technical) and household members. Household members feed Discs into t
 
 ## Product Purpose
 
-Semi-automated archiving of the household's own physical media (CD, DVD, Blu-ray, UHD Blu-ray) into Plex Libraries, wherever their folders live (a local disk, a mapped drive or a network share; mounting storage is the user's concern, ADR 0011). A person inserts a Disc; the system Rips, Identifies, Encodes and files it. Humans only step in when Identification is low-confidence or something fails. Success: Discs flow through with minimal attention, and nothing lands in the Archive mis-named.
+Semi-automated archiving of the household's own physical media (CD, DVD, Blu-ray, UHD Blu-ray) into Plex Libraries, wherever their folders live (a local disk, a mapped drive or a network share; mounting storage is the user's concern, ADR 0011). A person inserts a Disc; the system Rips, Identifies, Encodes and archives it. Humans only step in when Identification is low-confidence or something fails. Success: Discs flow through with minimal attention, and nothing lands in the Archive mis-named.
 
 ## Operating Context
 

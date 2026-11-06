@@ -253,7 +253,7 @@ def build_services(
 
 
 def _kind_of(tv_titles: TvTitles) -> Callable[[JobRecord], LibraryKind]:
-    """The Library kind a Job files to, as far as is known yet: music for a CD; TV once a
+    """The Library kind a Job archives to, as far as is known yet: music for a CD; TV once a
     video Job's Titles are mapped to a series' Episodes; else films."""
     def kind_of(job: JobRecord) -> LibraryKind:
         if job.disc_type == DiscType.CD:

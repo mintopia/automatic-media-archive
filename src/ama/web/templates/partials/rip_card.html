@@ -64,7 +64,7 @@
     {%- elif job.status == JobStatus.RIPPING %}{#- no progress from MakeMKV yet -#}
     <div class="meta">{{ source }}</div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">Reading the Disc</span></div>
-    {%- else %}{#- ripped, review or filed: Identification may already have moved it on -#}
+    {%- else %}{#- ripped, review or archived: Identification may already have moved it on -#}
     <div class="meta">{% if job.all_skipped %}{{ job.skipped_summary }}{% else %}{{ k }} Title{{ "s" if k != 1 }} ripped · <span class="nw">{{ job.total_size }}</span>{% endif %}</div>
     <div class="status"><span class="stk {{ p.css }}">{{ p }}</span><span class="ts">{% if job.finished_at %}Disc ejected at {{ job.finished_at.strftime("%H:%M") }}{% endif %}</span></div>
     {%- if on_page and job.status == JobStatus.RIPPED %}{% with job_id = job.id %}{% include "partials/job_waiting.html" %}{% endwith %}{% endif %}

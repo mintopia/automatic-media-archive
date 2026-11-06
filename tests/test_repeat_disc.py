@@ -35,7 +35,7 @@ def _file_cd(harness) -> None:
     harness.cyanrip.tracks = [(n, 120.0) for n in range(1, 25)]
     harness.cyanrip.ar_confidence = {n: 65 for n in range(1, 25)}
     harness.drive.insert(DiscType.CD)
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED))
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED))
 
 
 def _rips(harness) -> int:
@@ -63,7 +63,7 @@ def _file_movie(harness, root, disc_type=DiscType.BD) -> None:
     harness.drive.root = root
     harness.makemkv.release()
     harness.drive.insert(disc_type, "EXAMPLE_MOVIE")
-    eventually(lambda: harness.services.jobs.list(JobStatus.FILED), timeout=5)
+    eventually(lambda: harness.services.jobs.list(JobStatus.ARCHIVED), timeout=5)
     harness.drive.eject()
 
 
@@ -82,7 +82,7 @@ def test_a_known_cd_is_recognised_on_insert_and_not_ripped(harness, client):
     assert f"Music/Various Artists/{ALBUM}" in page
     assert "Waiting for your choice on" in page  # the Ripping bin
     assert _rips(harness) == rips
-    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
+    assert len(harness.services.jobs.list(JobStatus.ARCHIVED)) == 1
 
 
 def test_skip_ejects_the_known_disc_without_ripping(harness, client):
@@ -98,7 +98,7 @@ def test_skip_ejects_the_known_disc_without_ripping(harness, client):
     assert WARNING not in _page(client)
     assert _rips(harness) == rips
     assert harness.services.jobs.list(JobStatus.RIPPING) == []
-    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
+    assert len(harness.services.jobs.list(JobStatus.ARCHIVED)) == 1
 
 
 def test_archive_again_rips_and_files_the_disc_normally(harness, client):
@@ -108,7 +108,7 @@ def test_archive_again_rips_and_files_the_disc_normally(harness, client):
     eventually(lambda: WARNING in _page(client))
 
     client.post("/repeat/again")
-    eventually(lambda: len(harness.services.jobs.list(JobStatus.FILED)) == 2)
+    eventually(lambda: len(harness.services.jobs.list(JobStatus.ARCHIVED)) == 2)
     assert WARNING not in _page(client)
 
 
@@ -134,15 +134,15 @@ def test_a_different_cd_is_ripped_without_asking(harness, client):
     assert WARNING not in _page(client)
 
 
-def test_a_cd_ripped_but_not_yet_filed_is_a_repeat_waiting_to_be_filed(harness, client):
-    harness.cyanrip.mb_disc_id = DISC_1  # MusicBrainz offline: Ripped, never filed
+def test_a_cd_ripped_but_not_yet_archived_is_a_repeat_waiting_to_be_archived(harness, client):
+    harness.cyanrip.mb_disc_id = DISC_1  # MusicBrainz offline: Ripped, never archived
     harness.drive.insert(DiscType.CD)
     # AMA saw the drive empty, not just the tray open: else the Disc never left, to AMA
     eventually(lambda: harness.drive.ejected == 1 and not has_disc(harness.services.drive.state))
     rips = _rips(harness)
     harness.drive.insert(DiscType.CD)
     eventually(lambda: "You've ripped this Disc already" in _page(client))
-    assert "Already ripped, waiting to be filed" in _page(client)
+    assert "Already ripped, waiting to be archived" in _page(client)
     assert _rips(harness) == rips
 
 
@@ -182,14 +182,14 @@ def test_a_known_blu_ray_is_recognised_and_skip_ejects_it(harness, client, tmp_p
     harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
     eventually(lambda: WARNING in _page(client))
     page = _page(client)
-    assert "Example Movie (2016) · Blu-ray · filed" in page
+    assert "Example Movie (2016) · Blu-ray · archived" in page
     assert "Movies/Example Movie (2016) {tmdb-1234}" in page
     assert "The UHD Blu-ray of Example Movie (2016) is a different Disc" in page
 
     client.post("/repeat/skip")
     eventually(lambda: harness.drive.ejected == ejected + 1)
     assert len(harness.makemkv.ripped_ids) == rips
-    assert len(harness.services.jobs.list(JobStatus.FILED)) == 1
+    assert len(harness.services.jobs.list(JobStatus.ARCHIVED)) == 1
 
 
 def test_the_uhd_of_an_archived_blu_ray_is_not_a_repeat(harness, client, tmp_path):

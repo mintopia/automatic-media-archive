@@ -1,5 +1,5 @@
-"""Filing to the Archive: Plex must never see a partially written file, and nothing
-counts as filed (so scratch stays) until every file is verified in place."""
+"""Archiving to the Archive: Plex must never see a partially written file, and nothing
+counts as archived (so scratch stays) until every file is verified in place."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from ama.archive import PARTIAL, Archive, FilingError, safe_name
+from ama.archive import PARTIAL, Archive, ArchivingError, safe_name
 from ama.config import Library, LibraryKind
 from ama.jobs import JobStatus
 from tests.test_cd_archive import DISC_1, SPECIAL, _insert, _response, _wait_for
@@ -48,12 +48,12 @@ def test_a_copy_that_comes_out_different_is_not_renamed_into_place(tmp_path):
         dest.write_bytes(src.read_bytes()[:10])
 
     archive = Archive(_libraries(tmp_path / "libraries"), copy=truncating_copy)
-    with pytest.raises(FilingError):
+    with pytest.raises(ArchivingError):
         archive.place(tmp_path.joinpath("Music").relative_to(tmp_path), _sources(tmp_path))
     assert list((tmp_path / "libraries" / "Music").iterdir()) == []
 
 
-def test_filing_again_skips_files_already_in_place(tmp_path):
+def test_archiving_again_skips_files_already_in_place(tmp_path):
     copies = []
     archive = Archive(_libraries(tmp_path / "libraries"), copy=lambda s, d: (copies.append(d), shutil.copyfile(s, d)))
     files = _sources(tmp_path)
@@ -69,13 +69,13 @@ def test_names_are_made_safe_for_windows():
     assert len(safe_name("x" * 300)) == 80
 
 
-def test_a_disc_whose_filing_cant_be_verified_keeps_its_scratch(harness, client):
+def test_a_disc_whose_archiving_cant_be_verified_keeps_its_scratch(harness, client):
     harness.services.archive.copy = lambda src, dest: dest.write_bytes(b"garbage")
     _insert(harness, DISC_1, 24, _response(only=SPECIAL))
     rec = _wait_for(harness, JobStatus.RIPPED)
-    eventually(lambda: any("Couldn't file to" in ln.text
+    eventually(lambda: any("Couldn't archive to" in ln.text
                            for ln in harness.services.jobs.log_lines(rec.id)))
     assert harness.services.jobs.get(rec.id).status == JobStatus.RIPPED
     assert len(list(rec.scratch_dir.glob("*.flac"))) == 24
     harness.services.archive.copy = shutil.copyfile  # e.g. the Library folder came back
-    _wait_for(harness, JobStatus.FILED)
+    _wait_for(harness, JobStatus.ARCHIVED)

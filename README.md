@@ -1,7 +1,7 @@
 # Automatic Media Archive
 
 Put a Disc in, it turns up in Plex. AMA runs on the Windows PC with your optical drive:
-it rips your CDs, DVDs and Blu-rays, works out what each one is, encodes it and files it
+it rips your CDs, DVDs and Blu-rays, works out what each one is, encodes it and archives it
 into your Plex Libraries, named the way Plex expects. It only asks you when it can't tell,
 in a web UI you can open from any device at home.
 

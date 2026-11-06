@@ -135,7 +135,7 @@ class LibrariesView:
                 "AMA couldn't reach Plex {}. Save without one and Plex finds this folder on "
                 "its next scheduled scan; pick one here once Plex is back. "
                 '<a href="#plex-url">Check the Plex connection</a>').format(where)
-        return Markup("Plex's {} libraries. Plex scans this folder after each Job is filed "
+        return Markup("Plex's {} libraries. Plex scans this folder after each Job is archived "
                       "here.").format(_TYPE_WORD[form.kind])
 
 
