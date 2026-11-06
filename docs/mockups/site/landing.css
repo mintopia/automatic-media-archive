@@ -1,9 +1,10 @@
 /* Landing page. The website speaks in plain text on the ground; anything that shows the app sits inside an .appwin frame. */
-.lead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:end;padding:64px 0 40px}
+.lead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:center;padding:44px 0 32px}
 .lead h1{font:800 76px/.98 Archivo;letter-spacing:-.03em;text-wrap:balance}
 .lead .lede{color:var(--ink2);font-size:20px;margin-top:24px}
 .cta{display:flex;flex-direction:column;gap:10px;min-width:300px}
 .cta small{color:var(--ink2);font-size:13px}
+.cta .guide{color:var(--ink);font-weight:600;text-underline-offset:3px}
 .cta .btn+small{margin-bottom:8px}
 
 /* the app, shown: one window frame for every depiction */
@@ -18,7 +19,12 @@
 .appwin img{display:block;width:100%;height:auto}
 .wcap{margin-top:12px;color:var(--ink2);font-size:14px}
 .wcap b{color:var(--ink);font-weight:600}
-.hero-win .inner{max-height:560px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+.hero-win .drive{min-height:0}
+.hero-win .drive .body{padding:18px 24px}
+.hero-win .drive .title{font-size:30px}
+.hero-win .prog{padding-top:10px}
+.hero-win .pct{font-size:36px}
+.hero-win .inner{max-height:600px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
 
 /* website sections */
 .block{padding-top:112px}
@@ -27,12 +33,17 @@
 .more-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;font-weight:600;text-underline-offset:3px}
 
 .stages{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;margin-top:40px}
-.stages li{border-top:3px solid var(--c);padding-top:18px}
+.stages li{border-top:1px solid var(--ink);padding-top:18px}
 .stages h3{font:700 20px/1.2 Archivo}
 .stages p{color:var(--ink2);margin-top:8px}
 .stages .you{color:var(--ink);font-weight:600;margin-top:14px}
 
-.asks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px);gap:64px;align-items:start}
+body.site{overflow-x:clip}
+main.wrap{overflow:visible}
+.band{margin:112px calc(50% - 50vw) 0;padding:88px max(32px,calc(50vw - 688px));background:var(--sheet);border-block:1px solid var(--rule)}
+.band .h2{font-size:52px;line-height:1.02}
+.band .appwin{background:var(--ground)}
+.asks{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:64px;align-items:center}
 .alerts{list-style:none;margin-top:32px;border-top:1px solid var(--rule);max-width:520px}
 .alerts li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:14px;padding:16px 0;border-bottom:1px solid var(--rule)}
 .alerts .i{margin-top:3px}
@@ -60,7 +71,7 @@
 .handles td:first-child{font:800 20px/1.2 Archivo;width:120px}
 .handles b{font-weight:600}
 .handles small{display:block;color:var(--ink2);font-size:14px;margin-top:2px}
-.reqs{color:var(--ink2);margin-top:20px}
+.reqs{color:var(--ink2);margin-top:28px}
 .reqs b{color:var(--ink);font-weight:600}
 
 .install{list-style:none;counter-reset:s;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:40px}
@@ -86,12 +97,15 @@
   .cta{flex-direction:column;align-items:stretch}
   .cta .btn{width:100%}
   .cta .btn+small{margin:0 0 8px}
-  .hero-win .inner{max-height:440px}
+  .hero-win .inner{max-height:540px}
   .appwin .amain{padding:14px 12px}
   .block{padding-top:72px}
   .block>h2,.h2{font-size:30px}
   .intro{font-size:16px}
   .stages,.install{grid-template-columns:minmax(0,1fr);gap:28px}
+  .gallery-block{display:none}
+  .band{margin-top:72px;padding:56px 16px}
+  .band .h2{font-size:32px}
   .choice{grid-template-columns:22px 72px minmax(0,1fr)}
   .handles thead{display:none}
   .handles tr{display:block;padding:14px 0;border-bottom:1px solid var(--rule)}
