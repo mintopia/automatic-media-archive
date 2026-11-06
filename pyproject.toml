@@ -21,6 +21,7 @@ ama = "ama.__main__:main"
 dev = [
     "pytest>=8.3",
     "httpx>=0.28",
+    "ruff>=0.14",
 ]
 
 [build-system]
@@ -33,3 +34,12 @@ packages = ["src/ama"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+include = ["src/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+# Errors only: syntax, pyflakes (unused names, undefined names) and the error-class
+# pycodestyle checks. One-line `case x: ...` arms are allowed; the parsers lay them out as tables.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E701"]

@@ -186,7 +186,6 @@ def _sub(v: RunView, now: datetime) -> str:
 
 
 def _run_view(services: Services, run: RunRecord, now: datetime) -> RunView:
-    today = now.date()
     stored = services.runs.steps(run.id)
     errors = sum(s.errors for s in stored)
     if run.kind == RunKind.JOB and run.job_id is not None \
