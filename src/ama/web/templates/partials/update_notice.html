@@ -1,0 +1,5 @@
+{#- Now page: a newer AMA Release on GitHub (updates.py, ADR 0017). Topic "update".
+    AMA never updates itself: the link goes to the Release and its installer. -#}
+{%- if update -%}
+<div class="notice ok" role="status" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#download"/></svg><div><b>Update available: AMA {{ update.tag }}</b>Download the installer from the Release and run it over the top; your settings and History stay. AMA never updates itself. <a href="{{ update.url }}" rel="noopener" target="_blank">See {{ update.tag }} on GitHub</a></div></div>
+{%- endif -%}
