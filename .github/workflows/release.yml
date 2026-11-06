@@ -1,0 +1,66 @@
+# A vX.Y.Z tag on main creates the GitHub Release (ADR 0013).
+# The steps that lead up to the tag are in CONTRIBUTING.md, under "Releases".
+name: Release
+
+on:
+  push:
+    # Release tags only. Branch pushes don't match, and cyanrip build tags
+    # (cyanrip-<version>, ADR 0015) must never trigger this workflow.
+    tags:
+      - "v*.*.*"
+      - "!cyanrip-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Tag is vX.Y.Z and matches pyproject.toml
+        run: python3 tools/release/check_tag_version.py "$GITHUB_REF_NAME" pyproject.toml
+
+      - name: Tag is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) isn't on main. Releases are tagged on main after the release PR merges."
+            exit 1
+          fi
+
+  # Release assets (#76): add a job here that builds the Windows installer and
+  # uploads it with actions/upload-artifact, add it to `release`'s `needs`, then
+  # download it in `release` and pass the file to `gh release create` (or
+  # `gh release upload --clobber` when the Release already exists).
+
+  release:
+    name: Create the GitHub Release
+    needs: [verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      # Notes come from the merged PRs since the previous tag; GitHub attaches
+      # the source archives itself. Re-running the workflow leaves an existing
+      # Release alone.
+      - name: Create the Release
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --title "AMA $TAG"
+          fi

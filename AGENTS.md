@@ -10,8 +10,10 @@ Gitflow without release branches. See `CONTRIBUTING.md` for the steps.
 
 - Features: branch `feature/*` from `develop` and merge it back into `develop`.
   Small changes may go straight onto `develop`.
-- Releases: a PR from `develop` to `main`, which runs CI; once merged, tag `main`
-  `vX.Y.Z`, then back-merge `main` into `develop`.
+- Releases: bump `pyproject.toml` (and `uv lock`) on `develop`, PR `develop` into
+  `main`, which runs CI; once merged, tag `main` `vX.Y.Z` (the tag must match the
+  `pyproject.toml` version; it creates the GitHub Release), then back-merge `main`
+  into `develop`.
 - Hotfixes: branch `hotfix/*` from `main`, PR it into `main`, tag `vX.Y.Z`, then
   back-merge `main` into `develop`.
 - `main` only holds released code. Never commit to it directly.
