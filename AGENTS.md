@@ -1,5 +1,26 @@
 # Automatic Media Archive
 
+## Code hosting and branches
+
+Code lives on GitHub (`mintopia/automatic-media-archive`), the `origin` remote.
+The Forgejo repo on git.mintopia.net is a mirror of it, the `forgejo` remote:
+never push to it. Issues stay on Forgejo (below); GitHub Issues are off (ADR 0013).
+
+Gitflow without release branches. See `CONTRIBUTING.md` for the steps.
+
+- Features: branch `feature/*` from `develop` and merge it back into `develop`.
+  Small changes may go straight onto `develop`.
+- Releases: bump `pyproject.toml` (and `uv lock`) on `develop`, PR `develop` into
+  `main`, which runs CI; once merged, tag `main` `vX.Y.Z` (the tag must match the
+  `pyproject.toml` version; it creates the GitHub Release), then back-merge `main`
+  into `develop`.
+- Hotfixes: branch `hotfix/*` from `main`, PR it into `main`, tag `vX.Y.Z`, then
+  back-merge `main` into `develop`.
+- `main` only holds released code. Never commit to it directly.
+- Cite issues in commits and PR bodies by full Forgejo URL
+  (`https://git.mintopia.net/mintopia/automatic-media-archive/issues/<n>`), never a
+  bare `#<n>`: GitHub would link that to its own tracker.
+
 ## Agent skills
 
 ### Issue tracker

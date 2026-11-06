@@ -6,6 +6,9 @@ import subprocess
 import sys
 import threading
 
+import pytest
+
+from ama.single_instance import AlreadyRunning, InstanceLock
 from ama.supervisor import RESTART_EXIT_CODE, ServerProcess, run, supervise
 from ama.tray import CONTROL_ENV
 from tests.conftest import eventually
@@ -163,3 +166,51 @@ def test_a_server_that_stops_for_good_closes_the_tray(tmp_path, monkeypatch):
     child.stop()  # a crash: no restart asked for
     t.join(5)
     assert result == [1] and not t.is_alive()
+
+
+def test_with_no_settings_file_open_ama_opens_setup_on_localhost(tmp_path, monkeypatch):
+    opened: list[str] = []
+    monkeypatch.setattr("ama.supervisor.webbrowser.open", opened.append)
+    child = FakeChild([HANG, 0])
+    icon, t, result = _run_with_tray(tmp_path, monkeypatch, child)  # no ama.toml there
+    try:
+        icon.click("Open AMA")
+    finally:
+        icon.click("Quit")
+        t.join(5)
+    assert opened == ["http://127.0.0.1:8080/"]
+
+
+def test_a_second_ama_run_opens_the_running_ones_ui_and_exits(tmp_path, monkeypatch):
+    opened: list[str] = []
+    monkeypatch.setattr("ama.supervisor.webbrowser.open", opened.append)
+    child = FakeChild([HANG, 0])
+    icon, t, result = _run_with_tray(tmp_path, monkeypatch, child)  # signed in: AMA runs
+    try:
+        icons: list = []
+        monkeypatch.setattr("ama.supervisor.make_icon",
+                            lambda tray, platform: icons.append(tray))
+        second = FakeChild([0])  # then the Start menu's AMA
+        assert run(tmp_path / "ama.toml", platform="win32", popen=second) == 0
+        assert second.started == [] and icons == []
+        assert opened == ["http://127.0.0.1:8080/"]  # Setup's address: no ama.toml yet
+    finally:
+        icon.click("Quit")
+        t.join(5)
+    third = FakeChild([3])  # once the first has gone, AMA starts as usual
+    assert run(tmp_path / "ama.toml", platform="linux", popen=third) == 3
+    assert len(third.started) == 1
+
+
+def test_the_instance_lock_is_held_until_released(tmp_path):
+    path = tmp_path / "AMA" / "ama.lock"
+    lock = InstanceLock.acquire(path)
+    try:
+        with pytest.raises(AlreadyRunning):
+            InstanceLock.acquire(path)
+    finally:
+        lock.release()
+    with InstanceLock.acquire(path):
+        with pytest.raises(AlreadyRunning):
+            InstanceLock.acquire(path)
+    InstanceLock.acquire(path).release()

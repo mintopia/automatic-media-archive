@@ -165,3 +165,142 @@ def test_without_plex_the_list_is_disabled_and_saving_still_works(setup):
     client.post(PAGE + "/save", data={"lib.original": "Family Films", "lib.kind": "films",
                                       "lib.name": "Family", "lib.path": str(h.libraries_root / "F")})
     assert ("films", "Family", "Family Films", False) in _libraries(toml)  # Plex pick kept
+
+
+# --- the Naming Pattern (#67) -----------------------------------------------------------------
+
+FILMS_DEFAULT = "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}"
+
+
+def _pattern(client, kind, pattern):
+    r = client.get(PAGE + "/pattern", params={"lib.kind": kind, "lib.pattern": pattern})
+    assert r.status_code == 200
+    return html.unescape(r.text)
+
+
+def test_a_film_librarys_editor_shows_its_pattern_fields_presets_and_a_preview(setup):
+    client, *_ = setup
+    films = _group(_page(client, "?edit=Movies"), "Films")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape(FILMS_DEFAULT) + '"', films)
+    for field, example in [("{title}", "Ocean's Eleven"), ("{year}", "2001"),
+                           ("{tmdb_id}", "161"), ("{version}", "4K")]:
+        assert re.search(re.escape(field) + r"</code>.*?" + re.escape(example), films, re.S)
+    assert 'data-preset="{title} ({year})/{title} ({year}) - {version}"' in films
+    assert "Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 4K.mkv" in films
+
+
+def test_the_preview_follows_the_pattern_with_its_errors_and_plex_warnings(setup):
+    client, *_ = setup
+    out = _pattern(client, "films", "{title}/{title} - {version}")
+    assert "Ocean's Eleven/Ocean's Eleven - 4K.mkv" in out
+    assert "Without {year}, Plex may match the wrong film" in out
+    assert "Without {tmdb_id}, Plex may match the wrong film" in out
+    bad = _pattern(client, "films", "{title}/{nope}")
+    assert "{nope} isn't a field here" in bad and "Needs {version}" in bad
+    assert ".mkv" not in bad  # no preview of a pattern that can't be used
+
+
+def test_saving_a_pattern_files_later_films_by_it_and_a_bad_one_is_shown_again(setup):
+    client, toml, h = setup
+    data = {"lib.original": "Movies", "lib.kind": "films", "lib.name": "Movies",
+            "lib.plex": "Movies", "lib.path": str(h.libraries_root / "Movies")}
+    good = "{title} ({year})/{title} - {version}"
+    r = client.post(PAGE + "/save", data=data | {"lib.pattern": good}, follow_redirects=False)
+    assert r.status_code == 303
+    assert load_config(toml).libraries[0].pattern == good
+    r = client.post(PAGE + "/save", data=data | {"lib.pattern": "{title}"})
+    assert r.status_code == 422
+    films = _group(html.unescape(r.text), "Films")
+    assert re.search(r'id="lib-pattern"[^>]*value="\{title\}"[^>]*aria-invalid="true"', films)
+    assert "Needs {version}, so every file gets its own name" in films
+    assert load_config(toml).libraries[0].pattern == good
+
+
+# --- music's single-disc and multi-disc patterns (#69) ---------------------------------------
+
+def test_a_music_librarys_editor_has_both_patterns_each_with_its_preview(setup):
+    client, *_ = setup
+    music = _group(_page(client, "?edit=Music"), "Music")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape("{artist}/{album}/{track:02} - {track_title}") + '"', music)
+    assert re.search(r'<input [^>]*id="lib-multi_disc_pattern" name="lib.multi_disc_pattern" '
+                     'value="' + re.escape("{artist}/{album}/{disc}{track:02} - {track_title}")
+                     + '"', music)
+    assert "Single-disc pattern" in music and "Multi-disc pattern" in music
+    for field in ("artist", "album", "year", "track", "track_title", "track_artist", "disc",
+                  "disc_total", "disc_title"):
+        assert "{" + field + "}</code>" in music
+    assert "Queen/Greatest Hits/01 - Bohemian Rhapsody.flac" in music
+    assert "Queen/Greatest Hits/101 - Bohemian Rhapsody.flac" in music
+    assert 'data-preset="{artist}/{album}/Disc {disc}/{track:02} - {track_title}"' in music
+    assert 'aria-controls="lib-multi_disc_pattern"' in music
+
+
+def test_the_multi_disc_preview_follows_its_own_pattern(setup):
+    client, *_ = setup
+    r = client.get(PAGE + "/pattern", params={
+        "lib.kind": "music", "key": "multi_disc_pattern",
+        "lib.multi_disc_pattern": "{artist}/{album}/Disc {disc}/{track:02} {track_title}"})
+    assert r.status_code == 200
+    assert "Queen/Greatest Hits/Disc 1/01 Bohemian Rhapsody.flac" in html.unescape(r.text)
+    single = _pattern(client, "music", "{artist}/{album}/{track:02} - {track_title}")
+    assert "Queen/Greatest Hits/01 - Bohemian Rhapsody.flac" in single
+    bad = client.get(PAGE + "/pattern", params={
+        "lib.kind": "music", "key": "multi_disc_pattern",
+        "lib.multi_disc_pattern": "{artist}/{album}/{track:02}"})
+    assert "Needs {disc}" in html.unescape(bad.text)
+    assert client.get(PAGE + "/pattern", params={
+        "lib.kind": "films", "key": "multi_disc_pattern"}).status_code == 404
+
+
+def test_saving_a_music_librarys_patterns_and_a_bad_one_is_shown_again(setup):
+    client, toml, h = setup
+    data = {"lib.original": "Music", "lib.kind": "music", "lib.name": "Music",
+            "lib.plex": "Music", "lib.path": str(h.libraries_root / "Music"),
+            "lib.pattern": "{artist}/{album}/{track:02} - {track_title}"}
+    multi = "{artist}/{album}/Disc {disc}/{track:02} - {track_title}"
+    r = client.post(PAGE + "/save", data=data | {"lib.multi_disc_pattern": multi},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    assert next(lib for lib in load_config(toml).libraries
+                if lib.name == "Music").multi_disc_pattern == multi
+    r = client.post(PAGE + "/save", data=data | {"lib.multi_disc_pattern": "{album}/{track}"})
+    assert r.status_code == 422
+    music = _group(html.unescape(r.text), "Music")
+    assert re.search(r'id="lib-multi_disc_pattern"[^>]*value="\{album\}/\{track\}"[^>]*'
+                     'aria-invalid="true"', music)
+    assert "Needs {disc}, so every file gets its own name" in music
+
+
+# --- the TV Naming Pattern (#68) ----------------------------------------------------------------
+
+TV_DEFAULT = ("{show} ({year}) {{tmdb-{tmdb_id}}}/Season {season:02}/"
+              "{show} - s{season:02}e{episode:02} - {episode_title}")
+
+
+def test_a_tv_librarys_editor_previews_an_episode_a_special_and_one_with_no_title(setup):
+    client, *_ = setup
+    tv = _group(_page(client, "?edit=TV"), "TV")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape(TV_DEFAULT) + '"', tv)
+    for field, example in [("{show}", "Firefly"), ("{year}", "2002"), ("{tmdb_id}", "1437"),
+                           ("{season}", "1"), ("{episode}", "2"),
+                           ("{episode_title}", "The Train Job")]:
+        assert re.search(re.escape(field) + r"</code>.*?" + re.escape(example), tv, re.S)
+    assert 'data-preset="{show}/Season {season:02}/{show} - s{season:02}e{episode:02}' in tv
+    assert "Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e02 - The Train Job.mkv" in tv
+    assert ("Firefly (2002) {tmdb-1437}/Season 00/"
+            "Firefly - s00e01 - Here's How It Was_ The Making of Firefly.mkv") in tv
+    assert "Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e03.mkv" in tv
+
+
+def test_a_tv_pattern_is_checked_for_plex_and_a_show_folder(setup):
+    client, *_ = setup
+    out = _pattern(client, "tv", "{show}/{show} {season}-{episode}")
+    assert "Firefly/Firefly 1-2.mkv" in out
+    assert "Plex finds episodes by s01e02" in out
+    no_folder = _pattern(client, "tv", "{show} - s{season:02}e{episode:02}")
+    assert "The first folder must be the show's" in no_folder and ".mkv" not in no_folder
+    seasonal = _pattern(client, "tv", "{show} S{season}/s{season:02}e{episode:02}")
+    assert "The first folder must be the show's" in seasonal

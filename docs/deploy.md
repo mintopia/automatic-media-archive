@@ -2,7 +2,10 @@
 
 The app runs as the logged-on user (not a Windows service), because the MakeMKV
 licence is per-user. Task Scheduler starts it at logon with `pythonw.exe`, so
-there is no console window; it logs to `logs\ama.log` (see `[paths]` in the config).
+there is no console window. Its settings file, database and logs live in
+`%LOCALAPPDATA%\AMA\` (ADR 0017): `ama.toml`, `ama.sqlite3` and `logs\ama.log`.
+`--config PATH` or `$env:AMA_CONFIG` names another settings file; the database and
+logs then sit beside that file (see `[paths]` in it). Scratch has its own setting.
 
 ## External tools (ADR 0006)
 
@@ -22,7 +25,7 @@ it. After fixing it, press "I've fixed it, check again" there. CD Rips are unaff
 
 **ffmpeg/ffprobe and cyanrip are AMA's.** On startup AMA downloads its pinned
 portable builds (versions and SHA-256 in `src/ama/tools.py`) into
-`%LOCALAPPDATA%\ama\tools` (or `[tools] dir`), checks their hashes and unpacks
+`%LOCALAPPDATA%\AMA\tools` (or `[tools] dir`), checks their hashes and unpacks
 them. The first start needs internet and about 0.5 GB; later starts download
 nothing. A corrupt tool is fetched again on the next start. Progress and
 failures show on the Now page; a missing tool pauses only the work that needs it.
@@ -30,17 +33,17 @@ To use your own build instead, set its path under `[tools]` in `ama.toml`; it is
 used as-is. The ffmpeg build uses NVENC, which needs a recent NVIDIA driver
 (this box: 621.01 works).
 
-### AMA's cyanrip build (ADR 0007)
+### AMA's cyanrip build (ADR 0007, ADR 0015)
 
 cyanrip's last release (0.9.3.1) has broken AccurateRip lookups on Windows, so
-AMA builds its own from a pinned upstream commit and hosts the zip in this
-repo's Forgejo package registry:
+AMA builds its own from a pinned upstream commit and publishes the zip as a
+GitHub Release of this repo:
 
 | | |
 |---|---|
 | Upstream commit | `648b1dddd265cfd2bb69483a826eb5a5c7e7079e` (0.9.4-rc3; `-v` → `cyanrip 0.9.4-rc3 (648b1dd)`) |
-| Package | `mintopia` generic package `cyanrip`, version `0.9.4-rc3-g648b1dd` |
-| URL | `https://git.mintopia.net/api/packages/mintopia/generic/cyanrip/0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip` |
+| Release | [`cyanrip-0.9.4-rc3-g648b1dd`](https://github.com/mintopia/automatic-media-archive/releases/tag/cyanrip-0.9.4-rc3-g648b1dd) |
+| URL | `https://github.com/mintopia/automatic-media-archive/releases/download/cyanrip-0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip` |
 | Zip SHA-256 | `0b936259c0ecdf628e8446f42c778cf920e65de8556ccdaa0486c7b9df929d1d` |
 | `cyanrip.exe` SHA-256 | `851d72c61df34a3a6af5fc44aa1711582ec33bb22e198560bb8d52c3a089a94a` |
 
@@ -48,15 +51,18 @@ To rebuild or move to a new commit (needs no admin rights; about 3 GB and
 an hour under `%LOCALAPPDATA%\ama-build\cyanrip`):
 
 ```powershell
-# 1. edit tools\cyanrip\versions.sh: CYANRIP_COMMIT, CYANRIP_VERSION, any library pins
+# 1. edit tools\cyanrip\versions.sh: CYANRIP_COMMIT, CYANRIP_VERSION, any library pins; commit and push
 .\tools\cyanrip\build.ps1 -Fresh -InfoDevice D:   # clean build + tests; then `cyanrip -I` on the CD in D: (never rips)
-.\tools\cyanrip\build.ps1 -PublishOnly            # PUT the zip to the registry (key from ~\.forgejo); prints its sha256
+.\tools\cyanrip\build.ps1 -PublishOnly            # GitHub Release cyanrip-<version> via gh, tagging HEAD; prints the zip's sha256
 # 2. update the cyanrip Pin in src\ama\tools.py and the table above; uv run pytest
 ```
 
-A published version can't be replaced; a new build gets a new version. If
-MSYS2 has dropped a locked toolchain package, run `build.ps1 -Relock` and
-commit the new `tools\cyanrip\msys2-packages.lock`.
+A release is never replaced; a new build gets a new tag. The release notes
+link the upstream commit and `tools\cyanrip` at the tag (the GPL source
+offer). The tag isn't `v*.*.*`, so it doesn't start the app release workflow.
+The old Forgejo package stays up for older installs. If MSYS2 has dropped a
+locked toolchain package, run `build.ps1 -Relock` and commit the new
+`tools\cyanrip\msys2-packages.lock`.
 
 ## First install
 
@@ -64,11 +70,17 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
 2. Clone and install (uv fetches Python 3.13 itself):
 
    ```powershell
-   git clone https://git.mintopia.net/mintopia/automatic-media-archive.git C:\ama
+   git clone https://github.com/mintopia/automatic-media-archive.git C:\ama
    cd C:\ama
    uv sync --frozen --no-dev
-   copy ama.example.toml ama.toml   # then edit ama.toml: Libraries, secrets, scratch...
    ```
+
+   The first `uv run ama` finds no settings file and opens Setup in the browser on
+   http://127.0.0.1:8080/ (ADR 0016). It asks where the Libraries and Scratch go and
+   whether other devices may reach AMA (with an optional password), writes
+   `%LOCALAPPDATA%\AMA\ama.toml`, and AMA carries on at the address chosen, on the same
+   port. Change anything else on the Settings page. To
+   skip Setup, copy `ama.example.toml` there and edit it.
 
    Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
    if a Library is on a network share, make sure the Windows user AMA runs as can
@@ -77,7 +89,7 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    every minute. An `ama.toml` from v1/v2 is rewritten once at startup (its
    `[nas]` table is dropped and each Library gets its full path; a `.bak` is kept).
 
-3. Try it in a console first: `uv run ama` (reads `.\ama.toml`; `--config PATH`
+3. Try it in a console first: `uv run ama` (reads `%LOCALAPPDATA%\AMA\ama.toml`; `--config PATH`
    or `$env:AMA_CONFIG` to use another file). Open `http://<box>:8080/`. Ctrl+C to stop.
    `ama` (same as `ama run`) is a small supervisor that runs the server
    (`ama serve`) and starts it again when Settings' "Restart now" asks for it
@@ -90,8 +102,8 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
 
 5. Start it at login, logged in as the user who owns the MakeMKV licence. Either:
 
-   - **From the tray (no admin rights).** Start `C:\ama\.venv\Scripts\pythonw.exe -m ama run
-     --config C:\ama\ama.toml` once; AMA's icon appears in the notification area. Its
+   - **From the tray (no admin rights).** Start `C:\ama\.venv\Scripts\pythonw.exe -m ama run`
+     once; AMA's icon appears in the notification area. Its
      menu has Open AMA (also a double-click), Pause/Resume new Discs (the same Pause
      as the UI's menu), Restart (once nothing Rips or Encodes), **Start at login**
      and Quit. Ticking Start at login adds an "Automatic Media Archive" entry under
@@ -104,7 +116,7 @@ commit the new `tools\cyanrip\msys2-packages.lock`.
    The logon task (elevated PowerShell):
 
    ```powershell
-   $action    = New-ScheduledTaskAction -Execute "C:\ama\.venv\Scripts\pythonw.exe" -Argument "-m ama run --config C:\ama\ama.toml" -WorkingDirectory "C:\ama"
+   $action    = New-ScheduledTaskAction -Execute "C:\ama\.venv\Scripts\pythonw.exe" -Argument "-m ama run" -WorkingDirectory "C:\ama"
    $trigger   = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
    $settings  = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
@@ -142,12 +154,40 @@ Start-ScheduledTask -TaskName "Automatic Media Archive"
 ```
 
 Database migrations run automatically at startup. If the new version adds
-settings, compare `ama.toml` with `ama.example.toml`; the app refuses to start
+settings, compare `%LOCALAPPDATA%\AMA\ama.toml` with `ama.example.toml`; the app refuses to start
 on unknown settings and names them.
+
+## Moving an existing install to %LOCALAPPDATA%\AMA (once)
+
+Before Phase 4, AMA kept `ama.toml`, `ama.sqlite3` and `logs\` beside the clone
+(`C:\ama`). It now looks in `%LOCALAPPDATA%\AMA\` unless `--config` or
+`AMA_CONFIG` says otherwise (ADR 0017). An install that still starts with
+`--config C:\ama\ama.toml` keeps working; to move it:
+
+1. Quit AMA from the tray (or `Stop-ScheduledTask -TaskName "Automatic Media Archive"`).
+   Nothing should be Ripping or Encoding.
+2. If `[paths] scratch` in `ama.toml` is a relative path, make it a full one
+   (for example `'C:\ama\scratch'`): relative paths follow the settings file.
+3. Move the files (PowerShell):
+
+   ```powershell
+   $to = "$env:LOCALAPPDATA\AMA"
+   New-Item -ItemType Directory -Force $to | Out-Null
+   Move-Item C:\ama\ama.toml, C:\ama\ama.toml.bak, C:\ama\ama.sqlite3* $to -ErrorAction SilentlyContinue
+   Move-Item C:\ama\logs $to
+   ```
+
+   `ama.sqlite3*` also moves the database's `-wal` and `-shm` files if they are there.
+4. Drop `--config C:\ama\ama.toml` from however AMA starts:
+   - the logon task: register it again with `-Argument "-m ama run"` (above);
+   - the tray's **Start at login**: untick it and tick it again once AMA is running
+     from the new place.
+5. Start AMA. Its log should now be at `%LOCALAPPDATA%\AMA\logs\ama.log`.
 
 ## When it won't start
 
 - Config problems: run `uv run ama` in a console to see the error, or read
-  `ama-startup-error.log` next to the config (written when there is no console).
-- Everything else: `logs\ama.log`.
+  `ama-startup-error.log` next to the config, normally in `%LOCALAPPDATA%\AMA\`
+  (written when there is no console).
+- Everything else: `%LOCALAPPDATA%\AMA\logs\ama.log`.
 - Is it running? `Get-ScheduledTask -TaskName "Automatic Media Archive" | Get-ScheduledTaskInfo`

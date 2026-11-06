@@ -20,6 +20,14 @@ AUTH="Authorization: token $FORGEJO_API_KEY"
 Issues are referenced by their per-repo **index** (`#<index>`). As on GitHub,
 issues and pull requests share one index space.
 
+The code itself lives on GitHub (ADR 0013), where `#<index>` would link to
+GitHub's own (disabled) tracker. So **commit messages and GitHub PR bodies cite an
+issue by its full URL**: `https://git.mintopia.net/mintopia/automatic-media-archive/issues/<index>`.
+A bare `#<index>` is fine only inside Forgejo issue bodies and comments.
+
+The `forgejo` git remote is a read-only mirror of GitHub; infer `REPO` from it, not
+from `origin`.
+
 ## Conventions
 
 - **Create an issue**: `curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' "$API/repos/$REPO/issues" -d @- <<'JSON'` with `{"title":"...","body":"...","labels":[<id>,...]}`. Labels are given by **numeric id**, not name — resolve names first (see **Labels**). Use a heredoc for multi-line bodies.

@@ -13,9 +13,9 @@ import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
-from ama import decoys, extras
-from ama.archive import safe_name
+from ama import decoys, extras, naming
 from ama.jobs import TitleRecord, TitleStatus
+from ama.naming import Pattern, Subject
 from ama.tmdb import DiscHints, Episode, Series, clean_term
 
 TV = PurePosixPath("TV")
@@ -26,27 +26,39 @@ SIMILAR = 0.8          # an episode is at least this fraction of the longest one
 PLAY_ALL_SLACK_S = 90  # or 3%: a Play-all's length vs. the Titles it joins
 
 
-def series_folder(series: Series) -> PurePosixPath:
-    """`TV/Show (Year) {tmdb-ID}`."""
-    return TV / f"{safe_name(series.title)} {{tmdb-{series.id}}}"
+def series_folder(series: Series, pattern: Pattern = naming.default(Subject.TV)) -> PurePosixPath:
+    """The show's folder, its TV Library `pattern`'s first: `TV/Show (Year) {tmdb-ID}` by
+    default."""
+    return TV / pattern.folders(_show_values(series), 1)
 
 
-def season_folder(season: int) -> str:
-    return f"Season {season:02d}"
+def season_path(series: Series, season: int,
+                pattern: Pattern = naming.default(Subject.TV)) -> PurePosixPath:
+    """The folder a season's Episodes go in by `pattern`, as far as it goes before any
+    folder of an Episode's own: by default `TV/Show (Year) {tmdb-ID}/Season 01`."""
+    depth = pattern.leading_folders(frozenset({"episode", "episode_title"}))
+    return TV / pattern.folders(_show_values(series) | {"season": season}, depth)
 
 
-def episode_path(series: Series, ep: Episode) -> PurePosixPath:
-    """Where the Episode is filed, relative to the Archive root."""
-    stem = f"{safe_name(series.name)} - s{ep.season:02d}e{ep.number:02d}"
-    if ep.name:
-        stem += f" - {safe_name(ep.name)}"
-    return series_folder(series) / season_folder(ep.season) / f"{stem}.mkv"
+def episode_path(series: Series, ep: Episode,
+                 pattern: Pattern = naming.default(Subject.TV)) -> PurePosixPath:
+    """Where the Episode is filed by its TV Library's `pattern`, relative to the Archive
+    root; by default `TV/Show (Year) {tmdb-ID}/Season 01/Show - s01e02 - Episode Name.mkv`."""
+    values = _show_values(series) | {"season": ep.season, "episode": ep.number,
+                                     "episode_title": ep.name}
+    return TV / pattern.render(values, ".mkv")
 
 
-def extra_path(series: Series, name: str) -> PurePosixPath:
-    """A Title kept as an Extra of the show: `Other/<name>.mkv`, named and placed the way
-    a film's Extras are (`extras.default_names`, `extras.plex_path`)."""
-    return extras.plex_path(series_folder(series), name)
+def _show_values(series: Series) -> dict[str, naming.Value]:
+    return {"show": series.name, "year": series.year, "tmdb_id": series.id}
+
+
+def extra_path(series: Series, name: str,
+               pattern: Pattern = naming.default(Subject.TV)) -> PurePosixPath:
+    """A Title kept as an Extra of the show: `Other/<name>.mkv` in the show's folder by
+    `pattern`, named and placed the way a film's Extras are (`extras.default_names`,
+    `extras.plex_path`)."""
+    return extras.plex_path(series_folder(series, pattern), name)
 
 
 _SEASON_OR_DISC = re.compile(

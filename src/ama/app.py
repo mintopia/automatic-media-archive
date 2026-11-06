@@ -55,6 +55,7 @@ from ama.sets import DiscSets
 from ama.tmdb import Tmdb
 from ama.tools import ToolLookup, Tools
 from ama.tvarchive import TvArchiver, TvTitles
+from ama.updates import UpdateCheck
 from ama.video_rip import VideoRipper
 from ama.web import (STATIC_DIR, auth, cd_pick_pages, job_settings_pages, jobs_pages,
                      extras_pages, guess_pages, history_pages, logs_pages, movie_review_pages,
@@ -100,6 +101,7 @@ class Services:
     app_events: AppEvents  # startup and tool events as Runs
     log_pruner: LogPruner  # removes Step output older than logs.keep_days (#34)
     scratch_cleaner: ScratchCleaner
+    updates: UpdateCheck  # "Update available": a newer AMA Release (ADR 0017)
     job_settings: JobSettings | None = None  # set by build_services; per-Job overrides + locks
     settings: Settings | None = None  # set by build_services; ama.toml vs what's running
 
@@ -130,7 +132,7 @@ class Services:
                 self.tools.run, self.tools.watch_makemkv,
                 self.cd_archive.run, self.movie_archive.run,
                 self.thumbnails.run, self.tv_archive.run, self.notifier.run,
-                self.backfill.run, self.restart.run, self.encoders.run,
+                self.backfill.run, self.restart.run, self.encoders.run, self.updates.run,
                 *([self.settings.run] if self.settings else [])]
 
 
@@ -221,7 +223,7 @@ def build_services(
                               covers=covers, problems=problems,
                               library=job_settings.library),
         notifier=Notifier(jobs, bus, channels(cfg, http), problems),
-        sets=DiscSets(db),
+        sets=DiscSets(db, archive.logical),
         covers=covers,
         media=media,
         film_guesses=film_guesses,
@@ -241,6 +243,7 @@ def build_services(
             jobs, runs, lambda: services.config.scratch.retention_days,
             floor_gb=lambda: services.config.scratch.floor_gb,
             free=lambda: usage.free if (usage := scratch.usage()) else None),
+        updates=UpdateCheck(http, db, bus),
     )
     jobs.finished = services.scratch_cleaner.request
     services.settings = Settings(config_path, cfg, services.apply_live)

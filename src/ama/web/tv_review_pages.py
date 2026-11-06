@@ -17,12 +17,13 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ama import sets, tvreview
+from ama import naming, sets, tvreview
+from ama.config import LibraryKind, library_for
 from ama.jobs import JobRecord, JobStatus
 from ama.moviereview import ripped_titles
 from ama.sets import SetKind, SetKey
 from ama.tmdb import Episode, Series, TmdbError, load_hints
-from ama.tv import play_alls, season_folder, series_folder, series_terms
+from ama.tv import play_alls, season_path, series_terms
 from ama.tvarchive import planned
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
@@ -76,6 +77,13 @@ def _after_earlier_discs(services, rec: JobRecord, series: Series | None, season
     return [e for e in episodes if e.number > last]
 
 
+def tv_pattern(services, rec: JobRecord) -> naming.Pattern:
+    """The Naming Pattern of the TV Library `rec` would file to now."""
+    library = (services.job_settings.files_to(rec, LibraryKind.TV) if services.job_settings
+               else library_for(services.archive.libraries, LibraryKind.TV))
+    return naming.pattern_of(library)
+
+
 def page(request: Request, services, rec: JobRecord, errors: list[str] | None = None,
          status_code: int = 200, series_id: int | None = None, season: int | None = None,
          chosen: dict[int, str] | None = None) -> Response:
@@ -124,7 +132,7 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         "results": results, "series": series, "season": season or 0,
         "seasons": series.seasons if series and series.seasons else ([season] if series else []),
         "episodes": episodes, "specials": specials, "tmdb_error": tmdb_error,
-        "folder": (series_folder(series) / season_folder(season or 0)).as_posix()
+        "folder": season_path(series, season or 0, tv_pattern(services, rec)).as_posix()
         if series else "",
         "titles": [TvTitle(_title_choice(services, rec, t, None), t.number in joined,
                            picks.get(t.number, tvreview.EXTRA)) for t in titles],
@@ -170,7 +178,8 @@ async def episodes(request: Request, job_id: int) -> Response:
     kept, errors = tvreview.decide(titles, choices, known)
     if errors:
         return page(request, services, rec, errors, 400, series_id, season, choices)
-    services.tv_archive.titles.enqueue(rec.id, series, planned(series, rec, kept))
+    paths = planned(series, rec, kept, tv_pattern(services, rec))
+    services.tv_archive.titles.enqueue(rec.id, series, paths)
     n = sum(1 for k in kept if k.episode)
     if services.jobs.requeue(rec.id):
         services.jobs.log(rec.id, f"Review: {series.title} (TMDB {series.id}); "

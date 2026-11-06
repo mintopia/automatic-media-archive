@@ -15,7 +15,7 @@ import copy
 import logging
 import os
 import shutil
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ import tomlkit.exceptions
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
+from ama import naming
 from ama.config import EDITED, Config, ConfigError, LibraryKind, library_folder, load_config
 
 log = logging.getLogger(__name__)
@@ -132,20 +133,28 @@ def _toml_value(value: Any, typed: str) -> Any:
 
 
 def _write_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "w", encoding="utf-8", newline="") as f:
         f.write(text)
         f.flush()
         os.fsync(f.fileno())
-    bak = path.with_name(path.name + ".bak")
-    bak_tmp = path.with_name(path.name + ".bak.tmp")
-    shutil.copy2(path, bak_tmp)
-    os.replace(bak_tmp, bak)
+    if path.exists():  # a new file (Setup) has nothing to keep
+        bak = path.with_name(path.name + ".bak")
+        bak_tmp = path.with_name(path.name + ".bak.tmp")
+        shutil.copy2(path, bak_tmp)
+        os.replace(bak_tmp, bak)
     os.replace(tmp, path)
 
 
+SETUP_HEADER = ("AMA's settings, written by Setup. Change them on the Settings page, or here.",
+                "ama.example.toml lists every setting; anything left out has its default.")
+
 # A Library's keys that the file can leave out, and their value then.
-_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False}
+_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False, "pattern": "",
+                                     "multi_disc_pattern": ""}
+# What the Library editor types.
+_LIBRARY_TYPED = ("name", "plex", "path", "pattern", "multi_disc_pattern")
 
 
 class SettingsFile:
@@ -173,6 +182,30 @@ class SettingsFile:
         """Apply `{key: typed text}`; returns the keys whose value changed. Raises
         SettingsRejected (file untouched) if the result wouldn't load at startup."""
         doc = tomlkit.parse(self._text())
+        changed = self._edit(doc, changes)
+        if changed:
+            _write_atomic(self.path, doc.as_string())
+        return changed
+
+    def create(self, changes: Mapping[str, str],
+               libraries: Sequence[Mapping[str, Any]] = ()) -> None:
+        """Write a new file (Setup, ADR 0016): `changes` as `save` takes them, and
+        `libraries` as `[[libraries]]` entries ({"name", "kind", "path", "default"}).
+        Raises SettingsRejected (nothing written), or FileExistsError: never overwrites."""
+        if self.path.exists():
+            raise FileExistsError(self.path)
+        doc = tomlkit.document()
+        for line in SETUP_HEADER:
+            doc.add(tomlkit.comment(line))
+        doc.add(tomlkit.nl())
+        self._edit(doc, changes)
+        if libraries:
+            self._write_libraries(doc, [dict(_LIBRARY_OPTIONAL) | dict(lib) for lib in libraries])
+        else:
+            _write_atomic(self.path, doc.as_string())
+
+    def _edit(self, doc: tomlkit.TOMLDocument, changes: Mapping[str, str]) -> list[str]:
+        """Apply `changes` to `doc` if the result validates; the keys whose value changed."""
         data = doc.unwrap()
         candidate = copy.deepcopy(data)
         for key, typed in changes.items():
@@ -204,8 +237,6 @@ class SettingsFile:
                     table[t] = tomlkit.table()
                 table = table[t]
             table[name] = _toml_value(value_at(new, key), changes[key])
-        if changed:
-            _write_atomic(self.path, doc.as_string())
         return changed
 
     # -- Libraries: `[[libraries]]` entries, each saved on its own ---------------------
@@ -213,18 +244,22 @@ class SettingsFile:
     def save_library(self, kind: LibraryKind, original: str | None,
                      typed: Mapping[str, str]) -> None:
         """Add a `kind` Library (`original` None) or edit the one called `original`, from
-        `{"name", "plex", "path"}`; leaving out "plex" keeps the one it has. Raises
-        SettingsRejected keyed by those names."""
+        `{"name", "plex", "path", "pattern", "multi_disc_pattern"}`; an edit keeps the value of any it leaves out.
+        Raises SettingsRejected keyed by those names."""
         doc, libraries = self._libraries()
         index = (len(libraries) if original is None
                  else next((i for i, lib in enumerate(libraries) if lib["name"] == original),
                            None))
         if index is None:
             raise SettingsRejected({}, [f"There's no Library called {original}"])
-        kept = libraries[index]["plex"] if original is not None else ""
-        fields = {k: str(typed.get(k, kept if k == "plex" else "")).strip()
-                  for k in ("name", "plex", "path")}
+        kept = libraries[index] if original is not None else {}
+        fields = {k: str(typed.get(k, kept.get(k, ""))).strip() for k in _LIBRARY_TYPED}
         errors: dict[str, str] = {}
+        for key, subject in naming.patterns(kind).items():
+            if fields[key] == subject.spec.default:
+                fields[key] = ""  # the default stays implicit, as in a new file
+            elif fields[key] and (bad := naming.check(fields[key], subject).errors):
+                errors[key] = "; ".join(bad)
         for k in ("name", "path"):
             if not fields[k]:
                 errors[k] = "This can't be empty"
@@ -241,8 +276,7 @@ class SettingsFile:
         if errors:
             raise SettingsRejected(errors, [])
         if original is None:
-            libraries.append({"name": fields["name"], "kind": kind.value, "path": fields["path"],
-                              "plex": fields["plex"], "default": False})
+            libraries.append(fields | {"kind": kind.value, "default": False})
         else:
             libraries[index] = libraries[index] | fields
         self._write_libraries(doc, libraries)
@@ -294,7 +328,7 @@ class SettingsFile:
             if i >= len(aot):
                 aot.append(tomlkit.table())
             entry = aot[i]
-            for key in ("name", "kind", "path", "plex", "default"):
+            for key in ("name", "kind", "path", "plex", "default", *naming.PatternKey):
                 value = want[key]
                 optional = key in _LIBRARY_OPTIONAL  # left out of the file when empty
                 if entry.get(key, _LIBRARY_OPTIONAL.get(key)) == value:

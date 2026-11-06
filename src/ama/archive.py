@@ -28,6 +28,11 @@ class FilingError(Exception):
     """A file couldn't be put into the Archive intact."""
 
 
+def safe_chars(text: str) -> str:
+    """`text` with the characters Windows forbids in a name (`/` too) -> `_`."""
+    return _ILLEGAL.sub("_", text)
+
+
 def safe_name(text: str, limit: int = NAME_LIMIT) -> str:
     """`text` as a Windows/SMB-safe file or folder name (characters Windows forbids -> `_`)."""
     name = _ILLEGAL.sub("_", text).strip()
@@ -102,6 +107,14 @@ class Archive:
         """The Library holding `folder` (the innermost, if Libraries nest)."""
         holding = [lib for lib in self.libraries if Path(folder).is_relative_to(lib.path)]
         return max(holding, key=lambda lib: len(Path(lib.path).parts), default=None)
+
+    def logical(self, folder: Path) -> Path | None:
+        """`folder` as archivers name it (`Movies/<film>`), the reverse of `folder`; None
+        outside every Library."""
+        library = self.library_of(folder)
+        if library is None:
+            return None
+        return Path(library.kind.folder, *Path(folder).relative_to(library.path).parts)
 
     def within(self, folder: Path) -> Path | None:
         """`folder` from its Library folder's name down (`Films HD/<film>`); None outside

@@ -11,6 +11,7 @@ a typo can't silently fall back to a default. Every setting must also appear in
 
 from __future__ import annotations
 
+import os
 import re
 import tomllib
 from collections.abc import Callable, Sequence
@@ -73,6 +74,9 @@ def _drive_letter(value: str, info: ValidationInfo) -> str:
     return value
 
 
+SETUP_HOST = "127.0.0.1"  # Setup's address, whatever web.host will be (ADR 0016)
+
+
 class WebConfig(_Section):
     host: str = "0.0.0.0"
     port: int = Field(default=8080, ge=1, le=65535)
@@ -87,7 +91,7 @@ class DriveConfig(_Section):
 class ToolsConfig(_Section):
     """External programs (ADR 0006). Empty = AMA's default for that tool."""
 
-    dir: str = ""  # where AMA keeps its portable tools; empty = %LOCALAPPDATA%\ama\tools
+    dir: str = ""  # where AMA keeps its portable tools; empty = %LOCALAPPDATA%\AMA\tools
     ffmpeg: str = ""
     ffprobe: str = ""
     cyanrip: str = ""
@@ -175,9 +179,9 @@ class LogsConfig(_Section):
 
 
 class CqConfig(_Section):
-    dvd: int = Field(ge=0, le=51)
-    bd: int = Field(ge=0, le=51)
-    uhd: int = Field(ge=0, le=51)
+    dvd: int = Field(default=20, ge=0, le=51)
+    bd: int = Field(default=22, ge=0, le=51)
+    uhd: int = Field(default=22, ge=0, le=51)
 
 
 # Encode choices (ADR 0010). `encode.py` maps each to ffmpeg arguments; the Settings
@@ -207,7 +211,7 @@ class EncodeConfig(_Section):
     audio: AudioChoice = "languages"
     subtitles: SubtitleChoice = "languages"
     languages: Annotated[str, AfterValidator(_languages)] = "English"  # as typed
-    cq: CqConfig
+    cq: CqConfig = CqConfig()
     max_resolution: MaxResolutionConfig = MaxResolutionConfig()
 
     @property
@@ -267,6 +271,24 @@ class Library(_Section):
     path: Annotated[str, AfterValidator(library_folder)]
     plex: str = ""  # the Plex library's name; empty = whichever Plex library holds the folder
     default: bool = False
+    pattern: str = ""  # its Naming Pattern (`naming.pattern_of`); empty = the kind's default
+    multi_disc_pattern: str = ""  # music only: the one for multi-disc releases
+
+    @model_validator(mode="after")
+    def _check_pattern(self) -> Library:
+        from ama import naming  # it imports this module
+        slots = naming.patterns(self.kind)
+        for key in naming.PatternKey:
+            if not (pattern := getattr(self, key)):
+                continue
+            subject = slots.get(key)
+            if subject is None:
+                raise ValueError(f"{self.kind.label} Libraries can't have a {key} yet")
+            errors = naming.check(pattern, subject).errors
+            if errors:
+                raise ValueError(f"The {subject.spec.label} of {self.name}: "
+                                 f"{'; '.join(errors)}")
+        return self
 
 
 class Config(_Section):
@@ -282,7 +304,7 @@ class Config(_Section):
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
     webhook: WebhookConfig = WebhookConfig()
-    encode: EncodeConfig
+    encode: EncodeConfig = EncodeConfig()
     logs: LogsConfig = LogsConfig()
     # Empty in the file = one default per kind under the user's home (`LibraryKind.default_path`).
     libraries: tuple[Library, ...] = ()
@@ -339,13 +361,25 @@ class ConfigError(Exception):
     pass
 
 
+def data_dir() -> Path:
+    r"""Where AMA keeps its settings file, database, logs and tools: %LOCALAPPDATA%\AMA (ADR 0017)."""
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "AMA"
+
+
+def default_config_path() -> Path:
+    """The settings file when neither `--config` nor `AMA_CONFIG` names one."""
+    return data_dir() / "ama.toml"
+
+
 def load_config(path: Path) -> Config:
     path = Path(path).resolve()
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         raise ConfigError(
-            f"No config file at {path}. Copy ama.example.toml to ama.toml and fill it in."
+            f"No settings file at {path}. Start AMA without one to run Setup, or copy "
+            "ama.example.toml there and fill it in."
         ) from None
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{path}: {e}") from None

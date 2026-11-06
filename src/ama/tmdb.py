@@ -19,8 +19,9 @@ from pathlib import Path
 
 import httpx
 
-from ama.archive import safe_name
+from ama import naming
 from ama.jobs import ReviewReason
+from ama.naming import Pattern, Subject
 
 BASE = "https://api.themoviedb.org/3"
 IMAGES = "https://image.tmdb.org/t/p"
@@ -134,7 +135,10 @@ def search_terms(hints: DiscHints) -> list[str]:
 
 
 def _norm(title: str) -> str:
-    t = re.sub(r"[\W_]+", " ", title.casefold()).strip()
+    """For comparing titles: apostrophes dropped (OCEANS is Ocean's), other punctuation to
+    spaces, a leading article dropped."""
+    t = re.sub(r"['’]", "", title.casefold())  # straight and curly
+    t = re.sub(r"[\W_]+", " ", t).strip()
     return re.sub(r"^(the|a|an) ", "", t)
 
 
@@ -171,13 +175,22 @@ def decide_pick(pick: Candidate, main_feature_s: int
     return None, ReviewReason.PICK_RUNTIME_MISMATCH
 
 
-def movie_folder(c: Candidate) -> Path:
-    """`Movies/Title (Year) {tmdb-ID}` (Plex naming)."""
-    return MOVIES / movie_file_stem(c)
+def movie_folder(c: Candidate, pattern: Pattern = naming.default(Subject.FILM)) -> Path:
+    """The film's folder by its Library's `pattern`: `Movies/Title (Year) {tmdb-ID}` by
+    default (Plex naming)."""
+    return MOVIES / pattern.folders(_film_values(c, None))
 
 
-def movie_file_stem(c: Candidate) -> str:
-    return f"{safe_name(c.name)} {{tmdb-{c.id}}}"
+def movie_path(c: Candidate, version: str | None,
+               pattern: Pattern = naming.default(Subject.FILM)) -> Path:
+    """Where the film is filed by its Library's `pattern`; by default
+    `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`, its Plex version name
+    (`moviearchive.plex_version`) after the dash."""
+    return MOVIES / pattern.render(_film_values(c, version), ".mkv")
+
+
+def _film_values(c: Candidate, version: str | None) -> dict[str, naming.Value]:
+    return {"title": c.title, "year": c.year, "tmdb_id": c.id, "version": version}
 
 
 _BDMT_NAME = re.compile(r"<di:name>(.*?)</di:name>", re.S)
@@ -202,6 +215,10 @@ class TmdbError(Exception):
     """TMDB couldn't be asked (network, bad key). The message never contains the key."""
 
 
+class TmdbKeyRefused(TmdbError):
+    """TMDB answered 401: the API key is wrong."""
+
+
 class Tmdb:
     def __init__(self, http: httpx.Client, api_key: str) -> None:
         self._http = http
@@ -223,10 +240,14 @@ class Tmdb:
         except httpx.HTTPError as e:
             raise TmdbError(f"Couldn't reach TMDB ({type(e).__name__})") from None
         if r.status_code == 401:
-            raise TmdbError("TMDB refused the API key in ama.toml")
+            raise TmdbKeyRefused("TMDB refused the API key in ama.toml")
         if r.status_code != 200:
             raise TmdbError(f"TMDB answered HTTP {r.status_code}")
         return r.json()
+
+    def authenticate(self) -> None:
+        """Raises TmdbKeyRefused if TMDB won't take the key, TmdbError if it can't be asked."""
+        self._get("/authentication", {})
 
     def movie(self, movie_id: int, found: dict | None = None) -> Candidate:
         """One film's details (`found`: its search result, for fields the details lack)."""

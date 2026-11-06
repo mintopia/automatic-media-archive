@@ -7,7 +7,8 @@ restart settings) decides what happens next. A Linux container uses the same
 contract through its restart policy instead of this loop.
 
 On Windows `ama run` also shows the tray icon (`ama.tray`); its Quit asks the
-server to stop and ends the supervisor with 0.
+server to stop and ends the supervisor with 0. Only one `ama run` goes at a time
+(`ama.single_instance`): a second opens the running one's UI and ends with 0.
 """
 
 from __future__ import annotations
@@ -24,8 +25,9 @@ from pathlib import Path
 
 import httpx
 
-from ama.config import ConfigError, load_config
+from ama.config import SETUP_HOST, ConfigError, WebConfig, load_config
 from ama.settings import upgrade
+from ama.single_instance import LOCK_FILE, AlreadyRunning, InstanceLock
 from ama.start_at_login import StartAtLogin, WindowsRunKey, command_line
 from ama.tray import CONTROL_ENV, ServerControl, Tray, local_urls, make_icon
 
@@ -85,10 +87,38 @@ class ServerProcess:
             child.terminate()
 
 
+def _addresses(config: Path, upgrade_first: bool) -> tuple[str, str] | None:
+    """(where the tray reaches the server, its UI address) for `config`: Setup's on
+    localhost with no file yet (ADR 0016); None if the file can't be read."""
+    if not config.exists():
+        return local_urls(SETUP_HOST, WebConfig().port)
+    try:
+        if upgrade_first:  # the file the child is about to read
+            upgrade(config)
+        web = load_config(config).web
+    except ConfigError:
+        return None
+    return local_urls(web.host, web.port)
+
+
 def run(config: Path, platform: str = sys.platform,
         popen: Callable[..., subprocess.Popen] = subprocess.Popen) -> int:
     """`ama run`: supervise the server, with the tray icon on Windows. Returns the exit
-    code to end with (0 after Quit)."""
+    code to end with (0 after Quit, or when another `ama run` already goes)."""
+    try:
+        lock = InstanceLock.acquire(config.parent / LOCK_FILE)
+    except AlreadyRunning:
+        log.info("AMA is already running; opening it")
+        _, ui_url = _addresses(config, upgrade_first=False) or local_urls(
+            SETUP_HOST, WebConfig().port)
+        webbrowser.open(ui_url)
+        return 0
+    with lock:
+        return _supervise_with_tray(config, platform, popen)
+
+
+def _supervise_with_tray(config: Path, platform: str,
+                         popen: Callable[..., subprocess.Popen]) -> int:
     token = secrets.token_hex(16)
     server = ServerProcess(config, token, popen)
     http = httpx.Client(timeout=5)
@@ -104,13 +134,9 @@ def run(config: Path, platform: str = sys.platform,
                 ui_url="", open_url=webbrowser.open, quit=quit)
 
     def launch() -> int:
-        try:  # the file the child is about to read, so the address it will listen on
-            upgrade(config)
-            web = load_config(config).web
-        except ConfigError:
-            pass  # the child reports it and exits
-        else:
-            http.base_url, tray.ui_url = local_urls(web.host, web.port)
+        # where the child will listen; an unreadable file: the child reports it and exits
+        if (addresses := _addresses(config, upgrade_first=True)) is not None:
+            http.base_url, tray.ui_url = addresses
         return server.launch()
 
     try:

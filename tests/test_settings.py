@@ -1,5 +1,6 @@
 """Settings edits write ama.toml in place (ADR 0008): the file stays the one source of truth."""
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -179,6 +180,100 @@ def test_a_library_that_doesnt_validate_names_its_fields_and_the_file_is_unchang
     assert toml.read_bytes() == original
 
 
+FILMS_DEFAULT = (
+    "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}")
+
+
+def _films_pattern(toml) -> str:
+    return next(lib.pattern for lib in load_config(toml).libraries if lib.name == "Movies")
+
+
+def test_a_films_pattern_is_saved_to_its_library_and_absent_means_the_default(toml):
+    from ama import naming
+    movies = next(lib for lib in load_config(toml).libraries if lib.name == "Movies")
+    assert movies.pattern == "" and naming.pattern_of(movies).text == FILMS_DEFAULT
+    f = SettingsFile(toml)
+    f.save_library(LibraryKind.FILMS, "Movies", {"pattern": "{title} ({year})/{title} - {version}"})
+    assert "pattern = \"{title} ({year})/{title} - {version}\"" in toml.read_text(encoding="utf-8")
+    assert _films_pattern(toml) == "{title} ({year})/{title} - {version}"
+    f.save_library(LibraryKind.FILMS, "Movies", {"name": "Films"})  # an edit keeps the pattern
+    assert next(lib.pattern for lib in load_config(toml).libraries if lib.name == "Films")
+    # Saving the default keeps it implicit, so the file says "the default" again.
+    f.save_library(LibraryKind.FILMS, "Films", {"pattern": FILMS_DEFAULT})
+    raw = tomllib.loads(toml.read_text(encoding="utf-8"))["libraries"][0]
+    assert raw["name"] == "Films" and raw.get("pattern", "") == ""
+
+
+def test_a_pattern_that_cant_name_every_film_is_rejected_and_the_file_is_unchanged(toml):
+    original = toml.read_bytes()
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(toml).save_library(LibraryKind.FILMS, "Movies", {"pattern": "{title}"})
+    assert set(e.value.errors) == {"pattern"}
+    assert "Needs {version}" in e.value.errors["pattern"]
+    assert toml.read_bytes() == original
+
+
+def test_a_hand_edited_pattern_with_errors_stops_the_file_loading(toml):
+    toml.write_text(toml.read_text(encoding="utf-8").replace(
+        'pattern = ""', 'pattern = "{title}/{nope}"'), encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"The pattern of Movies: \{nope\} isn't a field here"):
+        load_config(toml)
+
+
+# --- music's single-disc and multi-disc patterns (#69) ---------------------------------------
+
+SINGLE_DEFAULT = "{artist}/{album}/{track:02} - {track_title}"
+MULTI_DEFAULT = "{artist}/{album}/{disc}{track:02} - {track_title}"
+
+
+def _music(toml):
+    return next(lib for lib in load_config(toml).libraries if lib.name == "Music")
+
+
+def test_a_music_library_saves_both_patterns_and_absent_means_each_default(toml):
+    from ama import naming
+    from ama.naming import Subject
+    music = _music(toml)
+    assert naming.pattern_of(music, Subject.MUSIC_SINGLE_DISC).text == SINGLE_DEFAULT
+    assert naming.pattern_of(music, Subject.MUSIC_MULTI_DISC).text == MULTI_DEFAULT
+    f = SettingsFile(toml)
+    f.save_library(LibraryKind.MUSIC, "Music", {
+        "pattern": "{artist} - {album}/{track:02} {track_title}",
+        "multi_disc_pattern": "{artist} - {album}/Disc {disc}/{track:02} {track_title}"})
+    music = _music(toml)
+    assert naming.pattern_of(music, Subject.MUSIC_SINGLE_DISC).text == (
+        "{artist} - {album}/{track:02} {track_title}")
+    assert naming.pattern_of(music, Subject.MUSIC_MULTI_DISC).text == (
+        "{artist} - {album}/Disc {disc}/{track:02} {track_title}")
+    f.save_library(LibraryKind.MUSIC, "Music", {"multi_disc_pattern": MULTI_DEFAULT})
+    raw = tomllib.loads(toml.read_text(encoding="utf-8"))["libraries"][2]
+    assert raw["kind"] == "music" and "multi_disc_pattern" not in raw
+    assert raw["pattern"] == "{artist} - {album}/{track:02} {track_title}"
+
+
+def test_a_multi_disc_pattern_without_the_disc_is_rejected_and_the_file_is_unchanged(toml):
+    original = toml.read_bytes()
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(toml).save_library(LibraryKind.MUSIC, "Music", {
+            "pattern": "{artist}/{album}/{track:02}",
+            "multi_disc_pattern": "{artist}/{album}/{track:02} - {track_title}"})
+    assert set(e.value.errors) == {"multi_disc_pattern"}
+    assert "Needs {disc}" in e.value.errors["multi_disc_pattern"]
+    assert toml.read_bytes() == original
+
+
+def test_a_hand_edited_multi_disc_pattern_is_checked_and_films_cant_have_one(toml):
+    text = toml.read_text(encoding="utf-8")
+    music = text.replace('multi_disc_pattern = ""', 'multi_disc_pattern = "{album}/{track}"')
+    toml.write_text(music, encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"The multi-disc pattern of Music: Needs \{disc\}"):
+        load_config(toml)
+    films = text.replace('kind = "films"', 'kind = "films"\nmulti_disc_pattern = "{title}"')
+    toml.write_text(films, encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"Films Libraries can't have a multi_disc_pattern"):
+        load_config(toml)
+
+
 # --- the one-time rewrite to plain Library paths (ADR 0011) -------------------------------
 
 V2 = r"""[nas]
@@ -320,3 +415,35 @@ def test_a_broken_hand_edit_keeps_the_running_values(app):
     app.settings.refresh(force=True)
     assert app.cd.cfg.offset == 667
     assert "cd.offset" in app.settings.problem
+
+
+# -- Setup writes a new file through the same writer (ADR 0016) -----------------------
+
+def test_create_writes_a_new_file_that_loads_with_the_given_values(tmp_path):
+    path = tmp_path / "AMA" / "ama.toml"
+    films = str(tmp_path / "Films")
+    SettingsFile(path).create(
+        {"paths.scratch": str(tmp_path / "scratch")},
+        [{"name": "Movies", "kind": "films", "path": films, "default": True},
+         {"name": "TV", "kind": "tv", "path": str(tmp_path / "TV"), "default": True},
+         {"name": "Music", "kind": "music", "path": str(tmp_path / "Music"), "default": True}])
+    cfg = load_config(path)
+    assert cfg.paths.scratch == tmp_path / "scratch"
+    assert (cfg.libraries[0].name, cfg.libraries[0].path) == ("Movies", films)
+    assert f"path = '{films}'" in path.read_text(encoding="utf-8")  # literal, like the example
+    assert sorted(p.name for p in path.parent.iterdir()) == ["ama.toml"]
+
+
+def test_create_rejects_bad_values_per_field_and_writes_nothing(tmp_path):
+    path = tmp_path / "ama.toml"
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(path).create({"paths.scratch": "scratch", "web.port": "eighty"})
+    assert e.value.errors == {"web.port": "Enter a whole number"}
+    assert not path.exists()
+
+
+def test_create_never_overwrites_an_existing_file(toml):
+    before = toml.read_bytes()
+    with pytest.raises(FileExistsError):
+        SettingsFile(toml).create({"paths.scratch": "scratch"})
+    assert toml.read_bytes() == before

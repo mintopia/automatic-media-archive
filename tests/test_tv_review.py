@@ -299,3 +299,31 @@ def test_a_disc_marked_as_a_film_is_never_taken_for_tv(harness, client):
     episodes = [(n, 22 * 60, str(n)) for n in range(1, 5)]
     rec = _in_review(harness, _marked_disc(harness, "SPACED_D1", episodes, tv=False))
     assert rec.review_reason != ReviewReason.EPISODES
+
+
+def test_episodes_are_filed_by_the_tv_librarys_pattern_and_a_later_change_moves_nothing(
+        harness, client):
+    _the_office(harness)
+    harness.tv_pattern("{show}/{show} s{season:02}e{episode:02} {episode_title}")
+    rec = _in_review(harness, _tv_disc(harness))
+    assert '<dt>Filed to</dt><dd style="overflow-wrap:anywhere">TV/The Office</dd>' in _page(
+        client, f"/review/{rec.id}")  # no season folder
+    client.post(f"/review/{rec.id}/episodes", data={
+        "series": str(OFFICE), "season": "1",
+        "t1": "S01E03", "t2": "S00E02", "t3": "discard", "t4": "discard", "t5": "extra"})
+    filed = eventually(lambda: harness.services.jobs.get(rec.id).status == JobStatus.FILED,
+                       timeout=10) or harness.services.jobs.get(rec.id)
+    show = extended_path(harness.libraries_root / "TV/The Office")
+
+    def names() -> list[str]:
+        return sorted(p.relative_to(show).as_posix() for p in show.rglob("*.mkv"))
+
+    assert names() == ["Other/THE_OFFICE_S1_D2 - Title 5.mkv",
+                       "The Office s00e02 Christmas Special (2).mkv",
+                       "The Office s01e03 The Quiz.mkv"]
+    assert filed.archive_dir and filed.archive_dir.name == "The Office"
+    harness.tv_pattern("{show} ({year})/Season {season}/{episode:02} {episode_title}")
+    assert names() == ["Other/THE_OFFICE_S1_D2 - Title 5.mkv",
+                       "The Office s00e02 Christmas Special (2).mkv",
+                       "The Office s01e03 The Quiz.mkv"]
+    assert not (harness.libraries_root / "TV/The Office (2001)").exists()

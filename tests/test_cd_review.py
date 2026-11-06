@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import html
 
-from mutagen.flac import FLAC
-
 from ama.archive import extended_path
+from ama.flactags import read_tags
 from ama.config import LibraryKind
 from ama.jobs import JobStatus, ReviewReason
 from ama.drive import DiscType
@@ -110,7 +109,7 @@ def test_picking_an_edition_files_the_cd(harness, client):
                           / "FINAL FANTASY VII REBIRTH Original Soundtrack")
     flacs = sorted(p.name for p in album.iterdir() if p.name.endswith(".flac"))
     assert len(flacs) == 24
-    tags = FLAC(album / flacs[0])
+    tags = read_tags(album / flacs[0])
     assert tags["MUSICBRAINZ_ALBUMID"] == [STANDARD]
     assert (tags["DISCNUMBER"], tags["DISCTOTAL"]) == (["1"], ["7"])
     assert (album / "cover.jpg").read_bytes() == COVER
@@ -159,7 +158,7 @@ def test_a_disc_musicbrainz_doesnt_know_is_filed_from_details_entered_by_hand(ha
     names = sorted(p.name for p in album.iterdir())
     assert names == ["01 - Everything in Its Right Place.flac", "02 - Kid A.flac",
                      "03 - The National Anthem.flac", "Kid A.cue", "Kid A.log"]
-    tags = FLAC(album / names[1])
+    tags = read_tags(album / names[1])
     assert tags["TITLE"] == ["Kid A"] and tags["ARTIST"] == ["Radiohead"]
     assert tags["ALBUM"] == ["Kid A"] and tags["DATE"] == ["2000"]
     assert tags["MUSICBRAINZ_DISCID"] == [DISC_1]

@@ -43,3 +43,9 @@
   (`-hwaccel cuda`, temporal AQ, b_ref_mode middle, explicit colour tags) on the archive PC's
   RTX 3060 Ti, driver 621.01. Stream side data comes back with reduced fractions (17/25).
 - The LibreDrive lines in `FakeMakemkv` are not captured: no UHD Disc has been scanned yet.
+- `flac/ffmpeg-tagged-sine.flac`: **real** FLAC from AMA's pinned ffmpeg 9.0.2, `ffmpeg -f lavfi -i
+  sine=frequency=440:sample_rate=44100:duration=1 -ac 2 -sample_fmt s16 -metadata TITLE="Track 01"
+  -metadata ARTIST=Unknown -metadata TRACKNUMBER=1 -metadata CYANRIP=0.9.3.1 out.flac`, 2026-11-06.
+  cyanrip writes its rips through the same libavformat FLAC muxer, so the layout matches a rip:
+  STREAMINFO, VORBIS_COMMENT (vendor `Lavf…`), 8192 bytes of PADDING, then the audio frames.
+  Not an actual cyanrip rip (no CD was in the drive): replace with one when there is.

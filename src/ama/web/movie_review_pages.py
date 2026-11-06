@@ -16,7 +16,8 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import decoys, moviereview
+from ama import decoys, moviereview, naming
+from ama.config import LibraryKind, library_for
 from ama.jobs import JobRecord, JobStatus, ReviewReason, TitleRecord
 from ama.extras import extra_titles
 from ama.moviearchive import main_feature
@@ -25,7 +26,7 @@ from ama.moviereview import POSITIONS, fits, ripped_titles, runtime_note, short_
 from ama.tmdb import Candidate, TmdbError, movie_folder, search_terms, load_hints
 from ama.video_rip import VIDEO_DISC_TYPES
 from ama.web import TEMPLATES, view_context
-from ama.web.review_items import after_decision, done_note, plural
+from ama.web.review_items import FILM_UNSURE, after_decision, done_note, plural
 from ama.events import Topic
 
 router = APIRouter()
@@ -141,8 +142,7 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         if best is not None:  # Review starts from the Best guess
             films = [best, *(f for f in films if f.id != best.id)]
     choices = [_film_choice(f, main_s, best is not None and f.id == best.id) for f in films]
-    picked_film = (best if best is not None and any(c.best for c in choices) else
-                   next((c.film for c in choices if c.fits), films[0] if films else None))
+    picked_film = _preselect(rec, guess, choices)
     ordered = _ordered(titles, main, found)
     shown = 3 if found else 4
     ctx = view_context(services) | {
@@ -152,28 +152,72 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         "shown": shown, "more_label": _more_label(ordered[shown:], found), "decoys": found,
         "picked_title": main, "main_length": short_duration(main_s),
         "errors": errors or [], "done": done_note(request),
-        "summary": _summary(picked_film, main, rec),
-        "pick_notice": _pick_notice(rec, guess.film if guess and guess.picked else None,
-                                    main_s),
+        "summary": _summary(services, picked_film, main, rec),
+        "notice": _notice(rec, guess.film if guess and guess.picked else None,
+                          short_duration(main_s)),
     }
     return TEMPLATES.TemplateResponse(request, "review_movie.html", ctx, status_code=status_code)
 
 
-def _pick_notice(rec: JobRecord, pick: Candidate | None, main_s: int) -> str | None:
-    """Why the film picked while it ripped wasn't accepted, if that's why it's here."""
-    if pick is None or rec.review_reason != ReviewReason.PICK_RUNTIME_MISMATCH:
+def _preselect(rec: JobRecord, guess, choices: list[FilmChoice]) -> Candidate | None:
+    """The film ticked when the page opens. When AMA is unsure which film it is, only the
+    person's own pick from while it ripped is ticked: they choose, AMA doesn't."""
+    if guess is not None and guess.picked:
+        return guess.film
+    if rec.review_reason in FILM_UNSURE:
         return None
-    runs = (f"runs {short_duration(pick.runtime_min * 60)}" if pick.runtime_min
-            else "has no running time in the film database (TMDB)")
-    return f"The film you picked {runs}; the main Title runs {short_duration(main_s)}."
+    best = next((c.film for c in choices if c.best), None)
+    return best or next((c.film for c in choices if c.fits), choices[0].film if choices else None)
 
 
-def _summary(film: Candidate | None, title: TitleRecord | None, rec: JobRecord) -> dict:
+@dataclass(frozen=True)
+class Notice:
+    head: str
+    body: str
+
+
+_WHY: dict[ReviewReason, Notice] = {
+    ReviewReason.NO_MATCH: Notice(
+        "We couldn't find this film",
+        "The Disc's label doesn't match a film in the film database (TMDB). Search for the "
+        "film's title, then pick it."),
+    ReviewReason.RUNTIME_MISMATCH: Notice(
+        "No film here runs as long as the Disc",
+        "These films have the right name, but none runs close to the main Title ({main}). "
+        "Check the pictures, then pick the film or search for another."),
+    ReviewReason.MULTIPLE_MATCHES: Notice(
+        "Several films fit this Disc",
+        "They have a similar name and running time, so we can't tell which it is. Check the "
+        "pictures, then pick the film on the Disc."),
+}
+
+
+def _notice(rec: JobRecord, pick: Candidate | None, main: str) -> Notice | None:
+    """Why the Disc is in Review, when the reason is which film it is."""
+    if rec.review_reason == ReviewReason.PICK_RUNTIME_MISMATCH and pick is not None:
+        runs = (f"runs {short_duration(pick.runtime_min * 60)}" if pick.runtime_min
+                else "has no running time in the film database (TMDB)")
+        return Notice("Your pick doesn't match the Disc's length",
+                      f"The film you picked {runs}; the main Title runs {main}. "
+                      "Check it's the right film, or pick another.")
+    why = _WHY.get(rec.review_reason)
+    return Notice(why.head, why.body.format(main=main)) if why else None
+
+
+def _summary(services, film: Candidate | None, title: TitleRecord | None,
+             rec: JobRecord) -> dict:
     n = len(extra_titles(rec.titles, title.number)) if title else 0
     return {"film": film.name if film else "",
             "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
             "extras": f"{n} Extra{'s' if n != 1 else ''}, filed under Other" if n else "",
-            "folder": movie_folder(film).as_posix() if film else ""}
+            "folder": movie_folder(film, film_pattern(services, rec)).as_posix() if film else ""}
+
+
+def film_pattern(services, rec: JobRecord) -> naming.Pattern:
+    """The Naming Pattern of the Films Library `rec` would file to now."""
+    library = (services.job_settings.files_to(rec, LibraryKind.FILMS) if services.job_settings
+               else library_for(services.archive.libraries, LibraryKind.FILMS))
+    return naming.pattern_of(library)
 
 
 @router.get("/review/{job_id}/titles/{number}/frames", response_class=HTMLResponse)
@@ -214,7 +258,7 @@ def decision(request: Request, job_id: int, film: int = 0, title: int = 0) -> Re
     except TmdbError:
         candidate = None
     return TEMPLATES.TemplateResponse(request, "partials/movie_decision.html",
-                                      {"summary": _summary(candidate, t, rec)})
+                                      {"summary": _summary(services, candidate, t, rec)})
 
 
 @router.post("/review/{job_id}/film", response_class=HTMLResponse)

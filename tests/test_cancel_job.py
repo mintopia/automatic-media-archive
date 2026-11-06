@@ -53,7 +53,7 @@ def test_cancelling_a_cd_rip_stops_cyanrip_ejects_and_throws_the_rip_away(client
     assert rec.failure.kind == FailureKind.RIP_CANCELLED
     eventually(lambda: harness.drive.ejected == 1)
     assert not rec.scratch_dir.exists()
-    assert harness.services.cd.current is None
+    eventually(lambda: harness.services.cd.current is None)
 
 
 def _film_encoding(harness):

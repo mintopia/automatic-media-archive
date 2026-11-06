@@ -52,3 +52,10 @@ def test_the_disc_number_comes_from_the_medium_holding_the_disc_id():
 
 def test_a_disc_id_on_no_medium_matches_nothing():
     assert musicbrainz.matches(_response(), "x" * 27 + "-") == []
+
+
+def test_the_user_agent_gives_musicbrainz_the_projects_github_home():
+    # MusicBrainz asks every client to say who it is and where to reach it.
+    assert musicbrainz.USER_AGENT.startswith("AMA/")
+    assert musicbrainz.USER_AGENT.endswith(
+        "( https://github.com/mintopia/automatic-media-archive )")

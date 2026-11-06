@@ -4,7 +4,9 @@ Libraries"), each added, edited, made default or removed on its own.
 The page is server-rendered: `?add=<kind>`, `?edit=<name>` and `?remove=<name>` open the
 inline form or confirm, and `?focus=<name>` puts focus back on a row after Cancel. The
 POSTs write ama.toml through `Settings` (ADR 0008) and land back on the page; a rejected
-one re-renders with the form open and its messages.
+one re-renders with the form open and its messages. A kind with Naming Patterns
+(`naming.patterns`) gets a pattern editor for each in its form, whose preview (`GET …/pattern`)
+redraws as the pattern is typed.
 """
 
 from __future__ import annotations
@@ -15,11 +17,13 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from markupsafe import Markup
 
+from ama import naming
 from ama.config import ConfigError, LibraryKind, Library
 from ama.settings import SettingsRejected
+from ama.web import TEMPLATES
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -40,7 +44,55 @@ class Form:
     name: str = ""
     plex: str = ""
     path: str = ""
+    # Each pattern key's pattern as typed (`naming.patterns`); the defaults for a new Library.
+    patterns: dict[naming.PatternKey, str] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def naming(self) -> list[PatternView]:
+        """A pattern editor for each of the kind's patterns."""
+        return [view for key in naming.patterns(self.kind)
+                if (view := pattern_view(self.kind, self.patterns.get(key, ""), key))]
+
+
+@dataclass(frozen=True)
+class PatternView:
+    """The Naming Pattern editor: the pattern, its check and preview, and what it can use."""
+
+    key: naming.PatternKey  # the Library key it is saved to
+    title: str  # the editor's label
+    pattern: str
+    check: naming.Check
+    preview: str  # the name it gives the examples; "" when the pattern can't be used
+    fields: tuple[naming.Field, ...]
+    presets: tuple[naming.Preset, ...]
+    variants: tuple[str, ...] = ()  # more names it gives: a TV special, an untitled Episode
+
+
+def pattern_view(kind: LibraryKind, pattern: str,
+                 key: naming.PatternKey = naming.PatternKey.PATTERN) -> PatternView | None:
+    """The editor for the pattern in a `kind` Library's `key`; None if it has no such key."""
+    subject = naming.patterns(kind).get(key)
+    if subject is None:
+        return None
+    spec = subject.spec
+    check = naming.check(pattern, subject)
+    names = []
+    if not check.errors:
+        parsed = naming.Pattern.parse(pattern, subject)
+        names = [parsed.render(spec.examples | v, spec.extension).as_posix()
+                 for v in ({}, *spec.variants)]
+    return PatternView(key, spec.title, pattern, check, names[0] if names else "", spec.fields,
+                       spec.presets, tuple(names[1:]))
+
+
+def _patterns_of(lib: Library) -> dict[naming.PatternKey, str]:
+    return {key: naming.pattern_of(lib, subject).text
+            for key, subject in naming.patterns(lib.kind).items()}
+
+
+def _new_patterns(kind: LibraryKind) -> dict[naming.PatternKey, str]:
+    return {key: subject.spec.default for key, subject in naming.patterns(kind).items()}
 
 
 @dataclass
@@ -96,9 +148,9 @@ def libraries_view(services: Services, query: Mapping[str, str],
     libraries = cfg.libraries
     if form is None:
         if (add := query.get("add")) in {k.value for k in LibraryKind}:
-            form = Form(LibraryKind(add), None)
+            form = Form(LibraryKind(add), None, patterns=_new_patterns(LibraryKind(add)))
         elif (lib := _named(libraries, query.get("edit"))) is not None:
-            form = Form(lib.kind, lib.name, lib.name, lib.plex, lib.path)
+            form = Form(lib.kind, lib.name, lib.name, lib.plex, lib.path, _patterns_of(lib))
     removing = _named(libraries, query.get("remove"))
     if removing is not None and removing.default:
         removing = None
@@ -137,10 +189,11 @@ async def libraries_save(request: Request, action: str) -> Response:
                 except ValueError:
                     raise HTTPException(400, "Unknown kind of Library") from None
                 original = form.get("lib.original") or None
-                typed = {k: form[f"lib.{k}"] for k in ("name", "plex", "path")
+                typed = {k: form[f"lib.{k}"] for k in ("name", "plex", "path", *naming.PatternKey)
                          if f"lib.{k}" in form}
                 shown = Form(kind, original, typed.get("name", ""), typed.get("plex", ""),
-                             typed.get("path", ""))
+                             typed.get("path", ""),
+                             {k: typed.get(k, "") for k in naming.patterns(kind)})
                 settings.save_library(kind, original, typed)
                 focus = typed.get("name", "").strip()
             case "default":
@@ -158,6 +211,24 @@ async def libraries_save(request: Request, action: str) -> Response:
     except ConfigError as e:
         return render_section(request, services, SLUG, problem=str(e), status=422)
     return RedirectResponse(PAGE + (f"?focus={quote(focus)}" if focus else ""), status_code=303)
+
+
+@router.get(PAGE + "/pattern", response_class=HTMLResponse)
+def pattern_preview(request: Request) -> Response:
+    """The pattern editor's preview, errors and warnings for the pattern as typed in
+    `lib.<key>` (`key` defaults to "pattern")."""
+    try:
+        kind = LibraryKind(request.query_params.get("lib.kind", ""))
+    except ValueError:
+        raise HTTPException(400, "Unknown kind of Library") from None
+    try:
+        key = naming.PatternKey(request.query_params.get("key", naming.PatternKey.PATTERN))
+    except ValueError:
+        key = None
+    view = pattern_view(kind, request.query_params.get(f"lib.{key}", ""), key) if key else None
+    if view is None:
+        raise HTTPException(404, f"{kind.label} Libraries have no pattern")
+    return TEMPLATES.TemplateResponse(request, "partials/naming_check.html", {"pv": view})
 
 
 def context(services: Services, request: Request) -> dict[str, Any]:

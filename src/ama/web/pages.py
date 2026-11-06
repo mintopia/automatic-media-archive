@@ -22,10 +22,23 @@ def _services(request: Request):
     return request.app.state.services
 
 
+TMDB_OFF_DISMISSED = "ama_tmdb_off_dismissed"  # cookie: this browser hid the warning
+
+
 @router.get("/", response_class=HTMLResponse)
 def now(request: Request) -> Response:
-    ctx = view_context(_services(request)) | {"current": "/"}
+    services = _services(request)
+    ctx = view_context(services) | {"current": "/", "tmdb_off": (
+        not services.tmdb.configured and TMDB_OFF_DISMISSED not in request.cookies)}
     return TEMPLATES.TemplateResponse(request, "now.html", ctx)
+
+
+@router.post("/notices/tmdb-off/dismiss")
+def dismiss_tmdb_off() -> Response:
+    r = RedirectResponse("/", status_code=303)
+    r.set_cookie(TMDB_OFF_DISMISSED, "1", httponly=True, samesite="lax",
+                 max_age=10 * 365 * 24 * 3600)
+    return r
 
 
 @router.get("/now/output", response_class=HTMLResponse)
@@ -65,8 +78,7 @@ def login(request: Request, password: Annotated[str, Form()] = "") -> Response:
     if not auth.password_matches(services, password):
         return TEMPLATES.TemplateResponse(request, "login.html", {"error": True}, status_code=401)
     r = RedirectResponse("/", status_code=303)
-    r.set_cookie(auth.COOKIE, auth.session_token(services), httponly=True, samesite="lax",
-                 max_age=365 * 24 * 3600)
+    auth.sign_in(r, auth.session_token(services))
     return r
 
 

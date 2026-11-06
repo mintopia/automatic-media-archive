@@ -6,7 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from ama.jobs import ReviewReason
-from ama.tmdb import Candidate, DiscHints, bd_meta_title, decide, movie_folder, search_terms
+from ama.tmdb import (Candidate, DiscHints, bd_meta_title, decide, movie_folder, search_terms,
+                      title_matches)
 
 
 def test_search_terms_come_from_bd_metadata_makemkv_name_and_volume_label_cleaned_up():
@@ -25,6 +26,13 @@ def _c(id_, title, runtime, year=2016, original_title=None) -> Candidate:
 
 
 MAIN = 116 * 60 + 40  # a 1:56:40 Main Feature
+
+
+def test_a_disc_name_without_its_apostrophe_matches_the_title():
+    oceans = {"title": "Ocean's Twelve", "original_title": "Ocean’s Twelve"}
+    assert title_matches(oceans, "OCEANS TWELVE") and title_matches(oceans, "Ocean's Twelve")
+    assert title_matches({"title": "The Ocean’s Twelve"}, "oceans twelve")
+    assert not title_matches(oceans, "Ocean Twelve")
 
 
 def test_one_title_match_within_five_minutes_is_accepted():

@@ -30,6 +30,7 @@ from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus
 from ama.events import EventBus
 from ama.extras import default_names
 from ama.media import MediaStore, screen
+from ama.naming import Pattern
 from ama.plex import Plex
 from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
@@ -62,18 +63,19 @@ class TvTitle:
         return self.path.stem
 
 
-def planned(series: Series, rec: JobRecord, kept: Iterable[Kept]
+def planned(series: Series, rec: JobRecord, kept: Iterable[Kept], pattern: Pattern
             ) -> list[tuple[int, Episode | None, PurePosixPath]]:
-    """(Title, Episode or None for an Extra, Archive path) for each kept Title. Extras are
-    named as a film's are (`extras.default_names`)."""
+    """(Title, Episode or None for an Extra, Archive path by the TV Library's `pattern`) for
+    each kept Title. Extras are named as a film's are (`extras.default_names`). The paths
+    are kept, so a later pattern change renames nothing."""
     kept = list(kept)
     hints = load_hints(rec.scratch_dir, rec.label)
     names = default_names([k.title for k in kept if not k.episode],
                           (hints.disc_name, hints.volume_name, rec.label, series.name,
                            series.title), rec.label)
     return [(k.title.number, k.episode,
-             episode_path(series, k.episode) if k.episode
-             else extra_path(series, names[k.title.number])) for k in kept]
+             episode_path(series, k.episode, pattern) if k.episode
+             else extra_path(series, names[k.title.number], pattern)) for k in kept]
 
 
 class TvTitles:
@@ -245,14 +247,15 @@ class TvArchiver:
     def _finish(self, rec: JobRecord, rows: list[TvTitle]) -> None:
         series = rows[0].series
         n = sum(1 for r in rows if r.episode)
-        # The show's folder, or the film's for an Extras Disc: `TV/<show>`, `Movies/<film>`
-        show = self._archive.folder(Path(*rows[0].path.parts[:2]),
-                                    self._library(rec, kind_of_path(rows[0].path)
-                                                  or LibraryKind.TV))
         what = (f"{n} Episode{'s' if n != 1 else ''}" if n
                 else f"{len(rows)} Extra{'s' if len(rows) != 1 else ''}")
         # An Extras Disc is filed as its film's Extras: keep the film, not the "series".
         film = n == 0 and rows[0].path.parts[0] == LibraryKind.FILMS.folder
+        # The show's folder `TV/<show>`, or the film's for an Extras Disc (`<film>/Other/…`,
+        # the film's folder as many levels deep as its pattern made it)
+        rel = Path(*rows[0].path.parts[:2]) if not film else Path(rows[0].path).parent.parent
+        show = self._archive.folder(rel, self._library(rec, kind_of_path(rows[0].path)
+                                                       or LibraryKind.TV))
         self._media.save(rec.id, screen(self._tmdb, self._covers, not film, series.id,
                                         series.name, series.year,
                                         lambda text: self._jobs.log(rec.id, text)))

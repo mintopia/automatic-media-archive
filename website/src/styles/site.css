@@ -57,6 +57,16 @@
 .kv thead th{font:600 13px Archivo;color:var(--ink2);border-top:0}
 .kv td:first-child{font-weight:600;width:34%}
 .kv td small{display:block;color:var(--ink2);font-size:13px}
+.doc .intro{margin-top:24px}
+.doc .mark{display:inline-flex;align-items:center;height:20px;padding:0 6px;border:1px solid var(--rule);border-radius:3px;font:600 11px/1 Archivo,sans-serif;letter-spacing:.02em;color:var(--ink2);margin:0 0 8px}
+.doc h2+.mark{margin-top:-4px}
+.doc .setting{margin-top:12px;padding:14px 16px;border:1px solid var(--rule);background:var(--well);border-radius:3px}
+.doc .setting .keys{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:4px}
+.doc .setting .keys li{font-size:14px;color:var(--ink2);scroll-margin-top:24px}
+.doc .setting .keys .key{font-weight:700;color:var(--ink)}
+.doc .setting p{font-size:15px}
+.doc pre{margin:8px 0;padding:10px 12px;background:var(--code);border:1px solid var(--rule);border-radius:3px;overflow-x:auto}
+.doc pre code{background:none;border:0;padding:0;white-space:pre}
 .next{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:56px}
 .next a{display:flex;flex-direction:column;gap:4px;padding:16px 18px;border:1px solid var(--rule);background:var(--well);text-decoration:none;border-radius:3px}
 .next a:hover{border-color:var(--ink)}

@@ -29,13 +29,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ama import decoys, filing, tvreview
+from ama import decoys, filing, naming, tvreview
 from ama import extras as extras_mod
 from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
 from ama.covers import Covers
 from ama.db import Database
-from ama.config import LibraryKind
+from ama.config import LibraryKind, library_for
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
@@ -47,7 +47,7 @@ from ama.proc import Streamer
 from ama.problems import Problem, Problems
 from ama.retry import Backoff, RetryLater
 from ama.tmdb import Candidate, Series, Tmdb, TmdbError, decide, decide_pick, load_hints, \
-    movie_file_stem, movie_folder, search_terms, title_matches
+    movie_path, search_terms, title_matches
 from ama.tv import looks_like_tv, might_be_tv, series_terms
 from ama.video_rip import VIDEO_DISC_TYPES
 
@@ -282,8 +282,8 @@ class MovieArchiver:
         self._jobs.log(rec.id, "Queued for Encode")
 
     def _to_tv_review(self, rec: JobRecord, why: str) -> None:
-        self._jobs.mark_review(rec.id, ReviewReason.EPISODES)
         self._jobs.log(rec.id, f"{why}. Needs Review: match the Titles to Episodes")
+        self._jobs.mark_review(rec.id, ReviewReason.EPISODES)
 
     def _series_named(self, terms: list[str]) -> Series | None:
         """The first TMDB series titled exactly like one of `terms`. Raises TmdbError."""
@@ -386,9 +386,11 @@ class MovieArchiver:
         """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
         self._jobs.begin_step(rec.id, "file", "File")
         version = plex_version(rec.disc_type, movie.video_height)
-        name = f"{movie_file_stem(movie.film)}{f' - {version}' if version else ''}.mkv"
-        rel = movie_folder(movie.film)
         library = self._library(rec, LibraryKind.FILMS)
+        pattern = naming.pattern_of(library_for(self._archive.libraries, LibraryKind.FILMS,
+                                                library))
+        path = movie_path(movie.film, version, pattern)
+        rel, name = path.parent, path.name
         with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
             extras = self._file_extras(rec, rel, library)

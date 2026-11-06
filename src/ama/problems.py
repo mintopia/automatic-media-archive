@@ -27,7 +27,9 @@ from ama.events import EventBus, Topic
 class Problem(StrEnum):
     """An app-wide reason Jobs can't move on; `partials/problems.html` words each."""
 
-    TMDB_KEY = "tmdb_key"  # [tmdb] api_key empty while video Jobs wait to be identified
+    # [tmdb] api_key empty while video Jobs wait to be identified; no banner of its own:
+    # Now's empty-key warning (tmdb_off.html) says it
+    TMDB_KEY = "tmdb_key"
     PLEX = "plex"          # the last Plex scan request failed
     NOTIFY = "notify"      # the last notification couldn't be sent
     LIBRARY_FOLDER = "library_folder"  # a Library folder a Job files to isn't reachable

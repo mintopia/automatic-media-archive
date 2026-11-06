@@ -28,15 +28,16 @@ from collections.abc import Callable
 from pathlib import Path
 
 import httpx
-from mutagen.flac import FLAC
 
-from ama import cdreview, cyanrip, filing, musicbrainz
+from ama import cdreview, cyanrip, filing, musicbrainz, naming
 from ama.archive import Archive, safe_name
+from ama.naming import Pattern, Subject
 from ama.cdguess import CdPick
-from ama.config import LibraryKind
+from ama.config import Library, LibraryKind, library_for
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
+from ama.flactags import write_tags
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason
 from ama.drive import DiscType
 from ama.events import EventBus, Topic
@@ -86,13 +87,36 @@ def review_reason(tracks: list[Track], candidates: list[Match],
 
 # ---- naming and tags (Plex conventions) --------------------------------------
 
-def album_folder(match: Match) -> Path:
-    return MUSIC / safe_name(match.release.artist) / safe_name(match.release.title)
+def _music_subject(match: Match) -> Subject:
+    return (Subject.MUSIC_MULTI_DISC if match.release.disc_total > 1
+            else Subject.MUSIC_SINGLE_DISC)
 
 
-def track_file(match: Match, number: int, title: str) -> str:
-    prefix = f"{match.disc_number}{number:02d}" if match.release.disc_total > 1 else f"{number:02d}"
-    return f"{prefix} - {safe_name(title)}.flac"
+def _music_values(match: Match, number: int = 0, title: str = "") -> dict[str, naming.Value]:
+    r = match.release
+    year = r.date[:4] if r.date and r.date[:4].isdigit() else None
+    artist = next((t.artist for t in match.tracks if t.number == number), "")
+    return {"artist": r.artist, "album": r.title, "year": year, "track": number,
+            "track_title": title, "track_artist": artist, "disc": match.disc_number,
+            "disc_total": r.disc_total, "disc_title": match.disc_title}
+
+
+def _pattern(match: Match, library: Library | None) -> Pattern:
+    """The pattern `library` files this disc by: its single- or multi-disc one, by the
+    release's disc count (the defaults without a Library)."""
+    subject = _music_subject(match)
+    return naming.pattern_of(library, subject) if library else naming.default(subject)
+
+
+def album_folder(match: Match, library: Library | None = None) -> Path:
+    """The folder for this disc's tracks, cue, log and cover: by default `Music/Artist/Album`,
+    one folder for all of a release's discs."""
+    return MUSIC / _pattern(match, library).folders(_music_values(match))
+
+
+def track_file(match: Match, number: int, title: str, library: Library | None = None) -> str:
+    """By default `NN - Track.flac`, or `DNN - Track.flac` in a multi-disc release."""
+    return _pattern(match, library).render(_music_values(match, number, title), ".flac").name
 
 
 def disc_file_stem(match: Match) -> str:
@@ -136,18 +160,6 @@ def track_tags(match: Match, number: int, mb_disc_id: str) -> dict[str, list[str
     # Details entered by hand in Review have no MusicBrainz IDs: leave those tags out.
     tags = {k: [x for x in v if x] for k, v in tags.items()}
     return {k: v for k, v in tags.items() if v}
-
-
-def write_tags(path: Path, tags: dict[str, list[str]]) -> None:
-    """Replace every tag in the FLAC at `path` with `tags` (idempotent)."""
-    f = FLAC(path)
-    if f.tags is None:
-        f.add_tags()
-    else:
-        f.tags.clear()
-    for k, v in tags.items():
-        f[k] = v
-    f.save()
 
 
 _CUE_FILE = re.compile(r'^(\s*FILE\s+)"([^"]+)"(.*)$')
@@ -268,10 +280,12 @@ class CdArchiver:
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}
         renamed: dict[str, str] = {}
+        library = self._library(rec, LibraryKind.MUSIC)
+        patterned = library_for(self._archive.libraries, LibraryKind.MUSIC, library)
         for t in self._tracks.load(rec.id):
             src = scratch / f"{t.number:02d}.flac"
             title = next((x.title for x in match.tracks if x.number == t.number), HIDDEN_TRACK)
-            name = track_file(match, t.number, title)
+            name = track_file(match, t.number, title, patterned)
             write_tags(src, track_tags(match, t.number, mb_disc_id))
             files[name] = src
             renamed[src.name] = name
@@ -297,7 +311,7 @@ class CdArchiver:
             cached = self._covers.path(art)
             assert cached is not None
             files[f"cover{cached.suffix}"] = cached
-        rel, library = album_folder(match), self._library(rec, LibraryKind.MUSIC)
+        rel = album_folder(match, patterned)  # the tracks' folder: cue, log and cover too
         with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, files, library)
         title = f"{match.release.title} — {match.release.artist}"

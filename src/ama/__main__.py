@@ -1,10 +1,12 @@
-"""`uv run ama [run|serve] [--config PATH]`: run the app (web UI + background monitors).
+r"""`uv run ama [run|serve|remove-data] [--config PATH]`: run the app (web UI + background monitors).
 
 `run` (the default) is the supervisor (ADR 0009, `ama.supervisor`): it starts
 `serve` as a child and starts it again when it exits asking to restart; on
 Windows it shows the tray icon (`ama.tray`).
 `serve` is the server itself; it exits with RESTART_EXIT_CODE after a restart
 from the UI, so without a supervisor (or a container restart policy) it stays down.
+`remove-data` is for the uninstaller: it deletes %LOCALAPPDATA%\AMA but no Library
+(`ama.remove_data`).
 """
 
 from __future__ import annotations
@@ -20,8 +22,10 @@ from pathlib import Path
 import uvicorn
 
 from ama.app import build_services, create_app
-from ama.config import ConfigError, load_config
+from ama.config import ConfigError, PathsConfig, data_dir, default_config_path, load_config
+from ama.remove_data import Refused, library_folders, remove_data
 from ama.settings import upgrade
+from ama.setup import run_setup
 from ama.supervisor import RESTART_EXIT_CODE, run
 from ama.tray import CONTROL_ENV
 
@@ -57,21 +61,35 @@ def _message_box(title: str, text: str) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="ama", description="Automatic Media Archive")
-    parser.add_argument("command", nargs="?", choices=("run", "serve"), default="run",
-                        help="run: the supervisor (default); serve: the server alone")
+    parser.add_argument("command", nargs="?", choices=("run", "serve", "remove-data"),
+                        default="run",
+                        help="run: the supervisor (default); serve: the server alone; "
+                             r"remove-data: delete %%LOCALAPPDATA%%\AMA, keeping Libraries")
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path(os.environ.get("AMA_CONFIG", "ama.toml")),
-        help="config file (default: $AMA_CONFIG or ./ama.toml)",
+        default=Path(os.environ.get("AMA_CONFIG") or default_config_path()),
+        help=r"config file (default: $AMA_CONFIG or %%LOCALAPPDATA%%\AMA\ama.toml)",
     )
     args = parser.parse_args(argv)
     if args.command == "run":
         sys.exit(run(args.config.resolve()))
+    if args.command == "remove-data":
+        try:
+            remove_data(data_dir(), library_folders(args.config))
+        except (Refused, OSError) as e:
+            print(f"ama: {e}", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
     serve(args.config)
 
 
 def serve(config: Path) -> None:
+    control_token = os.environ.pop(CONTROL_ENV, "")  # from `ama run`; tools don't inherit it
+    if not config.exists():  # first run: Setup writes the file (ADR 0016)
+        _setup_logging(config.resolve().parent / PathsConfig.model_fields["log_file"].default)
+        if not run_setup(config, control_token=control_token):
+            return  # stopped before it finished
     try:
         upgrade(config)
         cfg = load_config(config)
@@ -80,6 +98,7 @@ def serve(config: Path) -> None:
             print(f"ama: {e}", file=sys.stderr)
         else:  # no console under pythonw: leave the reason next to the config, and say so
             log = config.resolve().with_name("ama-startup-error.log")
+            log.parent.mkdir(parents=True, exist_ok=True)
             log.write_text(f"{e}\n", encoding="utf-8")
             _message_box("AMA couldn't start", f"{e}\n\nThis is also in {log}.")
         sys.exit(2)
@@ -87,7 +106,6 @@ def serve(config: Path) -> None:
     logging.getLogger("ama").info("starting; config %s", config.resolve())
     services = build_services(cfg, config_path=config)
     # A streaming /events response never finishes on its own: give shutdown a deadline.
-    control_token = os.environ.pop(CONTROL_ENV, "")  # from `ama run`; tools don't inherit it
     server = uvicorn.Server(uvicorn.Config(create_app(services, control_token), host=cfg.web.host,
                                            port=cfg.web.port, log_config=None,
                                            timeout_graceful_shutdown=3))

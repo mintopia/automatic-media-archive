@@ -67,10 +67,15 @@ def test_the_review_page_offers_the_films_found_with_how_their_runtime_fits(harn
     assert page.index("Example Movie (2020)") < page.index("Example Movie (2016)") \
         < page.index("Example Movie (1987)")
     assert "<b>Best guess</b> · 2 h 2 m · matches the Disc" in page
-    assert 'name="film" value="78" checked' in page
+    # Several films fit, so none is ticked: the person picks, and says why it's here.
+    assert 'name="film" value="78" checked' not in page and 'checked' in page
+    assert "Several films fit this Disc" in page
+    assert 'id="confirm-film" type="submit" disabled' in page
     assert 'name="title" value="1" checked' in page  # the Main Feature by default
     assert "2 h 1 m 33 s · the longest, likely the film" in page and "2 m 31 s" in page
-    assert "Movies/Example Movie (2020) {tmdb-78}" in page  # where it will be filed
+    assert "Pick a film" in page
+    facts = _page(client, f"/review/{rec.id}/decision?film=78&title=1")
+    assert "Movies/Example Movie (2020) {tmdb-78}" in facts  # where it will be filed
 
 
 def test_the_user_can_search_tmdb_for_another_film(harness, client):
@@ -89,6 +94,10 @@ def test_the_user_can_search_tmdb_for_another_film(harness, client):
     facts = _page(client, f"/review/{rec.id}/decision?film=329865&title=2")
     assert "Arrival (2016)" in facts and "Title 2 · 2 m" in facts
     assert "Movies/Arrival (2016) {tmdb-329865}" in facts
+    # ... and its Library's Naming Pattern.
+    harness.films_pattern("{year}/{title}/{title} - {version}")
+    facts = _page(client, f"/review/{rec.id}/decision?film=329865&title=2")
+    assert "Movies/2016/Arrival" in facts
 
 
 def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_film(

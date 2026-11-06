@@ -2,13 +2,13 @@
 name = "ama"
 version = "0.1.0"
 description = "Automatic Media Archive: rip, identify, encode and file optical Discs into a Plex library"
+license = "MIT"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
     "jinja2>=3.1",
     "python-multipart>=0.0.18",
-    "mutagen>=1.48.1",
     "httpx>=0.28",
     "tomlkit>=0.13",
     "pystray>=0.19 ; sys_platform == 'win32'",
@@ -22,6 +22,7 @@ ama = "ama.__main__:main"
 dev = [
     "pytest>=8.3",
     "httpx>=0.28",
+    "ruff>=0.14",
 ]
 
 [build-system]
@@ -34,3 +35,12 @@ packages = ["src/ama"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+include = ["src/**/*.py", "tests/**/*.py", "tools/**/*.py"]
+
+[tool.ruff.lint]
+# Errors only: syntax, pyflakes (unused names, undefined names) and the error-class
+# pycodestyle checks. One-line `case x: ...` arms are allowed; the parsers lay them out as tables.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E701"]
