@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import PurePosixPath
 
+from ama.naming import Pattern, Subject
 from ama.jobs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints
 from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, season_path, \
@@ -76,7 +77,8 @@ def test_episodes_are_filed_with_plex_tv_naming_and_specials_in_season_00():
 
 
 def test_a_tv_librarys_pattern_places_episodes_its_season_folder_and_extras():
-    pattern = "{show}/Season {season}/{episode:02}/{show} s{season:02}e{episode:02}"
+    pattern = Pattern.parse("{show}/Season {season}/{episode:02}/{show} s{season:02}e{episode:02}",
+                            Subject.TV)
     assert episode_path(OFFICE, Episode(1, 4, "The Quiz"), pattern) == PurePosixPath(
         "TV/The Office/Season 1/04/The Office s01e04.mkv")
     assert season_path(OFFICE, 1, pattern) == PurePosixPath("TV/The Office/Season 1")

@@ -6,35 +6,39 @@ from pathlib import PurePosixPath
 
 import pytest
 
-from ama.naming import DEFAULTS, FIELDS, Check, Kind, PatternError, check, examples, render
+from ama.naming import SPECS, Check, Pattern, PatternError, Subject, check
 
 TV_OK = "{show}/Season {season:02}/{show} - s{season:02}e{episode:02}"
 MUSIC_OK = "{artist}/{album}/{track:02} - {track_title}"
 
 
+def render(text: str, subject: Subject, values, ext: str) -> PurePosixPath:
+    return Pattern.parse(text, subject).render(values, ext)
+
+
 @pytest.mark.parametrize("pattern, kind", [
-    ("", Kind.FILM),
-    ("   ", Kind.FILM),
-    ("/Movies/{title} - {version}", Kind.FILM),
-    ("\\{title} - {version}", Kind.FILM),
-    ("C:/{title} - {version}", Kind.FILM),
-    ("../{title} - {version}", Kind.FILM),
-    ("{title}//{title} - {version}", Kind.FILM),
-    ("{title} - {version}/", Kind.FILM),
-    ("{title - {version}", Kind.FILM),            # unbalanced brace
-    ("{title} } - {version}", Kind.FILM),
-    ("{title:>10} - {version}", Kind.FILM),       # only zero-padding from format syntax
-    ("{title!r} - {version}", Kind.FILM),
-    ("{title} - {version} {nope}", Kind.FILM),    # not a film field
-    ("{title}", Kind.FILM),                       # a film's BD and UHD versions would collide
-    ("{year} - {version}", Kind.FILM),            # two films of a year would collide
-    ("{show}/Season {season:02}/{show} - s{season:02}", Kind.TV),     # TV without {episode}
-    ("{show}/{show} - e{episode:02}", Kind.TV),                       # ...or {season}
-    ("Season {season:02}/s{season:02}e{episode:02}", Kind.TV),        # ...or the show
-    ("{artist}/{album}/{track_title}", Kind.MUSIC_SINGLE_DISC),       # music without {track}
-    ("{artist}/{track:02} - {track_title}", Kind.MUSIC_SINGLE_DISC),  # ...or {album}
-    (MUSIC_OK, Kind.MUSIC_MULTI_DISC),                                # multi-disc without {disc}
-    ("{artist}/{album}/{track:02}/{track_title}", Kind.MUSIC_SINGLE_DISC),  # one folder a disc
+    ("", Subject.FILM),
+    ("   ", Subject.FILM),
+    ("/Movies/{title} - {version}", Subject.FILM),
+    ("\\{title} - {version}", Subject.FILM),
+    ("C:/{title} - {version}", Subject.FILM),
+    ("../{title} - {version}", Subject.FILM),
+    ("{title}//{title} - {version}", Subject.FILM),
+    ("{title} - {version}/", Subject.FILM),
+    ("{title - {version}", Subject.FILM),            # unbalanced brace
+    ("{title} } - {version}", Subject.FILM),
+    ("{title:>10} - {version}", Subject.FILM),       # only zero-padding from format syntax
+    ("{title!r} - {version}", Subject.FILM),
+    ("{title} - {version} {nope}", Subject.FILM),    # not a film field
+    ("{title}", Subject.FILM),                       # a film's BD and UHD versions would collide
+    ("{year} - {version}", Subject.FILM),            # two films of a year would collide
+    ("{show}/Season {season:02}/{show} - s{season:02}", Subject.TV),     # TV without {episode}
+    ("{show}/{show} - e{episode:02}", Subject.TV),                       # ...or {season}
+    ("Season {season:02}/s{season:02}e{episode:02}", Subject.TV),        # ...or the show
+    ("{artist}/{album}/{track_title}", Subject.MUSIC_SINGLE_DISC),       # music without {track}
+    ("{artist}/{track:02} - {track_title}", Subject.MUSIC_SINGLE_DISC),  # ...or {album}
+    (MUSIC_OK, Subject.MUSIC_MULTI_DISC),                                # multi-disc without {disc}
+    ("{artist}/{album}/{track:02}/{track_title}", Subject.MUSIC_SINGLE_DISC),  # one folder a disc
 ])
 def test_validation_rejects_a_pattern_that_cant_name_every_file_uniquely(pattern, kind):
     assert check(pattern, kind).errors
@@ -42,22 +46,22 @@ def test_validation_rejects_a_pattern_that_cant_name_every_file_uniquely(pattern
 
 @pytest.mark.parametrize("pattern, kind", [
     ("{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}",
-     Kind.FILM),
-    ("{tmdb_id} {version}", Kind.FILM),
-    (TV_OK, Kind.TV),
-    (MUSIC_OK, Kind.MUSIC_SINGLE_DISC),
-    ("{artist}/{album}/{disc}{track:02} - {track_title}", Kind.MUSIC_MULTI_DISC),
+     Subject.FILM),
+    ("{tmdb_id} {version}", Subject.FILM),
+    (TV_OK, Subject.TV),
+    (MUSIC_OK, Subject.MUSIC_SINGLE_DISC),
+    ("{artist}/{album}/{disc}{track:02} - {track_title}", Subject.MUSIC_MULTI_DISC),
 ])
 def test_validation_accepts_a_pattern_naming_every_file_uniquely(pattern, kind):
     assert check(pattern, kind).errors == ()
 
 
 @pytest.mark.parametrize("pattern, kind", [
-    ("{title}/{title} - {version}", Kind.FILM),                        # no year or TMDB ID
-    ("{title} ({year})/{title} ({year}) - {version}", Kind.FILM),     # no TMDB ID
-    ("{title} {{tmdb-{tmdb_id}}}/{title} - {version}", Kind.FILM),    # no year
-    ("{show}/Season {season}/{show} - {season}-{episode}", Kind.TV),  # no s01e02 form
-    ("{show}/Season {season:02}/{show} - s{season:02}e{episode:02}/x{episode}", Kind.TV),
+    ("{title}/{title} - {version}", Subject.FILM),                        # no year or TMDB ID
+    ("{title} ({year})/{title} ({year}) - {version}", Subject.FILM),     # no TMDB ID
+    ("{title} {{tmdb-{tmdb_id}}}/{title} - {version}", Subject.FILM),    # no year
+    ("{show}/Season {season}/{show} - {season}-{episode}", Subject.TV),  # no s01e02 form
+    ("{show}/Season {season:02}/{show} - s{season:02}e{episode:02}/x{episode}", Subject.TV),
 ])
 def test_validation_warns_without_rejecting_when_plex_wont_recognise_the_names(pattern, kind):
     result = check(pattern, kind)
@@ -72,23 +76,23 @@ def test_validation_warns_without_rejecting_when_plex_wont_recognise_the_names(p
     "{show}/{show} {season:02}x{episode:02}",
 ])
 def test_plex_episode_forms_raise_no_warning(pattern):
-    assert check(pattern, Kind.TV) == Check()
+    assert check(pattern, Subject.TV) == Check()
 
 
 def test_every_field_of_each_kind_is_listed_with_an_example_for_the_editor():
-    assert {f.name for f in FIELDS[Kind.FILM]} == {"title", "year", "tmdb_id", "version"}
-    assert {f.name for f in FIELDS[Kind.TV]} == {
+    assert {f.name for f in SPECS[Subject.FILM].fields} == {"title", "year", "tmdb_id", "version"}
+    assert {f.name for f in SPECS[Subject.TV].fields} == {
         "show", "year", "tmdb_id", "season", "episode", "episode_title"}
     music = {"artist", "album", "year", "track", "track_title", "track_artist", "disc",
              "disc_total", "disc_title"}
-    assert {f.name for f in FIELDS[Kind.MUSIC_SINGLE_DISC]} == music
-    assert {f.name for f in FIELDS[Kind.MUSIC_MULTI_DISC]} == music
-    assert all(f.about for fields in FIELDS.values() for f in fields)
+    assert {f.name for f in SPECS[Subject.MUSIC_SINGLE_DISC].fields} == music
+    assert {f.name for f in SPECS[Subject.MUSIC_MULTI_DISC].fields} == music
+    assert all(f.about for spec in SPECS.values() for f in spec.fields)
 
 
 def test_the_defaults_pass_validation_and_preview_with_the_examples():
-    assert all(check(DEFAULTS[k], k) == Check() for k in Kind)
-    assert [str(render(DEFAULTS[k], k, examples(k), "")) for k in Kind] == [
+    assert all(check(k.spec.default, k) == Check() for k in Subject)
+    assert [str(render(k.spec.default, k, k.spec.examples, "")) for k in Subject] == [
         "Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 4K",
         "Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e02 - The Train Job",
         "Queen/Greatest Hits/01 - Bohemian Rhapsody",
@@ -98,26 +102,26 @@ def test_the_defaults_pass_validation_and_preview_with_the_examples():
 
 def test_rendering_a_pattern_that_cant_be_parsed_or_uses_another_kinds_field_is_an_error():
     with pytest.raises(PatternError):
-        render("{title", Kind.FILM, examples(Kind.FILM), "")
+        render("{title", Subject.FILM, Subject.FILM.spec.examples, "")
     with pytest.raises(PatternError):
-        render("{show} - {version}", Kind.FILM, examples(Kind.FILM), "")
+        render("{show} - {version}", Subject.FILM, Subject.FILM.spec.examples, "")
 
 
 def test_a_pattern_is_literal_text_and_fields_with_slashes_between_folders():
-    assert render("{artist}/{album}/{track_title}", Kind.MUSIC_SINGLE_DISC,
+    assert render("{artist}/{album}/{track_title}", Subject.MUSIC_SINGLE_DISC,
                   {"artist": "Queen", "album": "Greatest Hits", "track_title": "Bohemian Rhapsody"},
                   ".flac") == PurePosixPath("Queen/Greatest Hits/Bohemian Rhapsody.flac")
 
 
 def test_fields_can_be_zero_padded_and_doubled_braces_are_literal():
     assert render("{show} {{tmdb-{tmdb_id}}}/Season {season:02}/s{season:02}e{episode:02}",
-                  Kind.TV, {"show": "Firefly", "tmdb_id": 1437, "season": 1, "episode": 103},
+                  Subject.TV, {"show": "Firefly", "tmdb_id": 1437, "season": 1, "episode": 103},
                   ".mkv") == PurePosixPath("Firefly {tmdb-1437}/Season 01/s01e103.mkv")
 
 
 def test_an_empty_field_drops_out_with_its_separators():
     def film(pattern: str, **values) -> str:
-        return render(pattern, Kind.FILM, {"title": "Ocean's Eleven", "year": 2001,
+        return render(pattern, Subject.FILM, {"title": "Ocean's Eleven", "year": 2001,
                                             "tmdb_id": 161, "version": "4K"} | values, "").name
 
     assert film("{title} - {version}", version="") == "Ocean's Eleven"
@@ -130,7 +134,7 @@ def test_an_empty_field_drops_out_with_its_separators():
 
 def test_each_segment_is_made_safe_for_windows():
     def music(**values) -> PurePosixPath:
-        return render("{artist}/{album}/{track:02} - {track_title}", Kind.MUSIC_SINGLE_DISC,
+        return render("{artist}/{album}/{track:02} - {track_title}", Subject.MUSIC_SINGLE_DISC,
                       {"artist": "Queen", "album": "Greatest Hits", "track": 1,
                        "track_title": "Bohemian Rhapsody"} | values, ".flac")
 

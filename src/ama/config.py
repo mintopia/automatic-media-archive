@@ -278,15 +278,16 @@ class Library(_Section):
     def _check_pattern(self) -> Library:
         from ama import naming  # it imports this module
         slots = naming.patterns(self.kind)
-        for key in naming.KEYS:
+        for key in naming.PatternKey:
             if not (pattern := getattr(self, key)):
                 continue
-            kind = slots.get(key)
-            if kind is None:
+            subject = slots.get(key)
+            if subject is None:
                 raise ValueError(f"{self.kind.label} Libraries can't have a {key} yet")
-            errors = naming.check(pattern, kind).errors
+            errors = naming.check(pattern, subject).errors
             if errors:
-                raise ValueError(f"The {naming.label(kind)} of {self.name}: {'; '.join(errors)}")
+                raise ValueError(f"The {subject.spec.label} of {self.name}: "
+                                 f"{'; '.join(errors)}")
         return self
 
 

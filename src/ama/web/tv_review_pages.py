@@ -77,7 +77,7 @@ def _after_earlier_discs(services, rec: JobRecord, series: Series | None, season
     return [e for e in episodes if e.number > last]
 
 
-def tv_pattern(services, rec: JobRecord) -> str:
+def tv_pattern(services, rec: JobRecord) -> naming.Pattern:
     """The Naming Pattern of the TV Library `rec` would file to now."""
     library = (services.job_settings.files_to(rec, LibraryKind.TV) if services.job_settings
                else library_for(services.archive.libraries, LibraryKind.TV))

@@ -30,6 +30,7 @@ from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus
 from ama.events import EventBus
 from ama.extras import default_names
 from ama.media import MediaStore, screen
+from ama.naming import Pattern
 from ama.plex import Plex
 from ama.problems import Problems
 from ama.retry import Backoff, RetryLater
@@ -62,7 +63,7 @@ class TvTitle:
         return self.path.stem
 
 
-def planned(series: Series, rec: JobRecord, kept: Iterable[Kept], pattern: str
+def planned(series: Series, rec: JobRecord, kept: Iterable[Kept], pattern: Pattern
             ) -> list[tuple[int, Episode | None, PurePosixPath]]:
     """(Title, Episode or None for an Extra, Archive path by the TV Library's `pattern`) for
     each kept Title. Extras are named as a film's are (`extras.default_names`). The paths
