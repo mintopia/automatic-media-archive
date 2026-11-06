@@ -52,6 +52,17 @@ def test_a_play_all_is_the_title_made_of_other_titles():
     assert play_alls([_t(1, 121), _t(2, 24), _t(3, 18)]) == set()
 
 
+def test_a_play_all_needs_two_titles_inside_it_that_dont_overlap():
+    # Firefly disc 1 (DVD): a double-length pilot, then two episodes in other title sets
+    # whose cells are numbered 1-12 too. Neither is part of the pilot.
+    firefly = [TitleRecord(1, 0, 4981, 1, 1, 0, "1-20", "t00.mkv", TitleStatus.RIPPED),
+               TitleRecord(2, 1, 2460, 1, 1, 0, "1-12", "t01.mkv", TitleStatus.RIPPED),
+               TitleRecord(3, 2, 2524, 1, 1, 0, "1-12", "t02.mkv", TitleStatus.RIPPED)]
+    assert play_alls(firefly) == set()
+    disjoint = [_t(1, 41, "1-12"), _t(2, 42, "13-24"), _t(3, 83, "1-24")]
+    assert play_alls(disjoint) == {3}
+
+
 def test_episodes_are_filed_with_plex_tv_naming_and_specials_in_season_00():
     assert episode_path(OFFICE, Episode(1, 4, "The Quiz")) == PurePosixPath(
         "TV/The Office (2001) {tmdb-2996}/Season 01/The Office - s01e04 - The Quiz.mkv")

@@ -110,6 +110,7 @@ class FakeMakemkv:
         self.calls: list[list[str]] = []
         self.licence_ok = True
         self.fail_title: int | None = None
+        self.read_error = "Scsi error - MEDIUM ERROR"  # what failing `fail_title` reports
         self.ripped_ids: list[int] = []
         self.ripping = False
         self.disc_name: str | None = None  # replaces the scan's Disc + volume name (CINFO 2/32)
@@ -171,9 +172,10 @@ class FakeMakemkv:
                 return 1
         self.ripping = False
         if title_id == self.fail_title:
-            on_line('MSG:2003,0,3,"Error \'Scsi error - MEDIUM ERROR\' occurred while reading '
+            err = self.read_error
+            on_line(f'MSG:2003,0,3,"Error \'{err}\' occurred while reading '
                     '\'/BDMV/STREAM/00020.m2ts\' at offset \'1048576\'","Error \'%1\' occurred '
-                    'while reading \'%2\' at offset \'%3\'","Scsi error - MEDIUM ERROR",'
+                    f'while reading \'%2\' at offset \'%3\'","{err}",'
                     '"/BDMV/STREAM/00020.m2ts","1048576"')
             on_line('MSG:5037,516,2,"Copy complete. 0 titles saved, 1 failed.",'
                     '"Copy complete. %1 titles saved, %2 failed.","0","1"')

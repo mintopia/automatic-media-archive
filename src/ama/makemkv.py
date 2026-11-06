@@ -250,16 +250,18 @@ class Selection:
 
 
 def select_titles(titles: Iterable[TitleInfo], min_seconds: int) -> Selection:
-    """Titles worth ripping: long enough, and not the exact same segments as an earlier one."""
+    """Titles worth ripping: long enough, and not the exact same segments (and length) as an
+    earlier one. A DVD numbers its cells afresh in each title set, so two different episodes
+    can share a segment map; only the length tells them apart."""
     keep: list[TitleInfo] = []
     short: list[TitleInfo] = []
     dupes: list[tuple[TitleInfo, TitleInfo]] = []
-    seen: dict[tuple[str, int], TitleInfo] = {}
+    seen: dict[tuple[str, int, int], TitleInfo] = {}
     for t in sorted(titles, key=lambda t: t.id):
         if t.duration_s < min_seconds:
             short.append(t)
             continue
-        key = (t.segments_map, t.segments_count)
+        key = (t.segments_map, t.segments_count, t.duration_s)
         if t.segments_map and key in seen:
             dupes.append((t, seen[key]))
             continue

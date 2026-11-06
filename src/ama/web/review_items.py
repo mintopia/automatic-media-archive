@@ -84,7 +84,8 @@ def _video_item(services: Services, rec: JobRecord) -> ReviewItem:
             found := decoys.detect(t for t in rec.titles if t.status == TitleStatus.RIPPED)):
         summary = (f"{len(found.versions)} near-identical versions of the film "
                    "(a copy-protection trick) · check which is right")
-    if guess := services.film_guesses.get(rec.id):
+    tv = rec.review_reason == ReviewReason.EPISODES
+    if guess := (services.series_guesses if tv else services.film_guesses).get(rec.id):
         summary = f"Best guess {guess.name} · {summary}"
     return ReviewItem(rec, rec.name, summary, action)
 

@@ -5,6 +5,8 @@ Review, History); its breadcrumb follows the Job's Phase (`job_steps.section`)."
 
 from __future__ import annotations
 
+import asyncio
+import shutil
 from dataclasses import replace
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
@@ -12,7 +14,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 
 from ama import cdreview
 from ama.cdguess import value
-from ama.jobs import JobRecord, JobStatus, FailureKind
+from ama.jobs import Failure, JobRecord, JobStatus, FailureKind
 from ama.drive import DiscType
 from ama.encoder import EncodeStatus
 from ama.extras import ExtraStatus
@@ -22,6 +24,10 @@ from ama.web.job_steps import job_steps, section
 from ama.events import Topic
 
 router = APIRouter()
+
+CANCELLED = Failure(FailureKind.CANCELLED, "You cancelled this Job.",
+                    "Its Rip was thrown away. Insert the Disc again to rip it from the start.")
+CANCEL_WAIT_S = 10  # for ffmpeg to stop, so its files can be deleted
 
 
 def _job_or_404(services, job_id: int) -> JobRecord:
@@ -170,3 +176,29 @@ def dismiss(request: Request, job_id: int) -> Response:
         services.bus.publish(Topic.RIP)
         services.bus.publish(Topic.DRIVE)
     return RedirectResponse("/", status_code=303)
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel(request: Request, job_id: int) -> Response:
+    """Stop a Job in progress and throw its Rip away: while it rips (the Disc is ejected), or
+    after, while it waits for Identification or encodes. 409 once it's in Review or done."""
+    services = request.app.state.services
+    rec = _job_or_404(services, job_id)
+    if rec.status == JobStatus.RIPPING:
+        if not (services.video_rip.cancel(job_id) or services.cd.cancel(job_id)):
+            return Response("The Rip is just finishing; try again in a moment", 409)
+    elif rec.status == JobStatus.RIPPED:
+        encoder = services.movie_archive.encoder
+        encoder.cancel(job_id)
+        services.jobs.log(job_id, "You cancelled the Job; scratch deleted")
+        services.jobs.mark_failed(job_id, CANCELLED)  # off every Encode queue
+        for _ in range(CANCEL_WAIT_S * 10):
+            if not encoder.encoding(job_id):
+                break
+            await asyncio.sleep(0.1)
+        await asyncio.to_thread(shutil.rmtree, rec.scratch_dir, ignore_errors=True)
+        for topic in (Topic.RIP, Topic.DRIVE, Topic.ENCODE, Topic.REVIEW):
+            services.bus.publish(topic)
+    else:
+        return Response("Only a Job that is ripping, waiting or encoding can be cancelled", 409)
+    return RedirectResponse(f"/jobs/{job_id}", status_code=303)

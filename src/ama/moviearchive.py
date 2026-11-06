@@ -29,7 +29,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ama import decoys, filing
+from ama import decoys, filing, tvreview
 from ama import extras as extras_mod
 from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
@@ -221,8 +221,12 @@ class MovieArchiver:
         main = main_feature(rec.titles)
         if main is None:
             raise RetryLater("No ripped Title to identify")
-        # TV is never accepted as a film, however well one fits.
-        if looks_like_tv(rec.titles):
+        # TV is never accepted as a film, however well one fits; the user's mark decides first.
+        mark = tvreview.marked(rec)
+        if mark:
+            self._to_tv_review(rec, "You marked this Disc as TV")
+            return
+        if mark is None and looks_like_tv(rec.titles):
             self._to_tv_review(rec, "Several Titles are episode-length, so this looks like TV")
             return
         if not self._tmdb.configured:
@@ -233,7 +237,7 @@ class MovieArchiver:
         try:
             candidates = self._tmdb.candidates(terms) if terms else []
             series = (self._series_named(series_terms(hints))
-                      if might_be_tv(rec.titles) else None)
+                      if mark is None and might_be_tv(rec.titles) else None)
         except TmdbError as e:
             raise RetryLater(str(e)) from None
         (rec.scratch_dir / TMDB_FILE).write_text(json.dumps(

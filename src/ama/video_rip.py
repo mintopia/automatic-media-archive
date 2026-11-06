@@ -46,6 +46,7 @@ log = logging.getLogger(__name__)
 VIDEO_DISC_TYPES = frozenset({DiscType.DVD, DiscType.BD, DiscType.UHD})
 PUBLISH_EVERY_SECONDS = 0.5
 
+_TRAY_OPEN = "MEDIUM NOT PRESENT"  # MakeMKV's SCSI error once the tray opens mid-read
 _DISC_ADVICE = ("This usually means a scratch or smudge. Clean the Disc and insert it again. "
                 "If it fails a second time, the Disc may be damaged.")
 LICENCE_FAILURE = Failure(
@@ -58,6 +59,12 @@ LIBREDRIVE_FAILURE = Failure(
     "problem with the Disc. Open MakeMKV on the archive PC once (it switches the drive into "
     "LibreDrive mode), close it, then insert the Disc again. If MakeMKV's drive information "
     "says LibreDrive isn't possible, the drive needs MakeMKV's firmware update.")
+CANCELLED_FAILURE = Failure(
+    FailureKind.RIP_CANCELLED, "You cancelled the Rip.",
+    "The partial Rip was thrown away. Insert the Disc again to rip it from the start.")
+TAKEN_OUT_FAILURE = Failure(
+    FailureKind.DISC, "The Disc was taken out during the Rip.",
+    "Insert it again to rip it from the start. To stop a Rip, cancel its Job instead.")
 INTERRUPTED_FAILURE = Failure(
     FailureKind.INTERRUPTED, "The app stopped during the Rip.",
     "The partial Rip was thrown away. Insert the Disc again to rip it from the start.")
@@ -219,6 +226,8 @@ class VideoRipper:
         except asyncio.CancelledError:
             self._abort = True  # stops makemkvcon; recover() cleans up on next start
             raise
+        except _Aborted:
+            failure = CANCELLED_FAILURE
         except Exception:
             log.exception("video rip crashed")
             failure = Failure(FailureKind.MAKEMKV, "Something went wrong during the Rip.",
@@ -353,6 +362,8 @@ class VideoRipper:
                       and (summary is None or (summary[0] >= 1 and summary[1] == 0)))
                 if not ok:
                     self._store.set_title_status(job.id, t.number, TitleStatus.FAILED)
+                    if any(isinstance(r, Msg) and _TRAY_OPEN in r.text for r in out):
+                        return TAKEN_OUT_FAILURE
                     return Failure(FailureKind.TITLE, f"Title {t.number} couldn't be ripped.",
                                    _DISC_ADVICE)
                 self._store.set_title_status(job.id, t.number, TitleStatus.RIPPED)
@@ -366,6 +377,15 @@ class VideoRipper:
         """The size of the Titles not Skipped (the Rip's 100%), as of the latest skip."""
         job = self.job
         return (sum(t.size_bytes for t in job.to_rip) if job else 0) or 1
+
+    def cancel(self, job_id: int) -> bool:
+        """Stop the Rip under way of `job_id`: makemkvcon is killed at its next line, the Job
+        fails as cancelled and the Disc is ejected. False if it isn't ripping."""
+        if self.active is None or self.active.id != job_id:
+            return False
+        self._abort = True
+        self._store.log(job_id, "Cancelling the Rip")
+        return True
 
     def skip(self, job_id: int, number: int, skipped: bool) -> bool:
         """Untick (`skipped`) or tick again a Title of the Rip under way that hasn't started.

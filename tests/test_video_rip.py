@@ -157,6 +157,41 @@ def test_failed_rip_ejects_deletes_partial_files_and_keeps_the_log(client, harne
     assert "Couldn't rip" not in page_text(client, "/")
 
 
+def test_a_disc_taken_out_mid_rip_says_so_rather_than_blaming_a_scratch(client, harness):
+    harness.makemkv.fail_title = 0
+    harness.makemkv.read_error = "Scsi error - NOT READY:MEDIUM NOT PRESENT - TRAY OPEN"
+    harness.makemkv.release()
+    harness.drive.insert(DiscType.BD, "EXAMPLE_MOVIE")
+    eventually(lambda: harness.drive.ejected == 1)
+    failure = harness.services.jobs.get(1).failure
+    assert failure.headline == "The Disc was taken out during the Rip."
+    assert "scratch or smudge" not in failure.advice
+
+
+def test_while_ripping_the_disc_can_be_marked_as_tv_and_back(client, harness):
+    harness.drive.insert(DiscType.DVD, "FIREFLY_DISC1")
+    eventually(lambda: harness.makemkv.ripping)
+    assert "It's TV, not a film" in page_text(client, "/jobs/1")
+    r = client.post("/jobs/1/kind", data={"kind": "tv", "next": "/jobs/1"},
+                    follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/jobs/1"
+    page = page_text(client, "/jobs/1")
+    assert "<b>TV</b>, your mark" in page and "It's a film, not TV" in page
+    assert "<b>TV</b>, your mark" in page_text(client, "/")  # the drive card on Now
+    client.post("/jobs/1/kind", data={"kind": "film"})
+    assert "<b>TV</b>, your mark" not in page_text(client, "/jobs/1")
+    assert client.post("/jobs/1/kind", data={"kind": "cartoon"}).status_code == 400
+    harness.makemkv.release()
+    eventually(lambda: harness.drive.ejected == 1)
+
+
+def test_a_disc_is_marked_tv_only_before_identification(client, harness):
+    jobs = harness.services.jobs
+    rec = jobs.create(DiscType.DVD, "DONE", "video")
+    jobs.mark_filed_empty(rec.id)
+    assert client.post(f"/jobs/{rec.id}/kind", data={"kind": "tv"}).status_code == 409
+
+
 def test_a_rip_interrupted_by_a_restart_is_failed_not_retried(tmp_path):
     from fastapi.testclient import TestClient
 

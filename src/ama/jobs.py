@@ -68,6 +68,8 @@ class TitleStatus(StrEnum):
 class FailureKind(StrEnum):
     INTERRUPTED = "interrupted"  # the app stopped mid-Rip
     DISCARDED = "discarded"  # the user threw the Rip away in Review
+    RIP_CANCELLED = "rip_cancelled"  # the user cancelled the Job while it ripped
+    CANCELLED = "cancelled"  # the user cancelled the Job after its Rip (Identification, Encode)
     SCRATCH_CLEANED = "scratch_cleaned"  # Scratch cleanup removed a failed Encode's Rip
     # video
     LICENCE = "licence"  # MakeMKV refused to work: not the Disc's fault
@@ -81,6 +83,10 @@ class FailureKind(StrEnum):
     DRIVE = "drive"  # cyanrip couldn't open the drive
     RIP_ERROR = "rip_error"
     UNREADABLE_TRACK = "unreadable_track"
+
+
+# The user stopped the Job themselves: nothing went wrong, nothing to be told about.
+USER_STOPPED = frozenset({FailureKind.DISCARDED, FailureKind.RIP_CANCELLED, FailureKind.CANCELLED})
 
 
 @dataclass(frozen=True)

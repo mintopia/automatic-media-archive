@@ -91,6 +91,18 @@ def test_select_drops_exact_duplicates_and_short_titles():
     assert [t.id for t in sel.short] == [3]
 
 
+def test_dvd_titles_sharing_a_segment_map_are_kept_unless_they_also_run_as_long():
+    # A DVD numbers its cells afresh in each title set: two episodes can both be "1-12".
+    from ama.makemkv import TitleInfo
+    ep = dict(segments_count=12, segments_map="1-12")
+    titles = [TitleInfo(0, duration_s=4981, segments_count=20, segments_map="1-20"),
+              TitleInfo(1, duration_s=2460, **ep), TitleInfo(2, duration_s=2524, **ep),
+              TitleInfo(3, duration_s=2460, **ep)]
+    sel = select_titles(titles, min_seconds=30)
+    assert [t.id for t in sel.keep] == [0, 1, 2]
+    assert [(d.id, of.id) for d, of in sel.duplicates] == [(3, 1)]
+
+
 def test_rip_summary_reads_saved_and_failed_counts():
     out = lines("makemkv-mkv-title.txt")
     assert rip_summary(map(parse_line, out)) == (1, 0)

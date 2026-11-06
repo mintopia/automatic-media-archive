@@ -3,6 +3,8 @@
 A video Disc in Review is TV when it looked like TV at Identification
 (`ReviewReason.EPISODES`), or when the user marked it so (`mark`, saved to
 scratch `tv.json`; marking it a film again sends it back to the Movie Review).
+A mark made while the Disc rips decides Identification: TV goes to TV Review,
+a film is never taken for TV.
 
 Each ripped Title gets a *choice*: an Episode code (`S01E04`, from the series'
 seasons on TMDB, specials are season 0), `extra` (kept, filed to the show's
@@ -26,12 +28,18 @@ EXTRA = "extra"
 DISCARD = "discard"
 
 
-def wants_tv(rec: JobRecord) -> bool:
+def marked(rec: JobRecord) -> bool | None:
+    """The user's mark: True for TV, False for a film, None if they haven't said."""
     try:
         kind = json.loads((rec.scratch_dir / MARK_FILE).read_text(encoding="utf-8"))["kind"]
     except (OSError, ValueError, KeyError, TypeError):
-        return rec.review_reason == ReviewReason.EPISODES
+        return None
     return kind == "tv"
+
+
+def wants_tv(rec: JobRecord) -> bool:
+    mark = marked(rec)
+    return rec.review_reason == ReviewReason.EPISODES if mark is None else mark
 
 
 def mark(rec: JobRecord, tv: bool) -> None:
