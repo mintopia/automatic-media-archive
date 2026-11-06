@@ -11,6 +11,7 @@ web UI showing the drive and the pipeline, with live updates.
 
 ```powershell
 uv sync                     # install (dev tools included)
+uv run ruff check           # lint
 uv run pytest               # tests; no hardware needed
 copy ama.example.toml ama.toml
 uv run ama                  # run; UI on http://localhost:8080/
