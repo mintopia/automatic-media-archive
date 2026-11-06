@@ -75,8 +75,8 @@ def test_a_bad_key_is_named_and_setup_stays_on_the_step(client, setup, asked):
 
 def test_no_key_counts_as_skipping(client, setup, asked):
     r = client.post("/setup/tmdb", data={"tmdb": "key", "tmdb_key": ""})
-    assert r.request.url.path == "/setup/ready"
-    assert "Skipped — CDs only for now" in html.unescape(r.text)
+    assert r.request.url.path == "/setup/remote"
+    assert "Skipped — CDs only for now" in html.unescape(client.get("/setup/ready").text)
     _finish(client)
     assert asked == [] and load_config(setup.config).tmdb.api_key == ""
 
@@ -94,13 +94,13 @@ def test_tmdb_out_of_reach_says_so_and_skipping_still_works(client, setup, monke
 
 def test_skipping_writes_no_key_and_asks_tmdb_nothing(client, setup, asked):
     r = client.post("/setup/tmdb", data={"tmdb": "skip", "tmdb_key": "half-typed"})
-    assert r.status_code == 200 and r.request.url.path == "/setup/ready"
-    assert "Skipped — CDs only for now" in html.unescape(r.text)
+    assert r.status_code == 200 and r.request.url.path == "/setup/remote"
+    assert "Skipped — CDs only for now" in html.unescape(client.get("/setup/ready").text)
     _finish(client)
     assert asked == [] and load_config(setup.config).tmdb.api_key == ""
 
 
 def test_the_key_never_shows_on_the_ready_step(client, asked):
-    r = client.post("/setup/tmdb", data={"tmdb": "key", "tmdb_key": GOOD})
-    ready = r.text.split("<h1>Ready</h1>", 1)[1]
+    client.post("/setup/tmdb", data={"tmdb": "key", "tmdb_key": GOOD})
+    ready = client.get("/setup/ready").text.split("<h1>Ready</h1>", 1)[1]
     assert GOOD not in ready and "TMDB" in ready
