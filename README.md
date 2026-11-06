@@ -18,3 +18,4 @@ uv run ama                  # run; UI on http://localhost:8080/
 
 Configuration: `ama.example.toml` documents every setting.
 Running at logon and deploying updates: [docs/deploy.md](docs/deploy.md).
+Contributing, branches and releases: [CONTRIBUTING.md](CONTRIBUTING.md).
