@@ -1,0 +1,100 @@
+/* Landing page. The website speaks in plain text on the ground; anything that shows the app sits inside an .appwin frame. */
+.lead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:end;padding:64px 0 40px}
+.lead h1{font:800 76px/.98 Archivo;letter-spacing:-.03em;text-wrap:balance}
+.lead .lede{color:var(--ink2);font-size:20px;margin-top:24px}
+.cta{display:flex;flex-direction:column;gap:10px;min-width:300px}
+.cta small{color:var(--ink2);font-size:13px}
+.cta .btn+small{margin-bottom:8px}
+
+/* the app, shown: one window frame for every depiction */
+.appwin{margin:0;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--ground)}
+.appwin .chrome{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;background:var(--well);border-bottom:1px solid var(--rule);font-size:13px;color:var(--ink2)}
+.appwin .chrome .i{width:16px;height:16px}
+.appwin .chrome b{color:var(--ink);font-weight:600}
+.appwin .chrome .tag{margin-left:auto;border:1px solid var(--rule);border-radius:3px;padding:2px 8px;font:600 11px/1.4 Archivo;letter-spacing:.04em}
+.appwin .inner{pointer-events:none;user-select:none}
+.appwin .inner .top{min-height:52px}
+.appwin .amain{padding:22px 24px 28px}
+.appwin img{display:block;width:100%;height:auto}
+.wcap{margin-top:12px;color:var(--ink2);font-size:14px}
+.wcap b{color:var(--ink);font-weight:600}
+.hero-win .inner{max-height:560px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+
+/* website sections */
+.block{padding-top:112px}
+.block>h2,.h2{font:800 40px/1.08 Archivo;letter-spacing:-.02em;text-wrap:balance}
+.intro{color:var(--ink2);font-size:18px;margin-top:14px}
+.more-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;font-weight:600;text-underline-offset:3px}
+
+.stages{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;margin-top:40px}
+.stages li{border-top:3px solid var(--c);padding-top:18px}
+.stages h3{font:700 20px/1.2 Archivo}
+.stages p{color:var(--ink2);margin-top:8px}
+.stages .you{color:var(--ink);font-weight:600;margin-top:14px}
+
+.asks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px);gap:64px;align-items:start}
+.alerts{list-style:none;margin-top:32px;border-top:1px solid var(--rule);max-width:520px}
+.alerts li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:14px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.alerts .i{margin-top:3px}
+.alerts b{display:block}
+.alerts span{color:var(--ink2)}
+.alerts+p{color:var(--ink2);font-size:14px;margin-top:14px}
+
+.q{font:700 20px/1.2 Archivo}
+.qs{color:var(--ink2);font-size:13px;margin-top:4px}
+.choices{margin:16px 0;border:1px solid var(--rule)}
+.choice{display:grid;grid-template-columns:22px 96px minmax(0,1fr);gap:14px;align-items:center;padding:12px 14px;border-top:1px solid var(--rule)}
+.choice:first-child{border-top:0}
+.choice.on{background:var(--well);box-shadow:inset 0 0 0 2px var(--ink)}
+.dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--ink3)}
+.choice.on .dot{border-color:var(--ink);background:radial-gradient(circle,var(--ink) 0 4px,transparent 5px)}
+.still{aspect-ratio:16/9;background:#3E4146}.still.lite{background:#9A9DA3}
+.choice b{display:block;font-weight:600}
+.choice small{color:var(--ink2);font-size:13px}
+
+.gallery{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;margin-top:40px}
+
+.handles{width:100%;border-collapse:collapse;margin-top:32px;font-size:16px}
+.handles th{text-align:left;font:600 13px Archivo;color:var(--ink2);padding:0 16px 12px 0;border-bottom:1px solid var(--ink)}
+.handles td{padding:18px 16px 18px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.handles td:first-child{font:800 20px/1.2 Archivo;width:120px}
+.handles b{font-weight:600}
+.handles small{display:block;color:var(--ink2);font-size:14px;margin-top:2px}
+.reqs{color:var(--ink2);margin-top:20px}
+.reqs b{color:var(--ink);font-weight:600}
+
+.install{list-style:none;counter-reset:s;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:40px}
+.install li{counter-increment:s;border-top:1px solid var(--ink);padding-top:16px}
+.install li::before{content:counter(s);display:block;font:800 40px/1 Archivo;letter-spacing:-.02em;margin-bottom:12px}
+.install b{display:block;font-size:18px}
+.install p{color:var(--ink2);margin-top:6px}
+.install-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:36px}
+.install-cta small{color:var(--ink2);font-size:13px}
+
+@media (max-width:1100px){
+  .lead{grid-template-columns:minmax(0,1fr);align-items:start;gap:28px}
+  .cta{flex-direction:row;flex-wrap:wrap;align-items:center;min-width:0}
+  .cta .btn+small{margin:0 12px 0 0}
+  .lead h1{font-size:60px}
+  .stages{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .asks,.gallery{grid-template-columns:minmax(0,1fr);gap:32px}
+}
+@media (max-width:720px){
+  .lead{padding:32px 0 28px}
+  .lead h1{font-size:42px;letter-spacing:-.025em}
+  .lead .lede{font-size:17px}
+  .cta{flex-direction:column;align-items:stretch}
+  .cta .btn{width:100%}
+  .cta .btn+small{margin:0 0 8px}
+  .hero-win .inner{max-height:440px}
+  .appwin .amain{padding:14px 12px}
+  .block{padding-top:72px}
+  .block>h2,.h2{font-size:30px}
+  .intro{font-size:16px}
+  .stages,.install{grid-template-columns:minmax(0,1fr);gap:28px}
+  .choice{grid-template-columns:22px 72px minmax(0,1fr)}
+  .handles thead{display:none}
+  .handles tr{display:block;padding:14px 0;border-bottom:1px solid var(--rule)}
+  .handles td{display:block;padding:2px 0;border:0;width:auto!important}
+  .install-cta .btn{width:100%}
+}

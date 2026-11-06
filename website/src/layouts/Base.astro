@@ -1,0 +1,49 @@
+---
+import "../../../src/ama/web/static/ama.css";
+import "../styles/site.css";
+import { url } from "../url.ts";
+
+interface Props {
+  title: string;
+  description?: string;
+  current?: "docs";
+}
+const { title, description, current } = Astro.props;
+const pageTitle = title === "Automatic Media Archive" ? title : `${title} · Automatic Media Archive`;
+---
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{pageTitle}</title>
+  {description && <meta name="description" content={description}>}
+  <slot name="head" />
+</head>
+<body class="site">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="stop">
+    <a class="brand" href={url()}>Automatic Media Archive</a>
+    <nav class="nav" aria-label="Main">
+      <a href={url("docs/how-a-disc-flows/")}>How a Disc flows</a>
+      <a href={url("docs/install/")}>Install</a>
+      <a href={url("docs/install/")} aria-current={current === "docs" ? "page" : undefined}>Docs</a>
+    </nav>
+    <div class="end">
+      <a class="btn quiet gh" href="https://github.com/mintopia/automatic-media-archive">GitHub</a>
+      <a class="btn pri" href="https://github.com/mintopia/automatic-media-archive/releases/latest"><svg class="i" aria-hidden="true"><use href={url("icons.svg#download")} /></svg>Download for Windows</a>
+    </div>
+  </header>
+  <slot />
+  <footer class="sfoot"><div class="wrap">
+    <a class="brand" href={url()}>Automatic Media Archive</a>
+    <nav aria-label="Footer">
+      <a href={url("docs/install/")}>Docs</a>
+      <a href={url("docs/third-party/")}>Third-party tools &amp; licences</a>
+      <a href={url("docs/contributing/")}>Contributing</a>
+      <a href="https://github.com/mintopia/automatic-media-archive">GitHub</a>
+    </nav>
+    <p>Free and open source under the MIT licence.</p>
+  </div></footer>
+</body>
+</html>

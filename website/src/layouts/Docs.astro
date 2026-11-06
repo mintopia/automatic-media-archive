@@ -1,0 +1,68 @@
+---
+import type { MarkdownHeading } from "astro";
+import Base from "./Base.astro";
+import { SECTIONS, PAGES, sectionOf, neighbours } from "../docs.ts";
+import { url } from "../url.ts";
+
+interface Props {
+  frontmatter: { slug: string; description?: string };
+  headings: MarkdownHeading[];
+}
+const { frontmatter, headings } = Astro.props;
+const page = PAGES.find((p) => p.slug === frontmatter.slug);
+if (!page) throw new Error(`Docs page slug "${frontmatter.slug}" is not in SECTIONS (src/docs.ts)`);
+const section = sectionOf(page.slug);
+const { prev, next } = neighbours(page.slug);
+const contents = headings.filter((h) => h.depth === 2);
+const href = (slug: string) => url(`docs/${slug}/`);
+---
+<Base title={page.title} description={frontmatter.description} current="docs">
+  <main id="main" class="wrap">
+    <nav class="dfile" aria-label="Docs sections">
+      {SECTIONS.map((s) => (
+        <a class="dtab" href={href(s.pages[0].slug)} aria-current={s === section ? "true" : undefined}>{s.label}</a>
+      ))}
+    </nav>
+    <div class="dsheet">
+      <nav class="plist" aria-label={section.label}>
+        <h2>{section.label}</h2>
+        {section.pages.map((p) => (
+          <a href={href(p.slug)} aria-current={p.slug === page.slug ? "page" : undefined}>{p.title}</a>
+        ))}
+        <div class="other">
+          {SECTIONS.filter((s) => s !== section).map((s) => (
+            <>
+              <h2>{s.label}</h2>
+              {s.pages.map((p) => <a href={href(p.slug)}>{p.title}</a>)}
+            </>
+          ))}
+        </div>
+      </nav>
+
+      <article class="doc">
+        <p class="crumb"><a href={href(PAGES[0].slug)}>Docs</a><span aria-hidden="true">›</span><span>{section.label}</span></p>
+        <h1>{page.title}</h1>
+        {frontmatter.description && <p class="sub">{frontmatter.description}</p>}
+        {contents.length > 1 && (
+          <details class="toc-m"><summary>On this page</summary>
+            {contents.map((h) => <a href={`#${h.slug}`}>{h.text}</a>)}
+          </details>
+        )}
+        <slot />
+        <nav class="next" aria-label="Previous and next page">
+          {prev && <a href={href(prev.slug)}><span>Previous</span><b><svg class="i" aria-hidden="true"><use href={url("icons.svg#back")} /></svg>{prev.title}</b></a>}
+          {next && <a class="fwd" href={href(next.slug)}><span>Next</span><b>{next.title}<svg class="i" aria-hidden="true"><use href={url("icons.svg#chevron")} /></svg></b></a>}
+        </nav>
+      </article>
+
+      <aside class="toc">
+        {contents.length > 1 && (
+          <nav aria-label="On this page">
+            <h2>On this page</h2>
+            {contents.map((h) => <a href={`#${h.slug}`}>{h.text}</a>)}
+          </nav>
+        )}
+      </aside>
+    </div>
+  </main>
+</Base>

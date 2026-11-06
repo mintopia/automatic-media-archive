@@ -441,6 +441,14 @@ Every run's steps and their output, laid out like a CI run log (`docs/mockups/lo
 - **Live output:** the log is `role="log"`. A running step's meta strip starts with a Phase-colour dot (`ink` for app runs) and "Following live output" (`role="status"`). The log follows the tail while scrolled to the bottom. Scrolling up stops following, the status reads "Scrolled up, not following", and a "Jump to latest" button appears at the log's bottom right.
 - **Inline output on Now:** a collapsed toggle on the rip card and on each running Encoding row. On the rip card it is a hairline-topped foot line (tool and step in `ink-2`, "Show output" / "Hide output", "Open in Logs" at the right), under the per-Job settings line when both show. On an Encoding row it sits under the row, indented to the title. Open, it shows the last ~20 lines in a compact log (12px, up to 200px on the card and 160px in the row; 150px for both on phones), scrolled to the newest line and updating live. "Open in Logs" goes to that step on its run page. A waiting Encoding row has no output, so no toggle.
 
+### Public site
+The website in `website/` (Astro, ADR 0014; mockups `docs/mockups/site/`) uses this system, but it is not the app and must never look like it.
+- **Website vs app:** website sections are plain type on `ground`: headings, lists, a table and `ink` buttons. Bins, tabs, stickers, rows and radio rows appear only inside an **app window** (`.appwin`): a 6px-cornered frame with a 40px `well` bar reading "AMA in your browser · <page>" and an "Example" (or "Design mockup") tag, its contents `inert`, captioned below with "The app: …".
+- **Landing:** the headline and lede, then Download for Windows and See how a Disc flows; under them, an app window showing the Now page. No animation. Stage colours outside app windows appear only as the 3px top rule over each stage in "How a Disc flows".
+- **Docs:** pages are grouped into sections (Get started, How it works, Reference; `website/src/docs.ts`) shown as a divider file of `ink` tabs over a sheet with an `ink` top edge. The sheet holds the section's page list (240px), the reading column and "On this page" (220px, hidden under 1240px, where a `<details>` takes its place). Previous and next links end each page. On phones the tabs and the page list scroll sideways.
+- **Text width:** body text runs to its column; no character-count caps on paragraphs or intros.
+- **Examples:** films are Ocean's Eleven / Twelve / Thirteen, TV is Firefly, music is Queen's Greatest Hits.
+
 ### Log
 A rip log on the always-dark `log-ground`, in 13px / 1.6 monospace, with whitespace preserved, a maximum height of 320px and scrolling. Error lines are `log-error`. Step output in Logs uses the same block, taller and with times (see Logs above).
 
