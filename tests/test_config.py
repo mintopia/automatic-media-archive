@@ -205,3 +205,54 @@ def test_without_libraries_each_kind_defaults_to_a_folder_in_the_users_home(tmp_
 def test_each_video_disc_type_has_its_own_minimum_title_length():
     mins = MinTitleConfig(dvd=10, bd=20, uhd=40)
     assert [mins.seconds(t) for t in (DiscType.DVD, DiscType.BD, DiscType.UHD)] == [10, 20, 40]
+
+
+# --- the example's comments are the website's Settings reference (ADR 0014) --------------
+
+RESTART = "Changes apply after a restart."  # website/src/settings.ts looks for the same sentence
+
+
+def _example_marks() -> tuple[dict[str, str], dict[str, str]]:
+    """Each table's intro and each key's comment, laid out as website/src/settings.ts reads them."""
+    lines = [line.strip() for line in EXAMPLE.read_text(encoding="utf-8").splitlines()] + [""]
+    intros: dict[str, str] = {}
+    comments: dict[str, str] = {}
+    table = ""
+    for i, line in enumerate(lines):
+        if line.startswith("["):
+            table = line.strip("[]")
+            end = next(j for j in range(i + 1, len(lines)) if not lines[j].startswith("#"))
+            below = " ".join(lines[i + 1:end]) if lines[end] == "" else ""
+            intros[table] = f"{intros.get(table, '')} {_block_ending_at(lines, i - 1)} {below}"
+        elif line and not line.startswith("#"):
+            j = i - 1
+            while lines[j] and not lines[j].startswith("#"):
+                j -= 1  # keys straight after one another share the comment above them
+            comments.setdefault(f"{table}.{line.split('=')[0].strip()}", _block_ending_at(lines, j))
+    return intros, comments
+
+
+def _block_ending_at(lines: list[str], end: int) -> str:
+    start = end
+    while start >= 0 and lines[start].startswith("#"):
+        start -= 1
+    return " ".join(lines[start + 1:end + 1])
+
+
+def test_every_example_setting_has_a_comment():
+    _, comments = _example_marks()
+    assert [k for k, c in comments.items() if not c] == []
+
+
+def test_the_example_marks_exactly_the_secret_settings():
+    from ama.settings import is_secret
+    _, comments = _example_marks()
+    marked = {k for k, c in comments.items() if "SECRET" in c}
+    assert marked == {k for k in comments if not k.startswith("libraries.") and is_secret(k)}
+
+
+def test_the_example_marks_exactly_the_tables_that_need_a_restart():
+    from ama.settings import is_live
+    intros, _ = _example_marks()
+    assert {t for t, intro in intros.items() if RESTART in intro} == {
+        t for t in intros if not is_live(t)}
