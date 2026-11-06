@@ -21,11 +21,7 @@ section.block{padding:96px 0 0}
 
 /* hero: one Disc row at poster scale */
 .hero{padding-top:32px}
-.htabs{display:flex;gap:4px}
-.htab{display:inline-flex;align-items:center;height:34px;padding:0 20px 0 14px;border-radius:6px 16px 0 0;font:700 15px/1 "Archivo Narrow",sans-serif;letter-spacing:.06em;text-transform:uppercase;background:var(--sheet);color:var(--ink2);border:1px solid var(--rule);border-bottom:0;transition:background-color .35s cubic-bezier(.2,.8,.2,1),color .35s}
-.htab.on{color:#fff;border-color:transparent}
-.htab.on.rip{background:var(--rip)}.htab.on.rev{background:var(--rev)}.htab.on.enc{background:var(--enc);color:#17181A}.htab.on.fil{background:var(--fil)}
-.prow{display:grid;grid-template-columns:280px minmax(0,1fr) 340px;min-height:440px;background:var(--sheet);border:1px solid var(--rule);border-top:3px solid var(--edge,var(--rip));transition:border-color .35s}
+.prow{display:grid;grid-template-columns:280px minmax(0,1fr) 340px;min-height:440px;background:var(--sheet);border:1px solid var(--rule);border-top:3px solid var(--edge,var(--rip))}
 .prow .cell{background:#24262A;color:#D9DBDF;display:flex;flex-direction:column;justify-content:space-between;padding:28px}
 .prow .cell .i{width:120px;height:120px;stroke-width:1.2}
 .cap{font:700 11px/1 Archivo;letter-spacing:.08em;text-transform:uppercase}
@@ -34,7 +30,7 @@ section.block{padding:96px 0 0}
 .hero h1{font:800 80px/.98 Archivo;letter-spacing:-.03em;text-wrap:balance;max-width:15ch}
 .hero .meta{color:var(--ink2);font-size:19px;max-width:44ch}
 .st{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.stk.xl{height:40px;padding:0 18px 0 14px;border-radius:20px 5px 5px 20px;font-size:16px;transition:background-color .35s,color .35s}
+.stk.xl{height:40px;padding:0 18px 0 14px;border-radius:20px 5px 5px 20px;font-size:16px}
 .stk.xl::before{width:9px;height:9px;margin-right:10px}
 .strip{display:flex;gap:4px}
 .strip b{width:28px;height:8px;background:var(--well);border:1px solid var(--rule)}
@@ -43,7 +39,7 @@ section.block{padding:96px 0 0}
 .step{color:var(--ink2);font-size:14px}
 .hprog{display:flex;align-items:center;gap:16px;margin-top:auto;min-height:44px}
 .hprog .bar{flex:1;height:12px;background:var(--well);border:1px solid var(--rule)}
-.hprog .bar i{display:block;height:100%;background:var(--edge,var(--rip));transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.hprog .bar i{display:block;height:100%;background:var(--edge,var(--rip))}
 .hprog .pct{font:800 44px/1 Archivo;letter-spacing:-.02em;min-width:3ch;text-align:right}
 .hprog .where{font-weight:600;font-size:16px}
 .hprog .where span{color:var(--ink2);font-weight:400}
@@ -200,9 +196,6 @@ section.block{padding:96px 0 0}
   .stop .nav a{min-height:48px;padding:0 12px}
   .wrap{padding:0 16px}
   .hero{padding-top:20px}
-  .htabs{overflow:hidden}
-  .htab{padding:0 10px;font-size:12px;letter-spacing:.04em;flex:none}
-  .htab:not(.on){max-width:30px;overflow:hidden;color:transparent}
   .prow{grid-template-columns:minmax(0,1fr);min-height:0}
   .prow .cell{flex-direction:row;align-items:center;gap:12px;padding:12px 16px}
   .prow .cell .i{width:28px;height:28px}
@@ -252,5 +245,4 @@ section.block{padding:96px 0 0}
   .next{grid-template-columns:minmax(0,1fr)}
   .next a.fwd{grid-column:auto}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .notice p b{display:inline;margin:0}
