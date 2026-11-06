@@ -188,8 +188,8 @@ def test_a_film_librarys_editor_shows_its_pattern_fields_presets_and_a_preview(s
         assert re.search(re.escape(field) + r"</code>.*?" + re.escape(example), films, re.S)
     assert 'data-preset="{title} ({year})/{title} ({year}) - {version}"' in films
     assert "Ocean's Eleven (2001) {tmdb-161}/Ocean's Eleven (2001) {tmdb-161} - 4K.mkv" in films
-    tv = _group(_page(client, "?edit=TV"), "TV")
-    assert 'id="lib-pattern"' not in tv  # TV and music patterns come later (#68, #69)
+    music = _group(_page(client, "?edit=Music"), "Music")
+    assert 'id="lib-pattern"' not in music  # music patterns come later (#69)
 
 
 def test_the_preview_follows_the_pattern_with_its_errors_and_plex_warnings(setup):
@@ -217,3 +217,36 @@ def test_saving_a_pattern_files_later_films_by_it_and_a_bad_one_is_shown_again(s
     assert re.search(r'id="lib-pattern"[^>]*value="\{title\}"[^>]*aria-invalid="true"', films)
     assert "Needs {version}, so every file gets its own name" in films
     assert load_config(toml).libraries[0].pattern == good
+
+
+# --- the TV Naming Pattern (#68) ----------------------------------------------------------------
+
+TV_DEFAULT = ("{show} ({year}) {{tmdb-{tmdb_id}}}/Season {season:02}/"
+              "{show} - s{season:02}e{episode:02} - {episode_title}")
+
+
+def test_a_tv_librarys_editor_previews_an_episode_a_special_and_one_with_no_title(setup):
+    client, *_ = setup
+    tv = _group(_page(client, "?edit=TV"), "TV")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape(TV_DEFAULT) + '"', tv)
+    for field, example in [("{show}", "Firefly"), ("{year}", "2002"), ("{tmdb_id}", "1437"),
+                           ("{season}", "1"), ("{episode}", "2"),
+                           ("{episode_title}", "The Train Job")]:
+        assert re.search(re.escape(field) + r"</code>.*?" + re.escape(example), tv, re.S)
+    assert 'data-preset="{show}/Season {season:02}/{show} - s{season:02}e{episode:02}' in tv
+    assert "Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e02 - The Train Job.mkv" in tv
+    assert ("Firefly (2002) {tmdb-1437}/Season 00/"
+            "Firefly - s00e01 - Here's How It Was_ The Making of Firefly.mkv") in tv
+    assert "Firefly (2002) {tmdb-1437}/Season 01/Firefly - s01e03.mkv" in tv
+
+
+def test_a_tv_pattern_is_checked_for_plex_and_a_show_folder(setup):
+    client, *_ = setup
+    out = _pattern(client, "tv", "{show}/{show} {season}-{episode}")
+    assert "Firefly/Firefly 1-2.mkv" in out
+    assert "Plex finds episodes by s01e02" in out
+    no_folder = _pattern(client, "tv", "{show} - s{season:02}e{episode:02}")
+    assert "The first folder must be the show's" in no_folder and ".mkv" not in no_folder
+    seasonal = _pattern(client, "tv", "{show} S{season}/s{season:02}e{episode:02}")
+    assert "The first folder must be the show's" in seasonal

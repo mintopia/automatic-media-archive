@@ -93,8 +93,17 @@ def examples(kind: Kind) -> dict[str, Value]:
     return {f.name: f.example for f in FIELDS[kind]}
 
 
+# More examples the preview names, each the main one (`examples`) with these values.
+VARIANTS: dict[Kind, tuple[dict[str, Value], ...]] = {
+    Kind.TV: ({"season": 0, "episode": 1,
+               "episode_title": "Here's How It Was: The Making of Firefly"},
+              {"episode": 3, "episode_title": ""}),
+}
+
+
 # The Libraries whose pattern Settings edits (the `pattern` key), and what it names.
-EDITABLE: dict[LibraryKind, Kind] = {LibraryKind.FILMS: Kind.FILM}
+EDITABLE: dict[LibraryKind, Kind] = {LibraryKind.FILMS: Kind.FILM,
+                                     LibraryKind.TV: Kind.TV}
 # A named file's extension, for the editor's preview.
 EXTENSIONS: dict[Kind, str] = {Kind.FILM: ".mkv", Kind.TV: ".mkv",
                                Kind.MUSIC_SINGLE_DISC: ".flac", Kind.MUSIC_MULTI_DISC: ".flac"}
@@ -113,6 +122,14 @@ PRESETS: dict[Kind, tuple[Preset, ...]] = {
         Preset("Plex, with the TMDB ID (default)", DEFAULTS[Kind.FILM]),
         Preset("Plex, title and year", "{title} ({year})/{title} ({year}) - {version}"),
         Preset("By year", "{year}/{title} ({year})/{title} ({year}) - {version}"),
+    ),
+    Kind.TV: (
+        Preset("Plex, with the TMDB ID (default)", DEFAULTS[Kind.TV]),
+        Preset("Plex, show name only",
+               "{show}/Season {season:02}/{show} - s{season:02}e{episode:02} - {episode_title}"),
+        Preset("No season folders",
+               "{show} ({year}) {{tmdb-{tmdb_id}}}/"
+               "{show} - s{season:02}e{episode:02} - {episode_title}"),
     ),
 }
 
@@ -221,7 +238,26 @@ def check(pattern: str, kind: Kind) -> Check:
     in_folders = {f.name for seg in segments[:-1] for f in _fields(seg)}
     for name in sorted(in_folders & _FILE_ONLY.get(kind, frozenset())):
         errors.append(f"{{{name}}} can only be in the file name")
+    if kind == Kind.TV and not _is_show_folder(segments):
+        errors.append("The first folder must be the show's, where its Extras go: "
+                      "use {show} or {tmdb_id} in it, and no season or episode field")
     return Check(tuple(errors), tuple(_plex_warnings(kind, segments, used)))
+
+
+def _is_show_folder(segments: list[list[_Token]]) -> bool:
+    """Whether the pattern's first folder names the show, and only the show."""
+    if len(segments) < 2:
+        return False
+    used = {f.name for f in _fields(segments[0])}
+    return bool(used & {"show", "tmdb_id"}) and not used & {"season", "episode", "episode_title"}
+
+
+def leading_folders(pattern: str, without: frozenset[str]) -> int:
+    """How many of the pattern's first folders use none of the fields `without`: a TV
+    pattern's season folder is as deep as its folders go before an Episode's own."""
+    segments = _parse(pattern)[:-1]
+    return next((i for i, seg in enumerate(segments)
+                 if {f.name for f in _fields(seg)} & without), len(segments))
 
 
 def _plex_warnings(kind: Kind, segments: list[list[_Token]], used: set[str]) -> list[str]:

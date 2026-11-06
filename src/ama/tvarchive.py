@@ -62,18 +62,19 @@ class TvTitle:
         return self.path.stem
 
 
-def planned(series: Series, rec: JobRecord, kept: Iterable[Kept]
+def planned(series: Series, rec: JobRecord, kept: Iterable[Kept], pattern: str
             ) -> list[tuple[int, Episode | None, PurePosixPath]]:
-    """(Title, Episode or None for an Extra, Archive path) for each kept Title. Extras are
-    named as a film's are (`extras.default_names`)."""
+    """(Title, Episode or None for an Extra, Archive path by the TV Library's `pattern`) for
+    each kept Title. Extras are named as a film's are (`extras.default_names`). The paths
+    are kept, so a later pattern change renames nothing."""
     kept = list(kept)
     hints = load_hints(rec.scratch_dir, rec.label)
     names = default_names([k.title for k in kept if not k.episode],
                           (hints.disc_name, hints.volume_name, rec.label, series.name,
                            series.title), rec.label)
     return [(k.title.number, k.episode,
-             episode_path(series, k.episode) if k.episode
-             else extra_path(series, names[k.title.number])) for k in kept]
+             episode_path(series, k.episode, pattern) if k.episode
+             else extra_path(series, names[k.title.number], pattern)) for k in kept]
 
 
 class TvTitles:

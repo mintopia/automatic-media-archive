@@ -213,7 +213,7 @@ path = '\\nas\media\Movies'
 plex = "Movies"
 # Whether it's the default Library for its kind.
 default = true
-# Films only, for now: the Library's Naming Pattern, the folders and file name
+# Films and TV only, for now: the Library's Naming Pattern, the folders and file name
 # inside it, from {title}, {year}, {tmdb_id} and {version} (4K, 1080p, or nothing
 # for a DVD), "/" between folders. Empty = Plex's naming,
 # "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}".
@@ -226,6 +226,13 @@ kind = "tv"
 path = '\\nas\media\TV'
 plex = "TV Shows"
 default = true
+# The TV Library's Naming Pattern: every Episode's folders and file name, from
+# {show}, {year}, {tmdb_id}, {season} (0 for specials), {episode} and
+# {episode_title}. The first folder is the show's, where its Extras go in Other;
+# {episode} and {episode_title} only in the file name. Empty = Plex's naming,
+# "{show} ({year}) {{tmdb-{tmdb_id}}}/Season {season:02}/{show} - s{season:02}e{episode:02} - {episode_title}".
+# Changing it names only what is filed afterwards; nothing filed is renamed.
+pattern = ""
 
 [[libraries]]
 name = "Music"

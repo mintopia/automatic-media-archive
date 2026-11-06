@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 
 from ama.jobs import TitleRecord, TitleStatus
 from ama.tmdb import DiscHints
-from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, \
+from ama.tv import Episode, Series, episode_path, extra_path, looks_like_tv, season_path, \
     might_be_tv, play_alls, series_terms
 
 
@@ -73,6 +73,15 @@ def test_episodes_are_filed_with_plex_tv_naming_and_specials_in_season_00():
         "TV/Show {tmdb-1}/Season 12/Show - s12e103.mkv")
     assert extra_path(OFFICE, "THE_OFFICE_S1_D2 - Title 5") == PurePosixPath(
         "TV/The Office (2001) {tmdb-2996}/Other/THE_OFFICE_S1_D2 - Title 5.mkv")
+
+
+def test_a_tv_librarys_pattern_places_episodes_its_season_folder_and_extras():
+    pattern = "{show}/Season {season}/{episode:02}/{show} s{season:02}e{episode:02}"
+    assert episode_path(OFFICE, Episode(1, 4, "The Quiz"), pattern) == PurePosixPath(
+        "TV/The Office/Season 1/04/The Office s01e04.mkv")
+    assert season_path(OFFICE, 1, pattern) == PurePosixPath("TV/The Office/Season 1")
+    assert extra_path(OFFICE, "Bloopers", pattern) == PurePosixPath(
+        "TV/The Office/Other/Bloopers.mkv")
 
 
 def test_series_search_terms_drop_season_and_disc_numbers():

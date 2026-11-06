@@ -5,6 +5,9 @@
 <ul class="patmsgs">{% for e in pv.check.errors %}<li class="ferr">{{ alert }}<span>{{ e }}</span></li>{% endfor %}</ul>
 {%- else %}
 <div class="patprev"><span class="k">Example</span><code>{{ pv.preview }}</code></div>
+{%- for v in pv.variants %}
+<div class="patprev"><span class="k">Also</span><code>{{ v }}</code></div>
+{%- endfor %}
 {%- endif %}
 {%- if pv.check.warnings %}
 <ul class="patmsgs">{% for w in pv.check.warnings %}<li class="fwarn">{{ alert }}<span>{{ w }}</span></li>{% endfor %}</ul>
