@@ -42,7 +42,8 @@ def test_every_runtime_dependency_is_in_the_notices(package):
     assert re.search(rf"^\| {re.escape(package)} \|", rows, re.MULTILINE | re.IGNORECASE)
 
 
-@pytest.mark.parametrize("tool", ["ffmpeg", "cyanrip", "MakeMKV", "htmx", "htmx SSE extension", "Archivo"])
+@pytest.mark.parametrize(
+    "tool", ["ffmpeg", "cyanrip", "MakeMKV", "htmx", "htmx SSE extension", "Archivo", "uv", "Python"])
 def test_every_external_tool_and_vendored_file_is_in_the_notices(tool):
     rows = NOTICES.read_text(encoding="utf-8")
     assert re.search(rf"^\| {re.escape(tool)} \|", rows, re.MULTILINE)
@@ -58,7 +59,10 @@ def test_no_gpl_dependency_remains():
 
 
 @pytest.mark.parametrize(
-    "licence", [STATIC / "vendor" / "LICENSE-htmx.txt", STATIC / "fonts" / "OFL-Archivo.txt"]
+    "licence", [STATIC / "vendor" / "LICENSE-htmx.txt", STATIC / "fonts" / "OFL-Archivo.txt",
+                # the Windows installer carries uv.exe (ADR 0017)
+                ROOT / "tools" / "installer" / "licenses" / "uv-LICENSE-MIT.txt",
+                ROOT / "tools" / "installer" / "licenses" / "uv-LICENSE-APACHE.txt"]
 )
 def test_vendored_licence_texts_ship_next_to_the_files(licence):
     assert licence.read_text(encoding="utf-8").strip()
