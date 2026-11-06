@@ -151,9 +151,10 @@ SETUP_HEADER = ("AMA's settings, written by Setup. Change them on the Settings p
                 "ama.example.toml lists every setting; anything left out has its default.")
 
 # A Library's keys that the file can leave out, and their value then.
-_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False, "pattern": ""}
+_LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False, "pattern": "",
+                                     "multi_disc_pattern": ""}
 # What the Library editor types.
-_LIBRARY_TYPED = ("name", "plex", "path", "pattern")
+_LIBRARY_TYPED = ("name", "plex", "path", "pattern", "multi_disc_pattern")
 
 
 class SettingsFile:
@@ -243,7 +244,7 @@ class SettingsFile:
     def save_library(self, kind: LibraryKind, original: str | None,
                      typed: Mapping[str, str]) -> None:
         """Add a `kind` Library (`original` None) or edit the one called `original`, from
-        `{"name", "plex", "path", "pattern"}`; an edit keeps the value of any it leaves out.
+        `{"name", "plex", "path", "pattern", "multi_disc_pattern"}`; an edit keeps the value of any it leaves out.
         Raises SettingsRejected keyed by those names."""
         doc, libraries = self._libraries()
         index = (len(libraries) if original is None
@@ -254,11 +255,11 @@ class SettingsFile:
         kept = libraries[index] if original is not None else {}
         fields = {k: str(typed.get(k, kept.get(k, ""))).strip() for k in _LIBRARY_TYPED}
         errors: dict[str, str] = {}
-        if (naming_kind := naming.EDITABLE.get(kind)) is not None:
-            if fields["pattern"] == naming.DEFAULTS[naming_kind]:
-                fields["pattern"] = ""  # the default stays implicit, as in a new file
-            elif fields["pattern"] and (bad := naming.check(fields["pattern"], naming_kind).errors):
-                errors["pattern"] = "; ".join(bad)
+        for key, naming_kind in naming.patterns(kind).items():
+            if fields[key] == naming.DEFAULTS[naming_kind]:
+                fields[key] = ""  # the default stays implicit, as in a new file
+            elif fields[key] and (bad := naming.check(fields[key], naming_kind).errors):
+                errors[key] = "; ".join(bad)
         for k in ("name", "path"):
             if not fields[k]:
                 errors[k] = "This can't be empty"
@@ -327,7 +328,7 @@ class SettingsFile:
             if i >= len(aot):
                 aot.append(tomlkit.table())
             entry = aot[i]
-            for key in ("name", "kind", "path", "plex", "default", "pattern"):
+            for key in ("name", "kind", "path", "plex", "default", *naming.KEYS):
                 value = want[key]
                 optional = key in _LIBRARY_OPTIONAL  # left out of the file when empty
                 if entry.get(key, _LIBRARY_OPTIONAL.get(key)) == value:

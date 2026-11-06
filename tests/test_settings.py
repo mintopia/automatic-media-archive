@@ -220,6 +220,60 @@ def test_a_hand_edited_pattern_with_errors_stops_the_file_loading(toml):
         load_config(toml)
 
 
+# --- music's single-disc and multi-disc patterns (#69) ---------------------------------------
+
+SINGLE_DEFAULT = "{artist}/{album}/{track:02} - {track_title}"
+MULTI_DEFAULT = "{artist}/{album}/{disc}{track:02} - {track_title}"
+
+
+def _music(toml):
+    return next(lib for lib in load_config(toml).libraries if lib.name == "Music")
+
+
+def test_a_music_library_saves_both_patterns_and_absent_means_each_default(toml):
+    from ama import naming
+    from ama.naming import Kind
+    music = _music(toml)
+    assert naming.pattern_of(music, Kind.MUSIC_SINGLE_DISC) == SINGLE_DEFAULT
+    assert naming.pattern_of(music, Kind.MUSIC_MULTI_DISC) == MULTI_DEFAULT
+    f = SettingsFile(toml)
+    f.save_library(LibraryKind.MUSIC, "Music", {
+        "pattern": "{artist} - {album}/{track:02} {track_title}",
+        "multi_disc_pattern": "{artist} - {album}/Disc {disc}/{track:02} {track_title}"})
+    music = _music(toml)
+    assert naming.pattern_of(music, Kind.MUSIC_SINGLE_DISC) == (
+        "{artist} - {album}/{track:02} {track_title}")
+    assert naming.pattern_of(music, Kind.MUSIC_MULTI_DISC) == (
+        "{artist} - {album}/Disc {disc}/{track:02} {track_title}")
+    f.save_library(LibraryKind.MUSIC, "Music", {"multi_disc_pattern": MULTI_DEFAULT})
+    raw = tomllib.loads(toml.read_text(encoding="utf-8"))["libraries"][2]
+    assert raw["kind"] == "music" and "multi_disc_pattern" not in raw
+    assert raw["pattern"] == "{artist} - {album}/{track:02} {track_title}"
+
+
+def test_a_multi_disc_pattern_without_the_disc_is_rejected_and_the_file_is_unchanged(toml):
+    original = toml.read_bytes()
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(toml).save_library(LibraryKind.MUSIC, "Music", {
+            "pattern": "{artist}/{album}/{track:02}",
+            "multi_disc_pattern": "{artist}/{album}/{track:02} - {track_title}"})
+    assert set(e.value.errors) == {"multi_disc_pattern"}
+    assert "Needs {disc}" in e.value.errors["multi_disc_pattern"]
+    assert toml.read_bytes() == original
+
+
+def test_a_hand_edited_multi_disc_pattern_is_checked_and_films_cant_have_one(toml):
+    text = toml.read_text(encoding="utf-8")
+    music = text.replace('multi_disc_pattern = ""', 'multi_disc_pattern = "{album}/{track}"')
+    toml.write_text(music, encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"The multi-disc pattern of Music: Needs \{disc\}"):
+        load_config(toml)
+    films = text.replace('kind = "films"', 'kind = "films"\nmulti_disc_pattern = "{title}"')
+    toml.write_text(films, encoding="utf-8")
+    with pytest.raises(ConfigError, match=r"Films Libraries can't have a multi_disc_pattern"):
+        load_config(toml)
+
+
 # --- the one-time rewrite to plain Library paths (ADR 0011) -------------------------------
 
 V2 = r"""[nas]

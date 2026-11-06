@@ -200,3 +200,76 @@ def test_labels_listed_once_per_disc_are_tagged_once():
     tags = track_tags(musicbrainz.matches(resp, DISC_1)[0], 1, DISC_1)
     assert tags["LABEL"] == ["SQUARE ENIX MUSIC"]
     assert tags["CATALOGNUMBER"] == ["SQEX-11102", "SQEX-11103"]
+
+
+# --- the Library's Naming Patterns (#69) -----------------------------------------------------
+
+SINGLE = "{artist} - {album}/{track:02} {track_title}"
+MULTI = "{artist} - {album} ({year})/Disc {disc}/{track:02} {track_title}"
+
+
+def _queen(disc_total: int, disc: int = 1) -> musicbrainz.Match:
+    release = musicbrainz.Release("r", "Greatest Hits", "Queen", ("q",), disc_total, "1981")
+    return musicbrainz.Match(release, disc, "", (
+        musicbrainz.TrackInfo(1, "Bohemian Rhapsody", "Queen", (), "", ""),))
+
+
+def test_the_releases_disc_count_picks_the_single_or_multi_disc_pattern():
+    from pathlib import Path
+
+    from ama.cdarchive import album_folder, track_file
+    from ama.config import Library
+    music = Library(name="Music", kind=LibraryKind.MUSIC, path=r"C:\Music", pattern=SINGLE,
+                    multi_disc_pattern=MULTI)
+    assert album_folder(_queen(1), music) == Path("Music/Queen - Greatest Hits")
+    assert track_file(_queen(1), 1, "Bohemian Rhapsody", music) == "01 Bohemian Rhapsody.flac"
+    assert album_folder(_queen(2, 2), music) == Path("Music/Queen - Greatest Hits (1981)/Disc 2")
+    assert track_file(_queen(2, 2), 1, "Bohemian Rhapsody", music) == "01 Bohemian Rhapsody.flac"
+
+
+def _patterned(tmp_path):
+    from tests.conftest import make_harness, write_config
+    harness = make_harness(tmp_path, config_file=write_config(tmp_path))
+    harness.services.settings.save_library(LibraryKind.MUSIC, "Music", {
+        "pattern": SINGLE, "multi_disc_pattern": MULTI})
+    return harness
+
+
+def test_a_multi_disc_release_is_filed_by_the_multi_disc_pattern_with_its_cue_log_and_cover(
+        tmp_path):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    harness = _patterned(tmp_path)
+    harness.web.covers[SPECIAL] = COVER
+    with TestClient(create_app(harness.services)):
+        _insert(harness, DISC_1, 24, _response(only=SPECIAL))
+        rec = _wait_for(harness, JobStatus.FILED)
+    folder = extended_path(harness.libraries_root / "Music" / f"Various Artists - {ALBUM} (2024)"
+                           / "Disc 1")
+    names = sorted(p.name for p in folder.iterdir())
+    assert names[0] == "01 The Unknown Journey Continues.flac"
+    assert len([n for n in names if n.endswith(".flac")]) == 24
+    assert {f"{ALBUM} (Disc 1).cue", f"{ALBUM} (Disc 1).log", "cover.jpg"} <= set(names)
+    assert rec.archive_dir == harness.libraries_root / "Music" / (
+        f"Various Artists - {ALBUM} (2024)") / "Disc 1"
+
+
+def test_changing_the_pattern_never_renames_a_filed_album(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from ama.app import create_app
+    harness = _patterned(tmp_path)
+    with TestClient(create_app(harness.services)):
+        _insert(harness, DISC_1, 24, _response(only=SPECIAL))
+        first = _wait_for(harness, JobStatus.FILED)
+        harness.services.settings.save_library(LibraryKind.MUSIC, "Music", {
+            "multi_disc_pattern": "{artist}/{album}/{disc}-{track:02} {track_title}"})
+        _insert(harness, DISC_2, 23, _response(only=SPECIAL))
+        _wait_for(harness, JobStatus.FILED, count=2)
+    old = extended_path(first.archive_dir)
+    assert len([p for p in old.iterdir() if p.suffix == ".flac"]) == 24
+    assert harness.services.jobs.get(first.id).archive_dir == first.archive_dir
+    new = extended_path(harness.libraries_root / "Music" / "Various Artists" / ALBUM)
+    flacs = [p.name for p in new.iterdir() if p.suffix == ".flac"]
+    assert len(flacs) == 23 and all(n.startswith("2-") for n in flacs)
