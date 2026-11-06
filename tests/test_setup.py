@@ -52,8 +52,8 @@ def _prefilled(html: str) -> dict[str, str]:
         r'<input[^>]*name="(?P<name>[^"]+)"[^>]*value="(?P<value>[^"]*)"', html)}
 
 
-def test_setup_goes_welcome_then_where_things_go_then_ready(client):
-    assert _walk(client) == ["Welcome to AMA", "Where things go"]
+def test_setup_goes_welcome_then_where_things_go_then_tmdb_then_ready(client):
+    assert _walk(client) == ["Welcome to AMA", "Where things go", "TMDB key"]
     assert "<h1>Ready</h1>" in client.get("/setup/ready").text
 
 

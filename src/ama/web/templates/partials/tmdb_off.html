@@ -1,0 +1,6 @@
+{#- Now page: the TMDB key is empty (Setup skipped it, #73). Stays until dismissed in this
+    browser, or until a key is added in Settings. -#}
+{%- if tmdb_off -%}
+<div class="notice" role="status" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Film/TV Identification is off until you add a TMDB key</b>CDs are archived as usual. Films and TV go to Review with no suggestions. <a href="/settings/archive/identification">Add a TMDB key</a>
+  <form method="post" action="/notices/tmdb-off/dismiss" style="margin-top:8px"><button class="btn quiet" type="submit">Dismiss</button></form></div></div>
+{%- endif -%}

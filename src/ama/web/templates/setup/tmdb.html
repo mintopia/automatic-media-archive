@@ -1,0 +1,14 @@
+<p>AMA identifies films and TV series with The Movie Database (TMDB). It needs your own free API key: sign in at themoviedb.org, then copy the v3 "API Key" from Settings, API. CDs don't need it.</p>
+<fieldset class="setup-adv" style="margin:0;padding:0">
+  <legend class="sr">TMDB key</legend>
+  <div class="radio"><input type="radio" id="f-tmdb-key" name="tmdb" value="key"{% if values["tmdb"] != "skip" %} checked{% endif %}><div class="field">
+    <label for="f-tmdb-key">Use my TMDB key</label>
+    <input class="input" id="f-tmdb_key" name="tmdb_key" value="{{ values["tmdb_key"] }}" spellcheck="false" autocomplete="off" aria-label="TMDB API key" aria-describedby="f-tmdb_key-hint{% if errors["tmdb_key"] %} f-tmdb_key-err{% endif %}"{% if errors["tmdb_key"] %} aria-invalid="true"{% endif %}>
+    <span class="hint" id="f-tmdb_key-hint">AMA checks it with TMDB before going on.</span>
+    {%- if errors["tmdb_key"] %}<span class="hint err" id="f-tmdb_key-err">{{ errors["tmdb_key"] }}</span>{% endif %}
+  </div></div>
+  <label class="radio"><input type="radio" name="tmdb" value="skip"{% if values["tmdb"] == "skip" %} checked{% endif %}><div>
+    <b>Skip — CDs only for now</b>
+    <span class="hint" style="display:block">Films and TV aren't identified until you add a key in Settings. Now reminds you.</span>
+  </div></label>
+</fieldset>
