@@ -28,7 +28,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 import httpx
-from mutagen.flac import FLAC
 
 from ama import cdreview, cyanrip, filing, musicbrainz
 from ama.archive import Archive, safe_name
@@ -37,6 +36,7 @@ from ama.config import LibraryKind
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
+from ama.flactags import write_tags
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason
 from ama.drive import DiscType
 from ama.events import EventBus, Topic
@@ -136,18 +136,6 @@ def track_tags(match: Match, number: int, mb_disc_id: str) -> dict[str, list[str
     # Details entered by hand in Review have no MusicBrainz IDs: leave those tags out.
     tags = {k: [x for x in v if x] for k, v in tags.items()}
     return {k: v for k, v in tags.items() if v}
-
-
-def write_tags(path: Path, tags: dict[str, list[str]]) -> None:
-    """Replace every tag in the FLAC at `path` with `tags` (idempotent)."""
-    f = FLAC(path)
-    if f.tags is None:
-        f.add_tags()
-    else:
-        f.tags.clear()
-    for k, v in tags.items():
-        f[k] = v
-    f.save()
 
 
 _CUE_FILE = re.compile(r'^(\s*FILE\s+)"([^"]+)"(.*)$')
