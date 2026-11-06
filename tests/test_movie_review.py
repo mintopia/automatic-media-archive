@@ -89,6 +89,10 @@ def test_the_user_can_search_tmdb_for_another_film(harness, client):
     facts = _page(client, f"/review/{rec.id}/decision?film=329865&title=2")
     assert "Arrival (2016)" in facts and "Title 2 · 2 m" in facts
     assert "Movies/Arrival (2016) {tmdb-329865}" in facts
+    # ... and its Library's Naming Pattern.
+    harness.films_pattern("{year}/{title}/{title} - {version}")
+    facts = _page(client, f"/review/{rec.id}/decision?film=329865&title=2")
+    assert "Movies/2016/Arrival" in facts
 
 
 def test_confirming_review_queues_the_encode_of_the_chosen_title_as_the_chosen_film(

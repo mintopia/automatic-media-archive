@@ -40,6 +40,16 @@
   if (focus) focus.focus();
   undo.addEventListener('click', () => { location.href = location.pathname; });
 
+  // A Naming Pattern preset fills the field; its input event redraws the preview.
+  form.querySelectorAll('[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const field = document.getElementById(btn.getAttribute('aria-controls'));
+      field.value = btn.dataset.preset;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.focus();
+    });
+  });
+
   form.querySelectorAll('.secret').forEach((box) => {
     const ctl = box.parentElement;
     const input = ctl.querySelector('input[type=password]');

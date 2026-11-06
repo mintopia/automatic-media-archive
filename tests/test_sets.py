@@ -123,6 +123,26 @@ def test_an_extras_disc_files_its_titles_as_extras_in_the_films_folder(harness, 
     assert "Discs 1–2 filed" in _page(client, f"/review/{again.id}")
 
 
+def test_an_extras_disc_joins_its_film_where_it_was_filed_whatever_the_pattern_is_now(
+        harness, client):
+    harness.films_pattern("{year}/{title}/{title} - {version}")
+    _file_example_movie(harness)
+    harness.films_pattern("{title} ({year})/{title} - {version}")  # changed since
+    rec = _in_review(harness, _tv_disc(harness, "EXAMPLE_MOVIE_BONUS", BONUS, DiscType.BD))
+
+    assert "Disc 1 filed · Movies / 2016 / Example Movie" in _page(client, f"/review/{rec.id}")
+    client.post(f"/review/{rec.id}/set", data={"part": "yes", "set": "movie:1234", "disc": "2"})
+    filed = _filed(harness, rec)
+    folder = harness.libraries_root / "Movies" / "2016" / "Example Movie"
+    assert filed.archive_dir == folder
+    assert sorted(p.relative_to(extended_path(folder)).as_posix()
+                  for p in extended_path(folder).rglob("*.mkv")) == [
+        "Example Movie - 1080p.mkv", "Other/EXAMPLE_MOVIE - Title 2.mkv",
+        "Other/EXAMPLE_MOVIE_BONUS - Title 1.mkv", "Other/EXAMPLE_MOVIE_BONUS - Title 2.mkv",
+        "Other/EXAMPLE_MOVIE_BONUS - Title 3.mkv"]
+    assert not extended_path(harness.libraries_root / "Movies" / "Example Movie (2016)").exists()
+
+
 def test_a_disc_not_part_of_a_set_is_identified_on_its_own_and_not_asked_again(harness, client):
     _the_office(harness)
     _file_first_office_disc(harness, client)

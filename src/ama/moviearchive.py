@@ -29,13 +29,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ama import decoys, filing, tvreview
+from ama import decoys, filing, naming, tvreview
 from ama import extras as extras_mod
 from ama.archive import Archive, extended_path
 from ama.archive import move as archive_move
 from ama.covers import Covers
 from ama.db import Database
-from ama.config import LibraryKind
+from ama.config import LibraryKind, library_for
 from ama.jobs import JobRecord, JobStatus, JobStore, ReviewReason, TitleRecord, TitleStatus
 from ama.drive import DiscType
 from ama.encoder import PIPELINE_TOPICS, Encoder, EncodeQueue, EncodeStatus, encode_disc_type
@@ -386,9 +386,11 @@ class MovieArchiver:
         """File `encode.mkv` into the Archive, then delete the Job's scratch and tell Plex."""
         self._jobs.begin_step(rec.id, "file", "File")
         version = plex_version(rec.disc_type, movie.video_height)
-        path = movie_path(movie.film, version)
-        rel, name = path.parent, path.name
         library = self._library(rec, LibraryKind.FILMS)
+        pattern = naming.pattern_of(library_for(self._archive.libraries, LibraryKind.FILMS,
+                                                library))
+        path = movie_path(movie.film, version, pattern)
+        rel, name = path.parent, path.name
         with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, {name: rec.scratch_dir / ENCODED}, library)
             extras = self._file_extras(rec, rel, library)
