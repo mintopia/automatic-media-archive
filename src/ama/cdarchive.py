@@ -33,7 +33,7 @@ from ama import cdreview, cyanrip, filing, musicbrainz, naming
 from ama.archive import Archive, safe_name
 from ama.naming import Kind
 from ama.cdguess import CdPick
-from ama.config import LibraryKind
+from ama.config import Library, LibraryKind, library_for
 from ama.cdrip import CdTracks, Track
 from ama.covers import Covers
 from ama.cyanrip import ArStatus
@@ -100,17 +100,24 @@ def _music_values(match: Match, number: int = 0, title: str = "") -> dict[str, n
             "disc_total": r.disc_total, "disc_title": match.disc_title}
 
 
-def album_folder(match: Match) -> Path:
-    """`Music/Artist/Album`: one folder for all of a release's discs."""
+def _pattern(match: Match, library: Library | None) -> tuple[str, Kind]:
+    """The pattern `library` files this disc by: its single- or multi-disc one, by the
+    release's disc count (the defaults without a Library)."""
     kind = _music_kind(match)
-    return MUSIC / naming.folders(naming.DEFAULTS[kind], kind, _music_values(match))
+    return (naming.pattern_of(library, kind) if library else naming.DEFAULTS[kind]), kind
 
 
-def track_file(match: Match, number: int, title: str) -> str:
-    """`NN - Track.flac`, or `DNN - Track.flac` in a multi-disc release."""
-    kind = _music_kind(match)
-    return naming.render(naming.DEFAULTS[kind], kind, _music_values(match, number, title),
-                         ".flac").name
+def album_folder(match: Match, library: Library | None = None) -> Path:
+    """The folder for this disc's tracks, cue, log and cover: by default `Music/Artist/Album`,
+    one folder for all of a release's discs."""
+    pattern, kind = _pattern(match, library)
+    return MUSIC / naming.folders(pattern, kind, _music_values(match))
+
+
+def track_file(match: Match, number: int, title: str, library: Library | None = None) -> str:
+    """By default `NN - Track.flac`, or `DNN - Track.flac` in a multi-disc release."""
+    pattern, kind = _pattern(match, library)
+    return naming.render(pattern, kind, _music_values(match, number, title), ".flac").name
 
 
 def disc_file_stem(match: Match) -> str:
@@ -274,10 +281,12 @@ class CdArchiver:
         scratch = rec.scratch_dir
         files: dict[str, Path] = {}
         renamed: dict[str, str] = {}
+        library = self._library(rec, LibraryKind.MUSIC)
+        patterned = library_for(self._archive.libraries, LibraryKind.MUSIC, library)
         for t in self._tracks.load(rec.id):
             src = scratch / f"{t.number:02d}.flac"
             title = next((x.title for x in match.tracks if x.number == t.number), HIDDEN_TRACK)
-            name = track_file(match, t.number, title)
+            name = track_file(match, t.number, title, patterned)
             write_tags(src, track_tags(match, t.number, mb_disc_id))
             files[name] = src
             renamed[src.name] = name
@@ -303,7 +312,7 @@ class CdArchiver:
             cached = self._covers.path(art)
             assert cached is not None
             files[f"cover{cached.suffix}"] = cached
-        rel, library = album_folder(match), self._library(rec, LibraryKind.MUSIC)
+        rel = album_folder(match, patterned)  # the tracks' folder: cue, log and cover too
         with filing.to_library(self._archive, rel, library):
             folder = self._archive.place(rel, files, library)
         title = f"{match.release.title} — {match.release.artist}"

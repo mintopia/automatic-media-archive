@@ -19,9 +19,10 @@ def _missing_keys(model: type[BaseModel], data: dict, prefix: str = "") -> list[
             missing.append(key)
         elif isinstance(field.annotation, type) and issubclass(field.annotation, BaseModel):
             missing += _missing_keys(field.annotation, data[name], key + ".")
-        elif get_origin(field.annotation) is tuple:  # an array of tables: its first entry
+        elif get_origin(field.annotation) is tuple:  # an array of tables: any of its entries
             (item, *_) = get_args(field.annotation)
-            missing += _missing_keys(item, data[name][0], key + "[0].")
+            missing += _missing_keys(item, {k: v for entry in data[name] for k, v in entry.items()},
+                                     key + "[].")
     return missing
 
 

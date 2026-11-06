@@ -94,7 +94,30 @@ def examples(kind: Kind) -> dict[str, Value]:
 
 
 # The Libraries whose pattern Settings edits (the `pattern` key), and what it names.
-EDITABLE: dict[LibraryKind, Kind] = {LibraryKind.FILMS: Kind.FILM}
+EDITABLE: dict[LibraryKind, Kind] = {
+    LibraryKind.FILMS: Kind.FILM,
+    LibraryKind.MUSIC: Kind.MUSIC_SINGLE_DISC,
+}
+# A Library's other pattern keys, and what each names.
+MORE_PATTERNS: dict[LibraryKind, dict[str, Kind]] = {
+    LibraryKind.MUSIC: {"multi_disc_pattern": Kind.MUSIC_MULTI_DISC},
+}
+KEYS = ("pattern", "multi_disc_pattern")  # every Library key that can hold a pattern
+# What the editor and its errors call a pattern of a Library that has more than one.
+LABELS: dict[Kind, str] = {Kind.MUSIC_SINGLE_DISC: "single-disc pattern",
+                           Kind.MUSIC_MULTI_DISC: "multi-disc pattern"}
+
+
+def patterns(kind: LibraryKind) -> dict[str, Kind]:
+    """A `kind` Library's pattern keys and what each names; empty if it has none."""
+    if kind not in EDITABLE:
+        return {}
+    return {"pattern": EDITABLE[kind]} | MORE_PATTERNS.get(kind, {})
+
+
+def label(kind: Kind) -> str:
+    """What the editor calls the pattern that names `kind`: "pattern" when it's the only one."""
+    return LABELS.get(kind, "pattern")
 # A named file's extension, for the editor's preview.
 EXTENSIONS: dict[Kind, str] = {Kind.FILM: ".mkv", Kind.TV: ".mkv",
                                Kind.MUSIC_SINGLE_DISC: ".flac", Kind.MUSIC_MULTI_DISC: ".flac"}
@@ -114,15 +137,27 @@ PRESETS: dict[Kind, tuple[Preset, ...]] = {
         Preset("Plex, title and year", "{title} ({year})/{title} ({year}) - {version}"),
         Preset("By year", "{year}/{title} ({year})/{title} ({year}) - {version}"),
     ),
+    Kind.MUSIC_SINGLE_DISC: (
+        Preset("Artist / Album (default)", DEFAULTS[Kind.MUSIC_SINGLE_DISC]),
+        Preset("Artist / Album (Year)", "{artist}/{album} ({year})/{track:02} - {track_title}"),
+    ),
+    Kind.MUSIC_MULTI_DISC: (
+        Preset("Disc number before the track (default)", DEFAULTS[Kind.MUSIC_MULTI_DISC]),
+        Preset("A folder per disc", "{artist}/{album}/Disc {disc}/{track:02} - {track_title}"),
+        Preset("Disc-track", "{artist}/{album}/{disc}-{track:02} - {track_title}"),
+    ),
 }
 
 
-def pattern_of(library: Library) -> str:
-    """The pattern `library` files by: its own, or its kind's default when it has none."""
-    kind = EDITABLE.get(library.kind)
-    if kind is None:
-        raise ValueError(f"{library.kind.label} Libraries have no editable pattern")
-    return library.pattern or DEFAULTS[kind]
+def pattern_of(library: Library, kind: Kind | None = None) -> str:
+    """The pattern `library` files `kind` by (by default, the one in its `pattern` key): its
+    own, or the kind's default when it has none."""
+    slots = patterns(library.kind)
+    key = next((k for k, nk in slots.items() if nk == kind), None) if kind else "pattern"
+    if key not in slots:
+        raise ValueError(f"{library.kind.label} Libraries have no editable pattern"
+                         + (f" for {kind}" if kind else ""))
+    return getattr(library, key) or DEFAULTS[slots[key]]
 
 # Each file's name is unique when the pattern has a field from every group.
 _UNIQUE: dict[Kind, tuple[tuple[str, ...], ...]] = {

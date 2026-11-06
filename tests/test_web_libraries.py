@@ -217,3 +217,59 @@ def test_saving_a_pattern_files_later_films_by_it_and_a_bad_one_is_shown_again(s
     assert re.search(r'id="lib-pattern"[^>]*value="\{title\}"[^>]*aria-invalid="true"', films)
     assert "Needs {version}, so every file gets its own name" in films
     assert load_config(toml).libraries[0].pattern == good
+
+
+# --- music's single-disc and multi-disc patterns (#69) ---------------------------------------
+
+def test_a_music_librarys_editor_has_both_patterns_each_with_its_preview(setup):
+    client, *_ = setup
+    music = _group(_page(client, "?edit=Music"), "Music")
+    assert re.search(r'<input [^>]*id="lib-pattern" name="lib.pattern" value="'
+                     + re.escape("{artist}/{album}/{track:02} - {track_title}") + '"', music)
+    assert re.search(r'<input [^>]*id="lib-multi_disc_pattern" name="lib.multi_disc_pattern" '
+                     'value="' + re.escape("{artist}/{album}/{disc}{track:02} - {track_title}")
+                     + '"', music)
+    assert "Single-disc pattern" in music and "Multi-disc pattern" in music
+    for field in ("artist", "album", "year", "track", "track_title", "track_artist", "disc",
+                  "disc_total", "disc_title"):
+        assert "{" + field + "}</code>" in music
+    assert "Queen/Greatest Hits/01 - Bohemian Rhapsody.flac" in music
+    assert "Queen/Greatest Hits/101 - Bohemian Rhapsody.flac" in music
+    assert 'data-preset="{artist}/{album}/Disc {disc}/{track:02} - {track_title}"' in music
+    assert 'aria-controls="lib-multi_disc_pattern"' in music
+
+
+def test_the_multi_disc_preview_follows_its_own_pattern(setup):
+    client, *_ = setup
+    r = client.get(PAGE + "/pattern", params={
+        "lib.kind": "music", "key": "multi_disc_pattern",
+        "lib.multi_disc_pattern": "{artist}/{album}/Disc {disc}/{track:02} {track_title}"})
+    assert r.status_code == 200
+    assert "Queen/Greatest Hits/Disc 1/01 Bohemian Rhapsody.flac" in html.unescape(r.text)
+    single = _pattern(client, "music", "{artist}/{album}/{track:02} - {track_title}")
+    assert "Queen/Greatest Hits/01 - Bohemian Rhapsody.flac" in single
+    bad = client.get(PAGE + "/pattern", params={
+        "lib.kind": "music", "key": "multi_disc_pattern",
+        "lib.multi_disc_pattern": "{artist}/{album}/{track:02}"})
+    assert "Needs {disc}" in html.unescape(bad.text)
+    assert client.get(PAGE + "/pattern", params={
+        "lib.kind": "films", "key": "multi_disc_pattern"}).status_code == 404
+
+
+def test_saving_a_music_librarys_patterns_and_a_bad_one_is_shown_again(setup):
+    client, toml, h = setup
+    data = {"lib.original": "Music", "lib.kind": "music", "lib.name": "Music",
+            "lib.plex": "Music", "lib.path": str(h.libraries_root / "Music"),
+            "lib.pattern": "{artist}/{album}/{track:02} - {track_title}"}
+    multi = "{artist}/{album}/Disc {disc}/{track:02} - {track_title}"
+    r = client.post(PAGE + "/save", data=data | {"lib.multi_disc_pattern": multi},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    assert next(lib for lib in load_config(toml).libraries
+                if lib.name == "Music").multi_disc_pattern == multi
+    r = client.post(PAGE + "/save", data=data | {"lib.multi_disc_pattern": "{album}/{track}"})
+    assert r.status_code == 422
+    music = _group(html.unescape(r.text), "Music")
+    assert re.search(r'id="lib-multi_disc_pattern"[^>]*value="\{album\}/\{track\}"[^>]*'
+                     'aria-invalid="true"', music)
+    assert "Needs {disc}, so every file gets its own name" in music
