@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Install · Automatic Media Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/ama.css"><link rel="stylesheet" href="site.css"><script src="../assets/theme.js"></script>
+</head>
+<body class="site">
+<a class="skip" href="#main">Skip to content</a>
+<header class="stop">
+  <a class="brand" href="index.html">Automatic Media Archive</a>
+  <nav class="nav" aria-label="Main"><a href="index.html#flow">How a Disc flows</a><a href="install.html">Install</a><a href="install.html" aria-current="page">Docs</a></nav>
+  <div class="end"><a class="btn quiet gh" href="https://github.com/mintopia/automatic-media-archive">GitHub</a><a class="btn pri" href="#download"><svg class="i" aria-hidden="true"><use href="../assets/icons.svg#download"/></svg>Download for Windows</a></div>
+</header>
+
+<main id="main" class="wrap">
+  <nav class="dfile" aria-label="Docs sections">
+    <a class="dtab" href="install.html" aria-current="true">Get started</a>
+    <a class="dtab" href="#">How it works</a>
+    <a class="dtab" href="#">Reference</a>
+  </nav>
+  <div class="dsheet">
+    <nav class="plist" aria-label="Get started">
+      <h2>Get started</h2>
+      <a href="install.html" aria-current="page">Install</a>
+      <a href="#">Setup walkthrough</a>
+      <div class="other">
+        <h2>How it works</h2>
+        <a href="#">How a Disc flows</a>
+        <a href="#">Libraries &amp; Naming Patterns</a>
+        <h2 style="margin-top:16px">Reference</h2>
+        <a href="#">Settings reference</a>
+        <a href="#">Third-party tools &amp; licences</a>
+        <a href="#">Contributing</a>
+      </div>
+    </nav>
+
+    <article class="doc">
+      <p class="crumb"><a href="install.html">Docs</a><span aria-hidden="true">›</span><span>Get started</span></p>
+      <h1>Install AMA</h1>
+      <p class="sub">AMA runs on the Windows PC that has the optical drive. It installs for your user only, without admin rights, and opens Setup in your browser when it’s done.</p>
+
+      <details class="toc-m"><summary>On this page</summary>
+        <a href="#need">What you need</a><a href="#download">Download</a><a href="#run">Run the installer</a><a href="#files">Where AMA keeps its files</a><a href="#update">Updates</a><a href="#uninstall">Uninstall</a>
+      </details>
+
+      <h2 id="need">What you need</h2>
+      <table class="kv">
+        <thead><tr><th scope="col">Thing</th><th scope="col">Why</th></tr></thead>
+        <tbody>
+          <tr><td>Windows 10 or 11</td><td>AMA runs as a normal app on your account and starts when you sign in.</td></tr>
+          <tr><td>An optical drive</td><td>A Blu-ray drive reads every Disc Type. UHD Discs need a drive that reads them.</td></tr>
+          <tr><td>MakeMKV</td><td>For DVDs and Blu-rays. You install it; AMA finds it.<small>CDs don’t need it.</small></td></tr>
+          <tr><td>Plex Media Server</td><td>On this PC or another one, as long as it can see your Library folders.</td></tr>
+          <tr><td>Space for scratch</td><td>A Rip waits on this PC until it’s encoded. A UHD Disc can take up to 100 GB.</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:16px">AMA downloads its other tools itself the first time it starts: <a href="#">ffmpeg and cyanrip</a>, at versions it has been tested with.</p>
+
+      <h2 id="download">Download</h2>
+      <p>Get the installer from the latest release on GitHub. It’s one file, <code>AMA-Setup-x.y.z.exe</code>, where <code>x.y.z</code> is the version.</p>
+      <div class="dl"><a class="btn pri big" href="https://github.com/mintopia/automatic-media-archive/releases/latest"><svg class="i" aria-hidden="true"><use href="../assets/icons.svg#download"/></svg>Download for Windows</a><small>Latest release on GitHub</small></div>
+
+      <h2 id="run">Run the installer</h2>
+      <div class="notice" role="note"><svg class="i" aria-hidden="true"><use href="../assets/icons.svg#alert"/></svg><div><b>Windows will warn you first</b><p>The installer isn’t code-signed yet, so SmartScreen shows “Windows protected your PC”. Choose <b>More info</b>, check the publisher line reads Unknown publisher and the file name is <code>AMA-Setup-x.y.z.exe</code>, then choose <b>Run anyway</b>.</p></div></div>
+      <ol class="num">
+        <li>Open the file you downloaded.</li>
+        <li>Leave <b>Start AMA when I sign in</b> ticked unless you want to start it yourself from the Start menu.</li>
+        <li>Choose <b>Install</b>. The installer sets up a private copy of Python and AMA’s libraries inside the app folder, so nothing else on the PC changes.</li>
+        <li>When it finishes, AMA starts and opens <a href="#">Setup</a> in your browser at <code>http://127.0.0.1</code>.</li>
+      </ol>
+
+      <h2 id="files">Where AMA keeps its files</h2>
+      <table class="kv">
+        <thead><tr><th scope="col">What</th><th scope="col">Where</th></tr></thead>
+        <tbody>
+          <tr><td>Settings</td><td><code>%LOCALAPPDATA%\AMA\ama.toml</code><small>Change them on the Settings page. The file stays readable if you’d rather edit it.</small></td></tr>
+          <tr><td>History and logs</td><td><code>%LOCALAPPDATA%\AMA\</code></td></tr>
+          <tr><td>Scratch</td><td>A folder you choose in Setup, under Advanced.</td></tr>
+          <tr><td>Your Libraries</td><td>Wherever you point them: a local disk, a mapped drive or a network share.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="update">Updates</h2>
+      <p>AMA checks GitHub for a newer release and shows <b>Update available</b> with a link. It never updates itself. Download the new installer and run it over the top; your settings and History stay.</p>
+
+      <h2 id="uninstall">Uninstall</h2>
+      <p>Use <b>Add or remove programs</b>. Uninstalling removes the app and keeps <code>%LOCALAPPDATA%\AMA\</code>, unless you tick <b>Also remove settings and history</b>. It never touches your Libraries.</p>
+
+      <nav class="next" aria-label="Next page">
+        <a class="fwd" href="#"><span>Next</span><b>Setup walkthrough<svg class="i" aria-hidden="true"><use href="../assets/icons.svg#chevron"/></svg></b></a>
+      </nav>
+    </article>
+
+    <aside class="toc"><nav aria-label="On this page">
+      <h2>On this page</h2>
+      <a href="#need" aria-current="true">What you need</a><a href="#download">Download</a><a href="#run">Run the installer</a><a href="#files">Where AMA keeps its files</a><a href="#update">Updates</a><a href="#uninstall">Uninstall</a>
+    </nav></aside>
+  </div>
+</main>
+
+<footer class="sfoot"><div class="wrap">
+  <a class="brand" href="index.html">Automatic Media Archive</a>
+  <nav aria-label="Footer"><a href="install.html">Docs</a><a href="#">Third-party tools &amp; licences</a><a href="#">Contributing</a><a href="https://github.com/mintopia/automatic-media-archive">GitHub</a></nav>
+  <p>Free and open source under the MIT licence.</p>
+</div></footer>
+<script src="site.js"></script>
+</body>
+</html>
