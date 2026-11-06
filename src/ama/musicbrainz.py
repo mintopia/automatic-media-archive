@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 
 USER_AGENT = (f"AMA/{version('ama')} "
-              "( https://git.mintopia.net/mintopia/automatic-media-archive )")
+              "( https://github.com/mintopia/automatic-media-archive )")
 
 VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377"  # MusicBrainz's special artist
 
