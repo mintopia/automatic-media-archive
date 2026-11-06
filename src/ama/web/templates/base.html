@@ -33,6 +33,9 @@
       {%- for label, href, icon in menu %}
       <a class="mi" href="{{ href }}"{% if here == href or here.startswith(href ~ "/") %} aria-current="page"{% endif %}><svg class="i" aria-hidden="true"><use href="/static/icons.svg#{{ icon }}"/></svg>{{ label }}</a>
       {%- endfor %}
+      {%- if update %}
+      <a class="mi" href="{{ update.url }}" rel="noopener" target="_blank"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#download"/></svg>Update available: {{ update.tag }}</a>
+      {%- endif %}
       {%- if can_log_out %}
       <form method="post" action="/logout"><button class="mi" type="submit"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>Log out</button></form>
       {%- endif %}
