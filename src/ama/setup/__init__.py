@@ -1,10 +1,10 @@
 """Setup (ADR 0016): with no settings file, AMA serves only this wizard, on 127.0.0.1.
 
 Each step is a module in `ama.setup.steps` exposing `STEP`, found at startup and run in
-`Step.order`; adding a step is adding a module (see that package for the order numbers).
-A step owns its form fields (prefilled from `Step.defaults`), checks them, says what they
-put in the settings file (`Step.settings`) and how they read on the Ready step
-(`Step.summary`). Finishing writes the file once with `SettingsFile.create` (ADR 0008);
+`Step.order`; adding a step is adding a module. A step owns its form fields (`Step.fields`,
+prefilled from `Step.defaults`; `Step.secrets` are kept exactly as typed, the rest trimmed),
+checks them, says what they put in the settings file (`Step.settings`) and how they read on
+the Ready step (`Step.summary`). Finishing writes the file once with `SettingsFile.create` (ADR 0008);
 an existing file means Setup is done, so it never runs again. Once it's written, a step may
 give the finished page cookies to set (`Step.cookies`: the remote step signs the browser in).
 """
@@ -20,7 +20,7 @@ import webbrowser
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -34,9 +34,16 @@ from ama.web import STATIC_DIR, TEMPLATES, auth
 
 log = logging.getLogger(__name__)
 
-HOST = SETUP_HOST
-
 Values = Mapping[str, str]  # every step's form fields, by name (names are unique across steps)
+
+
+class NewLibrary(TypedDict):
+    """A `[[libraries]]` entry for the new settings file."""
+
+    name: str
+    kind: str  # a LibraryKind value
+    path: str
+    default: bool
 
 
 @dataclass(frozen=True)
@@ -44,15 +51,17 @@ class Draft:
     """What steps put in the new settings file: `SettingsFile.create`'s arguments."""
 
     changes: dict[str, str] = field(default_factory=dict)  # dotted key -> typed text
-    libraries: list[dict[str, Any]] = field(default_factory=list)
+    libraries: list[NewLibrary] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class Step:
     slug: str  # its page: /setup/<slug>
     title: str  # the page's heading and its name in the step list
-    order: int  # where it comes (ama.setup.steps lists the numbers in use)
+    order: int  # where it comes, among the other steps' numbers
     template: str  # the step's body, inside the page's form
+    fields: tuple[str, ...] = ()  # the form fields it keeps
+    secrets: frozenset[str] = frozenset()  # fields kept exactly as typed (not trimmed)
     defaults: Callable[[Path], dict[str, str]] = lambda config: {}  # field -> prefilled
     check: Callable[[Values], dict[str, str]] = lambda values: {}  # field -> what to fix
     settings: Callable[[Values], Draft] = lambda values: Draft()
@@ -99,9 +108,10 @@ class Setup:
 
     def submit(self, step: Step, form: Values) -> dict[str, str]:
         """Keep the step's fields from `form`; what to fix in them (empty = go on)."""
-        for name in step.defaults(self.config):
+        for name in step.fields:
             if name in form:
-                self.values[name] = str(form[name]).strip()
+                value = str(form[name])
+                self.values[name] = value if name in step.secrets else value.strip()
         return step.check(self.values)
 
     def finish(self) -> Step | None:
@@ -138,7 +148,7 @@ def run_setup(config: Path, port: int = WebConfig().port,
     setup = Setup(config, machine=machine)
     setup.machine.start()
     app = create_setup_app(setup, control_token)
-    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=port, log_config=None,
+    server = uvicorn.Server(uvicorn.Config(app, host=SETUP_HOST, port=port, log_config=None,
                                            timeout_graceful_shutdown=3))
     stopping = threading.Event()
 
@@ -159,7 +169,7 @@ def run_setup(config: Path, port: int = WebConfig().port,
             if stopping.wait(0.05):
                 return
         bound = server.servers[0].sockets[0].getsockname()[1]
-        url = f"http://{HOST}:{bound}/"
+        url = f"http://{SETUP_HOST}:{bound}/"
         log.info("setup: no settings file at %s; Setup is at %s", config, url)
         open_url(url)
 

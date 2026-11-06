@@ -11,6 +11,7 @@ from ama.setup import Draft, Step, Values
 
 SCRATCH = "scratch"
 FIELDS = {LibraryKind.FILMS: "films", LibraryKind.TV: "tv", LibraryKind.MUSIC: "music"}
+NAMES = (*FIELDS.values(), SCRATCH)  # every field the step keeps
 
 
 def _defaults(config: Path) -> dict[str, str]:
@@ -39,7 +40,7 @@ def unwritable(folder: str) -> str | None:
 
 
 def _check(values: Values) -> dict[str, str]:
-    return {name: problem for name in (*FIELDS.values(), SCRATCH)
+    return {name: problem for name in NAMES
             if (problem := unwritable(values.get(name, "")))}
 
 
@@ -55,4 +56,4 @@ def _summary(values: Values) -> list[tuple[str, str]]:
 
 
 STEP = Step(slug="where", title="Where things go", order=30, template="setup/where.html",
-            defaults=_defaults, check=_check, settings=_settings, summary=_summary)
+            fields=NAMES, defaults=_defaults, check=_check, settings=_settings, summary=_summary)

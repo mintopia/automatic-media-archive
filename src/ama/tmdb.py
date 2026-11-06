@@ -21,7 +21,7 @@ import httpx
 
 from ama import naming
 from ama.jobs import ReviewReason
-from ama.naming import Kind
+from ama.naming import Pattern, Subject
 
 BASE = "https://api.themoviedb.org/3"
 IMAGES = "https://image.tmdb.org/t/p"
@@ -135,7 +135,10 @@ def search_terms(hints: DiscHints) -> list[str]:
 
 
 def _norm(title: str) -> str:
-    t = re.sub(r"[\W_]+", " ", title.casefold()).strip()
+    """For comparing titles: apostrophes dropped (OCEANS is Ocean's), other punctuation to
+    spaces, a leading article dropped."""
+    t = re.sub(r"['’]", "", title.casefold())  # straight and curly
+    t = re.sub(r"[\W_]+", " ", t).strip()
     return re.sub(r"^(the|a|an) ", "", t)
 
 
@@ -172,18 +175,18 @@ def decide_pick(pick: Candidate, main_feature_s: int
     return None, ReviewReason.PICK_RUNTIME_MISMATCH
 
 
-def movie_folder(c: Candidate, pattern: str = naming.DEFAULTS[Kind.FILM]) -> Path:
+def movie_folder(c: Candidate, pattern: Pattern = naming.default(Subject.FILM)) -> Path:
     """The film's folder by its Library's `pattern`: `Movies/Title (Year) {tmdb-ID}` by
     default (Plex naming)."""
-    return MOVIES / naming.folders(pattern, Kind.FILM, _film_values(c, None))
+    return MOVIES / pattern.folders(_film_values(c, None))
 
 
 def movie_path(c: Candidate, version: str | None,
-               pattern: str = naming.DEFAULTS[Kind.FILM]) -> Path:
+               pattern: Pattern = naming.default(Subject.FILM)) -> Path:
     """Where the film is filed by its Library's `pattern`; by default
     `Movies/Title (Year) {tmdb-ID}/Title (Year) {tmdb-ID} - 4K.mkv`, its Plex version name
     (`moviearchive.plex_version`) after the dash."""
-    return MOVIES / naming.render(pattern, Kind.FILM, _film_values(c, version), ".mkv")
+    return MOVIES / pattern.render(_film_values(c, version), ".mkv")
 
 
 def _film_values(c: Candidate, version: str | None) -> dict[str, naming.Value]:

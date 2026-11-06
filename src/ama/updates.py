@@ -16,6 +16,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.metadata import version
+from typing import NamedTuple
 
 import httpx
 
@@ -28,27 +29,40 @@ RELEASES_URL = "https://api.github.com/repos/mintopia/automatic-media-archive/re
 KEY = "update_check"  # kv: {"checked_at": epoch seconds, "release": {"tag", "url"} | null}
 DAY = 24 * 3600.0
 
-_TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
-_RUNNING = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+_NUMBERS = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
-Version = tuple[int, int, int]
+
+class Version(NamedTuple):
+    """X.Y.Z, compared as numbers."""
+
+    major: int
+    minor: int
+    patch: int
+
+    @classmethod
+    def parse(cls, text: str, *, whole: bool = False) -> Version | None:
+        """`X.Y.Z` at the start of `text` (an installed "1.2.3.dev0" is 1.2.3), or the
+        whole of it with `whole`; None if it isn't there."""
+        m = (_NUMBERS.fullmatch if whole else _NUMBERS.match)(text)
+        return cls(int(m[1]), int(m[2]), int(m[3])) if m else None
+
+    @classmethod
+    def of_tag(cls, tag: str) -> Version | None:
+        """An AMA Release's tag is exactly `vX.Y.Z`; None for any other tag."""
+        return cls.parse(tag[1:], whole=True) if tag.startswith("v") else None
+
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
 
 
 @dataclass(frozen=True)
 class Release:
-    tag: str  # "v1.2.3"
+    version: Version  # parsed from the tag, once
     url: str  # the Release's page on GitHub
 
     @property
-    def version(self) -> Version:
-        m = _TAG.fullmatch(self.tag)
-        assert m, self.tag  # only built from tags that match
-        return (int(m[1]), int(m[2]), int(m[3]))
-
-
-def _parse_running(running: str) -> Version | None:
-    m = _RUNNING.match(running)
-    return (int(m[1]), int(m[2]), int(m[3])) if m else None
+    def tag(self) -> str:
+        return f"v{self.version}"
 
 
 def newest(releases: object) -> Release | None:
@@ -61,8 +75,8 @@ def newest(releases: object) -> Release | None:
         if not isinstance(r, dict) or r.get("draft") or r.get("prerelease"):
             continue
         tag, url = r.get("tag_name"), r.get("html_url")
-        if isinstance(tag, str) and isinstance(url, str) and _TAG.fullmatch(tag):
-            found.append(Release(tag, url))
+        if isinstance(tag, str) and isinstance(url, str) and (v := Version.of_tag(tag)):
+            found.append(Release(v, url))
     return max(found, key=lambda r: r.version, default=None)
 
 
@@ -72,7 +86,7 @@ class UpdateCheck:
         self._http = http
         self._db = db
         self._bus = bus
-        self._running = _parse_running(running if running is not None else version("ama"))
+        self._running = Version.parse(running if running is not None else version("ama"))
         self._now = now
         self._checked_at, self._latest = self._load()
 
@@ -111,7 +125,7 @@ class UpdateCheck:
             try:
                 if await asyncio.to_thread(self.check):
                     self._bus.publish(Topic.UPDATE)
-            except Exception:  # noqa: BLE001 - never kill the loop, never show the user
+            except Exception:  # never kill the loop, never show the user
                 log.exception("update check failed")
             await asyncio.sleep(max(self.due_in(), 60.0))
 
@@ -120,10 +134,8 @@ class UpdateCheck:
             saved = json.loads(self._db.get_value(KEY) or "null")
             checked_at = float(saved["checked_at"])
             rel = saved.get("release")
-            latest = Release(rel["tag"], rel["url"]) if rel else None
-            if latest is not None and not _TAG.fullmatch(latest.tag):
-                latest = None
-            return checked_at, latest
+            v = Version.of_tag(rel["tag"]) if rel else None
+            return checked_at, Release(v, rel["url"]) if v else None
         except (ValueError, TypeError, KeyError):
             return None, None
 

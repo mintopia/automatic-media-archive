@@ -1,9 +1,8 @@
 {#- Now page: app-wide reasons Jobs can't move on (problems.py). Topic "problems".
-    Each says what's wrong and how to fix it; it goes once the cause is gone. -#}
+    Each says what's wrong and how to fix it; it goes once the cause is gone. Not tmdb_key:
+    tmdb_off.html is Now's one TMDB warning, and each waiting Job's card says why. -#}
 {%- for b in problems -%}
-{%- if b.problem == "tmdb_key" -%}
-<div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>No TMDB API key, so films and TV can't be identified</b>{{ b.jobs }} {{ "Job is" if b.jobs == 1 else "Jobs are" }} waiting. Put your key from themoviedb.org (Settings, API) in ama.toml as <code>[tmdb] api_key</code>; they carry on by themselves once it's set. <a href="/settings/archive/identification">Set the key</a></div></div>
-{%- elif b.problem == "plex" -%}
+{%- if b.problem == "plex" -%}
 <div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Plex didn't answer the last scan request</b>Filed Jobs are safe; Plex finds them on its next scan. Check <code>[plex] url</code> and <code>token</code> in ama.toml and that Plex is running. This goes once a scan works. <a href="/settings/archive/libraries">Plex settings</a><span class="ts" style="display:block;margin-top:4px">Plex said: {{ b.detail }}</span></div></div>
 {%- elif b.problem == "library_folder" -%}
 <div class="notice" role="alert" style="margin-bottom:16px"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>Jobs can't be filed to a Library folder</b>{{ b.jobs }} {{ "Job is" if b.jobs == 1 else "Jobs are" }} waiting to be filed; nothing is lost. Check that the drive or share is connected, has room and lets AMA write to it; filing is tried again every minute and carries on by itself. <a href="/settings/archive/libraries">Library settings</a><span class="ts" style="display:block;margin-top:4px">{{ b.detail }}</span></div></div>

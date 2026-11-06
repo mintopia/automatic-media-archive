@@ -178,7 +178,7 @@ def _summary(services, film: Candidate | None, title: TitleRecord | None,
             "folder": movie_folder(film, film_pattern(services, rec)).as_posix() if film else ""}
 
 
-def film_pattern(services, rec: JobRecord) -> str:
+def film_pattern(services, rec: JobRecord) -> naming.Pattern:
     """The Naming Pattern of the Films Library `rec` would file to now."""
     library = (services.job_settings.files_to(rec, LibraryKind.FILMS) if services.job_settings
                else library_for(services.archive.libraries, LibraryKind.FILMS))

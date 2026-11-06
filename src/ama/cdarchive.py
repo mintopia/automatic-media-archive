@@ -31,7 +31,7 @@ import httpx
 
 from ama import cdreview, cyanrip, filing, musicbrainz, naming
 from ama.archive import Archive, safe_name
-from ama.naming import Kind
+from ama.naming import Pattern, Subject
 from ama.cdguess import CdPick
 from ama.config import Library, LibraryKind, library_for
 from ama.cdrip import CdTracks, Track
@@ -87,8 +87,9 @@ def review_reason(tracks: list[Track], candidates: list[Match],
 
 # ---- naming and tags (Plex conventions) --------------------------------------
 
-def _music_kind(match: Match) -> Kind:
-    return Kind.MUSIC_MULTI_DISC if match.release.disc_total > 1 else Kind.MUSIC_SINGLE_DISC
+def _music_subject(match: Match) -> Subject:
+    return (Subject.MUSIC_MULTI_DISC if match.release.disc_total > 1
+            else Subject.MUSIC_SINGLE_DISC)
 
 
 def _music_values(match: Match, number: int = 0, title: str = "") -> dict[str, naming.Value]:
@@ -100,24 +101,22 @@ def _music_values(match: Match, number: int = 0, title: str = "") -> dict[str, n
             "disc_total": r.disc_total, "disc_title": match.disc_title}
 
 
-def _pattern(match: Match, library: Library | None) -> tuple[str, Kind]:
+def _pattern(match: Match, library: Library | None) -> Pattern:
     """The pattern `library` files this disc by: its single- or multi-disc one, by the
     release's disc count (the defaults without a Library)."""
-    kind = _music_kind(match)
-    return (naming.pattern_of(library, kind) if library else naming.DEFAULTS[kind]), kind
+    subject = _music_subject(match)
+    return naming.pattern_of(library, subject) if library else naming.default(subject)
 
 
 def album_folder(match: Match, library: Library | None = None) -> Path:
     """The folder for this disc's tracks, cue, log and cover: by default `Music/Artist/Album`,
     one folder for all of a release's discs."""
-    pattern, kind = _pattern(match, library)
-    return MUSIC / naming.folders(pattern, kind, _music_values(match))
+    return MUSIC / _pattern(match, library).folders(_music_values(match))
 
 
 def track_file(match: Match, number: int, title: str, library: Library | None = None) -> str:
     """By default `NN - Track.flac`, or `DNN - Track.flac` in a multi-disc release."""
-    pattern, kind = _pattern(match, library)
-    return naming.render(pattern, kind, _music_values(match, number, title), ".flac").name
+    return _pattern(match, library).render(_music_values(match, number, title), ".flac").name
 
 
 def disc_file_stem(match: Match) -> str:

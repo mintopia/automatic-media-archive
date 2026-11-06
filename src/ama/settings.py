@@ -255,10 +255,10 @@ class SettingsFile:
         kept = libraries[index] if original is not None else {}
         fields = {k: str(typed.get(k, kept.get(k, ""))).strip() for k in _LIBRARY_TYPED}
         errors: dict[str, str] = {}
-        for key, naming_kind in naming.patterns(kind).items():
-            if fields[key] == naming.DEFAULTS[naming_kind]:
+        for key, subject in naming.patterns(kind).items():
+            if fields[key] == subject.spec.default:
                 fields[key] = ""  # the default stays implicit, as in a new file
-            elif fields[key] and (bad := naming.check(fields[key], naming_kind).errors):
+            elif fields[key] and (bad := naming.check(fields[key], subject).errors):
                 errors[key] = "; ".join(bad)
         for k in ("name", "path"):
             if not fields[k]:
@@ -328,7 +328,7 @@ class SettingsFile:
             if i >= len(aot):
                 aot.append(tomlkit.table())
             entry = aot[i]
-            for key in ("name", "kind", "path", "plex", "default", *naming.KEYS):
+            for key in ("name", "kind", "path", "plex", "default", *naming.PatternKey):
                 value = want[key]
                 optional = key in _LIBRARY_OPTIONAL  # left out of the file when empty
                 if entry.get(key, _LIBRARY_OPTIONAL.get(key)) == value:

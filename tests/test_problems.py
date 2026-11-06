@@ -82,16 +82,16 @@ def _now(c) -> str:
     return html.unescape(c.get("/").text)
 
 
-def test_with_no_tmdb_key_a_ripped_video_disc_shows_a_banner_and_why_its_card_waits(tmp_path):
+def test_with_no_tmdb_key_a_ripped_video_disc_is_one_warning_and_its_card_says_why(tmp_path):
     h = make_harness(tmp_path, tmdb_key="")
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     with TestClient(create_app(h.services)) as c:
         _rip(h)
-        eventually(lambda: "[tmdb] api_key" in _now(c))
+        eventually(lambda: "Waiting: No TMDB API key" in _now(c))
         page = _now(c)
-        assert 'sse-swap="problems"' in page
-        banner = page[page.index('sse-swap="problems"'):page.index('class="split"')]
-        assert "No TMDB API key" in banner and "[tmdb] api_key" in banner
+        banners = page[:page.index('class="split"')]
+        # the empty-key warning (test_tmdb_warning.py) and no problem banner besides it
+        assert "Identification is off" in banners and "No TMDB API key" not in banners
         ripping = page[page.index('id="ripping-h"'):page.index('id="encoding-h"')]
         assert "Waiting: No TMDB API key is set in ama.toml ([tmdb] api_key)" in ripping
         assert "next try" in ripping
@@ -101,11 +101,11 @@ def test_with_no_tmdb_key_a_ripped_video_disc_shows_a_banner_and_why_its_card_wa
         h.services.tmdb.api_key = "tmdb-key"  # the key is set (Settings, #26)
         eventually(lambda: h.services.jobs.list(JobStatus.FILED), timeout=5)
         page = _now(c)
-        assert "[tmdb] api_key" not in page and "Waiting:" not in page
+        assert "Identification is off" not in page and "Waiting:" not in page
         assert "Waiting:" not in html.unescape(c.get("/jobs/1/waiting").text)
 
 
-def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_path):
+def test_the_waiting_line_comes_and_goes_over_sse_without_a_reload(tmp_path):
     h = make_harness(tmp_path, tmdb_key="")
     h.web.add_film("Example Movie", 1234, "Example Movie", runtime=122)
     server = uvicorn.Server(uvicorn.Config(create_app(h.services), host="127.0.0.1", port=0,
@@ -117,15 +117,10 @@ def test_the_banner_and_waiting_line_come_and_go_over_sse_without_a_reload(tmp_p
         port = server.servers[0].sockets[0].getsockname()[1]
         with httpx.stream("GET", f"http://127.0.0.1:{port}/events", timeout=10) as r:
             lines = r.iter_lines()
-            assert "[tmdb] api_key" not in _read_event(lines, "problems")  # on connect
             _rip(h)
-            while "[tmdb] api_key" not in _read_event(lines, "problems"):
-                pass
             while "Waiting: No TMDB API key" not in _read_event(lines, "ripping"):
                 pass
             h.services.tmdb.api_key = "tmdb-key"
-            while "[tmdb] api_key" in _read_event(lines, "problems"):
-                pass
             while "Waiting:" in _read_event(lines, "ripping"):
                 pass
     finally:

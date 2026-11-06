@@ -10,16 +10,32 @@ tags again gives the same file.
 from __future__ import annotations
 
 import os
+from enum import IntEnum
 from pathlib import Path
 
 _MAGIC = b"fLaC"
-_STREAMINFO, _PADDING, _VORBIS_COMMENT = 0, 1, 4
 _LAST = 0x80
 _MAX_BLOCK = (1 << 24) - 1
 _NEW_PADDING = 8192  # what ffmpeg's FLAC muxer (and so cyanrip) leaves
 _VENDOR = b"AMA"
 
 Tags = dict[str, list[str]]
+
+
+class BlockType(IntEnum):
+    """A metadata block's type (RFC 9639). Reserved numbers aren't members: such blocks are
+    kept as they are, by number."""
+
+    STREAMINFO = 0
+    PADDING = 1
+    APPLICATION = 2
+    SEEKTABLE = 3
+    VORBIS_COMMENT = 4
+    CUESHEET = 5
+    PICTURE = 6
+
+
+Block = tuple[int, bytes]  # (a BlockType, or a reserved number; the body)
 
 
 class _Flac:
@@ -29,7 +45,7 @@ class _Flac:
         with path.open("rb") as f:
             if f.read(4) != _MAGIC:
                 raise ValueError(f"{path} is not a FLAC file")
-            self.blocks: list[tuple[int, bytes]] = []
+            self.blocks: list[Block] = []
             while True:
                 header = f.read(4)
                 if len(header) < 4:
@@ -39,7 +55,7 @@ class _Flac:
                 if header[0] & _LAST:
                     break
             self.audio_start = f.tell()
-        if not self.blocks or self.blocks[0][0] != _STREAMINFO:
+        if not self.blocks or self.blocks[0][0] != BlockType.STREAMINFO:
             raise ValueError(f"{path}: no STREAMINFO block")
 
 
@@ -47,7 +63,7 @@ def read_tags(path: Path) -> Tags:
     """The FLAC's Vorbis comments, keys upper-cased, values in file order."""
     tags: Tags = {}
     for kind, body in _Flac(path).blocks:
-        if kind == _VORBIS_COMMENT:
+        if kind == BlockType.VORBIS_COMMENT:
             for comment in _parse_comments(body)[1]:
                 key, _, value = comment.partition("=")
                 tags.setdefault(key.upper(), []).append(value)
@@ -58,29 +74,31 @@ def write_tags(path: Path, tags: Tags) -> None:
     """Replace every tag in the FLAC at `path` with `tags` (idempotent)."""
     flac = _Flac(path)
     vendor = next((_parse_comments(body)[0] for kind, body in flac.blocks
-                   if kind == _VORBIS_COMMENT), _VENDOR)
+                   if kind == BlockType.VORBIS_COMMENT), _VENDOR)
     comment = _comment_block(vendor, tags)
     if len(comment) > _MAX_BLOCK:
         raise ValueError(f"{path}: tags too big for a FLAC block")
 
     # The tags go where the old ones were, else straight after STREAMINFO.
-    kept: list[tuple[int, bytes]] = []
+    kept: list[Block] = []
     for kind, body in flac.blocks:
-        if kind == _VORBIS_COMMENT and not any(k == _VORBIS_COMMENT for k, _ in kept):
-            kept.append((_VORBIS_COMMENT, comment))
-        elif kind not in (_VORBIS_COMMENT, _PADDING):
+        if kind == BlockType.VORBIS_COMMENT and not any(
+                k == BlockType.VORBIS_COMMENT for k, _ in kept):
+            kept.append((BlockType.VORBIS_COMMENT, comment))
+        elif kind not in (BlockType.VORBIS_COMMENT, BlockType.PADDING):
             kept.append((kind, body))
-    if not any(k == _VORBIS_COMMENT for k, _ in kept):
-        kept.insert(1, (_VORBIS_COMMENT, comment))
+    if not any(k == BlockType.VORBIS_COMMENT for k, _ in kept):
+        kept.insert(1, (BlockType.VORBIS_COMMENT, comment))
 
     room = flac.audio_start - len(_MAGIC)
     used = sum(4 + len(body) for _, body in kept)
     if used == room:
         _write_in_place(path, _metadata(kept))
     elif used + 4 <= room:
-        _write_in_place(path, _metadata(kept + [(_PADDING, bytes(room - used - 4))]))
+        _write_in_place(path, _metadata(kept + [(BlockType.PADDING, bytes(room - used - 4))]))
     else:
-        _rewrite(path, _metadata(kept + [(_PADDING, bytes(_NEW_PADDING))]), flac.audio_start)
+        _rewrite(path, _metadata(kept + [(BlockType.PADDING, bytes(_NEW_PADDING))]),
+                 flac.audio_start)
 
 
 def _parse_comments(body: bytes) -> tuple[bytes, list[str]]:
@@ -106,7 +124,7 @@ def _comment_block(vendor: bytes, tags: Tags) -> bytes:
     return b"".join(out)
 
 
-def _metadata(blocks: list[tuple[int, bytes]]) -> bytes:
+def _metadata(blocks: list[Block]) -> bytes:
     out = [_MAGIC]
     for i, (kind, body) in enumerate(blocks):
         last = _LAST if i == len(blocks) - 1 else 0

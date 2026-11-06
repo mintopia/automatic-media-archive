@@ -33,4 +33,4 @@ def _summary(values: Values) -> list[tuple[str, str]]:
 
 
 STEP = Step(slug="drive", title="Drive and MakeMKV", order=20, template="setup/drive.html",
-            defaults=_defaults, check=_check, settings=_settings, summary=_summary)
+            fields=(DRIVE,), defaults=_defaults, check=_check, settings=_settings, summary=_summary)

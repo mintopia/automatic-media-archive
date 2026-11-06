@@ -1,8 +1,9 @@
 """The TMDB key (ADR 0016): checked with TMDB before Setup goes on, or skipped, in which
-case films and TV aren't identified and Now says so until a key is added (#73)."""
+case films and TV aren't identified and Now says so until a key is added."""
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 
 import httpx
@@ -10,8 +11,16 @@ import httpx
 from ama.setup import Draft, Step, Values
 from ama.tmdb import Tmdb, TmdbError, TmdbKeyRefused
 
-CHOICE = "tmdb"  # "key" or "skip"
+CHOICE = "tmdb"  # a Choice
 KEY = "tmdb_key"
+
+
+class Choice(StrEnum):
+    """Use a key, or skip: the form's radio values."""
+
+    KEY = "key"
+    SKIP = "skip"
+
 SKIPPED = "Skipped — CDs only for now"
 
 
@@ -34,11 +43,11 @@ def key_problem(key: str) -> str | None:
 
 def _skipped(values: Values) -> bool:
     """Skip chosen, or no key given (the built-in default, as for every other setting)."""
-    return values.get(CHOICE) == "skip" or not values.get(KEY)
+    return values.get(CHOICE) == Choice.SKIP or not values.get(KEY)
 
 
 def _defaults(config: Path) -> dict[str, str]:
-    return {CHOICE: "key", KEY: ""}
+    return {CHOICE: Choice.KEY, KEY: ""}
 
 
 def _check(values: Values) -> dict[str, str]:
@@ -57,4 +66,5 @@ def _summary(values: Values) -> list[tuple[str, str]]:
 
 
 STEP = Step(slug="tmdb", title="TMDB key", order=40, template="setup/tmdb.html",
-            defaults=_defaults, check=_check, settings=_settings, summary=_summary)
+            fields=(CHOICE, KEY), defaults=_defaults, check=_check, settings=_settings,
+            summary=_summary)

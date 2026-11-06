@@ -5,6 +5,7 @@ The port stays at its default: Setup and AMA share it, so the tray's address hol
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 
 from ama.config import SETUP_HOST, load_config
@@ -13,33 +14,49 @@ from ama.setup import Draft, Step, Values
 from ama.web import auth
 
 REMOTE, PASSWORD = "remote", "password"
-HOSTS = {"yes": "0.0.0.0", "no": SETUP_HOST}
+
+
+class Remote(StrEnum):
+    """The answer: the form's radio values."""
+
+    YES = "yes"
+    NO = "no"
+
+
+HOSTS = {Remote.YES: "0.0.0.0", Remote.NO: SETUP_HOST}
+
+
+def _remote(values: Values) -> Remote | None:
+    try:
+        return Remote(values.get(REMOTE, ""))
+    except ValueError:
+        return None
 
 
 def _defaults(config: Path) -> dict[str, str]:
-    return {REMOTE: "yes", PASSWORD: ""}
+    return {REMOTE: Remote.YES, PASSWORD: ""}
 
 
 def _check(values: Values) -> dict[str, str]:
-    if values.get(REMOTE) not in HOSTS:
+    if _remote(values) is None:
         return {REMOTE: "Choose Yes or No"}
     return {}
 
 
 def _password(values: Values) -> str:
     """The password to keep: only with remote access, where it's what keeps others out."""
-    return values.get(PASSWORD, "") if values.get(REMOTE) == "yes" else ""
+    return values.get(PASSWORD, "") if _remote(values) is Remote.YES else ""
 
 
 def _settings(values: Values) -> Draft:
-    changes = {"web.host": HOSTS[values[REMOTE]]}
+    changes = {"web.host": HOSTS[Remote(values[REMOTE])]}  # _check passed
     if password := _password(values):
         changes["web.password"] = password
     return Draft(changes=changes)
 
 
 def _summary(values: Values) -> list[tuple[str, str]]:
-    if values.get(REMOTE) != "yes":
+    if _remote(values) is not Remote.YES:
         return [("Other devices", "No: only this PC can open AMA")]
     return [("Other devices", "Yes: phones and computers at home can open AMA"),
             ("Password", "Set" if _password(values) else "None: anyone at home can use AMA")]
@@ -57,5 +74,6 @@ def _cookies(values: Values, config: Path) -> dict[str, str]:
 
 
 STEP = Step(slug="remote", title="Reach AMA from other devices?", order=50,
-            template="setup/remote.html", defaults=_defaults, check=_check,
+            template="setup/remote.html", fields=(REMOTE, PASSWORD),
+            secrets=frozenset({PASSWORD}), defaults=_defaults, check=_check,
             settings=_settings, summary=_summary, cookies=_cookies)

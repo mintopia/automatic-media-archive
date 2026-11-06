@@ -191,7 +191,7 @@ def _films_pattern(toml) -> str:
 def test_a_films_pattern_is_saved_to_its_library_and_absent_means_the_default(toml):
     from ama import naming
     movies = next(lib for lib in load_config(toml).libraries if lib.name == "Movies")
-    assert movies.pattern == "" and naming.pattern_of(movies) == FILMS_DEFAULT
+    assert movies.pattern == "" and naming.pattern_of(movies).text == FILMS_DEFAULT
     f = SettingsFile(toml)
     f.save_library(LibraryKind.FILMS, "Movies", {"pattern": "{title} ({year})/{title} - {version}"})
     assert "pattern = \"{title} ({year})/{title} - {version}\"" in toml.read_text(encoding="utf-8")
@@ -232,18 +232,18 @@ def _music(toml):
 
 def test_a_music_library_saves_both_patterns_and_absent_means_each_default(toml):
     from ama import naming
-    from ama.naming import Kind
+    from ama.naming import Subject
     music = _music(toml)
-    assert naming.pattern_of(music, Kind.MUSIC_SINGLE_DISC) == SINGLE_DEFAULT
-    assert naming.pattern_of(music, Kind.MUSIC_MULTI_DISC) == MULTI_DEFAULT
+    assert naming.pattern_of(music, Subject.MUSIC_SINGLE_DISC).text == SINGLE_DEFAULT
+    assert naming.pattern_of(music, Subject.MUSIC_MULTI_DISC).text == MULTI_DEFAULT
     f = SettingsFile(toml)
     f.save_library(LibraryKind.MUSIC, "Music", {
         "pattern": "{artist} - {album}/{track:02} {track_title}",
         "multi_disc_pattern": "{artist} - {album}/Disc {disc}/{track:02} {track_title}"})
     music = _music(toml)
-    assert naming.pattern_of(music, Kind.MUSIC_SINGLE_DISC) == (
+    assert naming.pattern_of(music, Subject.MUSIC_SINGLE_DISC).text == (
         "{artist} - {album}/{track:02} {track_title}")
-    assert naming.pattern_of(music, Kind.MUSIC_MULTI_DISC) == (
+    assert naming.pattern_of(music, Subject.MUSIC_MULTI_DISC).text == (
         "{artist} - {album}/Disc {disc}/{track:02} {track_title}")
     f.save_library(LibraryKind.MUSIC, "Music", {"multi_disc_pattern": MULTI_DEFAULT})
     raw = tomllib.loads(toml.read_text(encoding="utf-8"))["libraries"][2]
