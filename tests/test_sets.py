@@ -74,6 +74,16 @@ def test_the_next_tv_disc_is_attached_to_its_set_and_continues_the_episodes(harn
     assert "Discs 1–2 filed" in asked and 'value="3"' in asked
 
 
+def test_a_tv_set_shows_where_its_season_was_filed_whatever_the_pattern_is_now(
+        harness, client):
+    _the_office(harness)
+    harness.tv_pattern("{show}/S{season}/{show} s{season:02}e{episode:02}")
+    _file_first_office_disc(harness, client)
+    harness.tv_pattern("{show} ({year})/Season {season:02}/{show} s{season:02}e{episode:02}")
+    rec = _in_review(harness, _tv_disc(harness, "THE_OFFICE_S1_D2", EPISODES))
+    assert "Disc 1 filed · TV / The Office / S1" in _page(client, f"/review/{rec.id}")
+
+
 FILM = "Movies/Example Movie (2016) {tmdb-1234}"
 BONUS = [(1, 20 * 60, "1"), (2, 8 * 60, "2"), (3, 3 * 60, "3")]
 

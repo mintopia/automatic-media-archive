@@ -26,33 +26,40 @@ SIMILAR = 0.8          # an episode is at least this fraction of the longest one
 PLAY_ALL_SLACK_S = 90  # or 3%: a Play-all's length vs. the Titles it joins
 
 
-def series_folder(series: Series) -> PurePosixPath:
-    """`TV/Show (Year) {tmdb-ID}`."""
-    return TV / naming.folders(naming.DEFAULTS[Kind.TV], Kind.TV, _show_values(series), 1)
+def series_folder(series: Series, pattern: str = naming.DEFAULTS[Kind.TV]) -> PurePosixPath:
+    """The show's folder, its TV Library `pattern`'s first: `TV/Show (Year) {tmdb-ID}` by
+    default."""
+    return TV / naming.folders(pattern, Kind.TV, _show_values(series), 1)
 
 
-def season_path(series: Series, season: int) -> PurePosixPath:
-    """`TV/Show (Year) {tmdb-ID}/Season 01`."""
-    return TV / naming.folders(naming.DEFAULTS[Kind.TV], Kind.TV,
-                               _show_values(series) | {"season": season}, 2)
+def season_path(series: Series, season: int,
+                pattern: str = naming.DEFAULTS[Kind.TV]) -> PurePosixPath:
+    """The folder a season's Episodes go in by `pattern`, as far as it goes before any
+    folder of an Episode's own: by default `TV/Show (Year) {tmdb-ID}/Season 01`."""
+    depth = naming.leading_folders(pattern, frozenset({"episode", "episode_title"}))
+    return TV / naming.folders(pattern, Kind.TV, _show_values(series) | {"season": season},
+                               depth)
 
 
-def episode_path(series: Series, ep: Episode) -> PurePosixPath:
-    """Where the Episode is filed, relative to the Archive root:
-    `TV/Show (Year) {tmdb-ID}/Season 01/Show - s01e02 - Episode Name.mkv`."""
+def episode_path(series: Series, ep: Episode,
+                 pattern: str = naming.DEFAULTS[Kind.TV]) -> PurePosixPath:
+    """Where the Episode is filed by its TV Library's `pattern`, relative to the Archive
+    root; by default `TV/Show (Year) {tmdb-ID}/Season 01/Show - s01e02 - Episode Name.mkv`."""
     values = _show_values(series) | {"season": ep.season, "episode": ep.number,
                                      "episode_title": ep.name}
-    return TV / naming.render(naming.DEFAULTS[Kind.TV], Kind.TV, values, ".mkv")
+    return TV / naming.render(pattern, Kind.TV, values, ".mkv")
 
 
 def _show_values(series: Series) -> dict[str, naming.Value]:
     return {"show": series.name, "year": series.year, "tmdb_id": series.id}
 
 
-def extra_path(series: Series, name: str) -> PurePosixPath:
-    """A Title kept as an Extra of the show: `Other/<name>.mkv`, named and placed the way
-    a film's Extras are (`extras.default_names`, `extras.plex_path`)."""
-    return extras.plex_path(series_folder(series), name)
+def extra_path(series: Series, name: str,
+               pattern: str = naming.DEFAULTS[Kind.TV]) -> PurePosixPath:
+    """A Title kept as an Extra of the show: `Other/<name>.mkv` in the show's folder by
+    `pattern`, named and placed the way a film's Extras are (`extras.default_names`,
+    `extras.plex_path`)."""
+    return extras.plex_path(series_folder(series, pattern), name)
 
 
 _SEASON_OR_DISC = re.compile(

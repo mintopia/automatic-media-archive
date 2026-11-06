@@ -66,6 +66,7 @@ class PatternView:
     preview: str  # the name it gives the examples; "" when the pattern can't be used
     fields: tuple[naming.Field, ...]
     presets: tuple[naming.Preset, ...]
+    variants: tuple[str, ...] = ()  # more names it gives: a TV special, an untitled Episode
 
 
 def pattern_view(kind: LibraryKind, pattern: str, key: str = "pattern") -> PatternView | None:
@@ -74,12 +75,13 @@ def pattern_view(kind: LibraryKind, pattern: str, key: str = "pattern") -> Patte
     if nk is None:
         return None
     check = naming.check(pattern, nk)
-    preview = "" if check.errors else naming.render(
-        pattern, nk, naming.examples(nk), naming.EXTENSIONS[nk]).as_posix()
+    names = [] if check.errors else [
+        naming.render(pattern, nk, naming.examples(nk) | v, naming.EXTENSIONS[nk]).as_posix()
+        for v in ({}, *naming.VARIANTS.get(nk, ()))]
     label = naming.label(nk)
     title = "Naming pattern" if label == "pattern" else label.capitalize()
-    return PatternView(key, title, pattern, check, preview, naming.FIELDS[nk],
-                       naming.PRESETS.get(nk, ()))
+    return PatternView(key, title, pattern, check, names[0] if names else "", naming.FIELDS[nk],
+                       naming.PRESETS.get(nk, ()), tuple(names[1:]))
 
 
 def _patterns_of(lib: Library) -> dict[str, str]:
