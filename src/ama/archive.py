@@ -108,6 +108,14 @@ class Archive:
         holding = [lib for lib in self.libraries if Path(folder).is_relative_to(lib.path)]
         return max(holding, key=lambda lib: len(Path(lib.path).parts), default=None)
 
+    def logical(self, folder: Path) -> Path | None:
+        """`folder` as archivers name it (`Movies/<film>`), the reverse of `folder`; None
+        outside every Library."""
+        library = self.library_of(folder)
+        if library is None:
+            return None
+        return Path(library.kind.folder, *Path(folder).relative_to(library.path).parts)
+
     def within(self, folder: Path) -> Path | None:
         """`folder` from its Library folder's name down (`Films HD/<film>`); None outside
         every Library."""

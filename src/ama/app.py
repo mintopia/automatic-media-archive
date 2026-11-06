@@ -223,7 +223,7 @@ def build_services(
                               covers=covers, problems=problems,
                               library=job_settings.library),
         notifier=Notifier(jobs, bus, channels(cfg, http), problems),
-        sets=DiscSets(db),
+        sets=DiscSets(db, archive.logical),
         covers=covers,
         media=media,
         film_guesses=film_guesses,

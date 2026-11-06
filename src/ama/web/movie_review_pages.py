@@ -16,7 +16,8 @@ from typing import Annotated
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from ama import decoys, moviereview
+from ama import decoys, moviereview, naming
+from ama.config import LibraryKind, library_for
 from ama.jobs import JobRecord, JobStatus, ReviewReason, TitleRecord
 from ama.extras import extra_titles
 from ama.moviearchive import main_feature
@@ -152,7 +153,7 @@ def page(request: Request, services, rec: JobRecord, errors: list[str] | None = 
         "shown": shown, "more_label": _more_label(ordered[shown:], found), "decoys": found,
         "picked_title": main, "main_length": short_duration(main_s),
         "errors": errors or [], "done": done_note(request),
-        "summary": _summary(picked_film, main, rec),
+        "summary": _summary(services, picked_film, main, rec),
         "pick_notice": _pick_notice(rec, guess.film if guess and guess.picked else None,
                                     main_s),
     }
@@ -168,12 +169,20 @@ def _pick_notice(rec: JobRecord, pick: Candidate | None, main_s: int) -> str | N
     return f"The film you picked {runs}; the main Title runs {short_duration(main_s)}."
 
 
-def _summary(film: Candidate | None, title: TitleRecord | None, rec: JobRecord) -> dict:
+def _summary(services, film: Candidate | None, title: TitleRecord | None,
+             rec: JobRecord) -> dict:
     n = len(extra_titles(rec.titles, title.number)) if title else 0
     return {"film": film.name if film else "",
             "title": f"Title {title.number} · {short_duration(title.duration_s)}" if title else "",
             "extras": f"{n} Extra{'s' if n != 1 else ''}, filed under Other" if n else "",
-            "folder": movie_folder(film).as_posix() if film else ""}
+            "folder": movie_folder(film, film_pattern(services, rec)).as_posix() if film else ""}
+
+
+def film_pattern(services, rec: JobRecord) -> str:
+    """The Naming Pattern of the Films Library `rec` would file to now."""
+    library = (services.job_settings.files_to(rec, LibraryKind.FILMS) if services.job_settings
+               else library_for(services.archive.libraries, LibraryKind.FILMS))
+    return naming.pattern_of(library)
 
 
 @router.get("/review/{job_id}/titles/{number}/frames", response_class=HTMLResponse)
@@ -214,7 +223,7 @@ def decision(request: Request, job_id: int, film: int = 0, title: int = 0) -> Re
     except TmdbError:
         candidate = None
     return TEMPLATES.TemplateResponse(request, "partials/movie_decision.html",
-                                      {"summary": _summary(candidate, t, rec)})
+                                      {"summary": _summary(services, candidate, t, rec)})
 
 
 @router.post("/review/{job_id}/film", response_class=HTMLResponse)
