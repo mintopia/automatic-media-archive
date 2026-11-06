@@ -346,6 +346,19 @@ main.login{min-height:100vh;display:grid;place-items:center}
 .login form{width:min(400px,100%)}
 .login .pad{display:flex;flex-direction:column;gap:18px}
 .login h1{font-size:26px}
+/* Setup (ADR 0016): one step at a time, in a single bin */
+main.setup{max-width:720px}
+.setup-steps{display:flex;flex-wrap:wrap;gap:4px 20px;margin:0 0 20px;padding:0;list-style:none;counter-reset:step;color:var(--ink2);font-size:13px}
+.setup-steps li{counter-increment:step}
+.setup-steps li::before{content:counter(step) ". "}
+.setup-steps li[aria-current]{color:var(--ink);font-weight:600}
+.setup .pad{display:flex;flex-direction:column;gap:18px}
+.setup .pad>p{max-width:62ch}
+.setup .notice .rmeta code,.setup dd{overflow-wrap:anywhere}
+.setup-adv{border:1px solid var(--rule);border-radius:3px}
+.setup-adv>summary{padding:14px 16px;min-height:0}
+.setup-adv>.field{padding:0 16px 16px}
+.setup-foot{justify-content:flex-end}
 .hint.err{color:var(--rev-ink)}
 .input[aria-invalid="true"]{border-color:var(--rev-ink);outline:1px solid var(--rev-ink)}
 @media (max-width:720px){

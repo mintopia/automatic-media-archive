@@ -320,3 +320,35 @@ def test_a_broken_hand_edit_keeps_the_running_values(app):
     app.settings.refresh(force=True)
     assert app.cd.cfg.offset == 667
     assert "cd.offset" in app.settings.problem
+
+
+# -- Setup writes a new file through the same writer (ADR 0016) -----------------------
+
+def test_create_writes_a_new_file_that_loads_with_the_given_values(tmp_path):
+    path = tmp_path / "AMA" / "ama.toml"
+    films = str(tmp_path / "Films")
+    SettingsFile(path).create(
+        {"paths.scratch": str(tmp_path / "scratch")},
+        [{"name": "Movies", "kind": "films", "path": films, "default": True},
+         {"name": "TV", "kind": "tv", "path": str(tmp_path / "TV"), "default": True},
+         {"name": "Music", "kind": "music", "path": str(tmp_path / "Music"), "default": True}])
+    cfg = load_config(path)
+    assert cfg.paths.scratch == tmp_path / "scratch"
+    assert (cfg.libraries[0].name, cfg.libraries[0].path) == ("Movies", films)
+    assert f"path = '{films}'" in path.read_text(encoding="utf-8")  # literal, like the example
+    assert sorted(p.name for p in path.parent.iterdir()) == ["ama.toml"]
+
+
+def test_create_rejects_bad_values_per_field_and_writes_nothing(tmp_path):
+    path = tmp_path / "ama.toml"
+    with pytest.raises(SettingsRejected) as e:
+        SettingsFile(path).create({"paths.scratch": "scratch", "web.port": "eighty"})
+    assert e.value.errors == {"web.port": "Enter a whole number"}
+    assert not path.exists()
+
+
+def test_create_never_overwrites_an_existing_file(toml):
+    before = toml.read_bytes()
+    with pytest.raises(FileExistsError):
+        SettingsFile(toml).create({"paths.scratch": "scratch"})
+    assert toml.read_bytes() == before

@@ -163,3 +163,16 @@ def test_a_server_that_stops_for_good_closes_the_tray(tmp_path, monkeypatch):
     child.stop()  # a crash: no restart asked for
     t.join(5)
     assert result == [1] and not t.is_alive()
+
+
+def test_with_no_settings_file_open_ama_opens_setup_on_localhost(tmp_path, monkeypatch):
+    opened: list[str] = []
+    monkeypatch.setattr("ama.supervisor.webbrowser.open", opened.append)
+    child = FakeChild([HANG, 0])
+    icon, t, result = _run_with_tray(tmp_path, monkeypatch, child)  # no ama.toml there
+    try:
+        icon.click("Open AMA")
+    finally:
+        icon.click("Quit")
+        t.join(5)
+    assert opened == ["http://127.0.0.1:8080/"]

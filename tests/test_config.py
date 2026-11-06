@@ -256,3 +256,10 @@ def test_the_example_marks_exactly_the_tables_that_need_a_restart():
     intros, _ = _example_marks()
     assert {t for t, intro in intros.items() if RESTART in intro} == {
         t for t in intros if not is_live(t)}
+
+
+def test_encode_cq_has_built_in_defaults_so_a_file_can_leave_it_out(tmp_path):
+    p = tmp_path / "ama.toml"
+    p.write_text("[paths]\nscratch = 'scratch'\n", encoding="utf-8")
+    cq = load_config(p).encode.cq
+    assert (cq.dvd, cq.bd, cq.uhd) == (20, 22, 22)

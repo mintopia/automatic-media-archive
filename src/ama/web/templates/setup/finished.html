@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Setup{% endblock %}
+{% block body_attrs %}{% endblock %}
+{% block header %}
+<header class="top"><span class="brand">Automatic Media Archive</span></header>
+{% endblock %}
+{% block main %}
+<main class="setup" id="main">
+  <div class="notice restart" role="status" data-restarting data-boot="{{ boot }}" data-boot-url="/boot" data-after="/"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#redo"/></svg><div class="rbody"><div><b>Starting AMA…</b>
+    <p class="rmeta">Setup is done and the settings are in <code>{{ config | path }}</code>. This page opens AMA when it's running, usually within a few seconds.</p>
+    <p class="rmeta" data-slow hidden>AMA hasn't started yet. If it doesn't, look in <code>%LOCALAPPDATA%\AMA\logs\ama.log</code>.</p></div></div></div>
+</main>
+<script src="/static/restarting.js"></script>
+{% endblock %}

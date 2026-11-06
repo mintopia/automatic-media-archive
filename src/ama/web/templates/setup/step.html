@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Setup{% endblock %}
+{% block body_attrs %}{% endblock %}
+{% block header %}
+<header class="top"><span class="brand">Automatic Media Archive</span></header>
+{% endblock %}
+{% block main %}
+<main class="setup" id="main">
+  <ol class="setup-steps" aria-label="Setup">
+    {%- for s in steps %}
+    <li{% if s is sameas step %} aria-current="step"{% endif %}>{{ s.title }}</li>
+    {%- endfor %}
+  </ol>
+  <form class="bin ink" method="post" action="/setup/{{ step.slug }}" novalidate>
+    <div class="tab"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>Setup</div>
+    <div class="box"><div class="pad">
+      <h1>{{ step.title }}</h1>
+      {%- if errors.get("") %}
+      <div class="notice" role="alert"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>AMA couldn't save the settings</b><p>{{ errors[""] }}</p></div></div>
+      {%- endif %}
+      {% include step.template %}
+      <div class="actions setup-foot">
+        {%- if back %}<a class="btn quiet" href="/setup/{{ back.slug }}">Back</a>{% endif %}
+        <button class="btn pri" type="submit">{{ step.button }}</button>
+      </div>
+    </div></div>
+  </form>
+</main>
+{% endblock %}

@@ -74,6 +74,9 @@ def _drive_letter(value: str, info: ValidationInfo) -> str:
     return value
 
 
+SETUP_HOST = "127.0.0.1"  # Setup's address, whatever web.host will be (ADR 0016)
+
+
 class WebConfig(_Section):
     host: str = "0.0.0.0"
     port: int = Field(default=8080, ge=1, le=65535)
@@ -176,9 +179,9 @@ class LogsConfig(_Section):
 
 
 class CqConfig(_Section):
-    dvd: int = Field(ge=0, le=51)
-    bd: int = Field(ge=0, le=51)
-    uhd: int = Field(ge=0, le=51)
+    dvd: int = Field(default=20, ge=0, le=51)
+    bd: int = Field(default=22, ge=0, le=51)
+    uhd: int = Field(default=22, ge=0, le=51)
 
 
 # Encode choices (ADR 0010). `encode.py` maps each to ffmpeg arguments; the Settings
@@ -208,7 +211,7 @@ class EncodeConfig(_Section):
     audio: AudioChoice = "languages"
     subtitles: SubtitleChoice = "languages"
     languages: Annotated[str, AfterValidator(_languages)] = "English"  # as typed
-    cq: CqConfig
+    cq: CqConfig = CqConfig()
     max_resolution: MaxResolutionConfig = MaxResolutionConfig()
 
     @property
@@ -283,7 +286,7 @@ class Config(_Section):
     discord: DiscordConfig = DiscordConfig()
     ntfy: NtfyConfig = NtfyConfig()
     webhook: WebhookConfig = WebhookConfig()
-    encode: EncodeConfig
+    encode: EncodeConfig = EncodeConfig()
     logs: LogsConfig = LogsConfig()
     # Empty in the file = one default per kind under the user's home (`LibraryKind.default_path`).
     libraries: tuple[Library, ...] = ()
@@ -357,7 +360,8 @@ def load_config(path: Path) -> Config:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         raise ConfigError(
-            f"No config file at {path}. Copy ama.example.toml to ama.toml and fill it in."
+            f"No settings file at {path}. Start AMA without one to run Setup, or copy "
+            "ama.example.toml there and fill it in."
         ) from None
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{path}: {e}") from None

@@ -15,7 +15,7 @@ import copy
 import logging
 import os
 import shutil
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -132,17 +132,22 @@ def _toml_value(value: Any, typed: str) -> Any:
 
 
 def _write_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "w", encoding="utf-8", newline="") as f:
         f.write(text)
         f.flush()
         os.fsync(f.fileno())
-    bak = path.with_name(path.name + ".bak")
-    bak_tmp = path.with_name(path.name + ".bak.tmp")
-    shutil.copy2(path, bak_tmp)
-    os.replace(bak_tmp, bak)
+    if path.exists():  # a new file (Setup) has nothing to keep
+        bak = path.with_name(path.name + ".bak")
+        bak_tmp = path.with_name(path.name + ".bak.tmp")
+        shutil.copy2(path, bak_tmp)
+        os.replace(bak_tmp, bak)
     os.replace(tmp, path)
 
+
+SETUP_HEADER = ("AMA's settings, written by Setup. Change them on the Settings page, or here.",
+                "ama.example.toml lists every setting; anything left out has its default.")
 
 # A Library's keys that the file can leave out, and their value then.
 _LIBRARY_OPTIONAL: dict[str, Any] = {"plex": "", "default": False}
@@ -173,6 +178,30 @@ class SettingsFile:
         """Apply `{key: typed text}`; returns the keys whose value changed. Raises
         SettingsRejected (file untouched) if the result wouldn't load at startup."""
         doc = tomlkit.parse(self._text())
+        changed = self._edit(doc, changes)
+        if changed:
+            _write_atomic(self.path, doc.as_string())
+        return changed
+
+    def create(self, changes: Mapping[str, str],
+               libraries: Sequence[Mapping[str, Any]] = ()) -> None:
+        """Write a new file (Setup, ADR 0016): `changes` as `save` takes them, and
+        `libraries` as `[[libraries]]` entries ({"name", "kind", "path", "default"}).
+        Raises SettingsRejected (nothing written), or FileExistsError: never overwrites."""
+        if self.path.exists():
+            raise FileExistsError(self.path)
+        doc = tomlkit.document()
+        for line in SETUP_HEADER:
+            doc.add(tomlkit.comment(line))
+        doc.add(tomlkit.nl())
+        self._edit(doc, changes)
+        if libraries:
+            self._write_libraries(doc, [dict(_LIBRARY_OPTIONAL) | dict(lib) for lib in libraries])
+        else:
+            _write_atomic(self.path, doc.as_string())
+
+    def _edit(self, doc: tomlkit.TOMLDocument, changes: Mapping[str, str]) -> list[str]:
+        """Apply `changes` to `doc` if the result validates; the keys whose value changed."""
         data = doc.unwrap()
         candidate = copy.deepcopy(data)
         for key, typed in changes.items():
@@ -204,8 +233,6 @@ class SettingsFile:
                     table[t] = tomlkit.table()
                 table = table[t]
             table[name] = _toml_value(value_at(new, key), changes[key])
-        if changed:
-            _write_atomic(self.path, doc.as_string())
         return changed
 
     # -- Libraries: `[[libraries]]` entries, each saved on its own ---------------------
