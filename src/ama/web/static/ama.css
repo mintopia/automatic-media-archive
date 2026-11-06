@@ -359,6 +359,8 @@ main.setup{max-width:720px}
 .setup-adv>summary{padding:14px 16px;min-height:0}
 .setup-adv>.field{padding:0 16px 16px}
 .setup-foot{justify-content:flex-end}
+.setup-password{margin-top:12px}
+.setup-remote:has(input[value="no"]:checked) .setup-password{display:none}
 .hint.err{color:var(--rev-ink)}
 .input[aria-invalid="true"]{border-color:var(--rev-ink);outline:1px solid var(--rev-ink)}
 @media (max-width:720px){

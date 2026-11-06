@@ -5,7 +5,8 @@ Each step is a module in `ama.setup.steps` exposing `STEP`, found at startup and
 A step owns its form fields (prefilled from `Step.defaults`), checks them, says what they
 put in the settings file (`Step.settings`) and how they read on the Ready step
 (`Step.summary`). Finishing writes the file once with `SettingsFile.create` (ADR 0008);
-an existing file means Setup is done, so it never runs again.
+an existing file means Setup is done, so it never runs again. Once it's written, a step may
+give the finished page cookies to set (`Step.cookies`: the remote step signs the browser in).
 """
 
 from __future__ import annotations
@@ -55,6 +56,8 @@ class Step:
     check: Callable[[Values], dict[str, str]] = lambda values: {}  # field -> what to fix
     settings: Callable[[Values], Draft] = lambda values: Draft()
     summary: Callable[[Values], list[tuple[str, str]]] = lambda values: []  # Ready's rows
+    # name -> value, for the finished page to set; called once the file is written
+    cookies: Callable[[Values, Path], dict[str, str]] = lambda values, config: {}
     button: str = "Continue"
 
 
@@ -81,6 +84,7 @@ class Setup:
             self.values |= step.defaults(self.config)
         self.boot = secrets.token_hex(8)  # the finished page waits for a different one
         self.finished = threading.Event()
+        self.cookies: dict[str, str] = {}  # what the finished page sets (Step.cookies)
 
     def step(self, slug: str) -> Step | None:
         return next((s for s in self.steps if s.slug == slug), None)
@@ -116,6 +120,8 @@ class Setup:
             self.finished.set()
             raise SetupDone from None
         log.info("setup: wrote %s", self.config)
+        for step in self.steps:
+            self.cookies |= step.cookies(self.values, self.config)
         self.finished.set()
         return None
 
@@ -220,7 +226,10 @@ def create_setup_app(setup: Setup, control_token: str = "") -> FastAPI:
             return page(request, step, {"": str(e)}, status=422)
         if stuck is not None:
             return page(request, stuck, stuck.check(setup.values), status=422)
-        return done(request)
+        response = done(request)
+        for name, value in setup.cookies.items():
+            response.set_cookie(name, value, **auth.COOKIE_OPTIONS)
+        return response
 
     @app.api_route("/{path:path}", methods=["GET", "POST"])
     def elsewhere(path: str) -> Response:

@@ -46,14 +46,16 @@ def _walk(client: TestClient) -> list[str]:
 
 
 def _prefilled(html: str) -> dict[str, str]:
-    """The form's inputs with the values the page filled in."""
+    """The form's inputs with the values the page filled in (radios: the ticked one)."""
     import re
     return {m["name"]: m["value"] for m in re.finditer(
-        r'<input[^>]*name="(?P<name>[^"]+)"[^>]*value="(?P<value>[^"]*)"', html)}
+        r'<input[^>]*name="(?P<name>[^"]+)"[^>]*value="(?P<value>[^"]*)"[^>]*>', html)
+        if 'type="radio"' not in m[0] or " checked" in m[0]}
 
 
-def test_setup_goes_welcome_then_where_things_go_then_ready(client):
-    assert _walk(client) == ["Welcome to AMA", "Where things go"]
+def test_setup_goes_through_its_steps_in_order_then_ready(client):
+    assert _walk(client) == ["Welcome to AMA", "Where things go",
+                             "Reach AMA from other devices?"]
     assert "<h1>Ready</h1>" in client.get("/setup/ready").text
 
 
@@ -82,7 +84,7 @@ def test_finishing_writes_the_settings_file_with_the_choices_and_defaults(client
     films_lib = next(lib for lib in cfg.libraries if lib.kind == LibraryKind.FILMS)
     assert (films_lib.path, films_lib.default) == (str(films), True)
     assert cfg.paths.scratch == tmp_path / "scratch"
-    assert cfg.web.host == "0.0.0.0"  # not asked yet: the default
+    assert cfg.web.host == "0.0.0.0"  # reaching AMA from other devices: Yes by default
     assert (cfg.encode.cq.dvd, cfg.encode.cq.bd, cfg.encode.cq.uhd) == (20, 22, 22)
 
 

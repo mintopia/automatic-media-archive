@@ -65,8 +65,7 @@ def login(request: Request, password: Annotated[str, Form()] = "") -> Response:
     if not auth.password_matches(services, password):
         return TEMPLATES.TemplateResponse(request, "login.html", {"error": True}, status_code=401)
     r = RedirectResponse("/", status_code=303)
-    r.set_cookie(auth.COOKIE, auth.session_token(services), httponly=True, samesite="lax",
-                 max_age=365 * 24 * 3600)
+    auth.sign_in(r, auth.session_token(services))
     return r
 
 

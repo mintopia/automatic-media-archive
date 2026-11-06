@@ -1,0 +1,12 @@
+<p>Phones, tablets and other computers on your home network can open AMA in a browser, to follow a Rip or answer Review from the sofa.</p>
+<div class="choices setup-remote" role="radiogroup" aria-label="Reach AMA from other devices?"{% if errors["remote"] %} aria-invalid="true" aria-describedby="f-remote-err"{% endif %}>
+  <div class="radio"><input type="radio" id="f-remote-yes" name="remote" value="yes"{% if values["remote"] == "yes" %} checked{% endif %}><div>
+    <label for="f-remote-yes"><div class="tt">Yes</div><div class="ts">Open AMA from any device at home.</div></label>
+    <div class="field setup-password"><label for="f-password">Password <span class="ts">(optional, recommended)</span></label>
+      <input class="input" id="f-password" name="password" type="password" value="{{ values["password"] }}" autocomplete="new-password" aria-describedby="f-password-hint">
+      <span class="hint" id="f-password-hint">Without one, anyone on your home network can use AMA. This browser stays signed in; you can change it later in Settings.</span>
+    </div>
+  </div><span></span></div>
+  <label class="radio"><input type="radio" name="remote" value="no"{% if values["remote"] == "no" %} checked{% endif %}><div><div class="tt">No</div><div class="ts">Only this PC can open AMA. No password needed.</div></div><span></span></label>
+</div>
+{%- if errors["remote"] %}<span class="hint err" id="f-remote-err">{{ errors["remote"] }}</span>{% endif %}
