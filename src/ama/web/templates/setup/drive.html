@@ -1,0 +1,29 @@
+{%- from "partials/makemkv_problem.html" import body -%}
+{%- set drives = machine.drives() -%}
+{%- set mk = machine.makemkv -%}
+{%- set k = mk | kind -%}
+<p>AMA rips each Disc you put in this PC's optical drive.</p>
+{%- if drives %}
+<div class="field"><label for="f-drive">Drive</label>
+  <select class="select" id="f-drive" name="drive" aria-describedby="f-drive-hint{% if errors.drive %} f-drive-err{% endif %}"{% if errors.drive %} aria-invalid="true"{% endif %}>
+    {%- for d in drives %}
+    <option value="{{ d.device }}"{% if d.device == values.drive or (values.drive not in drives | map(attribute="device") and loop.first) %} selected{% endif %}>{{ d.device }}{% if d.name %} · {{ d.name }}{% endif %}</option>
+    {%- endfor %}
+  </select>
+  <span class="hint" id="f-drive-hint">{% if drives | length == 1 %}AMA found this drive.{% else %}AMA found {{ drives | length }} drives and picked the first. Choose the one to rip from.{% endif %}</span>
+  {%- if errors.drive %}<span class="hint err" id="f-drive-err">{{ errors.drive }}</span>{% endif %}
+</div>
+{%- else %}
+<div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>No optical drive found</b>Connect one and <a href="/setup/drive">look again</a>. You can carry on without one: AMA uses the first drive it finds once it's running.</div></div>
+<input type="hidden" name="drive" value="">
+{%- endif %}
+<h2>MakeMKV</h2>
+{%- if k == "ToolReady" %}
+<div class="notice ok" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>MakeMKV{% if mk.version %} v{{ mk.version }}{% endif %} is installed and registered</b>AMA uses it to rip DVDs and Blu-rays.</div></div>
+{%- elif k == "ToolPending" %}
+<div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#loader"/></svg><div><b>Looking for MakeMKV…</b><a href="/setup/drive">Check again</a></div></div>
+{%- else %}
+<div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ mk | makemkv_headline }}</b>{{ body(mk) }}
+{%- if k == "MakemkvMissing" %}<span style="display:block;margin-top:8px"><a class="btn" href="https://www.makemkv.com/download/" target="_blank" rel="noopener">Install MakeMKV</a></span>{% endif %}
+<span style="display:block;margin-top:8px">You can carry on now: AMA checks MakeMKV again once it's running. <a href="/setup/drive">Check again</a></span></div></div>
+{%- endif %}

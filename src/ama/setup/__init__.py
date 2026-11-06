@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 
 from ama.config import SETUP_HOST, WebConfig
+from ama.setup.machine import Machine
 from ama.settings import SettingsFile, SettingsRejected
 from ama.web import STATIC_DIR, TEMPLATES, auth
 
@@ -73,8 +74,10 @@ class SetupDone(Exception):
 class Setup:
     """The wizard's state: the values typed so far, and whether the file is written."""
 
-    def __init__(self, config: Path, steps: Sequence[Step] | None = None) -> None:
+    def __init__(self, config: Path, steps: Sequence[Step] | None = None,
+                 machine: Machine | None = None) -> None:
         self.config = Path(config)
+        self.machine = machine if machine is not None else Machine.this_pc()
         self.steps = list(steps if steps is not None else discover())
         self.values: dict[str, str] = {}
         for step in self.steps:
@@ -122,10 +125,12 @@ class Setup:
 
 def run_setup(config: Path, port: int = WebConfig().port,
               open_url: Callable[[str], object] = webbrowser.open,
-              control_token: str = "") -> bool:
+              control_token: str = "", machine: Machine | None = None) -> bool:
     """Serve Setup on 127.0.0.1:`port` and open it in the browser; return once the settings
-    file is written (True) or Setup is stopped first: the tray's Quit, Ctrl+C (False)."""
-    setup = Setup(config)
+    file is written (True) or Setup is stopped first: the tray's Quit, Ctrl+C (False).
+    AMA's tools start downloading straight away."""
+    setup = Setup(config, machine=machine)
+    setup.machine.start()
     app = create_setup_app(setup, control_token)
     server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=port, log_config=None,
                                            timeout_graceful_shutdown=3))
@@ -182,6 +187,7 @@ def create_setup_app(setup: Setup, control_token: str = "") -> FastAPI:
         return TEMPLATES.TemplateResponse(request, "setup/step.html", {
             "step": step, "steps": setup.steps, "values": setup.values,
             "errors": errors or {}, "back": back, "config": setup.config,
+            "machine": setup.machine,
             "summary": [row for s in setup.steps for row in s.summary(setup.values)],
         }, status_code=status)
 
@@ -192,6 +198,16 @@ def create_setup_app(setup: Setup, control_token: str = "") -> FastAPI:
     @app.get("/boot")
     def boot() -> Response:
         return JSONResponse({"boot": setup.boot}, headers={"Cache-Control": "no-store"})
+
+    @app.get("/setup-downloads", response_class=HTMLResponse)
+    def downloads(request: Request) -> Response:  # Ready polls this while they're under way
+        return TEMPLATES.TemplateResponse(request, "setup/downloads.html",
+                                          {"machine": setup.machine})
+
+    @app.post("/setup-downloads/retry")
+    def retry_downloads() -> Response:
+        setup.machine.start()
+        return RedirectResponse(f"/setup/{setup.steps[-1].slug}", status_code=303)
 
     @app.get("/setup/{slug}", response_class=HTMLResponse)
     def show(request: Request, slug: str) -> Response:
@@ -212,6 +228,9 @@ def create_setup_app(setup: Setup, control_token: str = "") -> FastAPI:
         _, after = setup.neighbours(step)
         if after is not None:
             return RedirectResponse(f"/setup/{after.slug}", status_code=303)
+        if setup.machine.busy:
+            return page(request, step, {"": "AMA is still downloading its tools. Setup "
+                                        "finishes once they're in."}, status=422)
         try:
             stuck = setup.finish()
         except SetupDone:
