@@ -10,10 +10,13 @@ MSYS2 snapshot under -BuildRoot, installs the locked toolchain
 
   .\tools\cyanrip\build.ps1                 # clean build + zip
   .\tools\cyanrip\build.ps1 -InfoDevice D:  # ...then `cyanrip -I` on a CD in D: (no rip)
-  .\tools\cyanrip\build.ps1 -Publish        # ...then upload to the Forgejo package registry
+  .\tools\cyanrip\build.ps1 -Publish        # ...then publish it as a GitHub Release
+  .\tools\cyanrip\build.ps1 -PublishOnly    # publish the last build
   .\tools\cyanrip\build.ps1 -Relock         # update the toolchain and rewrite the lock
 
--Publish reads FORGEJO_BASE_URL and FORGEJO_API_KEY from ~\.forgejo.
+-Publish creates the GitHub Release cyanrip-<version> (ADR 0015) with the
+logged-in GitHub CLI (gh), tagging this checkout's HEAD. Commit tools\cyanrip
+and push HEAD first: the release notes link the build inputs at that tag.
 #>
 param(
     [string]$BuildRoot = (Join-Path $env:LOCALAPPDATA "ama-build\cyanrip"),
@@ -120,9 +123,14 @@ try {
         if ($code -ne 0) { throw "cyanrip -I exited $code" }
     }
     if ($Publish -or $PublishOnly) {
-        $env:FORGEJO_CREDENTIALS = ConvertTo-MsysPath (Join-Path $HOME ".forgejo")
+        $gh = Get-Command gh -ErrorAction SilentlyContinue
+        $gh = if ($gh) { $gh.Source } else { Join-Path $env:ProgramFiles "GitHub CLI\gh.exe" }
+        if (-not (Test-Path $gh)) { throw "publishing needs the GitHub CLI (gh), logged in" }
+        if (git -C $Here status --porcelain -- .) { throw "commit tools\cyanrip first: the release notes link it at the release tag" }
+        $env:GH = ConvertTo-MsysPath $gh
+        $env:AMA_COMMIT = git -C $Here rev-parse HEAD
         if ((Invoke-Msys "MINGW64" "'$HereMsys/build.sh' publish") -ne 0) { throw "publish failed" }
     }
 } finally {
-    Remove-Item Env:AMA_BUILD_ROOT, Env:FORGEJO_CREDENTIALS -ErrorAction SilentlyContinue
+    Remove-Item Env:AMA_BUILD_ROOT, Env:GH, Env:AMA_COMMIT -ErrorAction SilentlyContinue
 }

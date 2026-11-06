@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import io
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -197,5 +198,19 @@ def test_real_pins_are_complete():
     names = {m.name for p in REAL for m in p.members}
     assert names == {"ffmpeg", "ffprobe", "cyanrip"}
     for p in REAL:
-        assert p.url.startswith(("https://github.com/", "https://git.mintopia.net/api/packages/"))
+        assert p.url.startswith("https://github.com/")
         assert len(p.sha256) == 64 and all(len(m.sha256) == 64 for m in p.members)
+
+
+def test_cyanrip_pin_is_the_github_release_that_build_ps1_publishes():
+    """ADR 0015: tools/cyanrip/versions.sh names the release; the pin downloads it."""
+    from ama.tools import PINS as REAL
+
+    versions = (Path(__file__).parents[1] / "tools" / "cyanrip" / "versions.sh").read_text()
+    assert "RELEASE_REPO=mintopia/automatic-media-archive\n" in versions
+    assert 'RELEASE_TAG="cyanrip-$PACKAGE_VERSION"\n' in versions
+    (cyanrip,) = (p for p in REAL if p.key == "cyanrip")
+    assert cyanrip.url == (
+        "https://github.com/mintopia/automatic-media-archive/releases/download/"
+        "cyanrip-0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip")
+    assert cyanrip.sha256 == "0b936259c0ecdf628e8446f42c778cf920e65de8556ccdaa0486c7b9df929d1d"
