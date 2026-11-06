@@ -3,7 +3,7 @@
 # Run it through build.ps1, which sets up the pinned MSYS2 first.
 #
 #   build.sh [step...]   no steps = everything; e.g. "build_ffmpeg build_cyanrip"
-#   build.sh publish     PUT the zip to the Forgejo generic package registry
+#   build.sh publish     upload the zip as a GitHub Release (ADR 0015)
 #
 # Every third-party library is built from a pinned, SHA-256 checked source
 # and linked statically, so cyanrip.exe needs nothing but Windows DLLs.
@@ -221,23 +221,37 @@ package() {
     echo "$PACKAGE_FILE sha256: $(sha256sum "$OUT/$PACKAGE_FILE" | cut -d' ' -f1)"
 }
 
-# Uploads the zip. Reads FORGEJO_BASE_URL / FORGEJO_API_KEY from the file in
-# $FORGEJO_CREDENTIALS (default ~/.forgejo); the key goes in a header file,
-# never on a command line or in output.
+# Creates the GitHub Release $RELEASE_TAG with the zip (ADR 0015), tagging
+# $AMA_COMMIT, the AMA commit holding these build inputs. build.ps1 passes
+# $GH (the GitHub CLI, already logged in) and $AMA_COMMIT. A release is never
+# overwritten: if the tag exists, nothing is uploaded.
 publish() {
-    local creds="${FORGEJO_CREDENTIALS:-$HOME/.forgejo}" hdr url code
-    [[ -f $OUT/$PACKAGE_FILE ]] || { echo "build first: $OUT/$PACKAGE_FILE is missing" >&2; exit 1; }
-    set -a; . "$creds"; set +a
-    url="${FORGEJO_BASE_URL%/}/api/packages/$PACKAGE_OWNER/generic/$PACKAGE_NAME/$PACKAGE_VERSION/$PACKAGE_FILE"
-    hdr="$(mktemp)"; trap 'rm -f "$hdr"' RETURN
-    printf 'Authorization: token %s\n' "$FORGEJO_API_KEY" > "$hdr"
-    code="$(curl -s -o /dev/null -w '%{http_code}' -H @"$hdr" --upload-file "$OUT/$PACKAGE_FILE" "$url")"
-    case $code in
-        201) echo "published $url" ;;
-        409) echo "already published (a version's files can't be replaced; bump PACKAGE_VERSION or delete it in Forgejo): $url" ;;
-        *) echo "upload failed: HTTP $code for $url" >&2; exit 1 ;;
-    esac
-    echo "sha256: $(sha256sum "$OUT/$PACKAGE_FILE" | cut -d' ' -f1)"
+    local zip="$OUT/$PACKAGE_FILE" exe="$OUT/stage/cyanrip.exe" notes url
+    [[ -f $zip && -f $exe ]] || { echo "build first: $zip or $exe is missing" >&2; exit 1; }
+    : "${GH:?set GH to the GitHub CLI (build.ps1 does)}" "${AMA_COMMIT:?set AMA_COMMIT (build.ps1 does)}"
+    url="https://github.com/$RELEASE_REPO/releases/download/$RELEASE_TAG/$PACKAGE_FILE"
+    if "$GH" release view "$RELEASE_TAG" -R "$RELEASE_REPO" > /dev/null 2>&1; then
+        echo "already published (a release is never replaced; bump CYANRIP_COMMIT for a new build): $url"
+    else
+        notes="$(mktemp)"; trap 'rm -f "$notes"' RETURN
+        cat > "$notes" <<EOF
+AMA's portable Windows build of cyanrip $PACKAGE_VERSION, built by [\`tools/cyanrip/build.ps1\`](https://github.com/$RELEASE_REPO/blob/$RELEASE_TAG/tools/cyanrip/build.ps1) (ADR 0007). AMA downloads it automatically; you don't need to.
+
+cyanrip is GPL, and this build links libcdio and libcdio-paranoia statically. Its complete corresponding source:
+
+- cyanrip upstream commit [\`$CYANRIP_COMMIT\`](https://github.com/cyanreg/cyanrip/commit/$CYANRIP_COMMIT)
+- the pinned build inputs at this tag, [\`tools/cyanrip\`](https://github.com/$RELEASE_REPO/tree/$RELEASE_TAG/tools/cyanrip): every library's source URL and SHA-256 or commit (\`versions.sh\`), the MSYS2 toolchain lock and the build scripts
+
+SHA-256:
+- \`$PACKAGE_FILE\`: \`$(sha256sum "$zip" | cut -d' ' -f1)\`
+- \`cyanrip.exe\`: \`$(sha256sum "$exe" | cut -d' ' -f1)\`
+EOF
+        "$GH" release create "$RELEASE_TAG" "$zip" -R "$RELEASE_REPO" --target "$AMA_COMMIT" \
+            --title "cyanrip $PACKAGE_VERSION" --notes-file "$notes" --latest=false \
+            || { echo "creating the release $RELEASE_TAG failed" >&2; exit 1; }
+        echo "published $url"
+    fi
+    echo "sha256: $(sha256sum "$zip" | cut -d' ' -f1)"
 }
 
 all() {

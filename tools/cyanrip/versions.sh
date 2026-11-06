@@ -29,9 +29,10 @@ SOURCES=(
   "ffmpeg 9.0.2 https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
 )
 
-# The Forgejo generic package the zip is published as. The version names the
-# upstream commit, git-describe style.
-PACKAGE_OWNER=mintopia
-PACKAGE_NAME=cyanrip
+# The GitHub Release the zip is published as (ADR 0015). The version names the
+# upstream commit, git-describe style. The tag isn't v*.*.*, so it never starts
+# the app release workflow.
 PACKAGE_VERSION="$CYANRIP_VERSION-g${CYANRIP_COMMIT:0:7}"
 PACKAGE_FILE="cyanrip-$PACKAGE_VERSION-win64.zip"
+RELEASE_REPO=mintopia/automatic-media-archive
+RELEASE_TAG="cyanrip-$PACKAGE_VERSION"

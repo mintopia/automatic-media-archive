@@ -84,11 +84,11 @@ PINS: tuple[Pin, ...] = (
                    "02264dfa4f56baaa31e443ece8aa16d397f6b008200e7fd184d22b9009e75fd3"),
         )),
     # AMA's own build of upstream commit 648b1ddd (0.9.4-rc3), which fixes 0.9.3.1's
-    # AccurateRip and -D bugs; built by tools/cyanrip/build.ps1, hosted in this repo's
-    # Forgejo generic package registry (ADR 0007). Public download, no token needed.
+    # AccurateRip and -D bugs; built by tools/cyanrip/build.ps1 (ADR 0007), published as
+    # this repo's GitHub Release cyanrip-<version> (ADR 0015).
     Pin(key="cyanrip", version="0.9.4-rc3-g648b1dd",
-        url=("https://git.mintopia.net/api/packages/mintopia/generic/cyanrip/"
-             "0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip"),
+        url=("https://github.com/mintopia/automatic-media-archive/releases/download/"
+             "cyanrip-0.9.4-rc3-g648b1dd/cyanrip-0.9.4-rc3-g648b1dd-win64.zip"),
         sha256="0b936259c0ecdf628e8446f42c778cf920e65de8556ccdaa0486c7b9df929d1d",
         members=(Member("cyanrip", "cyanrip.exe",
                         "851d72c61df34a3a6af5fc44aa1711582ec33bb22e198560bb8d52c3a089a94a"),)),
