@@ -17,24 +17,31 @@ from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 
 if TYPE_CHECKING:
     from ama.app import Services
+    from ama.db import Database
 
 COOKIE = "ama_session"
 CONTROL_HEADER = "X-AMA-Control"  # the supervisor's tray (ama.tray)
 OPEN_PREFIXES = ("/login", "/static/")  # open without signing in, with what's under them
 OPEN_EXACT = frozenset({"/boot"})  # open as exactly this path only
+COOKIE_OPTIONS = {"httponly": True, "samesite": "lax", "max_age": 365 * 24 * 3600}  # a year
 
 
-def _secret(services: Services) -> str:
-    secret = services.db.get_value("session_secret")
+def signed_in_token(db: Database, password: str) -> str:
+    """The session cookie's value for `password`, keyed by the secret in `db` (made once)."""
+    secret = db.get_value("session_secret")
     if secret is None:
         secret = secrets.token_hex(32)
-        services.db.set_value("session_secret", secret)
-    return secret
+        db.set_value("session_secret", secret)
+    return hmac.new(secret.encode(), password.encode(), hashlib.sha256).hexdigest()
 
 
 def session_token(services: Services) -> str:
-    password = services.config.web.password
-    return hmac.new(_secret(services).encode(), password.encode(), hashlib.sha256).hexdigest()
+    return signed_in_token(services.db, services.config.web.password)
+
+
+def sign_in(response: Response, token: str) -> None:
+    """Make the browser that gets `response` signed in."""
+    response.set_cookie(COOKIE, token, **COOKIE_OPTIONS)
 
 
 def password_matches(services: Services, attempt: str) -> bool:

@@ -77,7 +77,9 @@ locked toolchain package, run `build.ps1 -Relock` and commit the new
 
    The first `uv run ama` finds no settings file and opens Setup in the browser on
    http://127.0.0.1:8080/ (ADR 0016). It asks where the Libraries and Scratch go and
-   writes `%LOCALAPPDATA%\AMA\ama.toml`; change anything else on the Settings page. To
+   whether other devices may reach AMA (with an optional password), writes
+   `%LOCALAPPDATA%\AMA\ama.toml`, and AMA carries on at the address chosen, on the same
+   port. Change anything else on the Settings page. To
    skip Setup, copy `ama.example.toml` there and edit it.
 
    Each Library is a plain folder path (ADR 0011). AMA doesn't connect to a NAS:
