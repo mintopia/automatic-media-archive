@@ -22,7 +22,7 @@ from enum import StrEnum
 from typing import get_args
 
 from ama import encode
-from ama.config import (AudioChoice, CdConfig, Config, EncodeConfig, LibraryKind,
+from ama.config import (AudioChoice, CdConfig, Config, EncodeConfig, Library, LibraryKind,
                         MaxResolutionConfig, SubtitleChoice, library_for)
 from ama.db import Database
 from ama.drive import DiscType
@@ -359,6 +359,13 @@ class JobSettings:
         self.lock(job, Group.IDENTIFICATION, kind)
         return self.lock(job, Group.LIBRARY, kind).get(
             "library", library_for(self._config().libraries, kind).name)
+
+    def files_to(self, job: JobRecord, kind: LibraryKind) -> Library:
+        """The Library a Job of `kind` would file to now, locking nothing (for a preview)."""
+        stored = self._stored(job.id, Group.LIBRARY)
+        picked = (stored[1].get("library", [None])[0] if stored
+                  else self._overrides(job.id).get("library"))
+        return library_for(self._config().libraries, kind, picked)
 
     def rip_config(self, job: JobRecord) -> CdConfig:
         """A CD Job's Rip settings; locks the Rip group (its Rip is starting)."""

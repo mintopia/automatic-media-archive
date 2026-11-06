@@ -213,6 +213,12 @@ path = '\\nas\media\Movies'
 plex = "Movies"
 # Whether it's the default Library for its kind.
 default = true
+# Films only, for now: the Library's Naming Pattern, the folders and file name
+# inside it, from {title}, {year}, {tmdb_id} and {version} (4K, 1080p, or nothing
+# for a DVD), "/" between folders. Empty = Plex's naming,
+# "{title} ({year}) {{tmdb-{tmdb_id}}}/{title} ({year}) {{tmdb-{tmdb_id}}} - {version}".
+# Changing it names only what is filed afterwards; nothing filed is renamed.
+pattern = ""
 
 [[libraries]]
 name = "TV"
