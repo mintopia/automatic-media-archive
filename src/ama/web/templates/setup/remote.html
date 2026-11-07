@@ -2,7 +2,7 @@
 <div class="choices setup-remote" role="radiogroup" aria-label="Reach AMA from other devices?"{% if errors["remote"] %} aria-invalid="true" aria-describedby="f-remote-err"{% endif %}>
   <div class="radio"><input type="radio" id="f-remote-yes" name="remote" value="yes"{% if values["remote"] == "yes" %} checked{% endif %}><div>
     <label for="f-remote-yes"><div class="tt">Yes</div><div class="ts">Open AMA from any device at home.</div></label>
-    <div class="field setup-password"><label for="f-password">Password <span class="ts">(optional, recommended)</span></label>
+    <div class="field setup-password"><label for="f-password">Password <span class="opt">(optional, recommended)</span></label>
       <input class="input" id="f-password" name="password" type="password" value="{{ values["password"] }}" autocomplete="new-password" aria-describedby="f-password-hint">
       <span class="hint" id="f-password-hint">Without one, anyone on your home network can use AMA. This browser stays signed in; you can change it later in Settings.</span>
     </div>

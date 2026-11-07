@@ -8,9 +8,9 @@
   <dt>{{ d.label }}</dt><dd>
   {%- if k == "ToolReady" %}Downloaded
   {%- elif k == "ToolDownloading" %}
-    {%- if st.total %}<span style="display:flex;align-items:center;gap:10px"><span class="meter" role="meter" aria-valuenow="{{ st.done }}" aria-valuemin="0" aria-valuemax="{{ st.total }}" aria-label="{{ d.label }} downloaded"><i style="width:{{ (100 * st.done / st.total) | round(1) }}%"></i></span><span class="ts">{{ (st.done / 1000000) | round | int }} / {{ (st.total / 1000000) | round | int }} MB</span></span>
+    {%- if st.total %}<span class="dl-row"><span class="meter" role="meter" aria-valuenow="{{ st.done }}" aria-valuemin="0" aria-valuemax="{{ st.total }}" aria-label="{{ d.label }} downloaded"><i style="width:{{ (100 * st.done / st.total) | round(1) }}%"></i></span><span class="ts">{{ (st.done / 1000000) | round | int }} / {{ (st.total / 1000000) | round | int }} MB</span></span>
     {%- else %}Downloading: {{ (st.done / 1000000) | round | int }} MB so far{% endif %}
-  {%- elif k == "ToolFailed" %}Couldn't download {{ d.label }}<span class="ts" style="display:block">Error: {{ st.detail }}</span>
+  {%- elif k == "ToolFailed" %}Couldn't download {{ d.label }}<span class="ts setup-line">Error: {{ st.detail }}</span>
   {%- elif k == "ToolNotFound" %}Not found at {{ st.path | path }}
   {%- elif busy %}Waiting
   {%- else %}Not downloaded yet
@@ -21,6 +21,6 @@
 <p class="hint" role="status">Finishing waits until these are in. Encodes need ffmpeg and CD Rips need cyanrip.</p>
 {%- elif machine.failed %}
 <div class="notice" role="alert"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg><div><b>A download failed</b>Check this PC is online and try again. You can also finish now: AMA keeps trying once it's running.
-<span style="display:block;margin-top:8px"><button class="btn" type="submit" formaction="/setup-downloads/retry" formmethod="post" formnovalidate>Try again</button></span></div></div>
+<span class="setup-line"><button class="btn" type="submit" formaction="/setup-downloads/retry" formmethod="post" formnovalidate>Try again</button></span></div></div>
 {%- endif %}
 </section>

@@ -6,11 +6,13 @@
 {% endblock %}
 {% block main %}
 <main class="setup" id="main">
+  {%- set at = steps.index(step) %}
   <ol class="setup-steps" aria-label="Setup">
     {%- for s in steps %}
-    <li{% if s is sameas step %} aria-current="step"{% endif %}>{{ s.title }}</li>
+    <li{% if loop.index0 < at %} class="done"{% elif loop.index0 == at %} aria-current="step"{% endif %}><span>{{ s.title }}</span></li>
     {%- endfor %}
   </ol>
+  <p class="setup-of" aria-hidden="true">Step {{ at + 1 }} of {{ steps | length }}</p>
   <form class="bin ink" method="post" action="/setup/{{ step.slug }}" novalidate>
     <div class="tab"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>Setup</div>
     <div class="box"><div class="pad">

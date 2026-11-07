@@ -21,9 +21,9 @@
 {%- if k == "ToolReady" %}
 <div class="notice ok" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#check"/></svg><div><b>MakeMKV{% if mk.version %} v{{ mk.version }}{% endif %} is installed and registered</b>AMA uses it to rip DVDs and Blu-rays.</div></div>
 {%- elif k == "ToolPending" %}
-<div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#loader"/></svg><div><b>Looking for MakeMKV…</b><a href="/setup/drive">Check again</a></div></div>
+<div class="notice ok pending" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#loader"/></svg><div><b>Looking for MakeMKV…</b><a href="/setup/drive">Check again</a></div></div>
 {%- else %}
 <div class="notice" role="status"><svg class="i" aria-hidden="true"><use href="/static/icons.svg#lock"/></svg><div><b>{{ mk | makemkv_headline }}</b>{{ body(mk) }}
-{%- if k == "MakemkvMissing" %}<span style="display:block;margin-top:8px"><a class="btn" href="https://www.makemkv.com/download/" target="_blank" rel="noopener">Install MakeMKV</a></span>{% endif %}
-<span style="display:block;margin-top:8px">You can carry on now: AMA checks MakeMKV again once it's running. <a href="/setup/drive">Check again</a></span></div></div>
+{%- if k == "MakemkvMissing" %}<span class="setup-line"><a class="btn" href="https://www.makemkv.com/download/" target="_blank" rel="noopener">Install MakeMKV</a></span>{% endif %}
+<span class="setup-line">You can carry on now: AMA checks MakeMKV again once it's running. <a href="/setup/drive">Check again</a></span></div></div>
 {%- endif %}
