@@ -7,6 +7,7 @@
   {%- for s in steps %}
     {%- set icon, label = icons[s.state] %}
     <div class="step{% if s.state in ('waiting', 'notrun') %} later{% endif %}"><div class="sum"><span class="st {{ s.state }}{% if s.state == 'running' and s.colour %} {{ s.colour }}{% endif %}"><svg class="i" role="img" aria-label="{{ label }}"><use href="/static/icons.svg#{{ icon }}"/></svg></span><div><div class="nm">{{ s.name }}{% if s.subject %} <span class="subj">· {{ s.subject }}</span>{% endif %}</div>{% if s.detail %}<div class="ts">{{ s.detail }}</div>{% endif %}
+      {%- if s.action %}<a class="btn pri go" href="{{ s.action[1] }}">{{ s.action[0] }}</a>{% endif %}
       {%- if s.progress %}<div class="live"><div class="bar enc" role="progressbar" aria-valuenow="{{ s.progress.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Encode progress"><i style="width:{{ s.progress.pct }}%"></i></div><b>{{ s.progress.pct }}%</b><span class="ts">{% if s.progress.speed %}{{ "%.1f" | format(s.progress.speed) }}× · {% endif %}{% if s.progress.eta_s is not none %}{{ s.progress.eta_s | left }}{% endif %}</span></div>{% endif %}</div>
       {%- set took = s.took(now) %}
       <span class="dur">{% if s.state == "running" %}{% if took %}<b>{{ took }}</b> so far{% else %}Running{% endif %}{% elif s.state == "waiting" %}Waiting{% elif s.state == "notrun" %}Won't run{% elif s.state == "failed" %}Failed{% if took %} after {{ took }}{% endif %}{% else %}{{ took }}{% endif %}</span><span></span></div></div>

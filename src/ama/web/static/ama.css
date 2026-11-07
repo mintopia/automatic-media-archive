@@ -441,6 +441,7 @@ fieldset.choices{margin:0;padding:0;min-width:0}
 .step.later .nm{color:var(--ink2)}
 .step .dur{color:var(--ink2);font-size:14px;text-align:right;white-space:nowrap}
 .step .dur b{color:var(--ink);font-weight:600}
+.step .go{margin-top:10px}
 .step .live{display:flex;align-items:center;gap:12px;margin-top:8px}
 .step .live .bar{width:180px;height:6px}
 .step .live b{font-size:13px;font-weight:700}

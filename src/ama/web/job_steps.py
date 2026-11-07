@@ -20,7 +20,7 @@ from ama.jobs import JobRecord, JobStatus, FailureKind, LogLine
 from ama.drive import DiscType
 from ama.encode import EncodeProgress
 from ama.encoder import EncodeStatus
-from ama.web.review_items import reason_summary
+from ama.web.review_items import reason_summary, review_item
 
 if TYPE_CHECKING:
     from ama.app import Services
@@ -45,6 +45,7 @@ class Step:
     progress: EncodeProgress | None = None  # the Encode running now
     colour: str = ""   # "rip" | "enc": the Phase colour while running
     number: int | None = None  # an Encode's Title
+    action: tuple[str, str] | None = None  # a button under the detail: (label, href)
 
     @property
     def key(self) -> str:
@@ -128,7 +129,7 @@ def job_steps(services: Services, rec: JobRecord) -> list[Step]:
                      finished=rec.archived_at)]
     ident = _identification(services, rec, rip, lines)
     encodes = [] if rec.disc_type == DiscType.CD else _encodes(services, rec, ident)
-    return [rip, ident, *encodes, _file(rec, ident, encodes, services.archive.shown)]
+    return [rip, ident, *encodes, _archive(rec, ident, encodes, services.archive.shown)]
 
 
 def _rip(services: Services, rec: JobRecord) -> Step:
@@ -175,7 +176,9 @@ def _identification(services: Services, rec: JobRecord, rip: Step,
         return Step(name, StepState.FAILED, "The Rip was discarded in Review", started=started)
     if rec.status == JobStatus.REVIEW:
         reason = reason_summary(rec.review_reason) if rec.review_reason else "Needs a decision"
-        return Step(name, StepState.WAITING, f"Needs Review: {reason}", started=started)
+        item = review_item(services, rec)
+        return Step(name, StepState.WAITING, f"Needs Review: {reason}", started=started,
+                    action=(item.action, item.href))
     as_ = (rec.title if rec.status == JobStatus.ARCHIVED and rec.disc_type == DiscType.CD
            else "" if rec.disc_type == DiscType.CD else _identified_as(services, rec))
     if as_ or why is not None or rec.status == JobStatus.ARCHIVED:
@@ -253,7 +256,7 @@ def _encodes(services: Services, rec: JobRecord, ident: Step) -> list[Step]:
     return steps
 
 
-def _file(rec: JobRecord, ident: Step, encodes: list[Step],
+def _archive(rec: JobRecord, ident: Step, encodes: list[Step],
           shown: Callable[[Path], str]) -> Step:
     if rec.status == JobStatus.ARCHIVED:
         where = "the Archive" if rec.archive_dir is None else shown(rec.archive_dir)

@@ -70,13 +70,12 @@ def reason_summary(reason: ReviewReason) -> str:
 
 
 def review_items(services: Services) -> list[ReviewItem]:
-    items = []
-    for rec in review.queue(services.jobs):
-        if rec.disc_type == DiscType.CD:
-            items.append(_cd_item(services, rec))
-        else:
-            items.append(_video_item(services, rec))
-    return items
+    return [review_item(services, rec) for rec in review.queue(services.jobs)]
+
+
+def review_item(services: Services, rec: JobRecord) -> ReviewItem:
+    """The Review row of a Job waiting in Review."""
+    return _cd_item(services, rec) if rec.disc_type == DiscType.CD else _video_item(services, rec)
 
 
 FILM_UNSURE = frozenset({ReviewReason.NO_MATCH, ReviewReason.RUNTIME_MISMATCH,

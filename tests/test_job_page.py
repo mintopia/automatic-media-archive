@@ -108,6 +108,7 @@ def test_the_crumb_follows_the_phase_and_review_and_history_link_to_the_job_page
     assert '<a href="/review" aria-current="page">' in page
     ident = _step(_steps(page), "Identification")
     assert "st waiting" in ident and "Needs Review: Found in the film database" in ident
+    assert f'<a class="btn pri go" href="/review/{rec.id}">Confirm film</a>' in ident
     assert "One per Title kept" in _step(_steps(page), ">Encode<")
     assert "To the Library, then a Plex scan" in _step(_steps(page), ">Archive<")
 
@@ -147,7 +148,7 @@ def test_a_failed_rips_job_page_says_the_later_steps_wont_run(client, harness):
     rec = harness.services.jobs.list(JobStatus.FAILED)[0]
     steps = _steps(_page(client, f"/jobs/{rec.id}"))
     assert "st failed" in _step(steps, ">Rip<") and "couldn't be ripped" in steps
-    assert steps.count("st notrun") == 3  # Identification, Encode, File
+    assert steps.count("st notrun") == 3  # Identification, Encode, Archive
 
 
 def test_a_cds_job_page_has_no_encode(client, harness):
@@ -160,6 +161,15 @@ def test_a_cds_job_page_has_no_encode(client, harness):
     assert "24 tracks" in _step(steps, ">Rip<")
     assert ALBUM in _step(steps, "Identification")
     assert "MusicBrainz release" in _step(steps, "Identification")
+
+
+def test_a_cd_waiting_in_review_links_from_its_job_page_to_its_review(client, harness):
+    from tests.test_cd_archive import DISC_1, _insert, _response, _wait_for
+    _insert(harness, DISC_1, 24, _response())
+    rec = _wait_for(harness, JobStatus.REVIEW)
+    ident = _step(_steps(_page(client, f"/jobs/{rec.id}")), "Identification")
+    assert f'<a class="btn pri go" href="/review/{rec.id}">Choose edition</a>' in ident
+    assert _page(client, f"/jobs/{rec.id}").count(f'href="/review/{rec.id}">Choose edition') == 2  # + drive card
 
 
 def test_a_tv_jobs_page_lists_an_encode_per_episode(client, harness):
